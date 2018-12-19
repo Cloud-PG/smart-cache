@@ -237,10 +237,10 @@ class DataFileReader(object):
         return self
 
     def __next__(self):
-        """Get the next JSON object string (inside iteration).
+        """Get the next JSON object (inside iteration).
 
         Returns:
-            str: the JSON string
+            dict: The JSON object converted in a dictionary
 
         Raises:
             StopIteration: to end the iterator
