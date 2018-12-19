@@ -14,7 +14,7 @@ class DataFileReader(object):
 
         Args:
             filename (str): name of the json.gz file to open.
-        
+
         Returns:
             DataFileReader: the instance of this object
 
@@ -28,7 +28,9 @@ class DataFileReader(object):
         """Extract a json object string from the file.
 
         Returns:
-            tuple: (JSON_string, position_in_the_file)
+            tuple: (dict, int) The JSON object converted in a
+                   dictionary and the position of that object
+                   in the file
 
         """
         buffer = b''
@@ -43,9 +45,9 @@ class DataFileReader(object):
                 tmp_p -= 1
 
             if tmp_p == 0 and len(buffer) >= 2:
-                json_str = buffer.decode("utf-8")
+                json_obj_dict = json.loads(buffer, encoding="utf-8")
                 buffer = b''
-                return json_str, start
+                return json_obj_dict, start
 
     @staticmethod
     def __gen_increasing_slice(slice):
