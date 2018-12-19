@@ -250,7 +250,7 @@ class DataFileReader(object):
         if next_json is not None:
             return next_json
         else:
-            raise StopIteration()
+            raise StopIteration
 
     def __del__(self):
         """Object destructor."""
