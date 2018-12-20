@@ -1,6 +1,7 @@
-from avro.io import DatumReader
 from avro.datafile import DataFileReader
-from . utils import gen_increasing_slice
+from avro.io import DatumReader
+
+from .utils import gen_increasing_slice
 
 __all__ = ['DataFileReader']
 

@@ -1,6 +1,7 @@
-from ..datafile.jsongz import JSONGzDataFileReader
-from ..datafile.avro import AvroDataFileReader
 from os import path
+
+from ..datafile.avro import AvroDataFileReader
+from ..datafile.jsongz import JSONGzDataFileReader
 
 __all__ = ['DataFileInterface']
 

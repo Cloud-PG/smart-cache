@@ -1,8 +1,8 @@
 import gzip
 import json
 from string import whitespace
-from . utils import gen_increasing_slice
 
+from .utils import gen_increasing_slice
 
 __all__ = ['JSONGzDataFileReader', 'JSONGzDataFileWriter']
 
