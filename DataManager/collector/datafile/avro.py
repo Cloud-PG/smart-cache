@@ -11,10 +11,10 @@ class AvroDataFileReader(object):
     """Write avro file."""
 
     def __init__(self, filename):
-        """Init function of data writer for json.gz files.
+        """Init function of data reader for .avro files.
 
         Args:
-            filename (str): name of the json.gz file to write.
+            filename (str): name of the .avro file to read.
 
         Returns:
             AvroDataFileReader: the instance of this object

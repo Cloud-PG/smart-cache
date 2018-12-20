@@ -1,5 +1,5 @@
 import gzip
-import json
+import simplejson
 from string import whitespace
 
 from .utils import gen_increasing_slice
@@ -29,7 +29,7 @@ class JSONGzDataFileWriter(object):
 
     @staticmethod
     def __valid_json(string):
-        """Check if a string is a valid JSON.
+        """Check if a string is a valid simplejson.
 
         Args:
             string (str): the string to analyse
@@ -39,7 +39,7 @@ class JSONGzDataFileWriter(object):
 
         """
         try:
-            json.loads(string)
+            simplejson.loads(string)
         except ValueError:
             return False
         else:
@@ -72,11 +72,11 @@ class JSONGzDataFileWriter(object):
             if self.__valid_json(data):
                 self.__write(data)
         elif type(data) == dict:
-            self.__write(json.dumps(data))
+            self.__write(simplejson.dumps(data))
         elif type(data) == list:
             if all(type(elm) == dict for elm in data):
                 for elm in data:
-                    self.__write(json.dumps(elm))
+                    self.__write(simplejson.dumps(elm))
             elif all(self.__valid_json(elm) for elm in data):
                 for elm in data:
                     self.__write(elm)
@@ -151,7 +151,7 @@ class JSONGzDataFileReader(object):
                 pass
 
             if tmp_p == 0 and len(buffer) >= 2:
-                json_obj_dict = json.loads(buffer, encoding="utf-8")
+                json_obj_dict = simplejson.loads(buffer, encoding="utf-8")
                 buffer = b''
                 return json_obj_dict, start
 
@@ -258,8 +258,8 @@ if __name__ == "__main__":
     ##
     # Test DataFileWriter
     with JSONGzDataFileWriter("test.json.gz", ['{"a": 2}']) as data:
-        data.append(json.dumps({}))
-        data.append([json.dumps({})])
+        data.append(simplejson.dumps({}))
+        data.append([simplejson.dumps({})])
         data.append([{}, {"a": 2}, {}])
 
     ##

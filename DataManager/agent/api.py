@@ -1,5 +1,5 @@
 import hashlib
-import json
+import simplejson
 
 import requests
 import urllib3
@@ -17,7 +17,7 @@ class ElasticSearchHttp(object):
         blake2s = hashlib.blake2s()
         urllib3.disable_warnings()
 
-        json_data = json.dumps(data)
+        json_data = simplejson.dumps(data)
         blake2s.update(json_data.encode("utf-8"))
         id_data = blake2s.hexdigest()
 
