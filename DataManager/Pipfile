@@ -8,6 +8,7 @@ verify_ssl = true
 [packages]
 avro-python3 = "*"
 python-snappy = "*"
+requests = "*"
 
 [requires]
 python_version = "3"
