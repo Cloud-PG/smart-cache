@@ -2,8 +2,12 @@ from ..datafile.jsongz import JSONGzDataFileReader
 from ..datafile.avro import AvroDataFileReader
 from os import path
 
+__all__ = ['DataFileInterface']
 
-class DataInterface(object):
+
+class DataFileInterface(object):
+
+    """Interface for file access."""
 
     def __init__(self, source):
         self.__source = source
@@ -27,15 +31,15 @@ class DataInterface(object):
     def get_data(self):
         for data in self.__data_collector:
             yield data
-    
+
     def __getitem__(self, idx):
         return self.__data_collector[idx]
 
     def __iter__(self):
-        """Initialize the DataInterface reader iterator.
+        """Initialize the DataFileInterface reader iterator.
 
         Returns:
-            DataInterface: this object instance
+            DataFileInterface: this object instance
 
         """
         self.__iter = iter(self.__data_collector)

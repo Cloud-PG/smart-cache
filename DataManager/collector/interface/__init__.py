@@ -1,1 +1,1 @@
-from .interface import DataInterface
+from .interface import DataFileInterface
