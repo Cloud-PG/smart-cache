@@ -1,12 +1,13 @@
 import gzip
 import json
 from string import whitespace
+from . utils import gen_increasing_slice
 
 
-__all__ = ['DataFileReader', 'DataFileWriter']
+__all__ = ['JSONGzDataFileReader', 'JSONGzDataFileWriter']
 
 
-class DataFileWriter(object):
+class JSONGzDataFileWriter(object):
 
     """Write json.gz file."""
 
@@ -18,7 +19,7 @@ class DataFileWriter(object):
             data (str, dict, list(str), list(dict)): initial data to be inserted
 
         Returns:
-            DataFileWriter: the instance of this object
+            JSONGzDataFileWriter: the instance of this object
 
         """
         self.__filename = filename
@@ -51,7 +52,7 @@ class DataFileWriter(object):
             data (str): the JSON string to write
 
         Returns:
-            DataFileWriter: this object instance
+            JSONGzDataFileWriter: this object instance
 
         """
         self.__descriptor.write(data.encode("utf-8") + b'\n')
@@ -64,7 +65,7 @@ class DataFileWriter(object):
             data (str, dict, list(str), list(dict)): data to be inserted
 
         Returns:
-            DataFileWriter: this object instance
+            JSONGzDataFileWriter: this object instance
 
         """
         if type(data) == str:
@@ -97,7 +98,7 @@ class DataFileWriter(object):
         """Initialization for 'with' statement.
 
         Returns:
-            DataFileWriter: this object instance
+            JSONGzDataFileWriter: this object instance
 
         """
         return self
@@ -107,7 +108,7 @@ class DataFileWriter(object):
         self.__descriptor.close()
 
 
-class DataFileReader(object):
+class JSONGzDataFileReader(object):
 
     """Read json.gz file with easy access to data."""
 
@@ -118,7 +119,7 @@ class DataFileReader(object):
             filename (str): name of the json.gz file to open.
 
         Returns:
-            DataFileReader: the instance of this object
+            JSONGzDataFileReader: the instance of this object
 
         """
         self.__filename = filename
@@ -156,47 +157,26 @@ class DataFileReader(object):
 
         return (None, -1)
 
-    @staticmethod
-    def __gen_increasing_slice(slice):
-        """Generate a sequence of indexes from a slice.
-
-        Args:
-            slice (slice): the slice object to expand
-
-        Returns:
-            generator: the indexes in increasing order
-
-        """
-        start = slice.start if slice.start else 0
-        stop = slice.stop
-        step = slice.step if slice.step else 1
-        if start > stop:
-            start, stop = stop + 1, start + 1
-        cur = start
-        while cur < stop:
-            assert cur >= 0, "Negative index not supported..."
-            yield cur
-            cur += step
-
     def __getitem__(self, idx):
         """Select an item or a group of item from the file.
 
         If the idx argument is a slice it is converted to a list
         of indexes. All index lists will be processed in increasing
-        order (see __gen_increasing_slice function for more details)
+        order (datafile.utils.gen_increasing_slice function for more details)
         and then will be returned in the order requested by the user.
 
         Args:
             idx (int or slice): indexes to extract
 
         Returns:
-            list or str: a single JSON string or a list of JSON strings
+            list or dict: The JSON object converted in a dictionary or a list
+                          of converted JSON objects
 
         """
         self.__descriptor.seek(0)
 
         if type(idx) is slice:
-            to_extract = (elm for elm in self.__gen_increasing_slice(idx))
+            to_extract = (elm for elm in gen_increasing_slice(idx))
         else:
             to_extract = [idx]
 
@@ -220,7 +200,7 @@ class DataFileReader(object):
                     break
 
         if type(idx) is slice:
-            if idx.start > idx.stop:
+            if idx.start is not None and idx.stop is not None and idx.start > idx.stop:
                 return list(reversed(results))
             return results
         else:
@@ -230,7 +210,7 @@ class DataFileReader(object):
         """Initialize the JSONGz reader iterator.
 
         Returns:
-            DataFileReader: this object instance
+            JSONGzDataFileReader: this object instance
 
         """
         self.__descriptor.seek(0, 0)
@@ -261,7 +241,7 @@ class DataFileReader(object):
         """Initialization for 'with' statement.
 
         Returns:
-            DataFileReader: this object instance
+            JSONGzDataFileReader: this object instance
 
         """
         return self
@@ -274,18 +254,18 @@ class DataFileReader(object):
 if __name__ == "__main__":
     ##
     # Test DataFileWriter
-    with DataFileWriter("test.json.gz", ['{"a": 2}']) as data:
+    with JSONGzDataFileWriter("test.json.gz", ['{"a": 2}']) as data:
         data.append(json.dumps({}))
         data.append([json.dumps({})])
         data.append([{}, {"a": 2}, {}])
 
     ##
-    # Test DataFileReader
-    with DataFileReader("test.json.gz") as data:
+    # Test JSONGzDataFileReader
+    with JSONGzDataFileReader("test.json.gz") as data:
         for obj in data:
             print(obj)
 
         print(data[0] == data[4])
 
-    for data_ in DataFileReader("test.json.gz"):
+    for data_ in JSONGzDataFileReader("test.json.gz"):
         print(data_)
