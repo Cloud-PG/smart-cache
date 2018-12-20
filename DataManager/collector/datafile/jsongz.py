@@ -173,6 +173,9 @@ class JSONGzDataFileReader(object):
                           of converted JSON objects
 
         """
+        assert type(idx) == int or type(
+            idx) == slice, "Index Could be an integer or a slice"
+
         self.__descriptor.seek(0)
 
         if type(idx) is slice:

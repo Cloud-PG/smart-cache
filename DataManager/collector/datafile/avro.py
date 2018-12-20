@@ -40,6 +40,9 @@ class AvroDataFileReader(object):
             list or dict: a dictionary or a list of dictionary
 
         """
+        assert type(idx) == int or type(
+            idx) == slice, "Index Could be an integer or a slice"
+
         self.__avro_file = DataFileReader(self.__descriptor, DatumReader())
 
         if type(idx) is slice:
