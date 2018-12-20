@@ -1,4 +1,5 @@
 import argparse
+from datetime import timedelta
 from sys import exit
 from time import time
 
@@ -34,6 +35,8 @@ def cli_main():
                             help="A destination type in the following list: 'elasticsearchhttp', ... ")
     subcmd_put.add_argument("--auth", metavar="auth", type=str, default="",
                             help="User and password of destination resource: 'user:password'")
+    subcmd_put.add_argument("--bulk", metavar="bulk", type=int, default=42,
+                            help="Size of the bulk bucket")
 
     subcmd_del = cmd_subparsers.add_parser(
         "del", help="Delete a JSON from the archive")
@@ -53,28 +56,61 @@ def cli_main():
                 )
             print(collector[index])
     elif args.command == "put":
+        BULK_SIZE = args.bulk
+
         if args.source_type == "file":
             source = DataFileInterface(args.source)
         if args.dest_type == "elasticsearchhttp":
             dest = ElasticSearchHttp(args.dest, args.auth)
 
         command_start = time()
-        for idx, data in enumerate(source):
+        tot_elm_done = 0
+        bucket = []
+
+        def put_bucket(cur_dest, cur_bucket, prev_tot_elm_done):
             start = time()
-
-            res = dest.put(data)
-
+            res = cur_dest.put(cur_bucket)
             if res.status_code > 201:
-                print("[ERROR][STATUS CODE][{}]-> Problem with resource index {}".format(
-                    res.status_code, idx)
+                print("[ERROR][STATUS CODE][{}]-> Problem with bulk insertion".format(
+                    res.status_code)
                 )
                 print("[ERROR][DETAILS][\n\n{}\n]".format(res.text))
+                exit(-1)
 
-            print("Inserted element {} in {:0.5f}s".format(
-                idx, time()-start), end='\r')
+            tot_elm_done = prev_tot_elm_done + len(bucket)
+            print("[COMMAND][PUT][INSERT][{} elements in {:0.5f}s][Tot elements inserted {}][Elapsed time: {:0>8}s]".format(
+                len(cur_bucket), time()-start, tot_elm_done, str(timedelta(seconds=time()-command_start))), end='\r')
 
-        print("[COMMAND][PUT][DONE in {:0.5f}s]-> All elements have been inserted...".format(
-            time()-command_start)
+            return tot_elm_done
+
+        for idx, data in enumerate(source):
+            if not args.bulk:
+                start = time()
+                res = dest.put(data)
+
+                if res.status_code > 201:
+                    print("[ERROR][STATUS CODE][{}]-> Problem with resource index {}".format(
+                        res.status_code, idx)
+                    )
+                    print("[ERROR][DETAILS][\n\n{}\n]".format(res.text))
+                    exit(-1)
+
+                tot_elm_done += 1
+                print("[COMMAND][PUT][INSERT][Element {}][DONE in {:0.5f}s][Elapsed time: {:0>8}s]".format(
+                    idx, time()-start,  str(timedelta(seconds=time()-command_start))), end='\r')
+            else:
+                if len(bucket) < BULK_SIZE:
+                    bucket.append(data)
+                else:
+                    tot_elm_done = put_bucket(dest, bucket, tot_elm_done)
+                    bucket = []
+
+        if len(bucket) != 0:
+            tot_elm_done = put_bucket(dest, bucket, tot_elm_done)
+
+        print("[COMMAND][PUT][DONE in {:0>8}s][{} items]".format(
+            str(timedelta(seconds=time()-command_start))),
+            tot_elm_done
         )
 
 
