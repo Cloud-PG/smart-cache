@@ -10,6 +10,7 @@ avro-python3 = "*"
 python-snappy = "*"
 requests = "*"
 elasticsearch = "*"
+simplejson = "*"
 
 [requires]
 python_version = "3"
