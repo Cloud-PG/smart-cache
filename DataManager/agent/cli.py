@@ -109,9 +109,9 @@ def cli_main():
             tot_elm_done = put_bucket(dest, bucket, tot_elm_done)
 
         print("[COMMAND][PUT][DONE in {:0>8}s][{} items]".format(
-            str(timedelta(seconds=time()-command_start))),
+            str(timedelta(seconds=time()-command_start)),
             tot_elm_done
-        )
+        ))
 
 
 if __name__ == "__main__":
