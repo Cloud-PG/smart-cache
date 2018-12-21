@@ -109,6 +109,7 @@ def cli_main():
                         tot_elm_done = put_bucket(dest, bucket, tot_elm_done)
                         bucket = []
             else:
+                tot_elm_done += 1
                 print("[COMMAND][PUT][SKIP][index {}]".format(idx), end="\r")
 
         if len(bucket) != 0:
