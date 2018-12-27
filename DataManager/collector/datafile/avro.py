@@ -40,12 +40,11 @@ class AvroDataFileReader(object):
             list or dict: a dictionary or a list of dictionary
 
         """
-        assert type(idx) == int or type(
-            idx) == slice, "Index Could be an integer or a slice"
+        assert isinstance(idx, [int, slice]), "Index Could be an integer or a slice"
 
         self.__avro_file = DataFileReader(self.__descriptor, DatumReader())
 
-        if type(idx) is slice:
+        if isinstance(idx, slice):
             to_extract = [elm for elm in gen_increasing_slice(idx)]
         else:
             to_extract = [idx]
@@ -66,7 +65,7 @@ class AvroDataFileReader(object):
                 results.append(cur_elm)
                 to_extract.pop(0)
 
-        if type(idx) is slice:
+        if isinstance(idx, slice):
             if idx.start is not None and idx.stop is not None and idx.start > idx.stop:
                 return list(reversed(results))
             return results

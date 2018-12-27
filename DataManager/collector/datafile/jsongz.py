@@ -68,13 +68,13 @@ class JSONGzDataFileWriter(object):
             JSONGzDataFileWriter: this object instance
 
         """
-        if type(data) == str:
+        if isinstance(data, str):
             if self.__valid_json(data):
                 self.__write(data)
-        elif type(data) == dict:
+        elif isinstance(data, dict):
             self.__write(simplejson.dumps(data))
-        elif type(data) == list:
-            if all(type(elm) == dict for elm in data):
+        elif isinstance(data, list):
+            if all(isinstance(elm, dict) for elm in data):
                 for elm in data:
                     self.__write(simplejson.dumps(elm))
             elif all(self.__valid_json(elm) for elm in data):
@@ -173,12 +173,11 @@ class JSONGzDataFileReader(object):
                           of converted JSON objects
 
         """
-        assert type(idx) == int or type(
-            idx) == slice, "Index Could be an integer or a slice"
+        assert isinstance(idx, [int, slice]), "Index Could be an integer or a slice"
 
         self.__descriptor.seek(0)
 
-        if type(idx) is slice:
+        if isinstance(idx, slice):
             to_extract = (elm for elm in gen_increasing_slice(idx))
         else:
             to_extract = [idx]
@@ -202,7 +201,7 @@ class JSONGzDataFileReader(object):
                     results.append(last_obj)
                     break
 
-        if type(idx) is slice:
+        if isinstance(idx, slice):
             if idx.start is not None and idx.stop is not None and idx.start > idx.stop:
                 return list(reversed(results))
             return results

@@ -23,7 +23,7 @@ class ElasticSearchHttp(object):
 
         urllib3.disable_warnings()
 
-        if type(data) == list:
+        if isinstance(data, list):
             all_objects = [simplejson.dumps(elm) for elm in data]
             all_object_ids = [
                 simplejson.dumps(
