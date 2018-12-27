@@ -1,5 +1,5 @@
 import hashlib
-import simplejson
+import json
 
 import requests
 import urllib3
@@ -24,9 +24,9 @@ class ElasticSearchHttp(object):
         urllib3.disable_warnings()
 
         if isinstance(data, list):
-            all_objects = [simplejson.dumps(elm) for elm in data]
+            all_objects = [json.dumps(elm) for elm in data]
             all_object_ids = [
-                simplejson.dumps(
+                json.dumps(
                     {"index": {"_id": self.__gen_id(elm)}}
                 )
                 for elm in all_objects
@@ -44,7 +44,7 @@ class ElasticSearchHttp(object):
                 verify=False
             )
         else:
-            json_data = simplejson.dumps(data)
+            json_data = json.dumps(data)
             id_data = self.__gen_id(json_data)
 
             res = requests.put(
