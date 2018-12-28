@@ -1,13 +1,12 @@
-import gzip
 import json
 from string import whitespace
 
-from .utils import gen_increasing_slice
+from .utils import gen_increasing_slice, get_stream
 
-__all__ = ['JSONGzDataFileReader', 'JSONGzDataFileWriter']
+__all__ = ['JSONDataFileReader', 'JSONDataFileWriter']
 
 
-class JSONGzDataFileWriter(object):
+class JSONDataFileWriter(object):
 
     """Write json.gz file."""
 
@@ -19,11 +18,11 @@ class JSONGzDataFileWriter(object):
             data (str, dict, list(str), list(dict)): initial data to be inserted
 
         Returns:
-            JSONGzDataFileWriter: the instance of this object
+            JSONDataFileWriter: the instance of this object
 
         """
         self.__filename = filename
-        self.__descriptor = gzip.open(self.__filename, "ab")
+        self.__descriptor = get_stream(self.__filename, "ab")
         if data is not None:
             self.append(data)
 
@@ -52,7 +51,7 @@ class JSONGzDataFileWriter(object):
             data (str): the JSON string to write
 
         Returns:
-            JSONGzDataFileWriter: this object instance
+            JSONDataFileWriter: this object instance
 
         """
         self.__descriptor.write(data.encode("utf-8") + b'\n')
@@ -65,7 +64,7 @@ class JSONGzDataFileWriter(object):
             data (str, dict, list(str), list(dict)): data to be inserted
 
         Returns:
-            JSONGzDataFileWriter: this object instance
+            JSONDataFileWriter: this object instance
 
         """
         if isinstance(data, str):
@@ -98,7 +97,7 @@ class JSONGzDataFileWriter(object):
         """Initialization for 'with' statement.
 
         Returns:
-            JSONGzDataFileWriter: this object instance
+            JSONDataFileWriter: this object instance
 
         """
         return self
@@ -108,7 +107,7 @@ class JSONGzDataFileWriter(object):
         self.__descriptor.close()
 
 
-class JSONGzDataFileReader(object):
+class JSONDataFileReader(object):
 
     """Read json.gz file with easy access to data."""
 
@@ -119,11 +118,11 @@ class JSONGzDataFileReader(object):
             filename (str): name of the json.gz file to open.
 
         Returns:
-            JSONGzDataFileReader: the instance of this object
+            JSONDataFileReader: the instance of this object
 
         """
         self.__filename = filename
-        self.__descriptor = gzip.open(self.__filename, "rb")
+        self.__descriptor = get_stream(self.__filename)
         self.__last_index = -1
         self.__last_index_pos = None
         self.__whitespaces = [elm.encode("utf-8") for elm in whitespace]
@@ -173,7 +172,8 @@ class JSONGzDataFileReader(object):
                           of converted JSON objects
 
         """
-        assert isinstance(idx, [int, slice]), "Index Could be an integer or a slice"
+        assert isinstance(
+            idx, (int, slice)), "Index Could be an integer or a slice"
 
         self.__descriptor.seek(0)
 
@@ -209,10 +209,10 @@ class JSONGzDataFileReader(object):
             return results.pop(0)
 
     def __iter__(self):
-        """Initialize the JSONGz reader iterator.
+        """Initialize the JSON reader iterator.
 
         Returns:
-            JSONGzDataFileReader: this object instance
+            JSONDataFileReader: this object instance
 
         """
         self.__descriptor.seek(0, 0)
@@ -243,7 +243,7 @@ class JSONGzDataFileReader(object):
         """Initialization for 'with' statement.
 
         Returns:
-            JSONGzDataFileReader: this object instance
+            JSONDataFileReader: this object instance
 
         """
         return self
@@ -256,18 +256,7 @@ class JSONGzDataFileReader(object):
 if __name__ == "__main__":
     ##
     # Test DataFileWriter
-    with JSONGzDataFileWriter("test.json.gz", ['{"a": 2}']) as data:
-        data.append(json.dumps({}))
-        data.append([json.dumps({})])
-        data.append([{}, {"a": 2}, {}])
+    
 
-    ##
-    # Test JSONGzDataFileReader
-    with JSONGzDataFileReader("test.json.gz") as data:
-        for obj in data:
-            print(obj)
-
-        print(data[0] == data[4])
-
-    for data_ in JSONGzDataFileReader("test.json.gz"):
+    for data_ in JSONDataFileReader("test.json.gz"):
         print(data_)

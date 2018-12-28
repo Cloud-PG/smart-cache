@@ -12,7 +12,7 @@ def cli_main():
         description='Data Manager Agent')
 
     cmd_subparsers = parser.add_subparsers(
-        title="jsongz commands", help="The library commands", dest="command")
+        title="json commands", help="The library commands", dest="command")
 
     subcmd_get = cmd_subparsers.add_parser(
         "get", help="Get a JSON from the source")

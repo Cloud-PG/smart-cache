@@ -1,7 +1,7 @@
 from os import path
 
 from ..datafile.avro import AvroDataFileReader
-from ..datafile.jsongz import JSONGzDataFileReader
+from ..datafile.json import JSONDataFileReader
 
 __all__ = ['DataFileInterface']
 
@@ -20,11 +20,16 @@ class DataFileInterface(object):
     def __get_collector(source):
         if path.isfile(source):
             filename, ext = path.splitext(source)
-            if ext == ".gz":
+            if ext == ".gz" or ext == ".bz2":
                 if path.splitext(filename)[1] == ".json":
-                    return JSONGzDataFileReader(source)
+                    return JSONDataFileReader(source)
+                else:
+                    raise Exception("Format {} is not supported...".format(
+                        path.splitext(filename)[1]))
             elif ext == ".avro":
                 return AvroDataFileReader(source)
+            else:
+                raise Exception("File type {} is not supported...".format(ext))
 
         raise Exception(
             "Collector for source:\n  -> '{}'\nis not yet implemented...".format(source))

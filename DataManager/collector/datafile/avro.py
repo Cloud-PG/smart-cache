@@ -40,7 +40,7 @@ class AvroDataFileReader(object):
             list or dict: a dictionary or a list of dictionary
 
         """
-        assert isinstance(idx, [int, slice]), "Index Could be an integer or a slice"
+        assert isinstance(idx, (int, slice)), "Index Could be an integer or a slice"
 
         self.__avro_file = DataFileReader(self.__descriptor, DatumReader())
 
@@ -73,7 +73,7 @@ class AvroDataFileReader(object):
             return results.pop(0)
 
     def __iter__(self):
-        """Initialize the JSONGz reader iterator.
+        """Initialize the Avro reader iterator.
 
         Returns:
             AvroDataFileReader: this object instance
@@ -84,10 +84,10 @@ class AvroDataFileReader(object):
         return self
 
     def __next__(self):
-        """Get the next JSON object (inside iteration).
+        """Get the next Avro object (inside iteration).
 
         Returns:
-            dict: The JSON object converted in a dictionary
+            dict: The avro object converted in a dictionary
 
         Raises:
             StopIteration: to end the iterator
