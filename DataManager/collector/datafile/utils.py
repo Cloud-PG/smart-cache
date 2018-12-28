@@ -29,6 +29,19 @@ def gen_increasing_slice(slice):
 
 
 def get_stream(filename, open_mode='rb'):
+    """Open a stream to write or read data.
+
+    Depending on the file requested it opens a different
+    file descriptor, such a gzip file or bzip file descriptor.
+
+    Args:
+        filename (str): the file to open
+        open_mode (str): the mode with which open the file
+
+    Returns:
+        file_descriptor
+
+    """
     body, ext_0 = path.splitext(filename)
     body, ext_1 = path.splitext(body)
     if ext_1 == '.json':
