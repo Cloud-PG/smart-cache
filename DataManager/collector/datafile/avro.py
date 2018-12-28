@@ -98,6 +98,8 @@ class AvroDataFileReader(object):
     def __del__(self):
         """Object destructor."""
         self.__avro_file.close()
+        if not self.__descriptor.closed:
+            self.__descriptor.close()
 
     def __enter__(self):
         """Initialization for 'with' statement.
