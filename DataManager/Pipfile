@@ -9,6 +9,7 @@ verify_ssl = true
 avro-python3 = "*"
 python-snappy = "*"
 requests = "*"
+snakebite = "*"
 
 [requires]
 python_version = "3"
