@@ -1,8 +1,80 @@
 import hashlib
 import json
+from os import path
 
 import requests
 import urllib3
+
+
+class HTTPFS(object):
+
+    def __init__(self, url, http_user=None, http_password=None, verify=False, allow_redirects=False, hadoop_user='root'):
+        self._server_url = url
+        self._http_user = http_user
+        self._http_password = http_password
+        self._verify = verify
+        self._allow_redirects = allow_redirects
+        self._api_url = "/webhdfs/v1"
+        self._hadoop_user = hadoop_user
+
+    def mkdirs(self, hdfs_path):
+        res = requests.put(
+            "{}{}{}".format(
+                self._server_url,
+                self._api_url,
+                hdfs_path
+            ),
+            params={
+                'op': "MKDIRS",
+                'user.name': self._hadoop_user
+            },
+            auth=(self._http_user, self._http_password),
+            verify=self._verify,
+            allow_redirects=self._allow_redirects
+        )
+        if res.status_code != 200:
+            raise Exception("Error on make folders:\n{}".format(res.text))
+
+    def create(self, hdfs_path, file_path, overwrite=False):
+        file_url = "{}{}{}".format(
+            self._server_url,
+            self._api_url,
+            hdfs_path
+        )
+        res = requests.put(
+            file_url,
+            params={
+                'op': "CREATE",
+                'user.name': self._hadoop_user,
+                'noredirect': True,
+                'overwrite': overwrite
+            },
+            auth=(self._http_user, self._http_password),
+            verify=self._verify,
+            allow_redirects=self._allow_redirects
+        )
+        if res.status_code not in [200, 201, 307]:
+            raise Exception("Error on create file:\n{}".format(res.text))
+        with open(file_path, 'rb') as file_:
+            res = requests.put(
+                file_url,
+                headers={
+                    'content-type': "application/octet-stream"
+                },
+                params={
+                    'op': "CREATE",
+                    'user.name': self._hadoop_user,
+                    'noredirect': True,
+                    'overwrite': overwrite,
+                    'data': True
+                },
+                auth=(self._http_user, self._http_password),
+                verify=self._verify,
+                allow_redirects=self._allow_redirects,
+                data=file_
+            )
+        if res.status_code not in [200, 201, 307]:
+            raise Exception("Error on upload file:\n{}".format(res.text))
 
 
 class ElasticSearchHttp(object):
