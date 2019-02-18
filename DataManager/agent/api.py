@@ -11,7 +11,22 @@ from yaspin import yaspin
 
 class HTTPFS(object):
 
+    """Hadoop httpfs interface."""
+
     def __init__(self, url, http_user=None, http_password=None, verify=False, allow_redirects=False, hadoop_user='root'):
+        """Init function httpfs interface.
+
+        Args:
+            http_user (str): http username
+            http_password (str): http password
+            verify (bool): verify the ssl certificate
+            allow_redirects (bool): allow request redirect
+            hadoop_user (str): hdfs user (default: root)
+
+        Returns:
+            HTTPFS: the instance of this object
+
+        """
         self._server_url = url
         self._http_user = http_user
         self._http_password = http_password
@@ -21,6 +36,15 @@ class HTTPFS(object):
         self._hadoop_user = hadoop_user
 
     def mkdirs(self, hdfs_path):
+        """Make directories in hadoop with httpfs.
+
+        Args:
+            hdfs_path (str): path to create
+
+        Returns:
+            bool: true if everything went ok
+
+        """
         res = requests.put(
             "{}{}{}".format(
                 self._server_url,
@@ -37,8 +61,19 @@ class HTTPFS(object):
         )
         if res.status_code != 200:
             raise Exception("Error on make folders:\n{}".format(res.text))
+        return res.json()['boolean']
 
     def liststatus(self, hdfs_path, print_list=False):
+        """List a directory in hadoop with httpfs.
+
+        Args:
+            hdfs_path (str): path to create
+            print_list (bool): if is necessary to print the list on stdout
+
+        Returns:
+            generator: (type, pathSuffix, full_hdfs_path) 
+
+        """
         res = requests.get(
             "{}{}{}".format(
                 self._server_url,
@@ -66,6 +101,15 @@ class HTTPFS(object):
             yield record['type'], record['pathSuffix'], path.join(hdfs_path, record['pathSuffix'])
 
     def delete(self, hdfs_path, recursive=True):
+        """Delete a specific path in hadoop with httpfs.
+
+        Args:
+            hdfs_path (str): path to delete
+
+        Returns:
+            bool: true if everything went ok
+
+        """
         res = requests.delete(
             "{}{}{}".format(
                 self._server_url,
@@ -87,6 +131,17 @@ class HTTPFS(object):
         return res.json()['boolean']
 
     def open(self, hdfs_path, noredirect=True, chunk_size=256):
+        """Open a file in hadoop with httpfs.
+
+        Args:
+            hdfs_path (str): path to create
+            noredirect (bool): not redirect the request
+            chunk_size (int): num of bytes read in a chunk
+
+        Returns:
+            io.BytesIO: the content of the file
+
+        """
         res = requests.get(
             "{}{}{}".format(
                 self._server_url,
@@ -115,6 +170,18 @@ class HTTPFS(object):
         return content
 
     def create(self, hdfs_path, file_path, overwrite=False, noredirect=True):
+        """Create a file in hadoop with httpfs.
+
+        Args:
+            hdfs_path (str): path to delete
+            file_path (str): the path of the file to write into hdfs
+            overwrite (bool): overwrite or not the file in hdfs
+            noredirect (bool): not redirect the request
+
+        Returns:
+            bool: true if everything went ok
+
+        """
         file_url = "{}{}{}".format(
             self._server_url,
             self._api_url,
@@ -156,6 +223,7 @@ class HTTPFS(object):
         if res.status_code not in [200, 201, 307]:
             raise Exception("Error on upload file:\n{}".format(
                 json.dumps(res.json(), indent=2)))
+        return True
 
 
 class ElasticSearchHttp(object):
