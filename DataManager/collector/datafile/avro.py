@@ -1,5 +1,6 @@
 from avro.datafile import DataFileReader
 from avro.io import DatumReader
+from io import BytesIO
 
 from .utils import gen_increasing_slice
 
@@ -10,18 +11,24 @@ class AvroDataFileReader(object):
 
     """Write avro file."""
 
-    def __init__(self, filename):
+    def __init__(self, file_):
         """Init function of data reader for .avro files.
 
         Args:
-            filename (str): name of the .avro file to read.
+            file_ (str): name of the .avro file to read.
 
         Returns:
             AvroDataFileReader: the instance of this object
 
         """
-        self.__filename = filename
-        self.__descriptor = open(filename, 'rb')
+        self.__descriptor = None
+        if isinstance(file_, str):
+            self.__descriptor = open(file_, 'rb')
+        elif isinstance(file_, BytesIO):
+            self.__descriptor = file_
+        else:
+            raise Exception(
+                "Type '{}' for file_ is not supported...".format(type(file_)))
         self.__avro_file = None
         self.__avro_iter = None
 
@@ -40,7 +47,8 @@ class AvroDataFileReader(object):
             list or dict: a dictionary or a list of dictionary
 
         """
-        assert isinstance(idx, (int, slice)), "Index Could be an integer or a slice"
+        assert isinstance(
+            idx, (int, slice)), "Index Could be an integer or a slice"
 
         self.__avro_file = DataFileReader(self.__descriptor, DatumReader())
 

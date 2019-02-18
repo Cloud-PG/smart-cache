@@ -1,9 +1,12 @@
 import hashlib
+import io
 import json
 from os import path
 
 import requests
 import urllib3
+
+from yaspin import yaspin
 
 
 class HTTPFS(object):
@@ -63,7 +66,7 @@ class HTTPFS(object):
             yield record['type'], record['pathSuffix'], path.join(hdfs_path, record['pathSuffix'])
 
     def delete(self, hdfs_path, recursive=True):
-        res = requests.get(
+        res = requests.delete(
             "{}{}{}".format(
                 self._server_url,
                 self._api_url,
@@ -81,8 +84,35 @@ class HTTPFS(object):
         if res.status_code != 200:
             raise Exception("Error on delete path '{}':\n{}".format(
                 hdfs_path, json.dumps(res.json(), indent=2)))
-
         return res.json()['boolean']
+
+    def open(self, hdfs_path, noredirect=True, chunk_size=256):
+        res = requests.get(
+            "{}{}{}".format(
+                self._server_url,
+                self._api_url,
+                hdfs_path
+            ),
+            params={
+                'op': "OPEN",
+                'user.name': self._hadoop_user,
+                'noredirect': noredirect,
+            },
+            auth=(self._http_user, self._http_password),
+            verify=self._verify,
+            allow_redirects=self._allow_redirects,
+            stream=True
+        )
+        if res.status_code != 200:
+            raise Exception("Error on open file '{}':\n{}".format(
+                hdfs_path, json.dumps(res.json(), indent=2)))
+
+        content = io.BytesIO()
+        with yaspin(text="Opening file {}...".format(hdfs_path)) as spinner:
+            for chunk in res.iter_content(chunk_size):
+                content.write(chunk)
+        content.seek(0)
+        return content
 
     def create(self, hdfs_path, file_path, overwrite=False, noredirect=True):
         file_url = "{}{}{}".format(

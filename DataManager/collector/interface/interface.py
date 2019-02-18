@@ -1,3 +1,4 @@
+from io import BytesIO
 from os import path
 
 from ..datafile.avro import AvroDataFileReader
@@ -18,7 +19,14 @@ class DataFileInterface(object):
 
     @staticmethod
     def __get_collector(source):
-        if path.isfile(source):
+        if isinstance(source, BytesIO):
+            tmp = source.read(100).decode("utf-8", errors="ignore")
+            source.seek(0)
+            if tmp.find("avro.schema") != -1:
+                return AvroDataFileReader(source)
+            else:
+                return JSONDataFileReader(source)
+        elif path.isfile(source):
             filename, ext = path.splitext(source)
             if ext == ".gz" or ext == ".bz2":
                 if path.splitext(filename)[1] == ".json":
