@@ -62,7 +62,29 @@ class HTTPFS(object):
         for record in res['FileStatuses']['FileStatus']:
             yield record['type'], record['pathSuffix'], path.join(hdfs_path, record['pathSuffix'])
 
-    def create(self, hdfs_path, file_path, overwrite=False):
+    def delete(self, hdfs_path, recursive=True):
+        res = requests.get(
+            "{}{}{}".format(
+                self._server_url,
+                self._api_url,
+                hdfs_path
+            ),
+            params={
+                'op': "DELETE",
+                'user.name': self._hadoop_user,
+                'recursive': recursive
+            },
+            auth=(self._http_user, self._http_password),
+            verify=self._verify,
+            allow_redirects=self._allow_redirects
+        )
+        if res.status_code != 200:
+            raise Exception("Error on delete path '{}':\n{}".format(
+                hdfs_path, json.dumps(res.json(), indent=2)))
+
+        return res.json()['boolean']
+
+    def create(self, hdfs_path, file_path, overwrite=False, noredirect=True):
         file_url = "{}{}{}".format(
             self._server_url,
             self._api_url,
@@ -73,7 +95,7 @@ class HTTPFS(object):
             params={
                 'op': "CREATE",
                 'user.name': self._hadoop_user,
-                'noredirect': True,
+                'noredirect': noredirect,
                 'overwrite': overwrite
             },
             auth=(self._http_user, self._http_password),
@@ -92,7 +114,7 @@ class HTTPFS(object):
                 params={
                     'op': "CREATE",
                     'user.name': self._hadoop_user,
-                    'noredirect': True,
+                    'noredirect': noredirect,
                     'overwrite': overwrite,
                     'data': True
                 },
