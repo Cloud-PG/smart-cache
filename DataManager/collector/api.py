@@ -1,13 +1,13 @@
 from io import BytesIO
 from os import path
 
-from ..datafile.avro import AvroDataFileReader
-from ..datafile.json import JSONDataFileReader
+from .datafile.avro import AvroDataFileReader
+from .datafile.json import JSONDataFileReader
 
-__all__ = ['DataFileInterface']
+__all__ = ['DataFile']
 
 
-class DataFileInterface(object):
+class DataFile(object):
 
     """Interface for file access."""
 
@@ -50,10 +50,10 @@ class DataFileInterface(object):
         return self.__data_collector[idx]
 
     def __iter__(self):
-        """Initialize the DataFileInterface reader iterator.
+        """Initialize the DataFile reader iterator.
 
         Returns:
-            DataFileInterface: this object instance
+            DataFile: this object instance
 
         """
         self.__iter = iter(self.__data_collector)
