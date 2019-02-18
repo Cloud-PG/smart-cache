@@ -35,6 +35,33 @@ class HTTPFS(object):
         if res.status_code != 200:
             raise Exception("Error on make folders:\n{}".format(res.text))
 
+    def liststatus(self, hdfs_path, print_list=False):
+        res = requests.get(
+            "{}{}{}".format(
+                self._server_url,
+                self._api_url,
+                hdfs_path
+            ),
+            params={
+                'op': "LISTSTATUS",
+                'user.name': self._hadoop_user
+            },
+            auth=(self._http_user, self._http_password),
+            verify=self._verify,
+            allow_redirects=self._allow_redirects
+        )
+        if res.status_code != 200:
+            raise Exception("Error on liststatus of folder '{}':\n{}".format(
+                hdfs_path, json.dumps(res.json(), indent=2)))
+        res = res.json()
+        if print_list:
+            print("### hdfs path: {} ###".format(hdfs_path))
+            for record in res['FileStatuses']['FileStatus']:
+                print("-[{}] {}".format(record['type'], record['pathSuffix']))
+        # Generator
+        for record in res['FileStatuses']['FileStatus']:
+            yield record['type'], record['pathSuffix'], path.join(hdfs_path, record['pathSuffix'])
+
     def create(self, hdfs_path, file_path, overwrite=False):
         file_url = "{}{}{}".format(
             self._server_url,
@@ -54,7 +81,8 @@ class HTTPFS(object):
             allow_redirects=self._allow_redirects
         )
         if res.status_code not in [200, 201, 307]:
-            raise Exception("Error on create file:\n{}".format(res.text))
+            raise Exception("Error on create file:\n{}".format(
+                json.dumps(res.json(), indent=2)))
         with open(file_path, 'rb') as file_:
             res = requests.put(
                 file_url,
@@ -74,7 +102,8 @@ class HTTPFS(object):
                 data=file_
             )
         if res.status_code not in [200, 201, 307]:
-            raise Exception("Error on upload file:\n{}".format(res.text))
+            raise Exception("Error on upload file:\n{}".format(
+                json.dumps(res.json(), indent=2)))
 
 
 class ElasticSearchHttp(object):
