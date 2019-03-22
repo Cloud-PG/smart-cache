@@ -1,9 +1,10 @@
 avro-python3==1.8.2
-certifi==2018.11.29
+certifi==2019.3.9
 chardet==3.0.4
 idna==2.8
-protobuf==3.6.1
-python-snappy==0.5.3
+numpy==1.16.2
+protobuf==3.7.0
+python-snappy==0.5.4
 requests==2.21.0
 six==1.12.0
 snakebite==2.11.0
