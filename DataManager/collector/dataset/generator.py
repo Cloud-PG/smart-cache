@@ -32,7 +32,7 @@ class CMSDatasetV0(object):
                 tmp[id_] += record
         return len(records), tmp
 
-    def extract(self, from_, to_, chunksize=10000, ui_update_time=2):
+    def extract(self, from_, to_, chunksize=16000, ui_update_time=2):
         f_year, f_month, f_day = [int(elm) for elm in from_.split()]
         t_year, t_month, t_day = [int(elm) for elm in to_.split()]
 
@@ -48,23 +48,25 @@ class CMSDatasetV0(object):
                         with yaspin(text="Starting extraction") as spinner:
                             start_time = time()
                             counter = 0
+                            partial_counter = 0
                             for num_parsed, result in pool.imap(self.to_cms_simple_record, collector.get_chunks(chunksize)):
                                 for record_id, record in result.items():
                                     if record_id not in records:
                                         records[record_id] = record
                                     else:
                                         records[record_id] += record
-                                counter += num_parsed
+                                partial_counter += num_parsed
+                                counter += partial_counter
 
                                 elapsed_time = time() - start_time
                                 if elapsed_time >= ui_update_time:
-                                    spinner.text = "[Year: {} | Month: {} | Day: {}][Parsed {} items | {:0.2f} it/s][{} records stored]".format(
-                                        year, month, day, num_parsed, float(counter/elapsed_time), len(records))
-                                    counter = 0
+                                    spinner.text = "[Year: {} | Month: {} | Day: {}][Parsed ~{} items | {:0.2f} it/s][{} records stored]".format(
+                                        year, month, day, counter, float(partial_counter/elapsed_time), len(records))
+                                    partial_counter = 0
                                     start_time = time()
 
                             spinner.text = "[Year: {} | Month: {} | Day: {}][parsed {} items][{} records stored]".format(
-                                year, month, day, idx, len(records))
+                                year, month, day, counter, len(records))
 
         if pool:
             pool.terminate()
