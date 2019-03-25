@@ -88,8 +88,9 @@ class CMSDataPopularity(FeatureData):
                 self.add_feature('process', process)
                 self.add_feature('file_type', file_type)
             except ValueError:
-                raise Exception(
+                print(
                     "Cannot extract features from '{}'".format(cur_file))
+                pass
 
     @property
     def record_id(self):
