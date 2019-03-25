@@ -25,7 +25,7 @@ class CMSDatasetV0(object):
         record = CMSSimpleRecord(cur_data.features)
         return cur_data.record_id, record
 
-    def extract(self, from_, to_, ui_update_time=2):
+    def extract(self, from_, to_, chunksize=100, ui_update_time=2):
         f_year, f_month, f_day = [int(elm) for elm in from_.split()]
         t_year, t_month, t_day = [int(elm) for elm in to_.split()]
 
@@ -40,17 +40,12 @@ class CMSDatasetV0(object):
                         collector = DataFile(cur_file)
                         with yaspin(text="Starting extraction") as spinner:
                             start_time = time()
-                            record_buffer = []
                             counter = 0
-                            for idx, (record_id, record) in enumerate(pool.imap_unordered(self.to_cms_simple_record, collector), 1):
-                                record_buffer.append((record_id, record))
-                                if len(record_buffer) > 1000:
-                                    for id_, obj in record_buffer:
-                                        if id_ not in records:
-                                            records[id_] = obj
-                                        else:
-                                            records[id_] += obj
-                                        record_buffer = []
+                            for idx, (record_id, record) in enumerate(pool.imap_unordered(self.to_cms_simple_record, collector, chunksize=chunksize), 1):
+                                if record_id not in records:
+                                    records[record_id] = record
+                                else:
+                                    records[record_id] += record
 
                                 elapsed_time = time() - start_time
                                 if elapsed_time >= ui_update_time:
@@ -59,13 +54,6 @@ class CMSDatasetV0(object):
                                         year, month, day, idx, float(counter/elapsed_time), len(records))
                                     counter = idx
                                     start_time = time()
-
-                            for id_, obj in record_buffer:
-                                if id_ not in records:
-                                    records[id_] = obj
-                                else:
-                                    records[id_] += obj
-                                record_buffer = []
 
                             spinner.text = "[Year: {} | Month: {} | Day: {}][parsed {} items][{} records stored]".format(
                                 year, month, day, idx, len(records))
