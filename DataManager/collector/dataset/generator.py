@@ -32,8 +32,6 @@ class CMSDatasetV0(object):
                 cur_data.TaskMonitorId)
             tmp[cur_data.record_id].update_tot_wrap_cpu(
                 float(cur_data.WrapCPU))
-        print("\n\nDONE {} and {} records found\n\n".format(len(records), len(tmp)))
-        sys.stdout.flush()
         return tmp
 
     def extract(self, from_, to_, ui_update_time=2, multiprocess=True, chunksize=10000):
@@ -41,6 +39,7 @@ class CMSDatasetV0(object):
         t_year, t_month, t_day = [int(elm) for elm in to_.split()]
 
         records = {}
+        pool = None
 
         for year in range(f_year, t_year + 1):
             for month in range(f_month, t_month + 1):
@@ -49,10 +48,11 @@ class CMSDatasetV0(object):
                         cur_file = self._httpfs.open(fullpath)
                         with yaspin(text="Starting extraction") as spinner:
                             if multiprocess:
+                                if not pool:
+                                    pool = Pool()
                                 collector = DataFile(cur_file)
                                 spinner.text = "[Year: {} | Month: {} | Day: {}][{} records stored]".format(
                                     year, month, day,  len(records))
-                                pool = Pool()
                                 results = pool.map(self.to_cms_simple_record, collector.get_chunks(chunksize))
                                 for result in results:
                                     for key, obj in result.items():
@@ -87,6 +87,9 @@ class CMSDatasetV0(object):
 
                                 spinner.text = "[Year: {} | Month: {} | Day: {}][parsed {} items][{} records stored]".format(
                                     year, month, day, idx, len(records))
+        
+        if pool:
+            pool.terminate()
 
         return records
 
