@@ -42,6 +42,16 @@ class DataFile(object):
         raise Exception(
             "Collector for source:\n  -> '{}'\nis not yet implemented...".format(source))
 
+    def get_chunks(self, chunksize=100):
+        tmp = []
+        for data in self.get_data():
+            tmp.append(data)
+            if len(tmp) == chunksize:
+                yield tmp
+                tmp = []
+        if len(tmp) != 0:
+            yield tmp
+
     def get_data(self):
         for data in self.__data_collector:
             yield data

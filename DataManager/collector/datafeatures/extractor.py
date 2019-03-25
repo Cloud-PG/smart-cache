@@ -35,12 +35,33 @@ class CMSSimpleRecord(FeatureData):
             self.add_feature(feature, value)
         self.__tasks = []
         self.__tot_wrap_cpu = 0.0
-    
+
     def to_dict(self):
         return {
             'features': self._features,
             'score': self.score
         }
+
+    def __add__(self, other):
+        tmp = CMSSimpleRecord(self.features)
+        for task in self.tasks + other.tasks:
+            tmp.add_task(task)
+        tmp.update_tot_wrap_cpu(self.tot_wrap_cpu + other.tot_wrap_cpu)
+        return tmp
+
+    def __iadd__(self, other):
+        for task in other.tasks:
+            self.add_task(task)
+        self.update_tot_wrap_cpu(other.tot_wrap_cpu)
+        return self
+
+    @property
+    def tasks(self):
+        return self.__tasks
+
+    @property
+    def tot_wrap_cpu(self):
+        return self.__tot_wrap_cpu
 
     @property
     def score(self):
