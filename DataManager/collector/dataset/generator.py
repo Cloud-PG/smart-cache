@@ -34,7 +34,7 @@ class CMSDatasetV0(object):
                 float(cur_data.WrapCPU))
         return tmp
 
-    def extract(self, from_, to_, ui_update_time=2, multiprocess=True, chunksize=10000):
+    def extract(self, from_, to_, ui_update_time=2, multiprocess=True, chunksize=100):
         f_year, f_month, f_day = [int(elm) for elm in from_.split()]
         t_year, t_month, t_day = [int(elm) for elm in to_.split()]
 
