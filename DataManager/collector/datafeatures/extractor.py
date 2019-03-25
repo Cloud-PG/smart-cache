@@ -51,7 +51,7 @@ class CMSSimpleRecord(FeatureData):
             self.__tasks.append(task)
         return self
 
-    def update_tot_wrap_cpu(self, value):
+    def update_tot_wrap_cpu(self, value: float):
         self.__tot_wrap_cpu += value
 
     @property
