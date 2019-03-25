@@ -20,26 +20,17 @@ class CMSDatasetV0(object):
         self._httpfs = HTTPFS(httpfs_url, httpfs_user, httpfs_password)
 
     @staticmethod
-    def to_cms_simple_record(records):
-        tmp = {}
-        for data in records:
-            cur_data = CMSDataPopularity(data)
-            if cur_data.record_id not in tmp:
-                tmp[cur_data.record_id] = CMSSimpleRecord(
-                    cur_data.features)
+    def to_cms_simple_record(data):
+        cur_data = CMSDataPopularity(data)
+        record = CMSSimpleRecord(cur_data.features)
+        return cur_data.record_id, record
 
-            tmp[cur_data.record_id].add_task(
-                cur_data.TaskMonitorId)
-            tmp[cur_data.record_id].update_tot_wrap_cpu(
-                float(cur_data.WrapCPU))
-        return tmp
-
-    def extract(self, from_, to_, ui_update_time=2, multiprocess=False, chunksize=100):
+    def extract(self, from_, to_, ui_update_time=2):
         f_year, f_month, f_day = [int(elm) for elm in from_.split()]
         t_year, t_month, t_day = [int(elm) for elm in to_.split()]
 
         records = {}
-        pool = None
+        pool = Pool()
 
         for year in range(f_year, t_year + 1):
             for month in range(f_month, t_month + 1):
@@ -48,45 +39,24 @@ class CMSDatasetV0(object):
                         cur_file = self._httpfs.open(fullpath)
                         collector = DataFile(cur_file)
                         with yaspin(text="Starting extraction") as spinner:
-                            if multiprocess:
-                                if not pool:
-                                    pool = Pool()
-                                spinner.text = "[Year: {} | Month: {} | Day: {}][{} records stored]".format(
-                                    year, month, day,  len(records))
-                                results = pool.map(self.to_cms_simple_record, collector.get_chunks(chunksize))
-                                for result in results:
-                                    for key, obj in result.items():
-                                        if key not in records:
-                                            records[key] = obj
-                                        else:
-                                            records[key] += obj
-                                
-                                spinner.text = "[Year: {} | Month: {} | Day: {}][{} records stored]".format(
-                                    year, month, day,  len(records))
-                            else:
-                                start_time = time()
-                                counter = 0
-                                for idx, data in enumerate(collector, 1):
-                                    cur_data = CMSDataPopularity(data)
-                                    if cur_data.record_id not in records:
-                                        records[cur_data.record_id] = CMSSimpleRecord(
-                                            cur_data.features)
+                            start_time = time()
+                            counter = 0
+                            for idx, (record_id, record) in enumerate(pool.imap(self.to_cms_simple_record, collector), 1):
+                                if record_id not in records:
+                                    records[record_id] = record
+                                else:
+                                    records[record_id] += record
 
-                                    records[cur_data.record_id].add_task(
-                                        cur_data.TaskMonitorId)
-                                    records[cur_data.record_id].update_tot_wrap_cpu(
-                                        float(cur_data.WrapCPU))
+                                elapsed_time = time() - start_time
+                                if elapsed_time >= ui_update_time:
+                                    counter = idx - counter
+                                    spinner.text = "[Year: {} | Month: {} | Day: {}][Parsed {} items | {:0.2f} it/s][{} records stored]".format(
+                                        year, month, day, idx, float(counter/elapsed_time), len(records))
+                                    counter = idx
+                                    start_time = time()
 
-                                    elapsed_time = time() - start_time
-                                    if elapsed_time >= ui_update_time:
-                                        counter = idx - counter
-                                        spinner.text = "[Year: {} | Month: {} | Day: {}][Parsed {} items | {:0.2f} it/s][{} records stored]".format(
-                                            year, month, day, idx, float(counter/elapsed_time), len(records))
-                                        counter = idx
-                                        start_time = time()
-
-                                spinner.text = "[Year: {} | Month: {} | Day: {}][parsed {} items][{} records stored]".format(
-                                    year, month, day, idx, len(records))
+                            spinner.text = "[Year: {} | Month: {} | Day: {}][parsed {} items][{} records stored]".format(
+                                year, month, day, idx, len(records))
         
         if pool:
             pool.terminate()
