@@ -46,11 +46,11 @@ class CMSDatasetV0(object):
                 for day in range(f_day, t_day + 1):
                     for type_, name, fullpath in self._httpfs.liststatus("/project/awg/cms/jm-data-popularity/avro-snappy/year={}/month={}/day={}".format(year, month, day)):
                         cur_file = self._httpfs.open(fullpath)
+                        collector = DataFile(cur_file)
                         with yaspin(text="Starting extraction") as spinner:
                             if multiprocess:
                                 if not pool:
                                     pool = Pool()
-                                collector = DataFile(cur_file)
                                 spinner.text = "[Year: {} | Month: {} | Day: {}][{} records stored]".format(
                                     year, month, day,  len(records))
                                 results = pool.map(self.to_cms_simple_record, collector.get_chunks(chunksize))
