@@ -20,12 +20,19 @@ class CMSDatasetV0(object):
         self._httpfs = HTTPFS(httpfs_url, httpfs_user, httpfs_password)
 
     @staticmethod
-    def to_cms_simple_record(data):
-        cur_data = CMSDataPopularity(data)
-        record = CMSSimpleRecord(cur_data.features)
-        return cur_data.record_id, record
+    def to_cms_simple_record(records):
+        tmp = {}
+        for data in records:
+            cur_data = CMSDataPopularity(data)
+            record = CMSSimpleRecord(cur_data.features)
+            id_ = cur_data.record_id
+            if id_ not in tmp:
+                tmp[id_] = record
+            else:
+                tmp[id_] += record
+        return len(records), tmp
 
-    def extract(self, from_, to_, chunksize=100, ui_update_time=2):
+    def extract(self, from_, to_, chunksize=1000, ui_update_time=2):
         f_year, f_month, f_day = [int(elm) for elm in from_.split()]
         t_year, t_month, t_day = [int(elm) for elm in to_.split()]
 
@@ -41,18 +48,19 @@ class CMSDatasetV0(object):
                         with yaspin(text="Starting extraction") as spinner:
                             start_time = time()
                             counter = 0
-                            for idx, (record_id, record) in enumerate(pool.imap_unordered(self.to_cms_simple_record, collector, chunksize=chunksize), 1):
-                                if record_id not in records:
-                                    records[record_id] = record
-                                else:
-                                    records[record_id] += record
+                            for num_parsed, result in pool.imap(self.to_cms_simple_record, collector.get_chunks(chunksize)):
+                                for record_id, record in result.items():
+                                    if record_id not in records:
+                                        records[record_id] = record
+                                    else:
+                                        records[record_id] += record
+                                counter += num_parsed
 
                                 elapsed_time = time() - start_time
                                 if elapsed_time >= ui_update_time:
-                                    counter = idx - counter
                                     spinner.text = "[Year: {} | Month: {} | Day: {}][Parsed {} items | {:0.2f} it/s][{} records stored]".format(
-                                        year, month, day, idx, float(counter/elapsed_time), len(records))
-                                    counter = idx
+                                        year, month, day, num_parsed, float(counter/elapsed_time), len(records))
+                                    counter = 0
                                     start_time = time()
 
                             spinner.text = "[Year: {} | Month: {} | Day: {}][parsed {} items][{} records stored]".format(
