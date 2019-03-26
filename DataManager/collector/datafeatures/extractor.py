@@ -90,7 +90,11 @@ class CMSDataPopularity(FeatureData):
         super(CMSDataPopularity, self).__init__()
         self.__data = data
         self.__record_id = None
+        self.__valid = False
         self.__extract_features()
+
+    def __bool__(self):
+        return self.__valid
 
     def __getattr__(self, name):
         if name in self.__data:
@@ -108,6 +112,7 @@ class CMSDataPopularity(FeatureData):
                 self.add_feature('campain', campain)
                 self.add_feature('process', process)
                 self.add_feature('file_type', file_type)
+                self.__valid = True
             except ValueError:
                 print(
                     "Cannot extract features from '{}'".format(cur_file))

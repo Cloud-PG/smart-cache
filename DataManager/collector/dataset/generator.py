@@ -24,15 +24,16 @@ class CMSDatasetV0(object):
         tmp = {}
         for data in records:
             cur_data = CMSDataPopularity(data)
-            record = CMSSimpleRecord(cur_data.features)
-            id_ = cur_data.record_id
-            if id_ not in tmp:
-                tmp[id_] = record
-            else:
-                tmp[id_] += record
+            if cur_data:
+                record = CMSSimpleRecord(cur_data.features)
+                id_ = cur_data.record_id
+                if id_ not in tmp:
+                    tmp[id_] = record
+                else:
+                    tmp[id_] += record
         return len(records), tmp
 
-    def extract(self, from_, to_, chunksize=16000, ui_update_time=2):
+    def extract(self, from_, to_, chunksize=5000, ui_update_time=1):
         f_year, f_month, f_day = [int(elm) for elm in from_.split()]
         t_year, t_month, t_day = [int(elm) for elm in to_.split()]
 
