@@ -33,12 +33,12 @@ class CMSDatasetV0(object):
                     tmp[id_] += record
         return len(records), tmp
 
-    def extract(self, from_, to_, chunksize=5000, ui_update_time=1):
+    def extract(self, from_, to_, chunksize=1000, n_processes=2, ui_update_time=1):
         f_year, f_month, f_day = [int(elm) for elm in from_.split()]
         t_year, t_month, t_day = [int(elm) for elm in to_.split()]
 
         records = {}
-        pool = Pool()
+        pool = Pool(processes=n_processes)
 
         for year in range(f_year, t_year + 1):
             for month in range(f_month, t_month + 1):
