@@ -29,12 +29,21 @@ class FeatureData(object):
 
 class CMSSimpleRecord(FeatureData):
 
-    def __init__(self, features):
+    def __init__(self, data):
         super(CMSSimpleRecord, self).__init__()
-        for feature, value in features:
-            self.add_feature(feature, value)
         self.__tasks = []
         self.__tot_wrap_cpu = 0.0
+        self.__record_id = None
+
+        if isinstance(data, CMSDataPopularity):
+            for feature, value in data.features:
+                self.add_feature(feature, value)
+            self.add_task(data.TaskMonitorId)
+            self.add_wrap_cpu(float(data.WrapCPU))
+            assert self.record_id == data.record_id, "record id doesn't match..."
+        else:
+            for feature, value in data:
+                self.add_feature(feature, value)
 
     def to_dict(self):
         return {
@@ -46,13 +55,13 @@ class CMSSimpleRecord(FeatureData):
         tmp = CMSSimpleRecord(self.features)
         for task in self.tasks + other.tasks:
             tmp.add_task(task)
-        tmp.update_tot_wrap_cpu(self.tot_wrap_cpu + other.tot_wrap_cpu)
+        tmp.add_wrap_cpu(self.tot_wrap_cpu + other.tot_wrap_cpu)
         return tmp
 
     def __iadd__(self, other):
         for task in other.tasks:
             self.add_task(task)
-        self.update_tot_wrap_cpu(other.tot_wrap_cpu)
+        self.add_wrap_cpu(other.tot_wrap_cpu)
         return self
 
     @property
@@ -72,7 +81,7 @@ class CMSSimpleRecord(FeatureData):
             self.__tasks.append(task)
         return self
 
-    def update_tot_wrap_cpu(self, value: float):
+    def add_wrap_cpu(self, value: float):
         self.__tot_wrap_cpu += value
 
     @property

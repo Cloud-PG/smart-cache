@@ -25,7 +25,7 @@ class CMSDatasetV0(object):
         for data in records:
             cur_data = CMSDataPopularity(data)
             if cur_data:
-                record = CMSSimpleRecord(cur_data.features)
+                record = CMSSimpleRecord(cur_data)
                 id_ = cur_data.record_id
                 if id_ not in tmp:
                     tmp[id_] = record
