@@ -61,12 +61,15 @@ class CMSSimpleRecord(FeatureData):
         for task in self.tasks + other.tasks:
             tmp.add_task(task)
         tmp.add_wrap_cpu(self.tot_wrap_cpu + other.tot_wrap_cpu)
+        tmp.add_next_window_counter(*self.next_window_counter)
+        tmp.add_next_window_counter(*other.next_window_counter)
         return tmp
 
     def __iadd__(self, other):
         for task in other.tasks:
             self.add_task(task)
         self.add_wrap_cpu(other.tot_wrap_cpu)
+        self.add_next_window_counter(*other.next_window_counter)
         return self
 
     def __repr__(self):
@@ -79,6 +82,10 @@ class CMSSimpleRecord(FeatureData):
     @property
     def tot_wrap_cpu(self):
         return self.__tot_wrap_cpu
+    
+    @property
+    def next_window_counter(self):
+        return self.__next_window_counter
 
     @property
     def score(self):
@@ -95,6 +102,10 @@ class CMSSimpleRecord(FeatureData):
 
     def add_wrap_cpu(self, value: float):
         self.__tot_wrap_cpu += value
+
+    def add_next_window_counter(self, true_values: int=0, false_values: int=0):
+        self.__next_window_counter[0] += true_values
+        self.__next_window_counter[1] += false_values
 
     @property
     def record_id(self):
