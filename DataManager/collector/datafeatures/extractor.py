@@ -45,10 +45,6 @@ class CMSSimpleRecord(FeatureData):
                 self.__next_window_counter[0] += 1
             else:
                 self.__next_window_counter[1] += 1
-            print(str(list(self.features)).encode("utf-8"))
-            print(self.record_id)
-            print(str(list(data.features)).encode("utf-8"))
-            print(data.record_id)
             assert self.record_id == data.record_id, "record id doesn't match..."
         else:
             for feature, value in data:
