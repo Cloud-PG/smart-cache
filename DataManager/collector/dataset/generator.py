@@ -73,16 +73,24 @@ class CMSDatasetV0(object):
             cur_file = self._httpfs.open(fullpath)
             with yaspin(text="Starting raw data extraction of {}".format(fullpath)) as spinner:
                 collector = DataFile(cur_file)
+                start_time = time()
+                counter = 0
                 for idx, record in enumerate(collector, 1):
-                    spinner.text = "Extracted {} records".format(idx)
                     obj = CMSDataPopularityRaw(record)
                     if not only_indexes:
                         tmp_data.append(obj)
                     if obj.record_id not in tmp_indexes:
                         tmp_indexes.append(obj.record_id)
+                    time_delta = time() - start_time
+                    if time_delta >= 1.0:
+                        counter_delta = idx - counter
+                        counter = idx
+                        spinner.text = "[{:0.2f} it/s][Extracted {} records from {}]".format(
+                            counter_delta / time_delta, idx, fullpath)
+                        start_time = time()
         return tmp_data, set(tmp_indexes)
 
-    def extract(self, start_date, window_size, chunksize=1000, n_processes=2, ui_update_time=1):
+    def extract(self, start_date, window_size):
         start_year, start_month, start_day = [
             int(elm) for elm in start_date.split()]
 
