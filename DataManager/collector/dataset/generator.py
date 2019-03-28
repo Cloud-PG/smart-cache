@@ -25,20 +25,6 @@ class CMSDatasetV0(object):
         self._httpfs = HTTPFS(httpfs_url, httpfs_user, httpfs_password)
 
     @staticmethod
-    def to_cms_simple_record(records):
-        tmp = {}
-        for data in records:
-            cur_data = CMSDataPopularity(data)
-            if cur_data:
-                record = CMSSimpleRecord(cur_data)
-                id_ = cur_data.record_id
-                if id_ not in tmp:
-                    tmp[id_] = record
-                else:
-                    tmp[id_] += record
-        return len(records), tmp
-
-    @staticmethod
     def __gen_interval(year: int, month: int, day: int, window_size: int, step: int=1, next_week: bool=False):
         """Create date interval in the window view requested.
 
