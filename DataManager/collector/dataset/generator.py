@@ -93,7 +93,7 @@ class CMSDatasetV0(object):
         start_year, start_month, start_day = [
             int(elm) for elm in start_date.split()]
 
-        res_data = {}
+        res_data = OrderedDict()
         data = []
         indexes = set()
         next_indexes = set()
