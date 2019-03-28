@@ -1,14 +1,18 @@
 import json
+import sys
+from collections import OrderedDict
+from datetime import date, timedelta
+from multiprocessing import Pool
 from time import time
+
+from tqdm import tqdm
 
 from DataManager.agent.api import HTTPFS
 from DataManager.collector.api import DataFile
 from DataManager.collector.datafeatures.extractor import (CMSDataPopularity,
+                                                          CMSDataPopularityRaw,
                                                           CMSSimpleRecord)
 from yaspin import yaspin
-from multiprocessing import Pool
-import sys
-from datetime import timedelta, date
 
 
 class CMSDatasetV0(object):
@@ -62,53 +66,56 @@ class CMSDatasetV0(object):
             yield (start_date.year, start_date.month, start_date.day)
             start_date += window_step
 
-    def extract(self, from_, window_size, chunksize=1000, n_processes=2, ui_update_time=1):
+    def get_raw_data(self, year, month, day, only_indexes=False):
+        tmp_data = []
+        tmp_indexes = []
+        for type_, name, fullpath in self._httpfs.liststatus("/project/awg/cms/jm-data-popularity/avro-snappy/year={}/month={}/day={}".format(year, month, day)):
+            cur_file = self._httpfs.open(fullpath)
+            with yaspin(text="Starting raw data extraction of {}".format(fullpath)) as spinner:
+                collector = DataFile(cur_file)
+                for idx, record in enumerate(collector, 1):
+                    spinner.text = "Extracted {} records".format(idx)
+                    obj = CMSDataPopularityRaw(record)
+                    if not only_indexes:
+                        tmp_data.append(obj)
+                    if obj.record_id not in tmp_indexes:
+                        tmp_indexes.append(obj.record_id)
+                    break
+        return tmp_data, set(tmp_indexes)
+
+    def extract(self, start_date, window_size, chunksize=1000, n_processes=2, ui_update_time=1):
         start_year, start_month, start_day = [
-            int(elm) for elm in from_.split()]
+            int(elm) for elm in start_date.split()]
+
+        res_data = {}
+        data = []
+        indexes = set()
+        next_indexes = set()
+
+        # Get raw data
         for year, month, day in self.__gen_interval(start_year, start_month, start_day, window_size):
-            print(year, month, day)
-        print("---")
+            new_data, new_indexes = self.get_raw_data(year, month, day)
+            data += new_data
+            indexes = indexes | new_indexes
+            break
+
         for year, month, day in self.__gen_interval(start_year, start_month, start_day, window_size, next_week=True):
-            print(year, month, day)
-        exit()
-        t_year, t_month, t_day = [int(elm) for elm in to_.split()]
+            _, new_indexes = self.get_raw_data(
+                year, month, day, only_indexes=True)
+            next_indexes = next_indexes | new_indexes
+            break
 
-        records = {}
-        pool = Pool(processes=n_processes)
+        indexes = indexes & next_indexes
 
-        for year in range(f_year, t_year + 1):
-            for month in range(f_month, t_month + 1):
-                for day in range(f_day, t_day + 1):
-                    for type_, name, fullpath in self._httpfs.liststatus("/project/awg/cms/jm-data-popularity/avro-snappy/year={}/month={}/day={}".format(year, month, day)):
-                        cur_file = self._httpfs.open(fullpath)
-                        collector = DataFile(cur_file)
-                        with yaspin(text="Starting extraction") as spinner:
-                            start_time = time()
-                            counter = 0
-                            partial_counter = 0
-                            for num_parsed, result in pool.imap(self.to_cms_simple_record, collector.get_chunks(chunksize)):
-                                for record_id, record in result.items():
-                                    if record_id not in records:
-                                        records[record_id] = record
-                                    else:
-                                        records[record_id] += record
-                                partial_counter += num_parsed
-                                counter += partial_counter
+        for idx, record in enumerate(tqdm(data)):
+            cur_data = CMSDataPopularity(record.data, indexes)
+            new_data = CMSSimpleRecord(cur_data)
+            if new_data.record_id not in res_data:
+                res_data[new_data.record_id] = new_data
+            else:
+                res_data[new_data.record_id] += new_data
 
-                                elapsed_time = time() - start_time
-                                if elapsed_time >= ui_update_time:
-                                    spinner.text = "[Year: {} | Month: {} | Day: {}][Parsed ~{} items | {:0.2f} it/s][{} records stored]".format(
-                                        year, month, day, counter, float(partial_counter/elapsed_time), len(records))
-                                    partial_counter = 0
-                                    start_time = time()
-
-                            spinner.text = "[Year: {} | Month: {} | Day: {}][parsed {} items][{} records stored]".format(
-                                year, month, day, counter, len(records))
-
-        if pool:
-            pool.terminate()
-
-        return records
+        return res_data
 
     def save(self, from_, to_, outfile_name=None):
         """Extract and save a dataset.

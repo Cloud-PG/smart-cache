@@ -12,6 +12,7 @@ requests = "*"
 snakebite = "*"
 yaspin = "*"
 numpy = "*"
+tqdm = "*"
 
 [requires]
 python_version = "3"

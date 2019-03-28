@@ -31,15 +31,24 @@ class CMSSimpleRecord(FeatureData):
 
     def __init__(self, data):
         super(CMSSimpleRecord, self).__init__()
-        self.__tasks = []
+        self.__tasks = set()
         self.__tot_wrap_cpu = 0.0
         self.__record_id = None
+        self.__next_window_counter = [0, 0]  # [True, False] counters
 
         if isinstance(data, CMSDataPopularity):
             for feature, value in data.features:
                 self.add_feature(feature, value)
             self.add_task(data.TaskMonitorId)
             self.add_wrap_cpu(float(data.WrapCPU))
+            if data.next_window:
+                self.__next_window_counter[0] += 1
+            else:
+                self.__next_window_counter[1] += 1
+            print(str(list(self.features)).encode("utf-8"))
+            print(self.record_id)
+            print(str(list(data.features)).encode("utf-8"))
+            print(data.record_id)
             assert self.record_id == data.record_id, "record id doesn't match..."
         else:
             for feature, value in data:
@@ -64,6 +73,9 @@ class CMSSimpleRecord(FeatureData):
         self.add_wrap_cpu(other.tot_wrap_cpu)
         return self
 
+    def __repr__(self):
+        return json.dumps(self.to_dict())
+
     @property
     def tasks(self):
         return self.__tasks
@@ -74,11 +86,15 @@ class CMSSimpleRecord(FeatureData):
 
     @property
     def score(self):
-        return self.__tot_wrap_cpu / len(self.__tasks)
+        try:
+            next_window_ratio = float(
+                self.__next_window_counter[0] / self.__next_window_counter[1])
+        except ZeroDivisionError:
+            next_window_ratio = 0.0
+        return float(self.__tot_wrap_cpu / len(self.__tasks)) * next_window_ratio
 
     def add_task(self, task):
-        if task not in self.__tasks:
-            self.__tasks.append(task)
+        self.__tasks = self.__tasks | set((task, ))
         return self
 
     def add_wrap_cpu(self, value: float):
@@ -88,18 +104,21 @@ class CMSSimpleRecord(FeatureData):
     def record_id(self):
         if self.__record_id is None:
             blake2s = hashlib.blake2s()
-            blake2s.update(str(self).encode("utf-8"))
+            blake2s.update(json.dumps(list(self.features)).encode("utf-8"))
             self.__record_id = blake2s.hexdigest()
         return self.__record_id
 
 
 class CMSDataPopularity(FeatureData):
 
-    def __init__(self, data):
+    def __init__(self, data, indexes=set()):
         super(CMSDataPopularity, self).__init__()
         self.__data = data
         self.__record_id = None
         self.__valid = False
+        self.__next_window = False
+        if self.__data.get('FileName') in indexes:
+            self.__next_window = True
         self.__extract_features()
 
     def __bool__(self):
@@ -128,9 +147,40 @@ class CMSDataPopularity(FeatureData):
                 pass
 
     @property
+    def next_window(self):
+        return self.__next_window
+
+    @property
     def record_id(self):
         if self.__record_id is None:
             blake2s = hashlib.blake2s()
             blake2s.update(str(self).encode("utf-8"))
             self.__record_id = blake2s.hexdigest()
         return self.__record_id
+
+
+class CMSDataPopularityRaw(FeatureData):
+
+    def __init__(self, data, feature_list=['FileName', 'TaskMonitorId', 'WrapCPU']):
+        super(CMSDataPopularityRaw, self).__init__()
+        self.__id = data[feature_list[0]]
+        for key, value in data.items():
+            if key in feature_list:
+                self.add_feature(key, value)
+
+    def __getattr__(self, name):
+        if name in self._features:
+            return self._features[name]
+        else:
+            raise AttributeError("Attribute '{}' not foud...".format(name))
+
+    @property
+    def record_id(self):
+        return self.__id
+
+    @property
+    def data(self):
+        return self._features
+
+    def __repr__(self):
+        return json.dumps(self._features)
