@@ -68,7 +68,7 @@ class CMSDatasetV0(object):
 
     def get_raw_data(self, year, month, day, only_indexes=False):
         tmp_data = []
-        tmp_indexes = []
+        tmp_indexes = set()
         for type_, name, fullpath in self._httpfs.liststatus("/project/awg/cms/jm-data-popularity/avro-snappy/year={}/month={}/day={}".format(year, month, day)):
             cur_file = self._httpfs.open(fullpath)
             with yaspin(text="Starting raw data extraction of {}".format(fullpath)) as spinner:
@@ -79,8 +79,7 @@ class CMSDatasetV0(object):
                     obj = CMSDataPopularityRaw(record)
                     if not only_indexes:
                         tmp_data.append(obj)
-                    if obj.record_id not in tmp_indexes:
-                        tmp_indexes.append(obj.record_id)
+                    tmp_indexes |= set((obj.FileName,))
                     time_delta = time() - start_time
                     if time_delta >= 1.0:
                         counter_delta = idx - counter
@@ -88,7 +87,7 @@ class CMSDatasetV0(object):
                         spinner.text = "[{:0.2f} it/s][Extracted {} records from {}]".format(
                             counter_delta / time_delta, idx, fullpath)
                         start_time = time()
-        return tmp_data, set(tmp_indexes)
+        return tmp_data, tmp_indexes
 
     def extract(self, start_date, window_size):
         start_year, start_month, start_day = [
