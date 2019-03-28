@@ -80,7 +80,6 @@ class CMSDatasetV0(object):
                         tmp_data.append(obj)
                     if obj.record_id not in tmp_indexes:
                         tmp_indexes.append(obj.record_id)
-                    break
         return tmp_data, set(tmp_indexes)
 
     def extract(self, start_date, window_size, chunksize=1000, n_processes=2, ui_update_time=1):
@@ -97,13 +96,11 @@ class CMSDatasetV0(object):
             new_data, new_indexes = self.get_raw_data(year, month, day)
             data += new_data
             indexes = indexes | new_indexes
-            break
 
         for year, month, day in self.__gen_interval(start_year, start_month, start_day, window_size, next_week=True):
             _, new_indexes = self.get_raw_data(
                 year, month, day, only_indexes=True)
             next_indexes = next_indexes | new_indexes
-            break
 
         indexes = indexes & next_indexes
 
