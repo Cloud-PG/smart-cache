@@ -12,7 +12,7 @@ requests = "*"
 snakebite = "*"
 yaspin = "*"
 numpy = "*"
-tinydb = "*"
+codernitydb = "*"
 
 [requires]
 python_version = "3"
