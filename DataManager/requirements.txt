@@ -1,7 +1,6 @@
 avro-python3==1.8.2
 certifi==2019.3.9
 chardet==3.0.4
-CodernityDB==0.5.0
 idna==2.8
 numpy==1.16.2
 protobuf==3.7.1
