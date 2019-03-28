@@ -117,24 +117,24 @@ class CMSDatasetV0(object):
 
         return res_data
 
-    def save(self, from_, to_, outfile_name=None):
+    def save(self, from_, window_size, outfile_name=None):
         """Extract and save a dataset.
 
         Args:
             from_ (str): a string that represents the date since to start
                          in the format "YYYY MM DD",
                          for example: "2018 5 27"
-            to_ (str): a string that represents the ending date
+            window_size (str): a string that represents the ending date
             outfile_name (str): output file name
 
         Returns:
             This object instance (for chaining operations)
         """
-        data = self.extract(from_, to_)
+        data = self.extract(from_, window_size)
 
         if not outfile_name:
             outfile_name = "CMSDatasetV0_{}-{}.json".format(
-                "".join(from_.split()), "".join(to_.split()))
+                "".join(from_.split()), window_size)
 
         with open(outfile_name, "w") as outfile:
             for record in data.values():
