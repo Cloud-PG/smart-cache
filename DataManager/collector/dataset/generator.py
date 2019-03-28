@@ -130,8 +130,8 @@ class CMSDatasetV0(object):
         data = self.extract(from_, window_size)
 
         if not outfile_name:
-            outfile_name = "CMSDatasetV0_{}-{}.json".format(
-                "".join(from_.split()), window_size)
+            outfile_name = "CMSDatasetV0_{}_{}.json".format(
+                "-".join(from_.split()), window_size)
 
         with open(outfile_name, "w") as outfile:
             for record in data.values():
