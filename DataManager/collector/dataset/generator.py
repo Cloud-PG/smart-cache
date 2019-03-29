@@ -120,7 +120,10 @@ class CMSDatasetV0(object):
                     [(idx, val) for idx, val in enumerate(set(sorted(values)))]
                 )
 
-        return res_data
+        if extract_support_tables:
+            return res_data, {'features': feature_support_table}
+        else:
+            return res_data, {}
 
     def save(self, from_, window_size, outfile_name=None, extract_support_tables=True):
         """Extract and save a dataset.
@@ -135,8 +138,8 @@ class CMSDatasetV0(object):
         Returns:
             This object instance (for chaining operations)
         """
-        data = self.extract(from_, window_size,
-                            extract_support_tables=extract_support_tables)
+        data, support_tables = self.extract(from_, window_size,
+                                            extract_support_tables=extract_support_tables)
 
         if not outfile_name:
             outfile_name = "CMSDatasetV0_{}_{}.json".format(
@@ -146,5 +149,9 @@ class CMSDatasetV0(object):
             for record in data.values():
                 outfile.write(json.dumps(record.to_dict()))
                 outfile.write("\n")
+
+        for name, values in support_tables.items():
+            with open("{}-support-{}.json".format(outfile_name, name), "w") as outfile:
+                json.dump(values, outfile)
 
         return self
