@@ -109,7 +109,7 @@ class CMSDatasetV0(object):
                 else:
                     res_data[new_data.record_id] += new_data
                 if extract_support_tables:
-                    for feature, value in new_data.feature:
+                    for feature, value in new_data.features:
                         if feature not in feature_support_table:
                             feature_support_table[feature] = set()
                         feature_support_table[feature] |= set((value, ))
