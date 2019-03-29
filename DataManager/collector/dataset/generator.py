@@ -60,6 +60,7 @@ class CMSDatasetV0(object):
 
             with yaspin(text="Starting raw data extraction of {}".format(fullpath)) as spinner:
                 collector = DataFile(cur_file)
+                extraction_start_time = time()
                 start_time = time()
                 counter = 0
 
@@ -77,6 +78,9 @@ class CMSDatasetV0(object):
                         spinner.text = "[{:0.2f} it/s][Extracted {} records from {}]".format(
                             counter_delta / time_delta, idx, fullpath)
                         start_time = time()
+
+                spinner.write("[Extracted {} items from '{}' in {}s]".format(
+                    idx, fullpath, time() - extraction_start_time))
 
         return tmp_data, tmp_indexes
 
