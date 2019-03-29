@@ -99,11 +99,12 @@ class CMSDatasetV0(object):
 
         for idx, record in enumerate(tqdm(data)):
             cur_data = CMSDataPopularity(record.data, indexes)
-            new_data = CMSSimpleRecord(cur_data)
-            if new_data.record_id not in res_data:
-                res_data[new_data.record_id] = new_data
-            else:
-                res_data[new_data.record_id] += new_data
+            if cur_data:
+                new_data = CMSSimpleRecord(cur_data)
+                if new_data.record_id not in res_data:
+                    res_data[new_data.record_id] = new_data
+                else:
+                    res_data[new_data.record_id] += new_data
 
         return res_data
 
