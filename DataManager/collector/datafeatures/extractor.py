@@ -82,7 +82,7 @@ class CMSSimpleRecord(FeatureData):
     @property
     def tot_wrap_cpu(self):
         return self.__tot_wrap_cpu
-    
+
     @property
     def next_window_counter(self):
         return self.__next_window_counter
@@ -168,12 +168,21 @@ class CMSDataPopularity(FeatureData):
 
 class CMSDataPopularityRaw(FeatureData):
 
-    def __init__(self, data, feature_list=['FileName', 'TaskMonitorId', 'WrapCPU']):
+    def __init__(self, data,
+                 feature_list=['FileName', 'TaskMonitorId', 'WrapCPU'],
+                 filters=[('Type', lambda elm: elm == "analysis")]):
         super(CMSDataPopularityRaw, self).__init__()
         self.__id = data[feature_list[0]]
-        for key, value in data.items():
-            if key in feature_list:
-                self.add_feature(key, value)
+        self.__valid = all(
+            [fun(data[name]) for name, fun in filters]
+        )
+        if self.__valid:
+            for key, value in data.items():
+                if key in feature_list:
+                    self.add_feature(key, value)
+
+    def __bool__(self):
+        return self.__valid
 
     def __getattr__(self, name):
         if name in self._features:

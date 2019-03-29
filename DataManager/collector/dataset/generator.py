@@ -57,22 +57,27 @@ class CMSDatasetV0(object):
         tmp_indexes = set()
         for type_, name, fullpath in self._httpfs.liststatus("/project/awg/cms/jm-data-popularity/avro-snappy/year={}/month={}/day={}".format(year, month, day)):
             cur_file = self._httpfs.open(fullpath)
+
             with yaspin(text="Starting raw data extraction of {}".format(fullpath)) as spinner:
                 collector = DataFile(cur_file)
                 start_time = time()
                 counter = 0
+
                 for idx, record in enumerate(collector, 1):
                     obj = CMSDataPopularityRaw(record)
-                    if not only_indexes:
-                        tmp_data.append(obj)
-                    tmp_indexes |= set((obj.FileName,))
-                    time_delta = time() - start_time
+                    if obj:
+                        if not only_indexes:
+                            tmp_data.append(obj)
+                        tmp_indexes |= set((obj.FileName,))
+                        time_delta = time() - start_time
+
                     if time_delta >= 1.0:
                         counter_delta = idx - counter
                         counter = idx
                         spinner.text = "[{:0.2f} it/s][Extracted {} records from {}]".format(
                             counter_delta / time_delta, idx, fullpath)
                         start_time = time()
+
         return tmp_data, tmp_indexes
 
     def extract(self, start_date, window_size, extract_support_tables=True):
@@ -117,7 +122,7 @@ class CMSDatasetV0(object):
         if extract_support_tables:
             for feature, values in feature_support_table.items():
                 feature_support_table[feature] = dict(
-                    [(idx, val) for idx, val in enumerate(set(sorted(values)))]
+                    list(enumerate(sorted(values, key=lambda elm: elm.lower())))
                 )
 
         if extract_support_tables:
