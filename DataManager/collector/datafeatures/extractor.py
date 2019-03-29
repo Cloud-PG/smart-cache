@@ -34,7 +34,7 @@ class CMSSimpleRecord(FeatureData):
         self.__tasks = set()
         self.__tot_wrap_cpu = 0.0
         self.__record_id = None
-        self.__next_window_counter = [0, 0]  # [True, False] counters
+        self.__next_window_counter = [1, 1]  # [True, False] counters
 
         if isinstance(data, CMSDataPopularity):
             for feature, value in data.features:
