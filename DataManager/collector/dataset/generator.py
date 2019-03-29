@@ -69,8 +69,8 @@ class CMSDatasetV0(object):
                         if not only_indexes:
                             tmp_data.append(obj)
                         tmp_indexes |= set((obj.FileName,))
-                        time_delta = time() - start_time
 
+                    time_delta = time() - start_time
                     if time_delta >= 1.0:
                         counter_delta = idx - counter
                         counter = idx
