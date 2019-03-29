@@ -125,7 +125,17 @@ class JSONDataFileReader(object):
         self.__descriptor = get_stream(self.__filename)
         self.__last_index = -1
         self.__last_index_pos = None
+        self.__len = None
         self.__whitespaces = [elm.encode("utf-8") for elm in whitespace]
+
+    def __len__(self):
+        if not self.__len:
+            num_lines = 0
+            for cur_char in iter(lambda: self.__descriptor.read(1), b''):
+                if cur_char == '\n':
+                    num_lines += 1
+            self.__len = num_lines
+        return self.__len
 
     def __get_json(self):
         """Extract a json object string from the file.
@@ -256,7 +266,6 @@ class JSONDataFileReader(object):
 if __name__ == "__main__":
     ##
     # Test DataFileWriter
-    
 
     for data_ in JSONDataFileReader("test.json.gz"):
         print(data_)
