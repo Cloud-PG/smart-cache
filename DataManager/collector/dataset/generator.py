@@ -75,7 +75,7 @@ class CMSDatasetV0(object):
                         start_time = time()
         return tmp_data, tmp_indexes
 
-    def extract(self, start_date, window_size):
+    def extract(self, start_date, window_size, extract_support_tables=True):
         start_year, start_month, start_day = [
             int(elm) for elm in start_date.split()]
 
@@ -97,6 +97,9 @@ class CMSDatasetV0(object):
 
         indexes = indexes & next_indexes
 
+        if extract_support_tables:
+            feature_support_table = {}
+
         for idx, record in enumerate(tqdm(data)):
             cur_data = CMSDataPopularity(record.data, indexes)
             if cur_data:
@@ -105,10 +108,21 @@ class CMSDatasetV0(object):
                     res_data[new_data.record_id] = new_data
                 else:
                     res_data[new_data.record_id] += new_data
+                if extract_support_tables:
+                    for feature, value in new_data.feature:
+                        if feature not in feature_support_table:
+                            feature_support_table[feature] = set()
+                        feature_support_table[feature] |= set((value, ))
+
+        if extract_support_tables:
+            for feature, values in feature_support_table.items():
+                feature_support_table[feature] = dict(
+                    [(idx, val) for idx, val in enumerate(set(sorted(values)))]
+                )
 
         return res_data
 
-    def save(self, from_, window_size, outfile_name=None):
+    def save(self, from_, window_size, outfile_name=None, extract_support_tables=True):
         """Extract and save a dataset.
 
         Args:
@@ -121,7 +135,8 @@ class CMSDatasetV0(object):
         Returns:
             This object instance (for chaining operations)
         """
-        data = self.extract(from_, window_size)
+        data = self.extract(from_, window_size,
+                            extract_support_tables=extract_support_tables)
 
         if not outfile_name:
             outfile_name = "CMSDatasetV0_{}_{}.json".format(
