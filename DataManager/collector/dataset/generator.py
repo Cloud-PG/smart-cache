@@ -90,25 +90,38 @@ class CMSDatasetV0(object):
 
         res_data = OrderedDict()
         data = []
-        indexes = set()
-        next_indexes = set()
+        window_indexes = set()
+        next_window_indexes = set()
+        pool = Pool()
 
         # Get raw data
-        for year, month, day in self.__gen_interval(start_year, start_month, start_day, window_size):
-            new_data, new_indexes = self.get_raw_data(year, month, day)
-            data += new_data
-            indexes = indexes | new_indexes
+        raw_data_window = pool.starmap_async(self.get_raw_data, self.__gen_interval(
+            start_year, start_month, start_day, window_size))
 
-        for year, month, day in self.__gen_interval(start_year, start_month, start_day, window_size, next_week=True):
-            _, new_indexes = self.get_raw_data(
-                year, month, day, only_indexes=True)
-            next_indexes = next_indexes | new_indexes
+        raw_data_next_window = pool.starmap_async(self.get_raw_data, self.__gen_interval(
+            start_year, start_month, start_day, window_size, next_week=True))
 
-        indexes = indexes & next_indexes
+        # Wait for results
+        window = raw_data_window.get()
+        next_window = raw_data_next_window.get()
+
+        # Merge results
+        for result in window:
+            for new_data, new_indexes in result:
+                data += new_data
+                window_indexes = window_indexes | new_indexes
+        
+        for result in next_window:
+            for _, new_indexes in result:
+                next_window_indexes = next_window_indexes | new_indexes
+
+        # Merge indexes
+        indexes = window_indexes & next_window_indexes
 
         if extract_support_tables:
             feature_support_table = {}
 
+        # Create output data
         for idx, record in enumerate(tqdm(data)):
             cur_data = CMSDataPopularity(record.data, indexes)
             if cur_data:
