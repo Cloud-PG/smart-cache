@@ -160,20 +160,26 @@ class CMSDatasetV0(object):
         Returns:
             This object instance (for chaining operations)
         """
+        start_time = time()
         data, support_tables = self.extract(from_, window_size,
                                             extract_support_tables=extract_support_tables)
+        print("Data extracted in {}s".format(time() - start_time))
 
         if not outfile_name:
             outfile_name = "CMSDatasetV0_{}_{}.json".format(
                 "-".join(from_.split()), window_size)
 
+        start_time = time()
         with open(outfile_name, "w") as outfile:
             for record in data.values():
                 outfile.write(json.dumps(record.to_dict()))
                 outfile.write("\n")
+        print("Output data written in {}s".format(time() - start_time))
 
         for name, values in support_tables.items():
+            start_time = time()
             with open("{}-support-{}.json".format(outfile_name, name), "w") as outfile:
                 json.dump(values, outfile)
+            print("{} support table written in {}s".format(name.capitalize(), time() - start_time))
 
         return self
