@@ -105,8 +105,11 @@ class CMSDatasetV0(object):
             start_year, start_month, start_day, window_size, next_week=True))
 
         # Wait for results
-        window = raw_data_window.get()
-        next_window = raw_data_next_window.get()
+        with yaspin(text="Wait for results...") as spinner:
+            window = raw_data_window.get()
+            spinner.write("Got first window")
+            next_window = raw_data_next_window.get()
+            spinner.write("Got next window")
 
         # Merge results
         with yaspin(text="Merge results...") as spinner:
