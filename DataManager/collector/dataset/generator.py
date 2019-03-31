@@ -94,6 +94,9 @@ class CMSDatasetV0(object):
         next_window_indexes = set()
         pool = Pool()
 
+        if extract_support_tables:
+            feature_support_table = {}
+
         # Get raw data
         raw_data_window = pool.starmap_async(self.get_raw_data, self.__gen_interval(
             start_year, start_month, start_day, window_size))
@@ -106,41 +109,42 @@ class CMSDatasetV0(object):
         next_window = raw_data_next_window.get()
 
         # Merge results
-        for result in window:
-            for new_data, new_indexes in result:
-                data += new_data
-                window_indexes = window_indexes | new_indexes
+        with yaspin(text="Merge results...") as spinner:
+            for result in window:
+                for new_data, new_indexes in result:
+                    data += new_data
+                    window_indexes = window_indexes | new_indexes
         
-        for result in next_window:
-            for _, new_indexes in result:
-                next_window_indexes = next_window_indexes | new_indexes
+            for result in next_window:
+                for _, new_indexes in result:
+                    next_window_indexes = next_window_indexes | new_indexes
 
-        # Merge indexes
-        indexes = window_indexes & next_window_indexes
+            # Merge indexes
+            spinner.write("Merge indexes...")
+            indexes = window_indexes & next_window_indexes
 
-        if extract_support_tables:
-            feature_support_table = {}
+            # Create output data
+            spinner.write("Create output data...")
+            for idx, record in enumerate(tqdm(data)):
+                cur_data = CMSDataPopularity(record.data, indexes)
+                if cur_data:
+                    new_data = CMSSimpleRecord(cur_data)
+                    if new_data.record_id not in res_data:
+                        res_data[new_data.record_id] = new_data
+                    else:
+                        res_data[new_data.record_id] += new_data
+                    if extract_support_tables:
+                        for feature, value in new_data.features:
+                            if feature not in feature_support_table:
+                                feature_support_table[feature] = set()
+                            feature_support_table[feature] |= set((value, ))
 
-        # Create output data
-        for idx, record in enumerate(tqdm(data)):
-            cur_data = CMSDataPopularity(record.data, indexes)
-            if cur_data:
-                new_data = CMSSimpleRecord(cur_data)
-                if new_data.record_id not in res_data:
-                    res_data[new_data.record_id] = new_data
-                else:
-                    res_data[new_data.record_id] += new_data
-                if extract_support_tables:
-                    for feature, value in new_data.features:
-                        if feature not in feature_support_table:
-                            feature_support_table[feature] = set()
-                        feature_support_table[feature] |= set((value, ))
-
-        if extract_support_tables:
-            for feature, values in feature_support_table.items():
-                feature_support_table[feature] = dict(
-                    list(enumerate(sorted(values, key=lambda elm: elm.lower())))
-                )
+            if extract_support_tables:
+                spinner.write("Generate support tables...")
+                for feature, values in feature_support_table.items():
+                    feature_support_table[feature] = dict(
+                        list(enumerate(sorted(values, key=lambda elm: elm.lower())))
+                    )
 
         if extract_support_tables:
             return res_data, {'features': feature_support_table}
