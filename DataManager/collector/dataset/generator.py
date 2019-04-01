@@ -78,7 +78,7 @@ class CMSDatasetV0(object):
                             counter_delta / time_delta, idx, fullpath)
                         start_time = time()
 
-                spinner.write("[Extracted {} items from '{}' in {}s]".format(
+                spinner.write("[Extracted {} items from '{}' in {:0.2f}s]".format(
                     idx, fullpath, time() - extraction_start_time))
 
         return tmp_data, tmp_indexes
