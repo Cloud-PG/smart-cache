@@ -2,17 +2,18 @@ import json
 import sys
 from collections import OrderedDict
 from datetime import date, timedelta
+from functools import partial
 from multiprocessing import Pool
 from time import time
 
 from tqdm import tqdm
+from yaspin import yaspin
 
 from DataManager.agent.api import HTTPFS
 from DataManager.collector.api import DataFile
 from DataManager.collector.datafeatures.extractor import (CMSDataPopularity,
                                                           CMSDataPopularityRaw,
                                                           CMSSimpleRecord)
-from yaspin import yaspin
 
 
 class CMSDatasetV0(object):
@@ -84,7 +85,7 @@ class CMSDatasetV0(object):
 
         return tmp_data, tmp_indexes
 
-    def extract(self, start_date, window_size, extract_support_tables=True):
+    def extract(self, start_date, window_size, extract_support_tables=True, num_processes=2):
         start_year, start_month, start_day = [
             int(elm) for elm in start_date.split()]
 
@@ -96,20 +97,33 @@ class CMSDatasetV0(object):
         if extract_support_tables:
             feature_support_table = {}
 
-        with Pool() as pool:
-            # Get raw data
-            raw_data_window = pool.starmap_async(self.get_raw_data, self.__gen_interval(
-                start_year, start_month, start_day, window_size))
+        pool_w = Pool(num_processes=num_processes)  # Pool current week
+        pool_nw = Pool(num_processes=num_processes)  # Pool next week
 
-            raw_data_next_window = pool.starmap_async(self.get_raw_data, self.__gen_interval(
-                start_year, start_month, start_day, window_size, next_week=True))
+        # Get raw data
+        raw_data_window = pool_w.starmap_async(
+            self.get_raw_data,
+            self.__gen_interval(
+                start_year, start_month, start_day, window_size)
+        )
 
-            # Wait for results
-            with yaspin(text="Wait for results...") as spinner:
-                window = raw_data_window.get()
-                spinner.write("Got first window")
-                next_window = raw_data_next_window.get()
-                spinner.write("Got next window")
+        raw_data_next_window = pool_nw.starmap_async(
+            partial(self.get_raw_data, only_indexes=True),
+            self.__gen_interval(
+                start_year, start_month, start_day, window_size, next_week=True)
+        )
+
+        # Wait for results
+        with yaspin(text="Wait for results...") as spinner:
+            raw_data_window.wait()
+            raw_data_next_window.wait()
+            window = raw_data_window.get()
+            spinner.write("Got first window")
+            next_window = raw_data_next_window.get()
+            spinner.write("Got next window")
+
+        pool_w.close()
+        pool_nw.close()
 
         # Merge results
         with yaspin(text="Merge results...") as spinner:
@@ -117,7 +131,7 @@ class CMSDatasetV0(object):
                 for new_data, new_indexes in result:
                     data += new_data
                     window_indexes = window_indexes | new_indexes
-        
+
             for result in next_window:
                 for _, new_indexes in result:
                     next_window_indexes = next_window_indexes | new_indexes
@@ -187,6 +201,7 @@ class CMSDatasetV0(object):
             start_time = time()
             with open("{}-support-{}.json".format(outfile_name, name), "w") as outfile:
                 json.dump(values, outfile)
-            print("{} support table written in {}s".format(name.capitalize(), time() - start_time))
+            print("{} support table written in {}s".format(
+                name.capitalize(), time() - start_time))
 
         return self
