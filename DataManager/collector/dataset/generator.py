@@ -97,8 +97,8 @@ class CMSDatasetV0(object):
         if extract_support_tables:
             feature_support_table = {}
 
-        pool_w = Pool(num_processes=num_processes)  # Pool current week
-        pool_nw = Pool(num_processes=num_processes)  # Pool next week
+        pool_w = Pool(processes=num_processes)  # Pool current week
+        pool_nw = Pool(processes=num_processes)  # Pool next week
 
         # Get raw data
         raw_data_window = pool_w.starmap_async(
