@@ -92,17 +92,17 @@ class CMSDatasetV0(object):
         data = []
         window_indexes = set()
         next_window_indexes = set()
-        pool = Pool()
 
         if extract_support_tables:
             feature_support_table = {}
 
-        # Get raw data
-        raw_data_window = pool.starmap_async(self.get_raw_data, self.__gen_interval(
-            start_year, start_month, start_day, window_size))
+        with Pool() as pool:
+            # Get raw data
+            raw_data_window = pool.starmap_async(self.get_raw_data, self.__gen_interval(
+                start_year, start_month, start_day, window_size))
 
-        raw_data_next_window = pool.starmap_async(self.get_raw_data, self.__gen_interval(
-            start_year, start_month, start_day, window_size, next_week=True))
+            raw_data_next_window = pool.starmap_async(self.get_raw_data, self.__gen_interval(
+                start_year, start_month, start_day, window_size, next_week=True))
 
         # Wait for results
         with yaspin(text="Wait for results...") as spinner:
