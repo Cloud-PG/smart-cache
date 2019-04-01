@@ -2,7 +2,7 @@ import json
 import sys
 from collections import OrderedDict
 from datetime import date, timedelta
-from functools import partialmethod
+from functools import partial
 from multiprocessing import Pool
 from time import time
 
@@ -109,7 +109,7 @@ class CMSDatasetV0(object):
         )
 
         next_window = pool.starmap(
-            partialmethod(self.get_raw_data, only_indexes=True),
+            partial(self.get_raw_data, only_indexes=True),
             self.__gen_interval(
                 start_year, start_month, start_day, window_size, next_week=True
             )
