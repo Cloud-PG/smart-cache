@@ -113,14 +113,12 @@ class CMSDatasetV0(object):
 
         # Merge results
         with yaspin(text="Merge results...") as spinner:
-            for result in window:
-                for new_data, new_indexes in result:
-                    data += new_data
-                    window_indexes = window_indexes | new_indexes
+            for new_data, new_indexes in window:
+                data += new_data
+                window_indexes = window_indexes | new_indexes
 
-            for result in next_window:
-                for _, new_indexes in result:
-                    next_window_indexes = next_window_indexes | new_indexes
+            for _, new_indexes in next_window:
+                next_window_indexes = next_window_indexes | new_indexes
 
             # Merge indexes
             spinner.write("Merge indexes...")
