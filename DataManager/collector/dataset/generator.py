@@ -2,7 +2,7 @@ import json
 import sys
 from collections import OrderedDict
 from datetime import date, timedelta
-from functools import partial
+from functools import partialmethod
 from multiprocessing import Pool
 from time import time
 
@@ -87,7 +87,8 @@ class CMSDatasetV0(object):
 
     def extract(self, start_date, window_size, extract_support_tables=True, num_processes=2):
         start_year, start_month, start_day = [
-            int(elm) for elm in start_date.split()]
+            int(elm) for elm in start_date.split()
+        ]
 
         res_data = OrderedDict()
         data = []
@@ -103,13 +104,15 @@ class CMSDatasetV0(object):
         window = pool.starmap(
             self.get_raw_data,
             self.__gen_interval(
-                start_year, start_month, start_day, window_size)
+                start_year, start_month, start_day, window_size
+            )
         )
 
         next_window = pool.starmap(
-            partial(self.get_raw_data, only_indexes=True),
+            partialmethod(self.get_raw_data, only_indexes=True),
             self.__gen_interval(
-                start_year, start_month, start_day, window_size, next_week=True)
+                start_year, start_month, start_day, window_size, next_week=True
+            )
         )
 
         # Merge results
