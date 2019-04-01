@@ -2,8 +2,6 @@ import json
 import sys
 from collections import OrderedDict
 from datetime import date, timedelta
-from functools import partial
-from multiprocessing import Pool
 from time import time
 
 from tqdm import tqdm
@@ -98,22 +96,20 @@ class CMSDatasetV0(object):
         if extract_support_tables:
             feature_support_table = {}
 
-        pool = Pool(processes=num_processes)
-
         # Get raw data
-        window = pool.starmap(
-            self.get_raw_data,
-            self.__gen_interval(
+        window = [
+            self.get_raw_data(year, month, day)
+            for year, month, day in self.__gen_interval(
                 start_year, start_month, start_day, window_size
             )
-        )
+        ]
 
-        next_window = pool.starmap(
-            partial(self.get_raw_data, only_indexes=True),
-            self.__gen_interval(
+        next_window = [
+            self.get_raw_data(year, month, day, only_indexes=True)
+            for year, month, day in self.__gen_interval(
                 start_year, start_month, start_day, window_size, next_week=True
             )
-        )
+        ]
 
         # Merge results
         with yaspin(text="Merge results...") as spinner:
