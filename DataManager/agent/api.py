@@ -13,7 +13,7 @@ class HTTPFS(object):
 
     """Hadoop httpfs interface."""
 
-    def __init__(self, url, http_user=None, http_password=None, verify=False, allow_redirects=False, hadoop_user='root'):
+    def __init__(self, url, http_user=None, http_password=None, verify=False, allow_redirects=False, hadoop_user='root', disable_warnings=True):
         """Init function httpfs interface.
 
         Args:
@@ -34,6 +34,13 @@ class HTTPFS(object):
         self._allow_redirects = allow_redirects
         self._api_url = "/webhdfs/v1"
         self._hadoop_user = hadoop_user
+        self.__disable_warnings = disable_warnings
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        pass
 
     def mkdirs(self, hdfs_path):
         """Make directories in hadoop with httpfs.
@@ -45,6 +52,9 @@ class HTTPFS(object):
             bool: true if everything went ok
 
         """
+        if self.__disable_warnings:
+            urllib3.disable_warnings()
+
         res = requests.put(
             "{}{}{}".format(
                 self._server_url,
@@ -74,6 +84,9 @@ class HTTPFS(object):
             generator: (type, pathSuffix, full_hdfs_path) 
 
         """
+        if self.__disable_warnings:
+            urllib3.disable_warnings()
+
         res = requests.get(
             "{}{}{}".format(
                 self._server_url,
@@ -110,6 +123,9 @@ class HTTPFS(object):
             bool: true if everything went ok
 
         """
+        if self.__disable_warnings:
+            urllib3.disable_warnings()
+
         res = requests.delete(
             "{}{}{}".format(
                 self._server_url,
@@ -142,6 +158,9 @@ class HTTPFS(object):
             io.BytesIO: the content of the file
 
         """
+        if self.__disable_warnings:
+            urllib3.disable_warnings()
+
         res = requests.get(
             "{}{}{}".format(
                 self._server_url,
@@ -183,6 +202,9 @@ class HTTPFS(object):
             bool: true if everything went ok
 
         """
+        if self.__disable_warnings:
+            urllib3.disable_warnings()
+
         file_url = "{}{}{}".format(
             self._server_url,
             self._api_url,
@@ -234,6 +256,12 @@ class ElasticSearchHttp(object):
         if self.__url[-1] != "/":
             self.__url += "/"
         self.__auth = tuple(auth.split(":")) if auth != "" else None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        pass
 
     @staticmethod
     def __gen_id(string):
