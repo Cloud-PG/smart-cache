@@ -97,33 +97,20 @@ class CMSDatasetV0(object):
         if extract_support_tables:
             feature_support_table = {}
 
-        pool_w = Pool(processes=num_processes)  # Pool current week
-        pool_nw = Pool(processes=num_processes)  # Pool next week
+        pool = Pool(processes=num_processes)
 
         # Get raw data
-        raw_data_window = pool_w.starmap_async(
+        window = pool.starmap(
             self.get_raw_data,
             self.__gen_interval(
                 start_year, start_month, start_day, window_size)
         )
 
-        raw_data_next_window = pool_nw.starmap_async(
+        next_window = pool.starmap(
             partial(self.get_raw_data, only_indexes=True),
             self.__gen_interval(
                 start_year, start_month, start_day, window_size, next_week=True)
         )
-
-        # Wait for results
-        with yaspin(text="Wait for results...") as spinner:
-            raw_data_window.wait()
-            raw_data_next_window.wait()
-            window = raw_data_window.get()
-            spinner.write("Got first window")
-            next_window = raw_data_next_window.get()
-            spinner.write("Got next window")
-
-        pool_w.close()
-        pool_nw.close()
 
         # Merge results
         with yaspin(text="Merge results...") as spinner:
