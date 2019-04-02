@@ -10,6 +10,10 @@ class FeatureData(object):
         self._features = {}
 
     @property
+    def feature(self):
+        return self._features
+
+    @property
     def features(self):
         for feature in sorted(self._features):
             yield feature, self._features[feature]
@@ -118,14 +122,16 @@ class CMSSimpleRecord(FeatureData):
 
 class CMSDataPopularity(FeatureData):
 
-    def __init__(self, data, indexes=set()):
+    def __init__(self, data,
+                 filters=[
+                     ('store_type', lambda elm: elm == "data" or elm == "mc")
+                 ]
+                 ):
         super(CMSDataPopularity, self).__init__()
         self.__data = data
         self.__record_id = None
         self.__valid = False
-        self.__next_window = False
-        if self.__data.get('FileName') in indexes:
-            self.__next_window = True
+        self.__filters = filters
         self.__extract_features()
 
     def __bool__(self):
@@ -147,15 +153,14 @@ class CMSDataPopularity(FeatureData):
                 self.add_feature('campain', campain)
                 self.add_feature('process', process)
                 self.add_feature('file_type', file_type)
-                self.__valid = True
+                # Check validity
+                self.__valid = all(
+                    [fun(self.feature[name]) for name, fun in filters]
+                )
             except ValueError:
                 print(
                     "Cannot extract features from '{}'".format(cur_file))
                 pass
-
-    @property
-    def next_window(self):
-        return self.__next_window
 
     @property
     def record_id(self):
@@ -170,7 +175,8 @@ class CMSDataPopularityRaw(FeatureData):
 
     def __init__(self, data,
                  feature_list=['FileName', 'TaskMonitorId', 'WrapCPU'],
-                 filters=[('Type', lambda elm: elm == "analysis")]):
+                 filters=[('Type', lambda elm: elm == "analysis")]
+                 ):
         super(CMSDataPopularityRaw, self).__init__()
         self.__id = data[feature_list[0]]
         self.__valid = all(
