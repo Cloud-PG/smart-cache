@@ -127,13 +127,13 @@ class CMSDatasetV0(object):
             # Create output data
             spinner.write("Create output data...")
             for idx, record in enumerate(tqdm(data)):
-                cur_data = CMSDataPopularity(record.data, indexes)
-                if cur_data:
-                    new_data = CMSSimpleRecord(cur_data)
-                    if new_data.record_id not in res_data:
-                        res_data[new_data.record_id] = new_data
+                cur_data_pop = CMSDataPopularity(record.data)
+                if cur_data_pop:
+                    new_record = CMSSimpleRecord(cur_data_pop)
+                    if new_record.record_id not in res_data:
+                        res_data[new_record.record_id] = new_record
                     else:
-                        res_data[new_data.record_id] += new_data
+                        res_data[new_record.record_id] += new_record
                     if extract_support_tables:
                         for feature, value in new_data.features:
                             if feature not in feature_support_table:
