@@ -14,6 +14,7 @@ yaspin = "*"
 numpy = "*"
 tqdm = "*"
 tensorflow = "*"
+matplotlib = "*"
 
 [requires]
 python_version = "3"
