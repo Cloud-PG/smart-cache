@@ -155,7 +155,7 @@ class CMSDataPopularity(FeatureData):
                 self.add_feature('file_type', file_type)
                 # Check validity
                 self.__valid = all(
-                    [fun(self.feature[name]) for name, fun in filters]
+                    [fun(self.feature[name]) for name, fun in self.__filters]
                 )
             except ValueError:
                 print(
