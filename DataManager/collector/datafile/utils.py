@@ -19,6 +19,8 @@ def gen_increasing_slice(slice):
     start = slice.start if slice.start else 0
     stop = slice.stop
     step = slice.step if slice.step else 1
+    if stop is None:
+        raise Exception("Slice with None stop is not supported...")
     if start > stop:
         start, stop = stop + 1, start + 1
     cur = start
