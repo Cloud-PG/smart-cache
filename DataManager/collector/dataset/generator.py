@@ -70,6 +70,7 @@ class CMSDatasetV0(object):
                         if not only_indexes:
                             tmp_data.append(obj)
                         tmp_indexes |= set((obj.FileName,))
+                        break
 
                     time_delta = time() - start_time
                     if time_delta >= 1.0:
@@ -130,13 +131,15 @@ class CMSDatasetV0(object):
             for idx, record in enumerate(tqdm(data)):
                 cur_data_pop = CMSDataPopularity(record.data)
                 if cur_data_pop:
+                    if cur_data_pop.FileName in next_window_indexes:
+                        cur_data_pop.is_in_next_window()
                     new_record = CMSSimpleRecord(cur_data_pop)
                     if new_record.record_id not in res_data:
                         res_data[new_record.record_id] = new_record
                     else:
                         res_data[new_record.record_id] += new_record
                     if extract_support_tables:
-                        for feature, value in new_data.features:
+                        for feature, value in new_record.features:
                             if feature not in feature_support_table:
                                 feature_support_table[feature] = set()
                             feature_support_table[feature] |= set((value, ))

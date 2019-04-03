@@ -1,5 +1,6 @@
 import json
 from string import whitespace
+from types import GeneratorType
 
 from .utils import gen_increasing_slice, get_stream
 
@@ -72,16 +73,15 @@ class JSONDataFileWriter(object):
                 self.__write(data)
         elif isinstance(data, dict):
             self.__write(json.dumps(data))
-        elif isinstance(data, list):
-            if all(isinstance(elm, dict) for elm in data):
-                for elm in data:
+        elif isinstance(data, (list, GeneratorType)):
+            for elm in data:
+                if isinstance(elm, dict):
                     self.__write(json.dumps(elm))
-            elif all(self.__valid_json(elm) for elm in data):
-                for elm in data:
+                elif self.__valid_json(elm):
                     self.__write(elm)
-            else:
-                raise Exception(
-                    "You can pass only a list of 'dict' or JSON strings".format(type(data)))
+                else:
+                    raise Exception(
+                        "You can pass only a list of 'dict' or JSON strings".format(type(data)))
         else:
             raise Exception(
                 "'{}' is not a valid input data type".format(type(data)))

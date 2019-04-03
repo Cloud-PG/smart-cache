@@ -131,6 +131,7 @@ class CMSDataPopularity(FeatureData):
         self.__data = data
         self.__record_id = None
         self.__valid = False
+        self.__next_window = False
         self.__filters = filters
         self.__extract_features()
 
@@ -141,7 +142,7 @@ class CMSDataPopularity(FeatureData):
         if name in self.__data:
             return self.__data[name]
         else:
-            raise AttributeError("Attribute '{}' not foud...".format(name))
+            raise AttributeError("Attribute '{}' not found...".format(name))
 
     def __extract_features(self):
         cur_file = self.__data['FileName']
@@ -157,9 +158,10 @@ class CMSDataPopularity(FeatureData):
                 self.__valid = all(
                     [fun(self.feature[name]) for name, fun in self.__filters]
                 )
-            except ValueError:
+            except ValueError as err:
                 print(
                     "Cannot extract features from '{}'".format(cur_file))
+                print(err)
                 pass
 
     @property
@@ -169,6 +171,14 @@ class CMSDataPopularity(FeatureData):
             blake2s.update(str(self).encode("utf-8"))
             self.__record_id = blake2s.hexdigest()
         return self.__record_id
+    
+    @property
+    def next_window(self):
+        return self.__next_window
+    
+    def is_in_next_window(self):
+        self.__next_window = True
+        return self
 
 
 class CMSDataPopularityRaw(FeatureData):
@@ -194,7 +204,7 @@ class CMSDataPopularityRaw(FeatureData):
         if name in self._features:
             return self._features[name]
         else:
-            raise AttributeError("Attribute '{}' not foud...".format(name))
+            raise AttributeError("Attribute '{}' not found...".format(name))
 
     @property
     def record_id(self):
