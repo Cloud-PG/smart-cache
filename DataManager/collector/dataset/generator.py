@@ -179,7 +179,7 @@ class CMSDatasetV0(object):
         metadata = {
             'from': from_,
             'window_size': window_size,
-            'support_tables': support_tables if extract_support_tables else extract_support_tables,
+            'support_tables': support_tables if extract_support_tables else False,
             'tot_records': len(data),
             'extraction_time': extraction_time
         }
