@@ -12,6 +12,7 @@ from DataManager.collector.api import DataFile
 from DataManager.collector.datafeatures.extractor import (CMSDataPopularity,
                                                           CMSDataPopularityRaw,
                                                           CMSSimpleRecord)
+from DataManager.collector.datafile.json import JSONDataFileWriter
 
 
 class CMSDatasetV0(object):
@@ -168,24 +169,31 @@ class CMSDatasetV0(object):
         start_time = time()
         data, support_tables = self.extract(from_, window_size,
                                             extract_support_tables=extract_support_tables)
-        print("Data extracted in {}s".format(time() - start_time))
+        extraction_time = time() - start_time
+        print("Data extracted in {}s".format(extraction_time))
 
         if not outfile_name:
-            outfile_name = "CMSDatasetV0_{}_{}.json".format(
+            outfile_name = "CMSDatasetV0_{}_{}.json.gz".format(
                 "-".join(from_.split()), window_size)
+        
+        metadata = {
+            'from': from_,
+            'window_size': window_size,
+            'support_tables': support_tables if extract_support_tables else extract_support_tables,
+            'tot_records': len(data),
+            'extraction_time': extraction_time
+        }
 
-        start_time = time()
-        with open(outfile_name, "w") as outfile:
-            for record in data.values():
-                outfile.write(json.dumps(record.to_dict()))
-                outfile.write("\n")
-        print("Output data written in {}s".format(time() - start_time))
+        with yaspin(text="Create dataset...") as spinner:
+            with JSONDataFileWriter(outfile_name) as out_file:
+                spinner.text = "Write metadata..."
+                start_time = time()
+                out_file.append(metadata)
+                spinner.write("Metadata written in {}s".format(time() - start_time))
 
-        for name, values in support_tables.items():
-            start_time = time()
-            with open("{}-support-{}.json".format(outfile_name, name), "w") as outfile:
-                json.dump(values, outfile)
-            print("{} support table written in {}s".format(
-                name.capitalize(), time() - start_time))
+                spinner.text = "Write data..."
+                start_time = time()
+                out_file.append((record.to_dict() for record in data.values()))
+                spinner.write("Data written in {}s".format(time() - start_time))
 
         return self
