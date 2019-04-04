@@ -18,8 +18,7 @@ class CMSDatasetV0Reader(object):
     def __init__(self, filename):
         self._collector = JSONDataFileReader(filename)
         self._meta = ReadableDictAsAttribute(self._collector[0])
-        self._use_feature_support = self.meta.support_tables.get(
-            'features', False)
+        self._use_tensor = True
         self.__features = None
         self.__feature_order = None
         self._collector.start_from(1)  # Skip metadata
@@ -29,38 +28,13 @@ class CMSDatasetV0Reader(object):
         return self.meta.len
 
     def __getitem__(self, index):
-        if self._use_feature_support:
-            if not self.__features:
-                self.__features = {}
-                self.__feature_order = set()
-                for name, table in self.meta.support_tables['features'].items():
-                    self.__features[name] = dict(
-                        (value, key)
-                        for key, value in table.items()
-                    )
-                    self.__feature_order |= set((name, ))
-                self.__feature_order = sorted(self.__feature_order)
+        if self._use_tensor:
             res = self._collector[index]
+            print(res)
             if isinstance(res, list):
-                for idx, record in enumerate(res):
-                    res[idx] = np.array([
-                        float(
-                            self.__features[feature_name]
-                            [record['features']
-                             [feature_name]]
-                        )
-                        for feature_name in self.__feature_order]
-                    )
-                return np.array(res)
+                return np.array((elm['tensor'] for elm in res))
             else:
-                return np.array([
-                    float(
-                        self.__features[feature_name]
-                        [res['features']
-                         [feature_name]]
-                    )
-                    for feature_name in self.__feature_order
-                ])
+                return np.array(res['tensor'])
         else:
             return self._collector[index]
 
@@ -79,7 +53,7 @@ class CMSDatasetV0Reader(object):
         return np.array(labels)
 
     def toggle_feature_support(self):
-        self._use_feature_support = not self._use_feature_support
+        self._use_tensor = not self._use_tensor
 
     @property
     def meta(self):

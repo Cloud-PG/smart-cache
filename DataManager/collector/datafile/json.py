@@ -11,7 +11,7 @@ class JSONDataFileWriter(object):
 
     """Write json.gz file."""
 
-    def __init__(self, filename, data=None):
+    def __init__(self, filename, data=None, append: bool=False):
         """Init function of data writer for json.gz files.
 
         Args:
@@ -23,7 +23,12 @@ class JSONDataFileWriter(object):
 
         """
         self.__filename = filename
-        self.__descriptor = get_stream(self.__filename, "ab")
+        self.__descriptor = None
+        if append:
+            self.__descriptor = get_stream(self.__filename, "ab")
+            self.__descriptor.seek(0, 2)
+        else:
+            self.__descriptor = get_stream(self.__filename, "wb")
         if data is not None:
             self.append(data)
 

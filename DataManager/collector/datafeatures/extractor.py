@@ -38,6 +38,7 @@ class CMSSimpleRecord(FeatureData):
         self.__tasks = set()
         self.__tot_wrap_cpu = 0.0
         self.__record_id = None
+        self.__tensor = []
         self.__next_window_counter = [1, 1]  # [True, False] counters
 
         if isinstance(data, CMSDataPopularity):
@@ -57,10 +58,22 @@ class CMSSimpleRecord(FeatureData):
     def to_dict(self):
         return {
             'features': self._features,
-            'score': self.score
+            'score': self.score,
+            'tensor': self.__tensor
         }
 
-    def __add__(self, other):
+    def gen_tensor(self):
+        self.__tensor = [
+            float(self._features[feature_name])
+            for feature_name in sorted(self._features.keys())
+        ]
+        return self
+
+    def add_tensor(self, tensor):
+        self.__tensor = tensor
+        return self
+
+    def __add__(self, other: 'CMSSimpleRecord'):
         tmp = CMSSimpleRecord(self.features)
         for task in self.tasks + other.tasks:
             tmp.add_task(task)
@@ -69,7 +82,7 @@ class CMSSimpleRecord(FeatureData):
         tmp.add_next_window_counter(*other.next_window_counter)
         return tmp
 
-    def __iadd__(self, other):
+    def __iadd__(self, other: 'CMSSimpleRecord'):
         for task in other.tasks:
             self.add_task(task)
         self.add_wrap_cpu(other.tot_wrap_cpu)
@@ -100,7 +113,7 @@ class CMSSimpleRecord(FeatureData):
             next_window_ratio = 0.0
         return float(self.__tot_wrap_cpu / len(self.__tasks)) * next_window_ratio
 
-    def add_task(self, task):
+    def add_task(self, task: str):
         self.__tasks = self.__tasks | set((task, ))
         return self
 
@@ -171,11 +184,11 @@ class CMSDataPopularity(FeatureData):
             blake2s.update(str(self).encode("utf-8"))
             self.__record_id = blake2s.hexdigest()
         return self.__record_id
-    
+
     @property
     def next_window(self):
         return self.__next_window
-    
+
     def is_in_next_window(self):
         self.__next_window = True
         return self

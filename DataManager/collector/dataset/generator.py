@@ -15,13 +15,78 @@ from DataManager.collector.datafeatures.extractor import (CMSDataPopularity,
 from DataManager.collector.datafile.json import JSONDataFileWriter
 
 
+class SupportTable(object):
+
+    """Class to manage support tables for feature conversions."""
+
+    def __init__(self):
+        self._tables = {}
+        self._indexed_tables = {}
+
+    def insert(self, table_name: str, key, value):
+        """Insert a value in a table.
+
+        Note: all tables are sets, so support tables manage
+              unique values.
+        """
+        if table_name not in self._tables:
+            self._tables[table_name] = {}
+        if key not in self._tables[table_name]:
+            self._tables[table_name][key] = set()
+        self._tables[table_name][key] |= set((value, ))
+        return self
+
+    def get_sorted_keys(self, table_name: str):
+        """Returns a sorted list of the sorted key in a table."""
+        return sorted(self._indexed_tables[table_name].keys())
+
+    def get_value(self, table_name: str, key, value):
+        """Convert a value with the respective index.
+
+        Note: You have to call gen_indexes before the conversion at least
+              one time to generate the indexes.
+        """
+        return self._indexed_tables[table_name][key][value]
+
+    def __getitem__(self, index: int):
+        """Make object interable to check if a specific table exists."""
+        return list(self._indexed_tables.keys())[index]
+
+    def gen_indexes(self):
+        """Generate an unique index for each value in a table.
+
+        Note: indexes are integer values sorted in ascending order in base
+              the value strings.
+        """
+        for table_name, table in self._tables.items():
+            for feature, values in table.items():
+                if table_name not in self._indexed_tables:
+                    self._indexed_tables[table_name] = {}
+                self._indexed_tables[table_name][feature] = dict(
+                    (key, index)
+                    for index, key in list(
+                        enumerate(
+                            sorted(values, key=lambda elm: elm.lower())
+                        )
+                    )
+                )
+        return self
+
+    def to_dict(self):
+        """Returns this object as a dictionary.
+
+        Note: it exports only the indexed tables.
+        """
+        return self._indexed_tables
+
+
 class CMSDatasetV0(object):
 
     """Generator of CMS dataset V0.
 
     This generator uses HTTPFS"""
 
-    def __init__(self, httpfs_url, httpfs_user, httpfs_password):
+    def __init__(self, httpfs_url: str, httpfs_user: str, httpfs_password: str):
         self._httpfs = HTTPFS(httpfs_url, httpfs_user, httpfs_password)
 
     @staticmethod
@@ -52,7 +117,12 @@ class CMSDatasetV0(object):
             yield (start_date.year, start_date.month, start_date.day)
             start_date += window_step
 
-    def get_raw_data(self, year, month, day, only_indexes=False):
+    def get_raw_data(self, year: int, month: int, day: int, only_indexes: bool=False):
+        """Take raw data from a cms data popularity file in avro format.
+
+        This function extract a specific period and it returns the data and the
+        indexes for such period.
+        """
         tmp_data = []
         tmp_indexes = set()
         for type_, name, fullpath in self._httpfs.liststatus("/project/awg/cms/jm-data-popularity/avro-snappy/year={}/month={}/day={}".format(year, month, day)):
@@ -84,7 +154,8 @@ class CMSDatasetV0(object):
 
         return tmp_data, tmp_indexes
 
-    def extract(self, start_date, window_size, extract_support_tables=True, num_processes=2):
+    def extract(self, start_date: str, window_size: int, extract_support_tables: bool=True):
+        """Extract data in a time window."""
         start_year, start_month, start_day = [
             int(elm) for elm in start_date.split()
         ]
@@ -95,7 +166,7 @@ class CMSDatasetV0(object):
         next_window_indexes = set()
 
         if extract_support_tables:
-            feature_support_table = {}
+            feature_support_table = SupportTable()
 
         # Get raw data
         window = [
@@ -122,11 +193,12 @@ class CMSDatasetV0(object):
                 next_window_indexes = next_window_indexes | new_indexes
 
             # Merge indexes
-            spinner.write("Merge indexes...")
+            spinner.text = "Merge indexes..."
             indexes = window_indexes & next_window_indexes
+            spinner.write("Indexes merged...")
 
             # Create output data
-            spinner.write("Create output data...")
+            spinner.text = "Create output data..."
             for idx, record in enumerate(tqdm(data)):
                 cur_data_pop = CMSDataPopularity(record.data)
                 if cur_data_pop:
@@ -139,49 +211,50 @@ class CMSDatasetV0(object):
                         res_data[new_record.record_id] += new_record
                     if extract_support_tables:
                         for feature, value in new_record.features:
-                            if feature not in feature_support_table:
-                                feature_support_table[feature] = set()
-                            feature_support_table[feature] |= set((value, ))
+                            feature_support_table.insert(
+                                'features', feature, value)
+            spinner.write("Output data created...")
 
             if extract_support_tables:
-                spinner.write("Generate support tables...")
-                for feature, values in feature_support_table.items():
-                    feature_support_table[feature] = dict(
-                        list(enumerate(sorted(values, key=lambda elm: elm.lower())))
-                    )
+                spinner.text = "Generate support table indexes..."
+                feature_support_table.gen_indexes()
+                spinner.write("Support table generated...")
 
         if extract_support_tables:
-            return res_data, {'features': feature_support_table}
+            return res_data, feature_support_table
         else:
             return res_data, {}
 
-    def save(self, from_, window_size, outfile_name=None, extract_support_tables=True):
+    def save(self, from_: str, window_size: int, outfile_name: str='', extract_support_tables: bool=True):
         """Extract and save a dataset.
 
         Args:
             from_ (str): a string that represents the date since to start
                          in the format "YYYY MM DD",
                          for example: "2018 5 27"
-            window_size (str): a string that represents the ending date
+            window_size (int): the number of days to extract
             outfile_name (str): output file name
+            extract_support_tables (bool): ask to extract the support table information
 
         Returns:
             This object instance (for chaining operations)
         """
         start_time = time()
-        data, support_tables = self.extract(from_, window_size,
-                                            extract_support_tables=extract_support_tables)
+        data, support_tables = self.extract(
+            from_, window_size,
+            extract_support_tables=extract_support_tables
+        )
         extraction_time = time() - start_time
         print("Data extracted in {}s".format(extraction_time))
 
         if not outfile_name:
             outfile_name = "CMSDatasetV0_{}_{}.json.gz".format(
                 "-".join(from_.split()), window_size)
-        
+
         metadata = {
             'from': from_,
             'window_size': window_size,
-            'support_tables': support_tables if extract_support_tables else False,
+            'support_tables': support_tables.to_dict() if extract_support_tables else False,
             'len': len(data),
             'extraction_time': extraction_time
         }
@@ -191,11 +264,32 @@ class CMSDatasetV0(object):
                 spinner.text = "Write metadata..."
                 start_time = time()
                 out_file.append(metadata)
-                spinner.write("Metadata written in {}s".format(time() - start_time))
+                spinner.write("Metadata written in {}s".format(
+                    time() - start_time)
+                )
 
                 spinner.text = "Write data..."
                 start_time = time()
-                out_file.append((record.to_dict() for record in data.values()))
-                spinner.write("Data written in {}s".format(time() - start_time))
+                for record in data.values():
+                    cur_record = record
+                    if 'features' in support_tables:
+                        sorted_features = support_tables.get_sorted_keys(
+                            'features'
+                        )
+                        cur_record = cur_record.add_tensor(
+                            [
+                                float(
+                                    support_tables.get_value(
+                                        'features',
+                                        feature_name,
+                                        cur_record.feature[feature_name]
+                                    )
+                                )
+                                for feature_name in sorted_features
+                            ]
+                        )
+                    out_file.append(cur_record.to_dict())
+                spinner.write("Data written in {}s".format(
+                    time() - start_time))
 
         return self
