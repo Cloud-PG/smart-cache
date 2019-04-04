@@ -30,9 +30,8 @@ class CMSDatasetV0Reader(object):
     def __getitem__(self, index):
         if self._use_tensor:
             res = self._collector[index]
-            print(res)
             if isinstance(res, list):
-                return np.array((elm['tensor'] for elm in res))
+                return np.array([elm['tensor'] for elm in res])
             else:
                 return np.array(res['tensor'])
         else:
@@ -49,7 +48,7 @@ class CMSDatasetV0Reader(object):
                 res[int(score >= self.score_avg)] = 1
                 labels.append(res)
             else:
-                labels.append(score >= self.score_avg)
+                labels.append(int(score >= self.score_avg))
         return np.array(labels)
 
     def toggle_feature_support(self):
