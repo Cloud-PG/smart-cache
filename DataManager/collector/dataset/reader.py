@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from ..datafile.json import JSONDataFileReader
-from .generator import SupportTables
 from .utils import ReadableDictAsAttribute
 
 
