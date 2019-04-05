@@ -173,16 +173,20 @@ class JSONDataFileReader(object):
         return (None, -1)
 
     def start_from(self, index: int):
-        """Set the cursor to a specific object index to start."""
+        """Set the cursor to a specific object index to start.
+        
+        Returns:
+            dict: the last object extracted
+        """
         if index < 0:
             raise Exception("Index have to be positive or equal to 0...")
         self.__descriptor.seek(0, 0)
         pos = self.__descriptor.tell()
         for _ in range(index):
-            self.__get_json()
+            last_obj, _ = self.__get_json()
             pos = self.__descriptor.tell()
         self.__getitem_start = pos
-        return self
+        return last_obj
 
     def __getitem__(self, idx):
         """Select an item or a group of item from the file.
