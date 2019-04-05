@@ -1,4 +1,6 @@
 
+from tqdm import tqdm
+
 class SupportTable(object):
 
     """Class to manage support tables for feature conversions."""
@@ -38,7 +40,7 @@ class SupportTable(object):
         assert filter_ is not None, "You need to specify a filter"
         reduced_set = {}
         categories = list(sorted(self._tables[table_name][target]))
-        for category in tqdm(categories):
+        for category in tqdm(categories, desc="Get category '{}'".format(target)):
             cur_category = filter_(category)
             cur_lvl = reduced_set
             for word in cur_category:
@@ -49,7 +51,7 @@ class SupportTable(object):
 
         result = set()
         cur_lvl = reduced_set
-        for key, value in tqdm(cur_lvl.items()):
+        for key, value in tqdm(cur_lvl.items(), desc="Reduce category '{}'".format(target)):
             cur_output = [key]
             cur_inner = value
             for cur_lvl in range(lvls):
@@ -150,7 +152,7 @@ class ReadableDictAsAttribute(object):
     def __init__(self, obj: dict):
         self.__dict = obj
         if 'support_tables' in self.__dict:
-            self.__dict['support_tables'] = SupportTables(
+            self.__dict['support_tables'] = SupportTable(
                 self.__dict['support_tables'])
 
     @property
