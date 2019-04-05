@@ -1,27 +1,22 @@
+import json
+
 import matplotlib.pyplot as plt
 import numpy as np
 
 from ..datafile.json import JSONDataFileReader
-
-
-class ReadableDictAsAttribute(object):
-
-    def __init__(self, obj: dict):
-        self.__dict = obj
-
-    def __getattr__(self, name):
-        return self.__dict[name]
+from .generator import SupportTables
+from .utils import ReadableDictAsAttribute
 
 
 class CMSDatasetV0Reader(object):
 
     def __init__(self, filename):
         self._collector = JSONDataFileReader(filename)
-        self._meta = ReadableDictAsAttribute(self._collector[0])
+        # Extract metadata and skip them for future reading
+        self._meta = ReadableDictAsAttribute(self._collector.start_from(1))
         self._use_tensor = True
         self.__features = None
         self.__feature_order = None
-        self._collector.start_from(1)  # Skip metadata
         self._score_avg = None
 
     def __len__(self):

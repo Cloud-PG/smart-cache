@@ -13,15 +13,85 @@ from DataManager.collector.datafeatures.extractor import (CMSDataPopularity,
                                                           CMSDataPopularityRaw,
                                                           CMSSimpleRecord)
 from DataManager.collector.datafile.json import JSONDataFileWriter
+from .utils import ReadableDictAsAttribute
 
 
-class SupportTable(object):
+class SupportTables(object):
 
     """Class to manage support tables for feature conversions."""
 
-    def __init__(self):
+    def __init__(self, support_table: dict=None):
         self._tables = {}
         self._indexed_tables = {}
+        self.filters = ReadableDictAsAttribute({
+            'split_process': self._filter_split_process
+        })
+        if support_table:
+            self._indexed_tables = support_table
+            for table_name, table in self._indexed_tables.items():
+                self._tables[table_name] = {}
+                for key in table.keys():
+                    self._tables[table_name][key] = set(table[key].keys())
+
+    @staticmethod
+    def __get_similarity(_a_: str, _b_: str):
+        num_eq = 0
+        min_len = min([len(_a_), len(_b_)])
+        max_len = max([len(_a_), len(_b_)])
+        for idx in range(min_len):
+            if _a_[idx] == _b_[idx]:
+                num_eq += 1
+        if num_eq == 0:
+            num_eq = -1.
+        return float(num_eq / min_len)
+
+    @staticmethod
+    def _filter_split_process(process: str):
+        tmp = " ".join(process.split("-"))
+        tmp = " ".join(tmp.split("_"))
+        return tmp.split()
+
+    def reduce_categories(self, table_name: str, target, filter_=None, lvls: int=0):
+        assert filter_ is not None, "You need to specify a filter"
+        reduced_set = {}
+        categories = list(sorted(self._tables[table_name][target]))
+        for category in tqdm(categories):
+            cur_category = filter_(category)
+            cur_lvl = reduced_set
+            for word in cur_category:
+                if word not in cur_lvl:
+                    cur_lvl[word] = {'times': 0}
+                cur_lvl[word]['times'] += 1
+                cur_lvl = cur_lvl[word]
+
+        result = set()
+        cur_lvl = reduced_set
+        for key, value in tqdm(cur_lvl.items()):
+            cur_output = [key]
+            cur_inner = value
+            for cur_lvl in range(lvls):
+                try:
+                    next_key = [
+                        inn_key for inn_key in cur_inner.keys()
+                        if inn_key != 'times'
+                    ].pop()
+                    if next_key:
+                        cur_output.append(next_key)
+                        cur_inner = cur_inner[next_key]
+                except IndexError:
+                    break
+            result |= set((" ".join(cur_output),))
+
+        self._tables[table_name][target] = result
+
+    @property
+    def list(self):
+        return list(self._indexed_tables.keys())
+
+    def __getattr__(self, name):
+        if name in self._indexed_tables:
+            return self._indexed_tables[name]
+        raise AttributeError(name)
 
     def insert(self, table_name: str, key, value):
         """Insert a value in a table.
@@ -47,6 +117,18 @@ class SupportTable(object):
               one time to generate the indexes.
         """
         return self._indexed_tables[table_name][key][value]
+
+    def get_close_value(self, table_name: str, key, value):
+        """Convert a value with the respective index.
+
+        Note: You have to call gen_indexes before the conversion at least
+              one time to generate the indexes.
+        """
+        for cur_key in self._indexed_tables[table_name][key]:
+            if value.index(cur_key) == 0:
+                return self._indexed_tables[table_name][key][cur_key]
+        raise KeyError("'{}' is not close to any index in '{}' table at '{}' key...".format(
+            value, table_name, key))
 
     def __getitem__(self, index: int):
         """Make object interable to check if a specific table exists."""
@@ -140,6 +222,7 @@ class CMSDatasetV0(object):
                         if not only_indexes:
                             tmp_data.append(obj)
                         tmp_indexes |= set((obj.FileName,))
+                        break
 
                     time_delta = time() - start_time
                     if time_delta >= 1.0:
@@ -166,7 +249,7 @@ class CMSDatasetV0(object):
         next_window_indexes = set()
 
         if extract_support_tables:
-            feature_support_table = SupportTable()
+            feature_support_table = SupportTables()
 
         # Get raw data
         window = [
@@ -213,10 +296,15 @@ class CMSDatasetV0(object):
                         for feature, value in new_record.features:
                             feature_support_table.insert(
                                 'features', feature, value)
+
             spinner.write("Output data created...")
 
             if extract_support_tables:
                 spinner.text = "Generate support table indexes..."
+                feature_support_table.reduce_categories(
+                    "features", "process",
+                    feature_support_table.filters.split_process
+                )
                 feature_support_table.gen_indexes()
                 spinner.write("Support table generated...")
 
@@ -279,7 +367,7 @@ class CMSDatasetV0(object):
                         cur_record = cur_record.add_tensor(
                             [
                                 float(
-                                    support_tables.get_value(
+                                    support_tables.get_close_value(
                                         'features',
                                         feature_name,
                                         cur_record.feature[feature_name]
