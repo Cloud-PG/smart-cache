@@ -78,7 +78,7 @@ class SupportTable(object):
             return self._indexed_tables[name]
         raise AttributeError(name)
 
-    def insert(self, table_name: str, key, value):
+    def insert(self, table_name: str, key, value, with_unknown: bool=True):
         """Insert a value in a table.
 
         Note: all tables are sets, so support tables manage
@@ -89,6 +89,8 @@ class SupportTable(object):
         if key not in self._tables[table_name]:
             self._tables[table_name][key] = set()
         self._tables[table_name][key] |= set((value, ))
+        if with_unknown:
+            self._tables[table_name][key] |= set(('__unknown__', ))
         return self
 
     def get_sorted_keys(self, table_name: str):
@@ -110,10 +112,13 @@ class SupportTable(object):
               one time to generate the indexes.
         """
         for cur_key in self._indexed_tables[table_name][key]:
-            if value.index(cur_key) == 0:
+            if value.find(cur_key) == 0:
                 return self._indexed_tables[table_name][key][cur_key]
-        raise KeyError("'{}' is not close to any index in '{}' table at '{}' key...".format(
-            value, table_name, key))
+        if '__unknown__' in self._indexed_tables[table_name][key]:
+            return self._indexed_tables[table_name][key]['__unknown__']
+        else:
+            raise KeyError("'{}' is not close to any index in '{}' table at '{}' key...".format(
+                value, table_name, key))
 
     def __getitem__(self, index: int):
         """Make object interable to check if a specific table exists."""
