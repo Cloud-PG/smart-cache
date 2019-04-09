@@ -196,15 +196,18 @@ class CMSDataPopularity(FeatureData):
 
 class CMSDataPopularityRaw(FeatureData):
 
-    def __init__(self, data,
+    def __init__(self, data=None,
                  feature_list=['FileName', 'TaskMonitorId', 'WrapCPU'],
                  filters=[('Type', lambda elm: elm == "analysis")]
                  ):
         super(CMSDataPopularityRaw, self).__init__()
-        self.__id = data[feature_list[0]]
-        self.__valid = all(
-            [fun(data[name]) for name, fun in filters]
-        )
+        self.__id = None
+        self.__valid = False
+        if data:
+            self.__id = data[feature_list[0]]
+            self.__valid = all(
+                [fun(data[name]) for name, fun in filters]
+            )
         if self.__valid:
             for key, value in data.items():
                 if key in feature_list:
@@ -218,6 +221,20 @@ class CMSDataPopularityRaw(FeatureData):
             return self._features[name]
         else:
             raise AttributeError("Attribute '{}' not found...".format(name))
+
+    def dump(self):
+        return json.dumps({
+            'features': self._features,
+            'id': self.__id,
+            'valid': self.__valid
+        })
+
+    def load(self, input_string):
+        data = json.loads(input_string)
+        self._features = data['features']
+        self.__id = data['id']
+        self.__valid = data['valid']
+        return self
 
     @property
     def record_id(self):

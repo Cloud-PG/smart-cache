@@ -2,6 +2,7 @@ import json
 import sys
 from collections import OrderedDict
 from datetime import date, timedelta
+from multiprocessing import Process, Queue
 from time import time
 
 from tqdm import tqdm
@@ -17,14 +18,86 @@ from DataManager.collector.datafile.json import JSONDataFileWriter
 from .utils import ReadableDictAsAttribute, SupportTable
 
 
+class CMSDatasetV0Process(Process):
+
+    # ! Multiprocess have to be fixed...
+
+    def __init__(self, return_data, return_indexes, only_indexes: bool=False):
+        super(CMSDatasetV0Process, self).__init__()
+        self.__full_path = None
+        self.__cur_file = None
+        self.__return_data = return_data
+        self.__return_indexes = return_indexes
+        self.__only_indexes = only_indexes
+
+    def add_data(self, full_path, cur_file):
+        self.__full_path = full_path
+        self.__cur_file = cur_file
+
+    def run(self):
+        with yaspin(text="Starting raw data extraction of {}".format(self.__full_path)) as spinner:
+            collector = DataFile(self.__cur_file)
+            extraction_start_time = time()
+            start_time = time()
+            counter = 0
+            extractions = 0
+
+            for idx, record in enumerate(collector, 1):
+                obj = CMSDataPopularityRaw(record)
+                if obj:
+                    extractions += 1
+                    if not self.__only_indexes:
+                        obj_str = obj.dump()
+                        self.__return_data.put(obj_str)
+                    self.__return_indexes.put(obj.FileName)
+                    if idx > 10000:
+                        break
+
+                time_delta = time() - start_time
+                if time_delta >= 1.0:
+                    counter_delta = idx - counter
+                    counter = idx
+                    spinner.text = "[{:0.2f} it/s][Extracted {} records of {} from {}]".format(
+                        counter_delta / time_delta, extractions, idx, self.__full_path)
+                    start_time = time()
+
+            spinner.write("[Extracted {} of {} items from '{}' in {:0.2f}s]".format(
+                extractions, idx, self.__full_path, time() - extraction_start_time)
+            )
+
+        print("[PID: {}] DONE".format(self.pid))
+
+
 class CMSDatasetV0(object):
 
     """Generator of CMS dataset V0.
 
-    This generator uses HTTPFS"""
+    This generator uses HTTPFS or Spark"""
 
-    def __init__(self, httpfs_url: str, httpfs_user: str, httpfs_password: str):
-        self._httpfs = HTTPFS(httpfs_url, httpfs_user, httpfs_password)
+    def __init__(self, httpfs: dict={}):
+        self._httpfs = None
+        if httpfs:
+            self._httpfs = HTTPFS(
+                httpfs.get('url'),
+                httpfs.get('user'),
+                httpfs.get('password')
+            )
+            self._httpfs_base_path = httpfs.get(
+                'base_path', "/project/awg/cms/jm-data-popularity/avro-snappy"
+            )
+
+    def get_data_collector(self, year, month, day):
+        if self._httpfs is not None:
+            for type_, name, full_path in self._httpfs.liststatus(
+                    "/{}year={}/month={}/day={}".format(
+                        self._httpfs_base_path, year, month, day
+                    )
+            ):
+                cur_file = self._httpfs.open(full_path)
+                collector = DataFile(cur_file)
+            return collector
+        else:
+            raise Exception("No methods to retrieve data...")
 
     @staticmethod
     def __gen_interval(year: int, month: int, day: int, window_size: int, step: int=1, next_week: bool=False):
@@ -62,36 +135,38 @@ class CMSDatasetV0(object):
         """
         tmp_data = []
         tmp_indexes = set()
-        for type_, name, fullpath in self._httpfs.liststatus("/project/awg/cms/jm-data-popularity/avro-snappy/year={}/month={}/day={}".format(year, month, day)):
-            cur_file = self._httpfs.open(fullpath)
 
-            with yaspin(text="Starting raw data extraction of {}".format(fullpath)) as spinner:
-                collector = DataFile(cur_file)
-                extraction_start_time = time()
-                start_time = time()
-                counter = 0
+        with yaspin(text="Starting raw data extraction of {}".format(full_path)) as spinner:
+            collector = self.get_data_collector(year, month, day)
+            extraction_start_time = time()
+            start_time = time()
+            counter = 0
+            extractions = 0
 
-                for idx, record in enumerate(collector, 1):
-                    obj = CMSDataPopularityRaw(record)
-                    if obj:
-                        if not only_indexes:
-                            tmp_data.append(obj)
-                        tmp_indexes |= set((obj.FileName,))
+            for idx, record in enumerate(collector, 1):
+                obj = CMSDataPopularityRaw(record)
+                if obj:
+                    extractions += 1
+                    if not only_indexes:
+                        tmp_data.append(obj)
+                    tmp_indexes |= set((obj.FileName,))
 
-                    time_delta = time() - start_time
-                    if time_delta >= 1.0:
-                        counter_delta = idx - counter
-                        counter = idx
-                        spinner.text = "[{:0.2f} it/s][Extracted {} records from {}]".format(
-                            counter_delta / time_delta, idx, fullpath)
-                        start_time = time()
+                time_delta = time() - start_time
+                if time_delta >= 1.0:
+                    counter_delta = idx - counter
+                    counter = idx
+                    spinner.text = "[{:0.2f} it/s][Extracted {} records of {} from {}]".format(
+                        counter_delta / time_delta, extractions, idx, full_path)
+                    start_time = time()
 
-                spinner.write("[Extracted {} items from '{}' in {:0.2f}s]".format(
-                    idx, fullpath, time() - extraction_start_time))
+            spinner.write("[Extracted {} of {} items from '{}' in {:0.2f}s]".format(
+                extractions, idx, self.__full_path, time() - extraction_start_time)
+            )
 
         return tmp_data, tmp_indexes
 
-    def extract(self, start_date: str, window_size: int, extract_support_tables: bool=True):
+    def extract(self, start_date: str, window_size: int, extract_support_tables: bool=True, multiprocess: bool=False, num_processes: int=1):
+        # ! Multiprocess have to be fixed...
         """Extract data in a time window."""
         start_year, start_month, start_day = [
             int(elm) for elm in start_date.split()
@@ -106,28 +181,108 @@ class CMSDatasetV0(object):
             feature_support_table = SupportTable()
 
         # Get raw data
-        window = [
-            self.get_raw_data(year, month, day)
-            for year, month, day in self.__gen_interval(
+        if not multiprocess:
+            window = [
+                self.get_raw_data(year, month, day)
+                for year, month, day in self.__gen_interval(
+                    start_year, start_month, start_day, window_size
+                )
+            ]
+
+            next_window = [
+                self.get_raw_data(year, month, day, only_indexes=True)
+                for year, month, day in self.__gen_interval(
+                    start_year, start_month, start_day, window_size, next_week=True
+                )
+            ]
+        else:
+            window_tasks = self.__gen_interval(
                 start_year, start_month, start_day, window_size
             )
-        ]
-
-        next_window = [
-            self.get_raw_data(year, month, day, only_indexes=True)
-            for year, month, day in self.__gen_interval(
+            next_window_tasks = self.__gen_interval(
                 start_year, start_month, start_day, window_size, next_week=True
             )
-        ]
+            all_tasks = []
+            task_data = Queue()
+            task_window_indexes = Queue()
+            task_next_window_indexes = Queue()
+
+            for year, month, day in window_tasks:
+                for type_, name, full_path in self._httpfs.liststatus("{}/year={}/month={}/day={}".format(
+                    self._httpfs_base_path, year, month, day)
+                ):
+                    all_tasks.append(
+                        (
+                            full_path,
+                            CMSDatasetV0Process(
+                                task_data, task_window_indexes
+                            )
+                        )
+                    )
+
+            for year, month, day in next_window_tasks:
+                for type_, name, full_path in self._httpfs.liststatus("{}/year={}/month={}/day={}".format(
+                    self._httpfs_base_path, year, month, day)
+                ):
+                    all_tasks.append(
+                        (
+                            full_path,
+                            CMSDatasetV0Process(
+                                task_data, task_next_window_indexes,
+                                only_indexes=True
+                            )
+                        )
+                    )
+
+            launched_processes = []
+
+            def flush_queue(queue):
+                data = []
+                while not queue.empty():
+                    data.append(queue.get())
+                return data
+
+            while len(all_tasks) > 0 or len(launched_processes) > 0:
+                if len(launched_processes) < num_processes and all_tasks:
+                    file_path, process = all_tasks.pop(0)
+                    cur_file = self._httpfs.open(file_path)
+                    process.add_data(file_path, cur_file)
+                    process.start()
+                    launched_processes.append(process)
+                    print("[Process {}] started...".format(process.pid))
+                elif launched_processes:
+                    data += flush_queue(task_data)
+                    window_indexes += flush_queue(task_window_indexes)
+                    next_window_indexes += flush_queue(
+                        task_next_window_indexes)
+                    while any([process.is_alive() for process in launched_processes]):
+                        for process in launched_processes:
+                            print("[Process -> {}][Alive: {}] try to join...".format(
+                                process.pid, process.is_alive()))
+                            process.join()
+                            print("[Process -> {}][Alive: {}] join done...".format(
+                                process.pid, process.is_alive()))
+
+            with yaspin(text="Get results...") as spinner:
+                spinner.text = "Get data..."
+                data += task_data.get()
+                spinner.write("Data updated...")
+                spinner.text = "Get window indexes..."
+                window_indexes |= set(task_window_indexes.get())
+                spinner.write("Window indexes updated...")
+                spinner.text = "Get next window indexes..."
+                next_window_indexes |= set(task_next_window_indexes.get())
+                spinner.write("Next window indexes updated...")
 
         # Merge results
         with yaspin(text="Merge results...") as spinner:
-            for new_data, new_indexes in window:
-                data += new_data
-                window_indexes = window_indexes | new_indexes
+            if not multiprocess:
+                for new_data, new_indexes in window:
+                    data += new_data
+                    window_indexes = window_indexes | new_indexes
 
-            for _, new_indexes in next_window:
-                next_window_indexes = next_window_indexes | new_indexes
+                for _, new_indexes in next_window:
+                    next_window_indexes = next_window_indexes | new_indexes
 
             # Merge indexes
             spinner.text = "Merge indexes..."
@@ -167,7 +322,7 @@ class CMSDatasetV0(object):
         else:
             return res_data, {}
 
-    def save(self, from_: str, window_size: int, outfile_name: str='', extract_support_tables: bool=True):
+    def save(self, from_: str, window_size: int, outfile_name: str='', extract_support_tables: bool=True, multiprocess: bool=False, num_processes: int=1):
         """Extract and save a dataset.
 
         Args:
@@ -184,7 +339,9 @@ class CMSDatasetV0(object):
         start_time = time()
         data, support_tables = self.extract(
             from_, window_size,
-            extract_support_tables=extract_support_tables
+            extract_support_tables=extract_support_tables,
+            multiprocess=multiprocess,
+            num_processes=num_processes
         )
         extraction_time = time() - start_time
         print("Data extracted in {}s".format(extraction_time))
