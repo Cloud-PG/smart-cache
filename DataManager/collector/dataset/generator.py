@@ -5,6 +5,7 @@ from datetime import date, timedelta
 from multiprocessing import Process, Queue
 from time import time
 
+from pyspark import SparkConf, SparkContext
 from tqdm import tqdm
 from yaspin import yaspin
 
@@ -74,17 +75,46 @@ class CMSDatasetV0(object):
 
     This generator uses HTTPFS or Spark"""
 
-    def __init__(self, httpfs: dict={}):
+    def __init__(self, spark_conf: dict={}, source: dict={}):
         self._httpfs = None
-        if httpfs:
+        self._spark_context = None
+        if 'httpfs' in source:
             self._httpfs = HTTPFS(
-                httpfs.get('url'),
-                httpfs.get('user'),
-                httpfs.get('password')
+                source['httpfs'].get('url'),
+                source['httpfs'].get('user'),
+                source['httpfs'].get('password')
             )
-            self._httpfs_base_path = httpfs.get(
+            self._httpfs_base_path = source['httpfs'].get(
                 'base_path', "/project/awg/cms/jm-data-popularity/avro-snappy"
             )
+        elif 'hdfs' in sources:
+            self._hdfs_base_path = source['hdfs'].get(
+                'hdfs_base_path', "hdfs://analytix/project/awg/cms/jm-data-popularity/avro-snappy",
+            )
+        elif 'local' in sources:
+            self._local_folder = source['local'].get(
+                'folder', "data",
+            )
+        if spark_conf:
+            self._spark_master = spark_conf.get('master', "local")
+            self._spark_app_name = spark_conf.get('app_name', "CMSDatasetV0")
+            self._spark_conf = spark_conf.get('config', {})
+
+    @property
+    def spark_context(self):
+        if not self._spark_context and 'sc' not in locals():
+            conf = SparkConf()
+            conf.setMaster(self._spark_master)
+            conf.setAppName(self._spark_app_name)
+
+            for name, value in self._spark_conf.items():
+                conf.set(name, value)
+
+            self._spark_context = SparkContext(conf=conf)
+        elif 'sc' in locals():
+            self._spark_context = sc
+
+        return self._spark_context
 
     def get_data_collector(self, year, month, day):
         if self._httpfs is not None:
@@ -96,6 +126,7 @@ class CMSDatasetV0(object):
                 cur_file = self._httpfs.open(full_path)
                 collector = DataFile(cur_file)
             return collector
+        elif self._hdfs_base_path
         else:
             raise Exception("No methods to retrieve data...")
 
@@ -164,6 +195,30 @@ class CMSDatasetV0(object):
             )
 
         return tmp_data, tmp_indexes
+
+    def spark_extract(self, start_date: str, window_size: int, extract_support_tables: bool=True):
+        """Extract data in a time window."""
+        start_year, start_month, start_day = [
+            int(elm) for elm in start_date.split()
+        ]
+
+        sc = self.spark_context
+
+        window = self.__gen_interval(
+            start_year, start_month, start_day, window_size
+        )
+        next_window = self.__gen_interval(
+            start_year, start_month, start_day, window_size, next_week=True
+        )
+
+        window_rdd = sc.parallelize([])
+        for year, month, day in window:
+            rdd_avro = sc.binaryFiles("{}/year={:4d}/month={:d}/day={:d}/part-m-00000.avro".format(
+                self._spark_hdfs_base_path, year, month, day)
+            )
+            raw = rdd_avro.map(lambda elm: CMSDataPopularityRaw(elm)).reduce(lambda elm: elm.valid == True)
+            window_rdd = window_rdd.union(raw)
+            print(window_rdd.sample())
 
     def extract(self, start_date: str, window_size: int, extract_support_tables: bool=True, multiprocess: bool=False, num_processes: int=1):
         # ! Multiprocess have to be fixed...
