@@ -213,8 +213,12 @@ class CMSDataPopularityRaw(FeatureData):
                 if key in feature_list:
                     self.add_feature(key, value)
 
-    def __bool__(self):
+    @property
+    def valid(self):
         return self.__valid
+
+    def __bool__(self):
+        return self.valid
 
     def __getattr__(self, name):
         if name in self._features:
