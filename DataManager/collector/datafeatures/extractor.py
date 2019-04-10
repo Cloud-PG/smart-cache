@@ -9,6 +9,17 @@ class FeatureData(object):
     def __init__(self):
         self._features = {}
 
+    def __getstate__(self):
+        """Make object serializable by pickle."""
+        return self.to_dict()
+
+    def __setstate__(self, state):
+        """Make object loaded by pickle."""
+        raise NotImplementedError
+
+    def to_dict(self):
+        raise NotImplementedError
+
     @property
     def feature(self):
         return self._features
@@ -54,6 +65,28 @@ class CMSSimpleRecord(FeatureData):
         else:
             for feature, value in data:
                 self.add_feature(feature, value)
+    
+    def __setstate__(self, state):
+        """Make object loaded by pickle."""
+        self._features = state['features']
+        self.__tasks = state['tasks']
+        self.__tot_wrap_cpu = state['tot_wrap_cpu']
+        self.__record_id = state['record_id']
+        self.__next_window_counter = state['next_window_counter']
+        self.__tensor = state['tensor']
+        return self
+
+    def __getstate__(self):
+        """Make object serializable by pickle."""
+        return {
+            'features': self._features,
+            'tasks': self.__tasks,
+            'tot_wrap_cpu': self.__tot_wrap_cpu,
+            'record_id': self.__record_id,
+            'next_window_counter': self.__next_window_counter,
+            'tensor': self.__tensor,
+            
+        }
 
     def to_dict(self):
         return {
@@ -148,6 +181,24 @@ class CMSDataPopularity(FeatureData):
         self.__filters = filters
         self.__extract_features()
 
+    def __setstate__(self, state):
+        """Make object loaded by pickle."""
+        self.__data = state['data']
+        self._features = state['features']
+        self.__record_id = state['record_id']
+        self.__valid = state['valid']
+        self.__next_window = state['next_window']
+        return self
+
+    def to_dict(self):
+        return {
+            'data': self.__data,
+            'features': self._features,
+            'record_id': self.__record_id,
+            'valid': self.__valid,
+            'next_window': self.__next_window
+        }
+
     def __bool__(self):
         return self.__valid
 
@@ -213,6 +264,30 @@ class CMSDataPopularityRaw(FeatureData):
                 if key in feature_list:
                     self.add_feature(key, value)
 
+    def __setstate__(self, state):
+        """Make object loaded by pickle."""
+        self._features = state['features']
+        self.__id = state['id']
+        self.__valid = state['valid']
+        return self
+
+    def to_dict(self):
+        return {
+            'features': self._features,
+            'id': self.__id,
+            'valid': self.__valid
+        }
+
+    def dumps(self):
+        return json.dumps(self.to_dict)
+
+    def loads(self, input_string):
+        data = json.loads(input_string)
+        self._features = data['features']
+        self.__id = data['id']
+        self.__valid = data['valid']
+        return self
+
     @property
     def valid(self):
         return self.__valid
@@ -225,20 +300,6 @@ class CMSDataPopularityRaw(FeatureData):
             return self._features[name]
         else:
             raise AttributeError("Attribute '{}' not found...".format(name))
-
-    def dump(self):
-        return json.dumps({
-            'features': self._features,
-            'id': self.__id,
-            'valid': self.__valid
-        })
-
-    def load(self, input_string):
-        data = json.loads(input_string)
-        self._features = data['features']
-        self.__id = data['id']
-        self.__valid = data['valid']
-        return self
 
     @property
     def record_id(self):
