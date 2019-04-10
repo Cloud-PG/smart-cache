@@ -219,7 +219,7 @@ class CMSDatasetV0(object):
 
     def spark_extract(self, start_date: str, window_size: int,
                       extract_support_tables: bool=True,
-                      num_partitions: int=10, chunk_size: int=500,
+                      num_partitions: int=100, chunk_size: int=5000,
                       log_level: str="WARN"
                       ):
         """Extract data in a time window."""
@@ -239,11 +239,10 @@ class CMSDatasetV0(object):
 
         data = []
         for year, month, day in window:
-            print(year, month, day)
             print("Get RAW data for {}/{}/{}".format(year, month, day))
             collector = self.get_data_collector(year, month, day)
             print("Extract data...")
-            pbar = tqdm()
+            pbar = tqdm(unit="record")
             for chunk in collector.get_chunks(chunk_size):
                 new_data = sc.parallelize(chunk, num_partitions).map(
                     lambda elm: CMSDataPopularityRaw(elm)
