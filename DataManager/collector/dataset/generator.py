@@ -3,8 +3,10 @@ import sys
 from collections import OrderedDict
 from datetime import date, timedelta
 from multiprocessing import Process, Queue
+from os import path
 from time import time
 
+import findspark
 from pyspark import SparkConf, SparkContext
 from tqdm import tqdm
 from yaspin import yaspin
@@ -78,6 +80,14 @@ class CMSDatasetV0(object):
     def __init__(self, spark_conf: dict={}, source: dict={}):
         self._httpfs = None
         self._spark_context = None
+        self._hdfs_base_path = None
+        self._local_folder = None
+
+        # Spark defaults
+        self._spark_master = spark_conf.get('master', "local")
+        self._spark_app_name = spark_conf.get('app_name', "CMSDatasetV0")
+        self._spark_conf = spark_conf.get('config', {})
+
         if 'httpfs' in source:
             self._httpfs = HTTPFS(
                 source['httpfs'].get('url'),
@@ -87,22 +97,19 @@ class CMSDatasetV0(object):
             self._httpfs_base_path = source['httpfs'].get(
                 'base_path', "/project/awg/cms/jm-data-popularity/avro-snappy"
             )
-        elif 'hdfs' in sources:
+        elif 'hdfs' in source:
             self._hdfs_base_path = source['hdfs'].get(
                 'hdfs_base_path', "hdfs://analytix/project/awg/cms/jm-data-popularity/avro-snappy",
             )
-        elif 'local' in sources:
+        elif 'local' in source:
             self._local_folder = source['local'].get(
                 'folder', "data",
             )
-        if spark_conf:
-            self._spark_master = spark_conf.get('master', "local")
-            self._spark_app_name = spark_conf.get('app_name', "CMSDatasetV0")
-            self._spark_conf = spark_conf.get('config', {})
 
     @property
     def spark_context(self):
         if not self._spark_context and 'sc' not in locals():
+            findspark.init()
             conf = SparkConf()
             conf.setMaster(self._spark_master)
             conf.setAppName(self._spark_app_name)
@@ -110,7 +117,7 @@ class CMSDatasetV0(object):
             for name, value in self._spark_conf.items():
                 conf.set(name, value)
 
-            self._spark_context = SparkContext(conf=conf)
+            self._spark_context = SparkContext.getOrCreate(conf=conf)
         elif 'sc' in locals():
             self._spark_context = sc
 
@@ -125,10 +132,24 @@ class CMSDatasetV0(object):
             ):
                 cur_file = self._httpfs.open(full_path)
                 collector = DataFile(cur_file)
-            return collector
-        elif self._hdfs_base_path
+        elif self._hdfs_base_path:
+            sc = self.spark_context
+            binary_file = sc.binaryFiles("{}/year={:4d}/month={:d}/day={:d}/part-m-00000.avro".format(
+                self._spark_hdfs_base_path, year, month, day)
+            ).collect()
+            collector = DataFile(binary_file[0])
+        elif self._local_folder:
+            cur_file_path = path.join(
+                path.abspath(self._local_folder),
+                "year={}".format(year),
+                "month={}".format(month),
+                "day={}".format(day),
+                "part-m-00000.avro"
+            )
+            collector = DataFile(cur_file_path)
         else:
             raise Exception("No methods to retrieve data...")
+        return collector
 
     @staticmethod
     def __gen_interval(year: int, month: int, day: int, window_size: int, step: int=1, next_week: bool=False):
@@ -196,13 +217,18 @@ class CMSDatasetV0(object):
 
         return tmp_data, tmp_indexes
 
-    def spark_extract(self, start_date: str, window_size: int, extract_support_tables: bool=True):
+    def spark_extract(self, start_date: str, window_size: int,
+                      extract_support_tables: bool=True,
+                      num_partitions: int=10, chunk_size: int=500,
+                      log_level: str="WARN"
+                      ):
         """Extract data in a time window."""
         start_year, start_month, start_day = [
             int(elm) for elm in start_date.split()
         ]
 
         sc = self.spark_context
+        sc.setLogLevel(log_level)
 
         window = self.__gen_interval(
             start_year, start_month, start_day, window_size
@@ -211,16 +237,26 @@ class CMSDatasetV0(object):
             start_year, start_month, start_day, window_size, next_week=True
         )
 
-        window_rdd = sc.parallelize([])
+        data = []
         for year, month, day in window:
-            rdd_avro = sc.binaryFiles("{}/year={:4d}/month={:d}/day={:d}/part-m-00000.avro".format(
-                self._spark_hdfs_base_path, year, month, day)
-            )
-            raw = rdd_avro.map(lambda elm: CMSDataPopularityRaw(elm)).reduce(lambda elm: elm.valid == True)
-            window_rdd = window_rdd.union(raw)
-            print(window_rdd.sample())
+            print(year, month, day)
+            print("Get RAW data for {}/{}/{}".format(year, month, day))
+            collector = self.get_data_collector(year, month, day)
+            print("Extract data...")
+            pbar = tqdm()
+            for chunk in collector.get_chunks(chunk_size):
+                new_data = sc.parallelize(chunk, num_partitions).map(
+                    lambda elm: CMSDataPopularityRaw(elm)
+                ).filter(
+                    lambda elm: elm.valid == True
+                )
+                data += new_data.collect()
+                pbar.update(len(chunk))
+            pbar.close()
 
-    def extract(self, start_date: str, window_size: int, extract_support_tables: bool=True, multiprocess: bool=False, num_processes: int=1):
+        print("DONE")
+
+    def extract(self, start_date: str, window_size: int, extract_support_tables: bool = True, multiprocess: bool = False, num_processes: int = 1):
         # ! Multiprocess have to be fixed...
         """Extract data in a time window."""
         start_year, start_month, start_day = [
@@ -377,7 +413,7 @@ class CMSDatasetV0(object):
         else:
             return res_data, {}
 
-    def save(self, from_: str, window_size: int, outfile_name: str='', extract_support_tables: bool=True, multiprocess: bool=False, num_processes: int=1):
+    def save(self, from_: str, window_size: int, outfile_name: str='', use_spark: bool=False, extract_support_tables: bool=True, multiprocess: bool=False, num_processes: int=1):
         """Extract and save a dataset.
 
         Args:
@@ -392,12 +428,18 @@ class CMSDatasetV0(object):
             This object instance (for chaining operations)
         """
         start_time = time()
-        data, support_tables = self.extract(
-            from_, window_size,
-            extract_support_tables=extract_support_tables,
-            multiprocess=multiprocess,
-            num_processes=num_processes
-        )
+        if not use_spark:
+            data, support_tables = self.extract(
+                from_, window_size,
+                extract_support_tables=extract_support_tables,
+                multiprocess=multiprocess,
+                num_processes=num_processes
+            )
+        else:
+            data, support_tables = self.spark_extract(
+                from_, window_size,
+                extract_support_tables=extract_support_tables,
+            )
         extraction_time = time() - start_time
         print("Data extracted in {}s".format(extraction_time))
 
