@@ -219,7 +219,7 @@ class CMSDatasetV0(object):
 
     def spark_extract(self, start_date: str, window_size: int,
                       extract_support_tables: bool=True,
-                      num_partitions: int=100, chunk_size: int=5000,
+                      num_partitions: int=10, chunk_size: int=5000,
                       log_level: str="WARN"
                       ):
         """Extract data in a time window."""
