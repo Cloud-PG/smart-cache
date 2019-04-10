@@ -230,7 +230,8 @@ class AvroDataFileReader(object):
 
     def __del__(self):
         """Object destructor."""
-        self.__avro_file.close()
+        if self.__avro_file:
+            self.__avro_file.close()
         if not self.__descriptor.closed:
             self.__descriptor.close()
 
