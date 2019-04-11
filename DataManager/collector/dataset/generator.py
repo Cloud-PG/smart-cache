@@ -419,7 +419,7 @@ class CMSDatasetV0(object):
                 print("[Len task queue: {}][Num. launched processes: {}]".format(
                     len(all_tasks), len(launched_processes))
                 )
-                if len(launched_processes) < num_processes and all_tasks:
+                if len(launched_processes) <= num_processes and all_tasks:
                     window_date, process = all_tasks.pop(0)
                     collector = self.get_data_collector(*window_date)
                     process.add_data(window_date, collector)
