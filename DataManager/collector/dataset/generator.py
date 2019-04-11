@@ -417,7 +417,7 @@ class CMSDatasetV0(object):
 
             while len(all_tasks) > 0 or len(launched_processes) > 0:
                 print("[Len task queue: {}][Num. launched processes: {}]".format(
-                    len(all_tasks), len(launched_processes))
+                    len(all_tasks), len(launched_processes), flush=True)
                 )
                 if len(launched_processes) < num_processes and all_tasks:
                     window_date, process = all_tasks.pop(0)
@@ -425,20 +425,21 @@ class CMSDatasetV0(object):
                     process.add_data(window_date, collector)
                     process.start()
                     launched_processes.append(process)
-                    print("[Process {}] started...".format(process.pid))
+                    print("[Process {}] started...".format(
+                        process.pid), flush=True)
                     print("[Len task queue: {}][Num. launched processes: {}]".format(
-                        len(all_tasks), len(launched_processes))
+                        len(all_tasks), len(launched_processes), flush=True)
                     )
                 elif launched_processes:
                     while any([process.is_alive() for process in launched_processes]):
                         for process in launched_processes:
                             print("[Process -> {}][Alive: {}] try to join...".format(
-                                process.pid, process.is_alive()))
+                                process.pid, process.is_alive()), flush=True)
                             # Wait for a process to end
                             process.join(1)
                             print("[Process -> {}][Alive: {}]".format(
-                                process.pid, process.is_alive()))
-                        print("[Flush queues...]")
+                                process.pid, process.is_alive()), flush=True)
+                        print("[Flush queues...]", flush=True)
                         # Get some data...
                         data += self.__flush_queue(task_data)
                         window_indexes |= set(
@@ -454,7 +455,7 @@ class CMSDatasetV0(object):
                             if process.is_alive()
                         ]
                         print("[Len task queue: {}][Num. launched processes: {}]".format(
-                            len(all_tasks), len(launched_processes))
+                            len(all_tasks), len(launched_processes), flush=True)
                         )
 
             # Update data and indexes with latest results
