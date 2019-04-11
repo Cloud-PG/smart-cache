@@ -351,7 +351,7 @@ class CMSDatasetV0(object):
             extract_support_tables (bool): ask to extract the support table 
                                            information
             multiprocess (bool): use Python multiprocessing
-            num_processes (int): number of process for Python multiprocessing
+            num_processes (int=2): number of process for Python multiprocessing
 
         Returns:
             (list, SupportTable): the data and the support table object
@@ -543,7 +543,7 @@ class CMSDatasetV0(object):
             extract_support_tables (bool): ask to extract the support table 
                                            information
             multiprocess (bool): use Python multiprocessing
-            num_processes (int): number of process for Python multiprocessing
+            num_processes (int=2): number of process for Python multiprocessing
 
         Returns:
             This object instance (for chaining operations)
