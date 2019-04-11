@@ -426,6 +426,9 @@ class CMSDatasetV0(object):
                     process.start()
                     launched_processes.append(process)
                     print("[Process {}] started...".format(process.pid))
+                    print("[Len task queue: {}][Num. launched processes: {}]".format(
+                        len(all_tasks), len(launched_processes))
+                    )
                 elif launched_processes:
                     while any([process.is_alive() for process in launched_processes]):
                         for process in launched_processes:
