@@ -27,7 +27,7 @@ class CMSDatasetV0Process(Process):
 
     def __init__(self, return_data: 'Queue', return_indexes: 'Queue', only_indexes: bool=False):
         """The process that extract data in parallel.
-        
+
         Args:
             return_data (Queue): the queue where the proces will put the data
             return_indexes (Queue): the queue where the proces will put the indexes
@@ -235,7 +235,7 @@ class CMSDatasetV0(object):
 
     def spark_extract(self, start_date: str, window_size: int,
                       extract_support_tables: bool=True,
-                      num_partitions: int=10, chunk_size: int=5000,
+                      num_partitions: int=10, chunk_size: int=1000,
                       log_level: str="WARN"
                       ):
         """Extract data in a time window with Spark.
@@ -248,7 +248,7 @@ class CMSDatasetV0(object):
             extract_support_tables (bool=True): ask to extract the support table 
                                                 information
             num_partitions (int=10): number of RDD partition to create
-            chunk_size (int=5000): size of records to extract in the same time
+            chunk_size (int=1000): size of records to extract in the same time
             log_level (str=WARN): the log level for Spark tasks
 
         Note:
@@ -270,22 +270,55 @@ class CMSDatasetV0(object):
         )
 
         data = []
+        window_indexes = set()
+        next_window_indexes = set()
+
         for year, month, day in window:
-            print("Get RAW data for {}/{}/{}".format(year, month, day))
+            print("[Spark task] Get RAW data for {}/{}/{}".format(year, month, day))
             collector = self.get_data_collector(year, month, day)
-            print("Extract data...")
+            print("[Spark task] Extract data...")
             pbar = tqdm(unit="record")
             for chunk in collector.get_chunks(chunk_size):
-                new_data = sc.parallelize(chunk, num_partitions).map(
+                processed_data = sc.parallelize(chunk, num_partitions).map(
                     lambda elm: CMSDataPopularityRaw(elm)
                 ).filter(
                     lambda elm: elm.valid == True
+                ).map(
+                    lambda elm: (elm, elm.FileName)
                 )
-                data += new_data.collect()
+                tmp_data = processed_data.collect()
+                if tmp_data:
+                    new_data, new_indexes = map(list, zip(*tmp_data))
+                    data += new_data
+                    window_indexes |= set(new_indexes)
                 pbar.update(len(chunk))
             pbar.close()
 
-        print("DONE")
+        for year, month, day in next_window:
+            print("[Spark task] Get RAW data for {}/{}/{}".format(year, month, day))
+            collector = self.get_data_collector(year, month, day)
+            print("[Spark task] Extract data...")
+            pbar = tqdm(unit="record")
+            for chunk in collector.get_chunks(chunk_size):
+                processed_data = sc.parallelize(chunk, num_partitions).map(
+                    lambda elm: CMSDataPopularityRaw(elm)
+                ).filter(
+                    lambda elm: elm.valid == True
+                ).map(
+                    lambda elm: (elm, elm.FileName)
+                )
+                tmp_data = processed_data.collect()
+                if tmp_data:
+                    _, new_indexes = map(list, zip(*tmp_data))
+                    next_window_indexes |= set(new_indexes)
+                pbar.update(len(chunk))
+            pbar.close()
+
+        print("[Spark task] DONE!")
+        return self.__gen_output(
+            data, window_indexes,
+            next_window_indexes, extract_support_tables
+        )
 
     @staticmethod
     def __flush_queue(queue):
@@ -322,18 +355,16 @@ class CMSDatasetV0(object):
 
         Returns:
             (list, SupportTable): the data and the support table object
+
+        Note: see __gen_output for more information about the return
         """
         start_year, start_month, start_day = [
             int(elm) for elm in start_date.split()
         ]
 
-        res_data = OrderedDict()
         data = []
         window_indexes = set()
         next_window_indexes = set()
-
-        if extract_support_tables:
-            feature_support_table = SupportTable()
 
         # Get raw data
         if not multiprocess:
@@ -432,6 +463,31 @@ class CMSDatasetV0(object):
             task_window_indexes.close()
             task_next_window_indexes.close()
 
+        return self.__gen_output(
+            data, window_indexes,
+            next_window_indexes, extract_support_tables
+        )
+
+    def __gen_output(self, data: list, window_indexes: set,
+                     next_window_indexes: set, extract_support_tables: bool=True
+                     ):
+        """Generate output data.
+
+        Args:
+            data (list): the data to prepare
+            window_indexes (set): the set of the indexes for the selected window
+            next_window_indexes (set): the set of the indexes for the next one 
+                                       selected window
+            extract_support_tables (bool): ask to extract the support table 
+                                           information
+
+        Returns:
+            (list, SupportTable): the data and the support table object
+        """
+        res_data = OrderedDict()
+        if extract_support_tables:
+            feature_support_table = SupportTable()
+
         # Create output
         with yaspin(text="Merge indexes...") as spinner:
             # Merge indexes
@@ -456,7 +512,7 @@ class CMSDatasetV0(object):
                                 'features', feature, value)
 
             spinner.write("Output data created...")
-            print(feature_support_table.to_dict())
+
             if extract_support_tables:
                 spinner.text = "Generate support table indexes..."
                 feature_support_table.reduce_categories(
