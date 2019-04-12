@@ -617,6 +617,7 @@ class CMSDatasetV0(object):
                 "-".join(from_.split()), window_size)
 
         metadata = {
+            'type': "metadata",
             'from': from_,
             'window_size': window_size,
             'support_tables': support_tables.to_dict() if extract_support_tables else False,
@@ -625,17 +626,11 @@ class CMSDatasetV0(object):
             'len_raw_next_week': raw_info['len_raw_next_week'],
             'raw_week_start': len(data) + 1,
             'raw_next_week_start': len(data) + raw_info['len_raw_week'] + 1,
-            'extraction_time': extraction_time
+            'extraction_time': extraction_time,
+            'checkpoints': {}
         }
 
         with JSONDataFileWriter(outfile_name) as out_file:
-            with yaspin(text="Create dataset...") as spinner:
-                spinner.text = "Write metadata..."
-                start_time = time()
-                out_file.append(metadata)
-                spinner.write("Metadata written in {}s".format(
-                    time() - start_time)
-                )
 
             for record in tqdm(data.values(), desc="Write data"):
                 cur_record = record
@@ -657,7 +652,17 @@ class CMSDatasetV0(object):
                     )
                 out_file.append(cur_record.to_dict())
 
-            for record in tqdm(raw_data, desc="Write raw data"):
-                out_file.append(record.to_dict())
+            for idx, record in tqdm(enumerate(raw_data, desc="Write raw data")):
+                position = out_file.append(record.to_dict())
+                if idx in [0, raw_info['len_raw_week']]:
+                    metadata['checkpoints'][idx] = position
+            
+            with yaspin(text="Write metadata...") as spinner:
+                spinner.text = "Write metadata..."
+                start_time = time()
+                out_file.append(metadata)
+                spinner.write("Metadata written in {}s".format(
+                    time() - start_time)
+                )
 
         return self

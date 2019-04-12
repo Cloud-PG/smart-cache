@@ -44,11 +44,11 @@ class JSONDataFileWriter(object):
 
         """
         try:
-            json.loads(string)
+            obj = json.loads(string)
         except ValueError:
             return False
         else:
-            return True
+            return json.dumps(obj)
 
     def __write(self, data):
         """Write data to the json.gz file.
@@ -61,7 +61,7 @@ class JSONDataFileWriter(object):
 
         """
         self.__descriptor.write(data.encode("utf-8") + b'\n')
-        return self
+        return self.__descriptor.tell()
 
     def append(self, data):
         """Append data to the json.gz file.
@@ -74,24 +74,21 @@ class JSONDataFileWriter(object):
 
         """
         if isinstance(data, str):
-            if self.__valid_json(data):
-                self.__write(data)
+            return self.__write(self.__valid_json(elm))
         elif isinstance(data, dict):
-            self.__write(json.dumps(data))
+            return self.__write(json.dumps(data))
         elif isinstance(data, (list, GeneratorType)):
             for elm in data:
                 if isinstance(elm, dict):
-                    self.__write(json.dumps(elm))
-                elif self.__valid_json(elm):
-                    self.__write(elm)
+                    return self.__write(json.dumps(elm))
+                elif self.__valid_json(elm) != False:
+                    return self.__write(self.__valid_json(elm))
                 else:
                     raise Exception(
                         "You can pass only a list of 'dict' or JSON strings".format(type(data)))
         else:
             raise Exception(
                 "'{}' is not a valid input data type".format(type(data)))
-
-        return self
 
     def __del__(self):
         """Object destructor."""
@@ -136,12 +133,26 @@ class JSONDataFileReader(object):
 
     def __len__(self):
         if not self.__len:
-            num_lines = 0
-            for cur_char in iter(lambda: self.__descriptor.read(1), b''):
-                if cur_char == '\n':
-                    num_lines += 1
+            self.__descriptor.seek(0, 0)
+            num_lines = self.__descriptor.read().decode("utf-8").count('\n')
             self.__len = num_lines
         return self.__len
+
+    def __get_json_from_end(self, step: int=512):
+        buffer = b''
+        index = -512 - 1
+        cur_chars = b''
+        while cur_chars.rfind(b'\n') == -1:
+            self.__descriptor.seek(index, 2)
+            last_pos = self.__descriptor.tell()
+            cur_chars = self.__descriptor.read(step)
+            buffer = cur_chars + buffer
+            print(last_pos, cur_chars, buffer)
+            index -= step
+        if len(buffer) >= 2:
+            return buffer, last_pos + cur_chars.rfind(b'\n')
+        else:
+            return (None, -1)
 
     def __get_json(self):
         """Extract a json object string from the file.
@@ -153,26 +164,17 @@ class JSONDataFileReader(object):
 
         """
         buffer = b''
-        tmp_p = 0
         start = self.__descriptor.tell()
         for cur_char in iter(lambda: self.__descriptor.read(1), b''):
             buffer += cur_char
-
-            if cur_char == b'{':
-                tmp_p += 1
-            elif cur_char == b'}':
-                tmp_p -= 1
-            elif cur_char in self.__whitespaces and tmp_p == 0:
-                pass
-
-            if tmp_p == 0 and len(buffer) >= 2:
+            if cur_char == b'\n' and len(buffer) >= 2:
                 return buffer, start
 
         return (None, -1)
 
     def start_from(self, index: int):
         """Set the cursor to a specific object index to start.
-        
+
         Returns:
             dict: the last object extracted
         """
@@ -204,6 +206,13 @@ class JSONDataFileReader(object):
         """
         assert isinstance(
             idx, (int, slice)), "Index Could be an integer or a slice"
+
+        if isinstance(idx, int) and idx < 0:
+            for cur_index in range(-idx):
+                obj, pos = self.__get_json_from_end()
+                if -cur_index == idx:
+                    return json.loads(obj, encoding="utf-8")
+            raise IndexError
 
         self.__descriptor.seek(self.__getitem_start)
 
