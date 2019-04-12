@@ -652,7 +652,7 @@ class CMSDatasetV0(object):
                     )
                 out_file.append(cur_record.to_dict())
 
-            for idx, record in tqdm(enumerate(raw_data, desc="Write raw data")):
+            for idx, record in tqdm(enumerate(raw_data), desc="Write raw data"):
                 position = out_file.append(record.to_dict())
                 if idx in [0, raw_info['len_raw_week']]:
                     metadata['checkpoints'][idx] = position
