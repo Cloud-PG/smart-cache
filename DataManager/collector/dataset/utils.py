@@ -1,5 +1,8 @@
 
+import json
+
 from tqdm import tqdm
+
 
 class SupportTable(object):
 
@@ -39,7 +42,11 @@ class SupportTable(object):
     def reduce_categories(self, table_name: str, target, filter_=None, lvls: int=0):
         assert filter_ is not None, "You need to specify a filter"
         reduced_set = {}
-        categories = list(sorted(self._tables[table_name][target]))
+        categories = list(
+            elm for elm in sorted(
+                self._tables[table_name][target]
+            ) if elm != "__unknown__"
+        )
         for category in tqdm(categories, desc="Get category '{}'".format(target)):
             cur_category = filter_(category)
             cur_lvl = reduced_set
@@ -66,6 +73,8 @@ class SupportTable(object):
                 except IndexError:
                     break
             result |= set((" ".join(cur_output),))
+
+        result |= set(("__unknown__", ))
 
         self._tables[table_name][target] = result
 
@@ -151,6 +160,9 @@ class SupportTable(object):
         """
         return self._indexed_tables
 
+    def __repr__(self):
+        return json.dumps(self.to_dict(), indent=2)
+
 
 class ReadableDictAsAttribute(object):
 
@@ -168,4 +180,7 @@ class ReadableDictAsAttribute(object):
         return self.__dict[name]
 
     def __repr__(self):
-        return json.dumps(self.__dict, indent=2)
+        tmp_dict = dict((key, value) for key, value in self.__dict.items())
+        if 'support_tables' in self.__dict:
+            tmp_dict['support_tables'] = tmp_dict['support_tables'].to_dict()
+        return json.dumps(tmp_dict, indent=2)
