@@ -19,9 +19,8 @@ class CMSSimpleRecordModelGenerator(object):
         self._epochs=epochs
 
     def train(self, dataset):
-        train_set = dataset.features()
-        train_labels = dataset.labels(one_hot=False)
-        self._model.fit(train_set, train_labels, epochs=self._epochs)
+        train_data, train_labels = dataset.train_set(one_hot=False)
+        self._model.fit(train_data, train_labels, epochs=self._epochs)
 
     def predict_single(self, data):
         tmp = np.expand_dims(data,0)

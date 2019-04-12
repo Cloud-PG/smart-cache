@@ -18,6 +18,20 @@ class CMSDatasetV0Reader(object):
         self.__feature_order = None
         self._score_avg = None
 
+    def get_raw(self, index, next_window: bool=False):
+        if not next_window:
+            if index >= self._meta.len_raw_week:
+                raise IndexError("Index {} out of bound for window that has size {}".format(
+                    index, self._meta.len_raw_week
+                ))
+        else:
+            if index >= self._meta.len_raw_next_week:
+                raise IndexError("Index {} out of bound for next window that has size {}".format(
+                    index, self._meta.len_raw_next_week
+                ))
+        start = self._meta.raw_week_start if not next_window else self._meta.len_raw_next_week
+        return self._collector[start + index]
+
     def __len__(self):
         return self.meta.len
 
@@ -31,10 +45,13 @@ class CMSDatasetV0Reader(object):
         else:
             return self._collector[index]
 
+    def train_set(self, one_hot: bool=True):
+        return self.features(), self.labels(one_hot=one_hot)
+
     def features(self):
         return self[:len(self)]
 
-    def labels(self, one_hot=True):
+    def labels(self, one_hot: bool=True):
         labels = []
         for score in list(self.scores):
             res = np.zeros((2,))
