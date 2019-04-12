@@ -166,9 +166,7 @@ class JSONDataFileReader(object):
                 pass
 
             if tmp_p == 0 and len(buffer) >= 2:
-                json_obj_dict = json.loads(buffer, encoding="utf-8")
-                buffer = b''
-                return json_obj_dict, start
+                return buffer, start
 
         return (None, -1)
 
@@ -186,7 +184,7 @@ class JSONDataFileReader(object):
             last_obj, _ = self.__get_json()
             pos = self.__descriptor.tell()
         self.__getitem_start = pos
-        return last_obj
+        return json.loads(last_obj, encoding="utf-8")
 
     def __getitem__(self, idx):
         """Select an item or a group of item from the file.
@@ -230,7 +228,7 @@ class JSONDataFileReader(object):
                 cur_idx += 1
 
                 if cur_idx == target_idx:
-                    results.append(last_obj)
+                    results.append(json.loads(last_obj, encoding="utf-8"))
                     break
 
         if isinstance(idx, slice):
@@ -262,7 +260,7 @@ class JSONDataFileReader(object):
         """
         next_json, _ = self.__get_json()
         if next_json is not None:
-            return next_json
+            return json.loads(next_json, encoding="utf-8")
         else:
             raise StopIteration
 
