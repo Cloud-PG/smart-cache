@@ -39,6 +39,10 @@ class CMSDatasetV0Reader(object):
         return self.meta.len
 
     def __getitem__(self, index):
+        if index >= self._meta.len:
+            raise IndexError("Index {} out of bound for dataset that has size {}".format(
+                index, self._meta.len
+            ))
         if self._use_tensor:
             res = self._collector[index]
             if isinstance(res, list):
