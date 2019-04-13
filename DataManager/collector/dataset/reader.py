@@ -12,7 +12,10 @@ class CMSDatasetV0Reader(object):
     def __init__(self, filename):
         self._collector = JSONDataFileReader(filename)
         # Extract metadata and skip them for future reading
-        self._meta = ReadableDictAsAttribute(self._collector.start_from(1))
+        self._meta = self._collector[-1]
+        if 'checkpoints' in self._meta:
+            for index, pos in self._meta.checkpoints.items():
+                self._collector.add_checkpoint(int(index), pos)
         self._use_tensor = True
         self.__features = None
         self.__feature_order = None

@@ -130,6 +130,16 @@ class JSONDataFileReader(object):
         self.__len = None
         self.__whitespaces = [elm.encode("utf-8") for elm in whitespace]
         self.__getitem_start = 0
+        self.__checkpoints = {}
+
+    def add_checkpoint(self, index: int, pos: int):
+        self.__checkpoints[index] = pos
+
+    def __get_checkpoint(self, cur_index: int):
+        for index in sorted(self.__checkpoints):
+            if cur_index >= self.__checkpoints[index]:
+                return (index, self.__checkpoints[index])
+        return False
 
     def __len__(self):
         if not self.__len:
@@ -147,10 +157,12 @@ class JSONDataFileReader(object):
             last_pos = self.__descriptor.tell()
             cur_chars = self.__descriptor.read(step)
             buffer = cur_chars + buffer
-            print(last_pos, cur_chars, buffer)
             index -= step
         if len(buffer) >= 2:
-            return buffer, last_pos + cur_chars.rfind(b'\n')
+            return (
+                buffer[cur_chars.rfind(b'\n')+1:], last_pos +
+                cur_chars.rfind(b'\n')
+            )
         else:
             return (None, -1)
 
@@ -210,7 +222,7 @@ class JSONDataFileReader(object):
         if isinstance(idx, int) and idx < 0:
             for cur_index in range(-idx):
                 obj, pos = self.__get_json_from_end()
-                if -cur_index == idx:
+                if -cur_index - 1 == idx:
                     return json.loads(obj, encoding="utf-8")
             raise IndexError
 
@@ -225,6 +237,11 @@ class JSONDataFileReader(object):
         cur_idx = -1
 
         for target_idx in to_extract:
+            checkpoint = self.__get_checkpoint(target_idx)
+            if checkpoint != False:
+                self.__last_index = checkpoint[0]
+                self.__descriptor.seek(checkpoint[1])
+
             if self.__last_index != -1 and target_idx - self.__last_index > 1:
                 self.__descriptor.seek(self.__last_index_pos)
                 cur_idx = self.__last_index

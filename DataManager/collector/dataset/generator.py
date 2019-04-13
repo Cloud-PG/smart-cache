@@ -244,7 +244,7 @@ class CMSDatasetV0(object):
             num_partitions (int=10): number of RDD partition to create
             chunk_size (int=1000): size of records to extract in the same time
             log_level (str=WARN): the log level for Spark tasks
-        
+
         Returns:
             (list, SupportTable, list, dict): the data, the support table object,
                                               the raw data list and the raw info
@@ -655,8 +655,8 @@ class CMSDatasetV0(object):
             for idx, record in tqdm(enumerate(raw_data), desc="Write raw data"):
                 position = out_file.append(record.to_dict())
                 if idx in [0, raw_info['len_raw_week']]:
-                    metadata['checkpoints'][idx] = position
-            
+                    metadata['checkpoints'][metadata['len'] + idx] = position
+
             with yaspin(text="Write metadata...") as spinner:
                 spinner.text = "Write metadata..."
                 start_time = time()
