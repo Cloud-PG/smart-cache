@@ -209,7 +209,7 @@ class CMSDataPopularity(FeatureData):
             'features': self._features,
             'record_id': self.__record_id,
             'valid': self.__valid,
-            'next_window': self.__next_window
+            'next_window': self.__next_window,
             'tensor': self.__tensor
         }
 
