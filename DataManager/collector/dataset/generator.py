@@ -54,6 +54,8 @@ class CMSDatasetV0Process(Process):
                     self.__return_data.put(obj)
                     self.__return_indexes.put(obj.FileName)
                     extractions += 1
+                    if extractions >= 100:
+                        break
 
                 time_delta = time() - start_time
                 if time_delta >= 1.0:
@@ -637,7 +639,7 @@ class CMSDatasetV0(object):
                     cur_record.add_tensor(
                         support_tables.close_conversion(
                             'features',
-                            cur_record.features
+                            cur_record.feature_dict
                         )
                     )
                 out_file.append(cur_record.to_dict())
@@ -645,7 +647,7 @@ class CMSDatasetV0(object):
             for idx, record in tqdm(enumerate(raw_data), desc="Write raw data"):
                 record.add_tensor(support_tables.close_conversion(
                     'features',
-                    record.features
+                    record.feature_dict
                 ))
                 position = out_file.append(record.to_dict())
                 if idx in [0, raw_info['len_raw_week']] or idx % checkpoint_step == 0:

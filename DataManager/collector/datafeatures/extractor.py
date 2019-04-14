@@ -29,6 +29,17 @@ class FeatureData(object):
         for feature in sorted(self._features):
             yield feature, self._features[feature]
 
+    @property
+    def feature_list(self):
+        return [
+            (feature, self._features[feature])
+            for feature in sorted(self._features)
+        ]
+    
+    @property
+    def feature_dict(self):
+        return self._features
+
     def features2array(self):
         tmp = []
         for feature in sorted(self._features):
@@ -65,7 +76,7 @@ class CMSSimpleRecord(FeatureData):
         else:
             for feature, value in data:
                 self.add_feature(feature, value)
-    
+
     def __setstate__(self, state):
         """Make object loaded by pickle."""
         self._features = state['features']
@@ -85,7 +96,7 @@ class CMSSimpleRecord(FeatureData):
             'record_id': self.__record_id,
             'next_window_counter': self.__next_window_counter,
             'tensor': self.__tensor,
-            
+
         }
 
     def to_dict(self):
@@ -181,7 +192,7 @@ class CMSDataPopularity(FeatureData):
         self.__filters = filters
         self.__tensor = []
         self.__extract_features()
-    
+
     def gen_tensor(self):
         self.__tensor = [
             float(self._features[feature_name])
