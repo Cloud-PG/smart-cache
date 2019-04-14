@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from ..datafeatures.extractor import (CMSDataPopularity,
-                                                CMSDataPopularityRaw)
+                                      CMSDataPopularityRaw)
 from ..datafile.json import JSONDataFileReader
 from .utils import ReadableDictAsAttribute, SupportTable
 
@@ -35,16 +35,16 @@ class CMSDatasetV0Reader(object):
                 ))
         start = self._meta.raw_week_start if not next_window else self._meta.raw_next_week_start
         res = self._collector[start + index]
+        tensor = None
         if as_tensor:
             if not self.__sorted_keys:
-                self.__sorted_keys = self._meta.support_tables.get_sorted_keys('features')
+                self.__sorted_keys = self._meta.support_tables.get_sorted_keys(
+                    'features')
             obj = CMSDataPopularity(
-                CMSDataPopularityRaw(
-                    res['features'],
-                    filters=[]
-                ).data
+                res['features'],
+                filters=[]
             )
-            return [
+            tensor = [
                 float(
                     self._meta.support_tables.get_close_value(
                         'features',
@@ -54,8 +54,7 @@ class CMSDatasetV0Reader(object):
                 )
                 for feature_name in self.__sorted_keys
             ]
-
-        return res
+        return res, tensor
 
     def __len__(self):
         return self.meta.len
