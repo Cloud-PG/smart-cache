@@ -11,13 +11,11 @@ from pyspark import SparkConf, SparkContext
 from tqdm import tqdm
 from yaspin import yaspin
 
-from DataManager.agent.api import HTTPFS
-from DataManager.collector.api import DataFile
-from DataManager.collector.datafeatures.extractor import (CMSDataPopularity,
-                                                          CMSDataPopularityRaw,
-                                                          CMSSimpleRecord)
-from DataManager.collector.datafile.json import JSONDataFileWriter
-
+from ...agent.api import HTTPFS
+from ..api import DataFile
+from ..datafeatures.extractor import (CMSDataPopularity, CMSDataPopularityRaw,
+                                      CMSSimpleRecord)
+from ..datafile.json import JSONDataFileWriter
 from .utils import ReadableDictAsAttribute, SupportTable
 
 
