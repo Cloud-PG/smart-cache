@@ -444,7 +444,7 @@ class CMSDatasetV0(object):
                             print("[Process -> {}][Alive: {}] try to join...".format(
                                 process.pid, process.is_alive()), flush=True)
                             # Wait for a process to end
-                            process.join(1)
+                            process.join(5)
                             print("[Process -> {}][Alive: {}]".format(
                                 process.pid, process.is_alive()), flush=True)
                         print("[Flush queues...]", flush=True)
