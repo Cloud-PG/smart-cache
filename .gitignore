@@ -190,3 +190,6 @@ $RECYCLE.BIN/
 
 # My vs-code settings
 .vscode
+
+# Plots
+*.png
