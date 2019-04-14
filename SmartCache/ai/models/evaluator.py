@@ -15,8 +15,7 @@ class SimpleCacheInfiniteSpace(object):
         size_cache = []
         size_ai_cache = []
 
-        # for idx in tqdm(range(self._dataset.meta.len_raw_week)):
-        for idx in tqdm(range(10)):
+        for idx in tqdm(range(self._dataset.meta.len_raw_week)):
             obj, tensor = self._dataset.get_raw(
                 idx, as_tensor=True, next_window=next_window
             )
