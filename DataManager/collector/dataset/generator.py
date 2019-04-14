@@ -573,7 +573,8 @@ class CMSDatasetV0(object):
 
     def save(self, from_: str, window_size: int, outfile_name: str='',
              use_spark: bool=False, extract_support_tables: bool=True,
-             multiprocess: bool=False, num_processes: int=2
+             multiprocess: bool=False, num_processes: int=2, 
+             checkpoint_step: int=5000
              ):
         """Extract and save a dataset.
 
@@ -588,6 +589,7 @@ class CMSDatasetV0(object):
                                            information
             multiprocess (bool): use Python multiprocessing
             num_processes (int=2): number of process for Python multiprocessing
+            checkpoint_step (int=5000): stride for checkpoint extraction
 
         Returns:
             This object instance (for chaining operations)
@@ -654,7 +656,7 @@ class CMSDatasetV0(object):
 
             for idx, record in tqdm(enumerate(raw_data), desc="Write raw data"):
                 position = out_file.append(record.to_dict())
-                if idx in [0, raw_info['len_raw_week']]:
+                if idx in [0, raw_info['len_raw_week']] or idx % checkpoint_step == 0:
                     metadata['checkpoints'][metadata['len'] + idx] = position
 
             with yaspin(text="Write metadata...") as spinner:

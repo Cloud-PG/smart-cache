@@ -168,6 +168,8 @@ class ReadableDictAsAttribute(object):
 
     def __init__(self, obj: dict):
         self.__dict = obj
+        self.__current = -1
+        self.__items = list(sorted(self.__dict.keys()))
         if 'support_tables' in self.__dict:
             self.__dict['support_tables'] = SupportTable(
                 self.__dict['support_tables'])
@@ -176,11 +178,24 @@ class ReadableDictAsAttribute(object):
     def list(self):
         return list(self.__dict.keys())
 
+    def __iter__(self):
+        self.__current = -1
+        return self
+
+    def __next__(self):
+        self.__current += 1
+        if self.__current >= len(self.__items):
+            raise StopIteration
+        return self.__items[self.__current]
+
+    def to_dict(self):
+        tmp_dict = dict((key, value) for key, value in self.__dict.items())
+        if 'support_tables' in self.__dict:
+            tmp_dict['support_tables'] = tmp_dict['support_tables'].to_dict()
+        return tmp_dict
+
     def __getattr__(self, name):
         return self.__dict[name]
 
     def __repr__(self):
-        tmp_dict = dict((key, value) for key, value in self.__dict.items())
-        if 'support_tables' in self.__dict:
-            tmp_dict['support_tables'] = tmp_dict['support_tables'].to_dict()
-        return json.dumps(tmp_dict, indent=2)
+        return json.dumps(self.to_dict(), indent=2)

@@ -12,7 +12,7 @@ class CMSDatasetV0Reader(object):
     def __init__(self, filename):
         self._collector = JSONDataFileReader(filename)
         # Extract metadata and skip them for future reading
-        self._meta = self._collector[-1]
+        self._meta = ReadableDictAsAttribute(self._collector[-1])
         if 'checkpoints' in self._meta:
             for index, pos in self._meta.checkpoints.items():
                 self._collector.add_checkpoint(int(index), pos)
@@ -22,6 +22,7 @@ class CMSDatasetV0Reader(object):
         self._score_avg = None
 
     def get_raw(self, index, next_window: bool=False):
+        assert index >= 0, "Index of raw data cannot be negative"
         if not next_window:
             if index >= self._meta.len_raw_week:
                 raise IndexError("Index {} out of bound for window that has size {}".format(
@@ -32,7 +33,7 @@ class CMSDatasetV0Reader(object):
                 raise IndexError("Index {} out of bound for next window that has size {}".format(
                     index, self._meta.len_raw_next_week
                 ))
-        start = self._meta.raw_week_start if not next_window else self._meta.len_raw_next_week
+        start = self._meta.raw_week_start if not next_window else self._meta.raw_next_week_start
         return self._collector[start + index]
 
     def __len__(self):
@@ -78,12 +79,13 @@ class CMSDatasetV0Reader(object):
 
     @property
     def records(self):
-        for record in self._collector:
+        for record in self._collector[:self._meta.len]:
             yield record
 
     @property
     def scores(self):
         for record in self.records:
+            print(record)
             yield record['score']
 
     @property

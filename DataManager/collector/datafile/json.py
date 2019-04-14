@@ -136,8 +136,8 @@ class JSONDataFileReader(object):
         self.__checkpoints[index] = pos
 
     def __get_checkpoint(self, cur_index: int):
-        for index in sorted(self.__checkpoints):
-            if cur_index >= self.__checkpoints[index]:
+        for index in reversed(sorted(self.__checkpoints)):
+            if cur_index >= index:
                 return (index, self.__checkpoints[index])
         return False
 
@@ -148,9 +148,9 @@ class JSONDataFileReader(object):
             self.__len = num_lines
         return self.__len
 
-    def __get_json_from_end(self, step: int=512):
+    def __get_json_from_end(self, step: int=1024):
         buffer = b''
-        index = -512 - 1
+        index = -step - 1
         cur_chars = b''
         while cur_chars.rfind(b'\n') == -1:
             self.__descriptor.seek(index, 2)
@@ -239,8 +239,10 @@ class JSONDataFileReader(object):
         for target_idx in to_extract:
             checkpoint = self.__get_checkpoint(target_idx)
             if checkpoint != False:
-                self.__last_index = checkpoint[0]
                 self.__descriptor.seek(checkpoint[1])
+                cur_idx = checkpoint[0]
+                self.__last_index = checkpoint[0]
+                self.__last_index_pos = checkpoint[1]
 
             if self.__last_index != -1 and target_idx - self.__last_index > 1:
                 self.__descriptor.seek(self.__last_index_pos)
