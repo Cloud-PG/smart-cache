@@ -3,25 +3,25 @@ import json
 import matplotlib.pyplot as plt
 import numpy as np
 
+from ..datafeatures.extractor import (CMSDataPopularity,
+                                                CMSDataPopularityRaw)
 from ..datafile.json import JSONDataFileReader
-from .utils import ReadableDictAsAttribute
+from .utils import ReadableDictAsAttribute, SupportTable
 
 
 class CMSDatasetV0Reader(object):
 
     def __init__(self, filename):
         self._collector = JSONDataFileReader(filename)
-        # Extract metadata and skip them for future reading
         self._meta = ReadableDictAsAttribute(self._collector[-1])
         if 'checkpoints' in self._meta:
             for index, pos in self._meta.checkpoints.items():
                 self._collector.add_checkpoint(int(index), pos)
         self._use_tensor = True
-        self.__features = None
-        self.__feature_order = None
         self._score_avg = None
+        self.__sorted_keys = None
 
-    def get_raw(self, index, next_window: bool=False):
+    def get_raw(self, index, next_window: bool=False, as_tensor: bool=False):
         assert index >= 0, "Index of raw data cannot be negative"
         if not next_window:
             if index >= self._meta.len_raw_week:
@@ -34,16 +34,33 @@ class CMSDatasetV0Reader(object):
                     index, self._meta.len_raw_next_week
                 ))
         start = self._meta.raw_week_start if not next_window else self._meta.raw_next_week_start
-        return self._collector[start + index]
+        res = self._collector[start + index]
+        if as_tensor:
+            if not self.__sorted_keys:
+                self.__sorted_keys = self._meta.support_tables.get_sorted_keys('features')
+            obj = CMSDataPopularity(
+                CMSDataPopularityRaw(
+                    res['features'],
+                    filters=[]
+                ).data
+            )
+            return [
+                float(
+                    self._meta.support_tables.get_close_value(
+                        'features',
+                        feature_name,
+                        obj.feature[feature_name]
+                    )
+                )
+                for feature_name in self.__sorted_keys
+            ]
+
+        return res
 
     def __len__(self):
         return self.meta.len
 
     def __getitem__(self, index):
-        if index >= self._meta.len:
-            raise IndexError("Index {} out of bound for dataset that has size {}".format(
-                index, self._meta.len
-            ))
         if self._use_tensor:
             res = self._collector[index]
             if isinstance(res, list):
@@ -57,11 +74,17 @@ class CMSDatasetV0Reader(object):
         return self.features(), self.labels(one_hot=one_hot)
 
     def features(self):
-        return self[:len(self)]
+        features = []
+        for record in self.records:
+            if self._use_tensor:
+                features.append(np.array(record['tensor']))
+            else:
+                np.array(record['features'])
+        return np.array(features)
 
     def labels(self, one_hot: bool=True):
         labels = []
-        for score in list(self.scores):
+        for score in self.scores:
             res = np.zeros((2,))
             if one_hot:
                 res[int(score >= self.score_avg)] = 1
@@ -85,7 +108,6 @@ class CMSDatasetV0Reader(object):
     @property
     def scores(self):
         for record in self.records:
-            print(record)
             yield record['score']
 
     @property
@@ -94,7 +116,7 @@ class CMSDatasetV0Reader(object):
             self._score_avg = sum(self.scores) / len(self)
         return self._score_avg
 
-    def scores_show(self):
+    def score_show(self):
         scores = list(self.scores)
         avg = self.score_avg
         plt.plot(range(len(scores)), scores, label="scores")

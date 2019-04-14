@@ -8,7 +8,7 @@ class CMSSimpleRecordModelGenerator(object):
     def __init__(self, epochs=10):
         self._model = keras.Sequential([
             keras.layers.Flatten(input_shape=(4, )),
-            keras.layers.Dense(128, activation='relu'),
+            keras.layers.Dense(256, activation='relu'),
             keras.layers.Dense(128, activation='relu'),
             keras.layers.Dense(64, activation='relu'),
             keras.layers.Dense(2, activation='softmax')
