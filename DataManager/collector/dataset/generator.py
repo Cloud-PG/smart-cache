@@ -522,39 +522,38 @@ class CMSDatasetV0(object):
         print("[window_indexes: {}]".format(len(window_indexes)))
         print("[next_window_indexes: {}]".format(len(next_window_indexes)))
 
+        ##
         # Create output
+
+        # Merge indexes
         with yaspin(text="Merge indexes...") as spinner:
-            # Merge indexes
             indexes = window_indexes & next_window_indexes
             spinner.write("Indexes merged...")
 
-            spinner.text = "Merge raw data..."
-            all_raw_data = data + next_data
-            spinner.write("Raw data merged...")
+        for raw_data in tqdm(data + next_data, desc="Merge raw data"):
+            cur_data_pop = CMSDataPopularity(record.data)
+            if cur_data_pop:
+                all_raw_data.append(cur_data_pop)
 
-            # Create output data
-            spinner.write("Create output data...")
-            spinner.stop()
-            for idx, record in enumerate(tqdm(data)):
-                cur_data_pop = CMSDataPopularity(record.data)
-                if cur_data_pop:
-                    if cur_data_pop.FileName in next_window_indexes:
-                        cur_data_pop.is_in_next_window()
-                    new_record = CMSSimpleRecord(cur_data_pop)
-                    if new_record.record_id not in res_data:
-                        res_data[new_record.record_id] = new_record
-                    else:
-                        res_data[new_record.record_id] += new_record
-                    if extract_support_tables:
-                        for feature, value in new_record.features:
-                            feature_support_table.insert(
-                                'features', feature, value)
+        # Create output data
+        for idx, record in tqdm(enumerate(data), desc="Create output data"):
+            cur_data_pop = CMSDataPopularity(record.data)
+            if cur_data_pop:
+                if cur_data_pop.FileName in next_window_indexes:
+                    cur_data_pop.is_in_next_window()
+                new_record = CMSSimpleRecord(cur_data_pop)
+                if new_record.record_id not in res_data:
+                    res_data[new_record.record_id] = new_record
+                else:
+                    res_data[new_record.record_id] += new_record
+                if extract_support_tables:
+                    for feature, value in new_record.features:
+                        feature_support_table.insert(
+                            'features', feature, value)
 
-            spinner.write("Output data created...")
-            spinner.start()
-
+        with yaspin(text="Generate support table indexes...") as spinner:
             if extract_support_tables:
-                spinner.text = "Generate support table indexes..."
+                spinner.text = ""
                 feature_support_table.reduce_categories(
                     "features", "process",
                     feature_support_table.filters.split_process
@@ -571,7 +570,7 @@ class CMSDatasetV0(object):
 
     def save(self, from_: str, window_size: int, outfile_name: str='',
              use_spark: bool=False, extract_support_tables: bool=True,
-             multiprocess: bool=False, num_processes: int=2, 
+             multiprocess: bool=False, num_processes: int=2,
              checkpoint_step: int=5000
              ):
         """Extract and save a dataset.
@@ -635,24 +634,19 @@ class CMSDatasetV0(object):
             for record in tqdm(data.values(), desc="Write data"):
                 cur_record = record
                 if 'features' in support_tables:
-                    sorted_features = support_tables.get_sorted_keys(
-                        'features'
-                    )
-                    cur_record = cur_record.add_tensor(
-                        [
-                            float(
-                                support_tables.get_close_value(
-                                    'features',
-                                    feature_name,
-                                    cur_record.feature[feature_name]
-                                )
-                            )
-                            for feature_name in sorted_features
-                        ]
+                    cur_record.add_tensor(
+                        support_tables.close_conversion(
+                            'features',
+                            cur_record.features
+                        )
                     )
                 out_file.append(cur_record.to_dict())
 
             for idx, record in tqdm(enumerate(raw_data), desc="Write raw data"):
+                record.add_tensor(support_tables.close_conversion(
+                    'features',
+                    record.features
+                ))
                 position = out_file.append(record.to_dict())
                 if idx in [0, raw_info['len_raw_week']] or idx % checkpoint_step == 0:
                     metadata['checkpoints'][metadata['len'] + idx] = position

@@ -14,12 +14,29 @@ class SupportTable(object):
         self.filters = ReadableDictAsAttribute({
             'split_process': self._filter_split_process
         })
+        self.__sorted_keys = {}
         if support_table:
             self._indexed_tables = support_table
             for table_name, table in self._indexed_tables.items():
                 self._tables[table_name] = {}
                 for key in table.keys():
                     self._tables[table_name][key] = set(table[key].keys())
+
+    def close_conversion(self, table_name: str, data: dict):
+        """Convert data value following the support tables."""
+        if table_name not in self.__sorted_keys:
+            self.__sorted_keys[table_name] = self.get_sorted_keys(table_name)
+        sorted_keys = self.__sorted_keys[table_name]
+        return [
+            float(
+                self.get_close_value(
+                    table_name,
+                    key,
+                    data[key]
+                )
+            )
+            for key in sorted_keys
+        ]
 
     @staticmethod
     def __get_similarity(_a_: str, _b_: str):

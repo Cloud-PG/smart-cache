@@ -179,7 +179,19 @@ class CMSDataPopularity(FeatureData):
         self.__valid = False
         self.__next_window = False
         self.__filters = filters
+        self.__tensor = []
         self.__extract_features()
+    
+    def gen_tensor(self):
+        self.__tensor = [
+            float(self._features[feature_name])
+            for feature_name in sorted(self._features.keys())
+        ]
+        return self
+
+    def add_tensor(self, tensor):
+        self.__tensor = tensor
+        return self
 
     def __setstate__(self, state):
         """Make object loaded by pickle."""
@@ -188,6 +200,7 @@ class CMSDataPopularity(FeatureData):
         self.__record_id = state['record_id']
         self.__valid = state['valid']
         self.__next_window = state['next_window']
+        self.__tensor = state['tensor']
         return self
 
     def to_dict(self):
@@ -197,6 +210,7 @@ class CMSDataPopularity(FeatureData):
             'record_id': self.__record_id,
             'valid': self.__valid,
             'next_window': self.__next_window
+            'tensor': self.__tensor
         }
 
     def __bool__(self):
