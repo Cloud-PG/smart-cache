@@ -531,7 +531,7 @@ class CMSDatasetV0(object):
             spinner.write("Indexes merged...")
 
         for raw_data in tqdm(data + next_data, desc="Merge raw data"):
-            cur_data_pop = CMSDataPopularity(record.data)
+            cur_data_pop = CMSDataPopularity(raw_data.data)
             if cur_data_pop:
                 all_raw_data.append(cur_data_pop)
 
