@@ -5,7 +5,7 @@ from tensorflow import keras
 
 class CMSSimpleRecordModelGenerator(object):
 
-    def __init__(self, epochs=1000):
+    def __init__(self, epochs=100):
         self._model = keras.Sequential([
             keras.layers.Flatten(input_shape=(4, )),
             keras.layers.Dense(1024, activation='relu'),
