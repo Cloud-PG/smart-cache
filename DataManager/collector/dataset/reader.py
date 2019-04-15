@@ -3,8 +3,6 @@ import json
 import matplotlib.pyplot as plt
 import numpy as np
 
-from ..datafeatures.extractor import (CMSDataPopularity,
-                                      CMSDataPopularityRaw)
 from ..datafile.json import JSONDataFileReader
 from .utils import ReadableDictAsAttribute, SupportTable
 
@@ -21,40 +19,35 @@ class CMSDatasetV0Reader(object):
         self._score_avg = None
         self.__sorted_keys = None
 
+    def get_raw_window(self):
+        for record in self._collector.start_from(
+            self._meta.raw_window_start, self._meta.len_raw_window
+        ):
+            yield record
+    
+    def get_raw_next_window(self):
+        for record in self._collector.start_from(
+            self._meta.raw_next_window_start, self._meta.len_raw_next_window
+        ):
+            yield record
+
     def get_raw(self, index, next_window: bool=False, as_tensor: bool=False):
         assert index >= 0, "Index of raw data cannot be negative"
         if not next_window:
-            if index >= self._meta.len_raw_week:
+            if index >= self._meta.len_raw_window:
                 raise IndexError("Index {} out of bound for window that has size {}".format(
-                    index, self._meta.len_raw_week
+                    index, self._meta.len_raw_window
                 ))
         else:
-            if index >= self._meta.len_raw_next_week:
+            if index >= self._meta.len_raw_next_window:
                 raise IndexError("Index {} out of bound for next window that has size {}".format(
-                    index, self._meta.len_raw_next_week
+                    index, self._meta.len_raw_next_window
                 ))
-        start = self._meta.raw_week_start if not next_window else self._meta.raw_next_week_start
+        start = self._meta.raw_window_start if not next_window else self._meta.raw_next_window_start
         res = self._collector[start + index]
-        tensor = None
-        if as_tensor:
-            if not self.__sorted_keys:
-                self.__sorted_keys = self._meta.support_tables.get_sorted_keys(
-                    'features')
-            obj = CMSDataPopularity(
-                res['features'],
-                filters=[]
-            )
-            tensor = [
-                float(
-                    self._meta.support_tables.get_close_value(
-                        'features',
-                        feature_name,
-                        obj.feature[feature_name]
-                    )
-                )
-                for feature_name in self.__sorted_keys
-            ]
-        return res, tensor
+        if not as_tensor:
+            return res
+        return np.array(res['tensor'])
 
     def __len__(self):
         return self.meta.len

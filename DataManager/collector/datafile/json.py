@@ -184,7 +184,7 @@ class JSONDataFileReader(object):
 
         return (None, -1)
 
-    def start_from(self, index: int):
+    def start_from(self, index: int, stop: int=-1):
         """Set the cursor to a specific object index to start.
 
         Returns:
@@ -194,11 +194,20 @@ class JSONDataFileReader(object):
             raise Exception("Index have to be positive or equal to 0...")
         self.__descriptor.seek(0, 0)
         pos = self.__descriptor.tell()
-        for _ in range(index):
-            last_obj, _ = self.__get_json()
-            pos = self.__descriptor.tell()
-        self.__getitem_start = pos
-        return json.loads(last_obj, encoding="utf-8")
+        cur_idx = 0
+
+        checkpoint = self.__get_checkpoint(index)
+        if checkpoint != False:
+            self.__descriptor.seek(checkpoint[1])
+            cur_idx = checkpoint[0]
+
+        for _ in range(index - cur_idx):
+            _, _ = self.__get_json()
+
+        for idx, (json_obj, _) in enumerate(iter(self.__get_json, (None, -1))):
+            if idx == stop:
+                break
+            yield json.loads(json_obj, encoding="utf-8")
 
     def __getitem__(self, idx):
         """Select an item or a group of item from the file.
@@ -225,8 +234,6 @@ class JSONDataFileReader(object):
                 if -cur_index - 1 == idx:
                     return json.loads(obj, encoding="utf-8")
             raise IndexError
-
-        self.__descriptor.seek(self.__getitem_start)
 
         if isinstance(idx, slice):
             to_extract = (elm for elm in gen_increasing_slice(idx))
@@ -273,7 +280,7 @@ class JSONDataFileReader(object):
             JSONDataFileReader: this object instance
 
         """
-        self.__descriptor.seek(self.__getitem_start, 0)
+        self.__descriptor.seek(0, 0)
         return self
 
     def __next__(self):

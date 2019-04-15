@@ -151,7 +151,7 @@ class CMSDatasetV0(object):
         return collector
 
     @staticmethod
-    def __gen_interval(year: int, month: int, day: int, window_size: int, step: int=1, next_week: bool=False):
+    def __gen_interval(year: int, month: int, day: int, window_size: int, step: int=1, next_window: bool=False):
         """Create date interval in the window view requested.
 
         Args:
@@ -160,7 +160,7 @@ class CMSDatasetV0(object):
             day (int): day of the start date
             window_size (int): number of days of the interval
             step (int): number of days for each step (stride)
-            next_week (bool): indicates if you need the next window period
+            next_window (bool): indicates if you need the next window period
 
         Returns:
             generator (year: int, month:int, day: int): a list of tuples of the
@@ -169,7 +169,7 @@ class CMSDatasetV0(object):
         """
         window_step = timedelta(days=step)
         window_size = timedelta(days=window_size)
-        if not next_week:
+        if not next_window:
             start_date = date(year, month, day)
         else:
             start_date = date(year, month, day) + window_size
@@ -263,7 +263,7 @@ class CMSDatasetV0(object):
             start_year, start_month, start_day, window_size
         )
         next_window = self.__gen_interval(
-            start_year, start_month, start_day, window_size, next_week=True
+            start_year, start_month, start_day, window_size, next_window=True
         )
 
         data = []
@@ -384,7 +384,7 @@ class CMSDatasetV0(object):
                 window_indexes |= new_indexes
 
             for year, month, day in self.__gen_interval(
-                start_year, start_month, start_day, window_size, next_week=True
+                start_year, start_month, start_day, window_size, next_window=True
             ):
                 new_data, new_indexes = self.__get_raw_data(
                     year, month, day)
@@ -411,7 +411,7 @@ class CMSDatasetV0(object):
                 )
 
             for year, month, day in self.__gen_interval(
-                start_year, start_month, start_day, window_size, next_week=True
+                start_year, start_month, start_day, window_size, next_window=True
             ):
                 all_tasks.append(
                     (
@@ -494,7 +494,7 @@ class CMSDatasetV0(object):
 
         Args:
             data (list): the data to prepare
-            next_data (list): the data of the week next to the one selected
+            next_data (list): the data of the window next to the one selected
             window_indexes (set): the set of the indexes for the selected window
             next_window_indexes (set): the set of the indexes for the next one 
                                        selected window
@@ -509,8 +509,8 @@ class CMSDatasetV0(object):
         all_raw_data = []
 
         raw_info = {
-            'len_raw_week': len(data),
-            'len_raw_next_week': len(next_data),
+            'len_raw_window': len(data),
+            'len_raw_next_window': len(next_data),
         }
 
         if extract_support_tables:
@@ -621,10 +621,10 @@ class CMSDatasetV0(object):
             'window_size': window_size,
             'support_tables': support_tables.to_dict() if extract_support_tables else False,
             'len': len(data),
-            'len_raw_week': raw_info['len_raw_week'],
-            'len_raw_next_week': raw_info['len_raw_next_week'],
-            'raw_week_start': len(data) + 1,
-            'raw_next_week_start': len(data) + raw_info['len_raw_week'] + 1,
+            'len_raw_window': raw_info['len_raw_window'],
+            'len_raw_next_window': raw_info['len_raw_next_window'],
+            'raw_window_start': len(data) + 1,
+            'raw_next_window_start': len(data) + raw_info['len_raw_window'] + 1,
             'extraction_time': extraction_time,
             'checkpoints': {}
         }
@@ -648,7 +648,7 @@ class CMSDatasetV0(object):
                     record.feature_dict
                 ))
                 position = out_file.append(record.to_dict())
-                if idx in [0, raw_info['len_raw_week']] or idx % checkpoint_step == 0:
+                if idx in [0, raw_info['len_raw_window']] or idx % checkpoint_step == 0:
                     metadata['checkpoints'][metadata['len'] + idx] = position
 
             with yaspin(text="Write metadata...") as spinner:
