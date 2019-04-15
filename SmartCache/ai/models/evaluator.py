@@ -19,7 +19,7 @@ class Evaluator(object):
         raise NotImplemented
 
     @staticmethod
-    def __plot_num_file(size_cache, size_ai_cache, stride: int=100):
+    def _plot_num_file(size_cache, size_ai_cache, stride: int=100):
         plt.clf()
         plt.plot(range(len(size_cache)), size_cache, label="cache", alpha=0.9)
         plt.plot(range(len(size_ai_cache)), size_ai_cache,
@@ -98,7 +98,7 @@ class SimpleCacheInfiniteSpace(Evaluator):
         cache, size_cache, ai_cache, size_ai_cache = self._compare(
             stride=stride)
 
-        self.__plot_num_file(size_cache, size_ai_cache)
+        self._plot_num_file(size_cache, size_ai_cache)
         if show:
             plt.show()
         else:
@@ -109,7 +109,7 @@ class SimpleCacheInfiniteSpace(Evaluator):
             next_window=True, stride=stride
         )
 
-        self.__plot_num_file(size_cache, size_ai_cache)
+        self._plot_num_file(size_cache, size_ai_cache)
         if show:
             plt.show()
         else:
@@ -124,7 +124,7 @@ class SimpleCacheInfiniteSpace(Evaluator):
             next_window=True, stride=stride
         )
 
-        self.__plot_num_file(size_cache, size_ai_cache)
+        self._plot_num_file(size_cache, size_ai_cache)
         plt.axvline(x=separator)
         if show:
             plt.show()
