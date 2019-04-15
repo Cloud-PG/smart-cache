@@ -25,7 +25,7 @@ class Evaluator(object):
         plt.plot(range(len(size_ai_cache)), size_ai_cache,
                  label="ai_cache", alpha=0.9)
         plt.ylabel("Num. files in cache")
-        plt.xlabel("Num. request x {}".format(stride))
+        plt.xlabel("Num. request accepted x{}".format(stride))
         plt.legend()
 
 
