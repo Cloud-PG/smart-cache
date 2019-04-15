@@ -623,8 +623,8 @@ class CMSDatasetV0(object):
             'len': len(data),
             'len_raw_window': raw_info['len_raw_window'],
             'len_raw_next_window': raw_info['len_raw_next_window'],
-            'raw_window_start': len(data) + 1,
-            'raw_next_window_start': len(data) + raw_info['len_raw_window'] + 1,
+            'raw_window_start': len(data),
+            'raw_next_window_start': len(data) + raw_info['len_raw_window'],
             'extraction_time': extraction_time,
             'checkpoints': {}
         }

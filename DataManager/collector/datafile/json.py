@@ -125,7 +125,7 @@ class JSONDataFileReader(object):
         """
         self.__filename = filename
         self.__descriptor = get_stream(self.__filename)
-        self.__last_index = -1
+        self.__last_index = None
         self.__last_index_pos = None
         self.__len = None
         self.__whitespaces = [elm.encode("utf-8") for elm in whitespace]
@@ -200,7 +200,7 @@ class JSONDataFileReader(object):
             self.__descriptor.seek(checkpoint[1])
             cur_idx = checkpoint[0]
 
-        for _ in range(index - cur_idx - 1):
+        for _ in range(index - cur_idx):
             _, _ = self.__get_json()
             cur_idx += 1
 
@@ -243,7 +243,7 @@ class JSONDataFileReader(object):
             to_extract = [idx]
 
         results = []
-        cur_idx = -1
+        cur_idx = 0
 
         for target_idx in to_extract:
             checkpoint = self.__get_checkpoint(target_idx)
@@ -253,20 +253,20 @@ class JSONDataFileReader(object):
                 self.__last_index = checkpoint[0]
                 self.__last_index_pos = checkpoint[1]
 
-            if self.__last_index != -1 and target_idx - self.__last_index > 1:
+            if self.__last_index and target_idx - self.__last_index > 1:
                 self.__descriptor.seek(self.__last_index_pos)
                 cur_idx = self.__last_index
 
-            for obj, start in iter(lambda: self.__get_json(), None):
+            for obj, start in iter(lambda: self.__get_json(), (None, -1)):
                 last_obj = obj
                 self.__last_index_pos = start
                 self.__last_index = cur_idx
 
-                cur_idx += 1
-
                 if cur_idx == target_idx:
                     results.append(json.loads(last_obj, encoding="utf-8"))
                     break
+                
+                cur_idx += 1
 
         if isinstance(idx, slice):
             if idx.start is not None and idx.stop is not None and idx.start > idx.stop:
