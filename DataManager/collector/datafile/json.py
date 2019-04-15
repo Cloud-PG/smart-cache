@@ -201,7 +201,7 @@ class JSONDataFileReader(object):
             self.__descriptor.seek(checkpoint[1])
             cur_idx = checkpoint[0]
 
-        for _ in range(index - cur_idx):
+        for _ in range(index - cur_idx - 1):
             _, _ = self.__get_json()
 
         for idx, (json_obj, _) in enumerate(iter(self.__get_json, (None, -1))):

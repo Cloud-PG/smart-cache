@@ -9,9 +9,9 @@ class SimpleCacheInfiniteSpace(object):
         self._dataset = dataset
         self._model = model
 
-    def _compare(self, next_window: bool=False, stride: int=1000):
-        cache = np.unique([])
-        ai_cache = np.unique([])
+    def _compare(self, next_window: bool=False, stride: int=100):
+        cache = set()
+        ai_cache = set()
 
         size_cache = []
         size_ai_cache = []
@@ -32,12 +32,12 @@ class SimpleCacheInfiniteSpace(object):
             tmp_tensors.append(tensor)
 
             if idx % stride == 0:
-                cache = np.union1d(cache, tmp_file_names)
+                cache |= set(tmp_file_names)
 
                 predictions = self._model.predict(np.array(tmp_tensors))
                 for pred_idx, prediction in enumerate(predictions):
                     if prediction != 0:
-                        ai_cache = np.union1d(ai_cache, tmp_file_names[pred_idx])
+                        ai_cache |= set((tmp_file_names[pred_idx],))
 
                 size_cache.append(len(cache))
                 size_ai_cache.append(len(ai_cache))
