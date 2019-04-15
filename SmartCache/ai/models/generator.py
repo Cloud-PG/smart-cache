@@ -5,12 +5,13 @@ from tensorflow import keras
 
 class CMSSimpleRecordModelGenerator(object):
 
-    def __init__(self, epochs=100):
+    def __init__(self, epochs=1000):
         self._model = keras.Sequential([
             keras.layers.Flatten(input_shape=(4, )),
+            keras.layers.Dense(1024, activation='relu'),
+            keras.layers.Dense(1024, activation='relu'),
+            keras.layers.Dense(512, activation='relu'),
             keras.layers.Dense(256, activation='relu'),
-            keras.layers.Dense(128, activation='relu'),
-            keras.layers.Dense(64, activation='relu'),
             keras.layers.Dense(2, activation='softmax')
         ])
         self._model.compile(optimizer='adam',

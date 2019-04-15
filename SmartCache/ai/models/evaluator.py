@@ -2,14 +2,19 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
 
+
 class Evaluator(object):
+
+    def __init__(self, dataset, model):
+        self._dataset = dataset
+        self._model = model
 
     def compare_window(self, show: bool=False):
         raise NotImplemented
-    
+
     def compare_next_window(self, show: bool=False):
         raise NotImplemented
-    
+
     def compare_all(self, show: bool=False):
         raise NotImplemented
 
@@ -17,9 +22,7 @@ class Evaluator(object):
 class SimpleCacheInfiniteSpace(Evaluator):
 
     def __init__(self, dataset, model):
-        super(SimpleCacheInfiniteSpace, self).__init__()
-        self._dataset = dataset
-        self._model = model
+        super(SimpleCacheInfiniteSpace, self).__init__(dataset, model)
 
     def _compare(
         self, initial_values: set=(), next_window: bool=False, stride: int=100
@@ -68,45 +71,48 @@ class SimpleCacheInfiniteSpace(Evaluator):
 
         return cache, size_cache, ai_cache, size_ai_cache
 
-    def compare_window(self, show: bool=False):
-        cache, size_cache, ai_cache, size_ai_cache = self._compare()
-
+    @staticmethod
+    def __plot_size(size_cache, size_ai_cache, stride: int=100):
         plt.clf()
-        plt.plot(range(len(size_cache)), size_cache, label="cache")
-        plt.plot(range(len(size_ai_cache)), size_ai_cache, label="ai_cache")
+        plt.plot(range(len(size_cache)), size_cache, label="cache", alpha=0.9)
+        plt.plot(range(len(size_ai_cache)), size_ai_cache,
+                 label="ai_cache", alpha=0.9)
+        plt.ylabel("Num. files in cache")
+        plt.xlabel("Num. request x {}".format(stride))
         plt.legend()
+
+    def compare_window(self, show: bool=False, stride: int=100):
+        cache, size_cache, ai_cache, size_ai_cache = self._compare(
+            stride=stride)
+
+        self.__plot_size(size_cache, size_ai_cache)
         if show:
             plt.show()
         else:
             plt.savefig("compare_window.png")
 
-    def compare_next_window(self, show: bool=False):
+    def compare_next_window(self, show: bool=False, stride: int=100):
         cache, size_cache, ai_cache, size_ai_cache = self._compare(
-            next_window=True
+            next_window=True, stride=stride
         )
 
-        plt.clf()
-        plt.plot(range(len(size_cache)), size_cache, label="cache")
-        plt.plot(range(len(size_ai_cache)), size_ai_cache, label="ai_cache")
-        plt.legend()
+        self.__plot_size(size_cache, size_ai_cache)
         if show:
             plt.show()
         else:
             plt.savefig("compare_next_window.png")
 
-    def compare_all(self, show: bool=False):
-        cache, size_cache, ai_cache, size_ai_cache = self._compare()
+    def compare_all(self, show: bool=False, stride: int=100):
+        cache, size_cache, ai_cache, size_ai_cache = self._compare(
+            stride=stride)
         separator = len(size_cache)
         cache, size_cache, ai_cache, size_ai_cache = self._compare(
             initial_values=(cache, size_cache, ai_cache, size_ai_cache),
-            next_window=True
+            next_window=True, stride=stride
         )
 
-        plt.clf()
-        plt.plot(range(len(size_cache)), size_cache, label="cache")
-        plt.plot(range(len(size_ai_cache)), size_ai_cache, label="ai_cache")
+        self.__plot_size(size_cache, size_ai_cache)
         plt.axvline(x=separator)
-        plt.legend()
         if show:
             plt.show()
         else:

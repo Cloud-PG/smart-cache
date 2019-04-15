@@ -10,14 +10,17 @@ from .utils import ReadableDictAsAttribute, SupportTable
 class CMSDatasetV0Reader(object):
 
     def __init__(self, filename):
+        print("[Open dataset: {}]".format(filename))
         self._collector = JSONDataFileReader(filename)
         self._meta = ReadableDictAsAttribute(self._collector[-1])
         if 'checkpoints' in self._meta:
+            print("[Load checkpoints]")
             for index, pos in self._meta.checkpoints.items():
                 self._collector.add_checkpoint(int(index), pos)
         self._use_tensor = True
         self._score_avg = None
         self.__sorted_keys = None
+        print("[Dataset loaded...]")
 
     def get_raw_window(self):
         for record in self._collector.start_from(

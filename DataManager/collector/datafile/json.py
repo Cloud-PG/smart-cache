@@ -202,8 +202,9 @@ class JSONDataFileReader(object):
 
         for _ in range(index - cur_idx):
             _, _ = self.__get_json()
+            cur_idx += 1
 
-        for idx, (json_obj, _) in enumerate(iter(self.__get_json, (None, -1))):
+        for idx, (json_obj, _) in enumerate(iter(self.__get_json, (None, -1)), cur_idx):
             if idx == stop - 1:
                 break
             yield json.loads(json_obj, encoding="utf-8")
