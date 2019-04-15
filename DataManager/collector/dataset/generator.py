@@ -54,8 +54,6 @@ class CMSDatasetV0Process(Process):
                     self.__return_data.put(obj)
                     self.__return_indexes.put(obj.FileName)
                     extractions += 1
-                    if extractions >= 100:
-                        break
 
                 time_delta = time() - start_time
                 if time_delta >= 1.0:
