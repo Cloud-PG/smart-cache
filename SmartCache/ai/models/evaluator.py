@@ -19,10 +19,13 @@ class SimpleCacheInfiniteSpace(object):
         tmp_file_names = []
         tmp_tensors = []
 
-        for idx in tqdm(range(self._dataset.meta.len_raw_window)):
-            obj = self._dataset.get_raw(
-                idx, next_window=next_window
-            )
+        generator = None
+        if not next_window:
+            generator = self._dataset.get_raw_window()
+        else:
+            generator = self._dataset.get_raw_next_window()
+
+        for idx, obj in tqdm(enumerate(generator), desc="Simulation"):
             FileName = obj['data']['FileName']
             tensor = obj['tensor']
             tmp_file_names.append(FileName)
