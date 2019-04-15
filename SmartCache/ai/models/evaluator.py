@@ -17,7 +17,7 @@ class Evaluator(object):
 
     def compare_all(self, show: bool=False):
         raise NotImplemented
-    
+
     @staticmethod
     def __plot_num_file(size_cache, size_ai_cache, stride: int=100):
         plt.clf()
@@ -27,6 +27,16 @@ class Evaluator(object):
         plt.ylabel("Num. files in cache")
         plt.xlabel("Num. request accepted x{}".format(stride))
         plt.legend()
+
+# TODO
+# class SimpleCacheFiniteSpace(Evaluator):
+
+
+class SimpleCacheFiniteSpace(Evaluator):
+
+    def __init__(self, dataset, model, max_num_files=1000):
+        super(SimpleCacheInfiniteSpace, self).__init__(dataset, model)
+        self.__cache_size = 1000
 
 
 class SimpleCacheInfiniteSpace(Evaluator):
