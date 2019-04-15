@@ -571,7 +571,7 @@ class CMSDatasetV0(object):
     def save(self, from_: str, window_size: int, outfile_name: str='',
              use_spark: bool=False, extract_support_tables: bool=True,
              multiprocess: bool=False, num_processes: int=2,
-             checkpoint_step: int=5000
+             checkpoint_step: int=10000
              ):
         """Extract and save a dataset.
 
@@ -586,7 +586,7 @@ class CMSDatasetV0(object):
                                            information
             multiprocess (bool): use Python multiprocessing
             num_processes (int=2): number of process for Python multiprocessing
-            checkpoint_step (int=5000): stride for checkpoint extraction
+            checkpoint_step (int=10000): stride for checkpoint extraction
 
         Returns:
             This object instance (for chaining operations)
