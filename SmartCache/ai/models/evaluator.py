@@ -2,19 +2,40 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
 
+class Evaluator(object):
 
-class SimpleCacheInfiniteSpace(object):
+    def compare_window(self, show: bool=False):
+        raise NotImplemented
+    
+    def compare_next_window(self, show: bool=False):
+        raise NotImplemented
+    
+    def compare_all(self, show: bool=False):
+        raise NotImplemented
+
+
+class SimpleCacheInfiniteSpace(Evaluator):
 
     def __init__(self, dataset, model):
+        super(SimpleCacheInfiniteSpace, self).__init__()
         self._dataset = dataset
         self._model = model
 
-    def _compare(self, next_window: bool=False, stride: int=100):
+    def _compare(
+        self, initial_values: set=(), next_window: bool=False, stride: int=100
+    ):
         cache = set()
         ai_cache = set()
 
         size_cache = []
         size_ai_cache = []
+
+        if initial_values:
+            init_cache, init_size_cache, init_ai_cache, init_size_ai_cache = initial_values
+            cache |= set(init_cache)
+            ai_cache |= set(init_ai_cache)
+            size_cache += init_size_cache
+            size_ai_cache += init_size_ai_cache
 
         tmp_file_names = []
         tmp_tensors = []
@@ -73,5 +94,20 @@ class SimpleCacheInfiniteSpace(object):
         else:
             plt.savefig("compare_next_window.png")
 
-    def compare_all(self):
-        pass
+    def compare_all(self, show: bool=False):
+        cache, size_cache, ai_cache, size_ai_cache = self._compare()
+        separator = len(size_cache)
+        cache, size_cache, ai_cache, size_ai_cache = self._compare(
+            initial_values=(cache, size_cache, ai_cache, size_ai_cache),
+            next_window=True
+        )
+
+        plt.clf()
+        plt.plot(range(len(size_cache)), size_cache, label="cache")
+        plt.plot(range(len(size_ai_cache)), size_ai_cache, label="ai_cache")
+        plt.axvline(x=separator)
+        plt.legend()
+        if show:
+            plt.show()
+        else:
+            plt.savefig("compare_all.png")

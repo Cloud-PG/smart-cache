@@ -193,7 +193,6 @@ class JSONDataFileReader(object):
         if index < 0:
             raise Exception("Index have to be positive or equal to 0...")
         self.__descriptor.seek(0, 0)
-        pos = self.__descriptor.tell()
         cur_idx = 0
 
         checkpoint = self.__get_checkpoint(index)
@@ -201,11 +200,11 @@ class JSONDataFileReader(object):
             self.__descriptor.seek(checkpoint[1])
             cur_idx = checkpoint[0]
 
-        for _ in range(index - cur_idx - 1):
+        for _ in range(index - cur_idx):
             _, _ = self.__get_json()
 
         for idx, (json_obj, _) in enumerate(iter(self.__get_json, (None, -1))):
-            if idx == stop:
+            if idx == stop - 1:
                 break
             yield json.loads(json_obj, encoding="utf-8")
 
