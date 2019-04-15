@@ -228,6 +228,8 @@ class JSONDataFileReader(object):
         assert isinstance(
             idx, (int, slice)), "Index Could be an integer or a slice"
 
+        self.__descriptor.seek(0, 0)
+
         if isinstance(idx, int) and idx < 0:
             for cur_index in range(-idx):
                 obj, pos = self.__get_json_from_end()
