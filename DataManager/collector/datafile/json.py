@@ -125,8 +125,8 @@ class JSONDataFileReader(object):
         """
         self.__filename = filename
         self.__descriptor = get_stream(self.__filename)
-        self.__last_index = None
-        self.__last_index_pos = None
+        self.__last_index = 0
+        self.__last_index_pos = 0
         self.__len = None
         self.__whitespaces = [elm.encode("utf-8") for elm in whitespace]
         self.__getitem_start = 0
@@ -137,7 +137,7 @@ class JSONDataFileReader(object):
 
     def __get_checkpoint(self, cur_index: int):
         for index in reversed(sorted(self.__checkpoints)):
-            if cur_index >= index:
+            if cur_index > index:
                 return (index, self.__checkpoints[index])
         return False
 
@@ -228,8 +228,6 @@ class JSONDataFileReader(object):
         assert isinstance(
             idx, (int, slice)), "Index Could be an integer or a slice"
 
-        self.__descriptor.seek(0, 0)
-
         if isinstance(idx, int) and idx < 0:
             for cur_index in range(-idx):
                 obj, pos = self.__get_json_from_end()
@@ -243,9 +241,11 @@ class JSONDataFileReader(object):
             to_extract = [idx]
 
         results = []
-        cur_idx = 0
 
         for target_idx in to_extract:
+            self.__descriptor.seek(0, 0)
+            cur_idx = 0
+
             checkpoint = self.__get_checkpoint(target_idx)
             if checkpoint != False:
                 self.__descriptor.seek(checkpoint[1])
@@ -253,7 +253,7 @@ class JSONDataFileReader(object):
                 self.__last_index = checkpoint[0]
                 self.__last_index_pos = checkpoint[1]
 
-            if self.__last_index and target_idx - self.__last_index > 1:
+            if self.__last_index > cur_idx and target_idx > self.__last_index:
                 self.__descriptor.seek(self.__last_index_pos)
                 cur_idx = self.__last_index
 
@@ -265,7 +265,7 @@ class JSONDataFileReader(object):
                 if cur_idx == target_idx:
                     results.append(json.loads(last_obj, encoding="utf-8"))
                     break
-                
+
                 cur_idx += 1
 
         if isinstance(idx, slice):
