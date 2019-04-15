@@ -649,7 +649,7 @@ class CMSDatasetV0(object):
                 ))
                 position = out_file.append(record.to_dict())
                 if idx in [0, raw_info['len_raw_window']] or idx % checkpoint_step == 0:
-                    metadata['checkpoints'][metadata['len'] + idx] = position
+                    metadata['checkpoints'][metadata['len'] + idx - 1] = position
 
             with yaspin(text="Write metadata...") as spinner:
                 spinner.text = "Write metadata..."
