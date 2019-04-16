@@ -509,8 +509,8 @@ class CMSDatasetV0(object):
         all_raw_data = []
 
         raw_info = {
-            'len_raw_window': len(data),
-            'len_raw_next_window': len(next_data),
+            'len_raw_window': 0,
+            'len_raw_next_window': 0,
         }
 
         if extract_support_tables:
@@ -530,10 +530,20 @@ class CMSDatasetV0(object):
             indexes = window_indexes & next_window_indexes
             spinner.write("Indexes merged...")
 
-        for raw_data in tqdm(data + next_data, desc="Merge raw data"):
+        for raw_data in tqdm(data, desc="Merge raw data"):
             cur_data_pop = CMSDataPopularity(raw_data.data)
             if cur_data_pop:
                 all_raw_data.append(cur_data_pop)
+                raw_info['len_raw_window'] += 1
+        
+        for raw_data in tqdm(next_data, desc="Merge next raw data"):
+            cur_data_pop = CMSDataPopularity(raw_data.data)
+            if cur_data_pop:
+                all_raw_data.append(cur_data_pop)
+                raw_info['len_raw_next_window'] += 1
+        
+        print("[filtered raw data: {}]".format(raw_info['len_raw_window']))
+        print("[filtered raw next data: {}]".format(raw_info['len_raw_next_window']))
 
         # Create output data
         for idx, record in tqdm(enumerate(data), desc="Create output data"):
