@@ -9,11 +9,11 @@ class Evaluator(object):
         self._dataset = dataset
         self._model = model
 
-    def _compare(self, initial_values: set=(), next_window: bool=False, stride: int=100):
+    def _compare(self, initial_values: set=(), next_window: bool=False):
         raise NotImplementedError
 
-    def compare_window(self, show: bool=False, stride: int=100):
-        result = self._compare(stride=stride)
+    def compare_window(self, show: bool=False):
+        result = self._compare()
 
         self._plot_stats(
             {
@@ -30,8 +30,8 @@ class Evaluator(object):
         else:
             plt.savefig("compare_window.png")
 
-    def compare_next_window(self, show: bool=False, stride: int=100):
-        result = self._compare(next_window=True, stride=stride)
+    def compare_next_window(self, show: bool=False):
+        result = self._compare(next_window=True)
 
         self._plot_stats(
             {
@@ -48,12 +48,12 @@ class Evaluator(object):
         else:
             plt.savefig("compare_next_window.png")
 
-    def compare_all(self, show: bool=False, stride: int=100):
-        result = self._compare(stride=stride)
+    def compare_all(self, show: bool=False):
+        result = self._compare()
         separator = len(result['cache']['size'])
         result = self._compare(
             initial_values=result,
-            next_window=True, stride=stride
+            next_window=True
         )
 
         self._plot_stats(
@@ -73,7 +73,7 @@ class Evaluator(object):
             plt.savefig("compare_all.png")
 
     @staticmethod
-    def _plot_stats(size, hit_rate, stride: int=100):
+    def _plot_stats(size, hit_rate):
         plt.clf()
         # Size
         plt.subplot(2, 1, 1)
@@ -99,7 +99,7 @@ class SimpleCacheFiniteSpaceLRU(Evaluator):
         self.__cache_size = 1000
 
     def _compare(
-        self, initial_values: set=(), next_window: bool=False, stride: int=100
+        self, initial_values: set=(), next_window: bool=False
     ):
         pass
 
@@ -110,7 +110,7 @@ class SimpleCacheInfiniteSpace(Evaluator):
         super(SimpleCacheInfiniteSpace, self).__init__(dataset, model)
 
     def _compare(
-        self, initial_values: dict={}, next_window: bool=False, stride: int=100
+        self, initial_values: dict={}, next_window: bool=False
     ):
         cache = set()
         cache_hit_ratio = []
@@ -137,9 +137,6 @@ class SimpleCacheInfiniteSpace(Evaluator):
             ai_cache_hit = initial_values['ai_cache']['hit']
             ai_cache_miss = initial_values['ai_cache']['miss']
 
-        tmp_file_names = []
-        tmp_tensors = []
-
         generator = None
         if not next_window:
             generator = self._dataset.get_raw_window()
@@ -149,42 +146,32 @@ class SimpleCacheInfiniteSpace(Evaluator):
         for idx, obj in tqdm(enumerate(generator), desc="Simulation"):
             FileName = obj['data']['FileName']
             tensor = obj['tensor']
-            tmp_file_names.append(FileName)
-            tmp_tensors.append(tensor)
 
-            if idx % stride == 0:
-                for file_name in tmp_file_names:
-                    if file_name in cache:
-                        cache_hit += 1
-                    else:
-                        cache_miss += 1
-                for file_name in tmp_file_names:
-                    if file_name in ai_cache:
-                        ai_cache_hit += 1
-                    else:
-                        ai_cache_miss += 1
+            if FileName in cache:
+                cache_hit += 1
+            else:
+                cache_miss += 1
+                cache |= set((FileName,))
 
-                cache |= set(tmp_file_names)
+            if FileName in ai_cache:
+                ai_cache_hit += 1
+            else:
+                ai_cache_miss += 1
+                prediction = self._model.predict_single(tensor)
+                if prediction != 0:
+                    ai_cache |= set((FileName,))
 
-                predictions = self._model.predict(np.array(tmp_tensors))
-                for pred_idx, prediction in enumerate(predictions):
-                    if prediction != 0:
-                        ai_cache |= set((tmp_file_names[pred_idx],))
+            size_cache.append(len(cache))
+            size_ai_cache.append(len(ai_cache))
 
-                size_cache.append(len(cache))
-                size_ai_cache.append(len(ai_cache))
-
-                cache_hit_ratio.append(
-                    float(cache_hit / (cache_hit + cache_miss)) * 100.
-                    if cache_hit > 0 else 0.
-                )
-                ai_cache_hit_ratio.append(
-                    float(ai_cache_hit / (ai_cache_hit + ai_cache_miss)) * 100.
-                    if ai_cache_hit > 0 else 0.
-                )
-
-                tmp_file_names = []
-                tmp_tensors = []
+            cache_hit_ratio.append(
+                float(cache_hit / (cache_hit + cache_miss)) * 100.
+                if cache_hit > 0 else 0.
+            )
+            ai_cache_hit_ratio.append(
+                float(ai_cache_hit / (ai_cache_hit + ai_cache_miss)) * 100.
+                if ai_cache_hit > 0 else 0.
+            )
 
         return {
             'cache': {
