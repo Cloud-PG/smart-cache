@@ -32,5 +32,5 @@ class CMSSimpleRecordModelGenerator(object):
         predictions = self._model.predict(data)
         return np.argmax(predictions, axis=1)
     
-    def save_model(self, out_name: str):
+    def save(self, out_name: str):
         self._model.save("{}.h5".format(out_name))
