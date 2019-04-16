@@ -24,13 +24,15 @@ class CMSDatasetV0Reader(object):
 
     def get_raw_window(self):
         for record in self._collector.start_from(
-            self._meta.raw_window_start, self._meta.len_raw_window
+            self._meta.raw_window_start, 
+            self._meta.raw_window_start + self._meta.len_raw_window
         ):
             yield record
     
     def get_raw_next_window(self):
         for record in self._collector.start_from(
-            self._meta.raw_next_window_start, self._meta.len_raw_next_window
+            self._meta.raw_next_window_start, 
+            self._meta.raw_next_window_start + self._meta.len_raw_next_window
         ):
             yield record
 
