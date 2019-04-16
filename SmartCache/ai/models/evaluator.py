@@ -175,12 +175,12 @@ class SimpleCacheInfiniteSpace(Evaluator):
                 size_ai_cache.append(len(ai_cache))
 
                 cache_hit_ratio.append(
-                    float(cache_hit / cache_miss)
-                    if cache_hit > 0 and cache_miss > 0 else 0.
+                    float(cache_hit / (cache_hit + cache_miss)) * 100.
+                    if cache_hit > 0 else 0.
                 )
                 ai_cache_hit_ratio.append(
-                    float(ai_cache_hit / ai_cache_miss)
-                    if ai_cache_hit > 0 and ai_cache_miss > 0 else 0.
+                    float(ai_cache_hit / (ai_cache_hit + ai_cache_miss)) * 100.
+                    if ai_cache_hit > 0 else 0.
                 )
 
                 tmp_file_names = []
