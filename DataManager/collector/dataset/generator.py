@@ -94,7 +94,7 @@ class CMSDatasetV0(object):
                 source['httpfs'].get('password')
             )
             self._httpfs_base_path = source['httpfs'].get(
-                'base_path', "/project/awg/cms/jm-data-popularity/avro-snappy"
+                'base_path', "/project/awg/cms/jm-data-popularity/avro-snappy/"
             )
         elif 'hdfs' in source:
             self._hdfs_base_path = source['hdfs'].get(
@@ -125,7 +125,7 @@ class CMSDatasetV0(object):
     def get_data_collector(self, year, month, day):
         if self._httpfs is not None:
             for type_, name, full_path in self._httpfs.liststatus(
-                    "/{}year={}/month={}/day={}".format(
+                    "{}year={}/month={}/day={}".format(
                         self._httpfs_base_path, year, month, day
                     )
             ):
