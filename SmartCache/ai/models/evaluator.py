@@ -9,13 +9,15 @@ class SimpleCache(object):
         self._cache = set()
         self._hit = 0
         self._miss = 0
-        self._history = []
+        self._size_history = []
+        self._hit_rate_history = []
 
         if init_state:
             self._cache |= init_state['cache']
             self._hit += init_state['hit']
             self._miss += init_state['miss']
-            self._history += init_state['history']
+            self._size_history += init_state['size_history']
+            self._hit_rate_history += init_state['hit_rate_history']
 
     @property
     def state(self):
@@ -23,13 +25,23 @@ class SimpleCache(object):
             'cache': self._cache,
             'hit': self._hit,
             'miss': self._miss,
-            'history': self._history
+            'size_history': self._size_history,
+            'hit_rate_history': self._hit_rate_history
         }
 
     @property
     def history(self):
-        return list(zip(*self._history))
+        return list(zip(self._size_history, self._hit_rate_history))
 
+    @property
+    def size_history(self):
+        return self._size_history
+
+    @property
+    def hit_rate_history(self):
+        return self._hit_rate_history
+
+    @property
     def hit_rate(self):
         return float(self._hit / (self._hit + self._miss)) * 100.
 
@@ -46,10 +58,10 @@ class SimpleCache(object):
                 self._cache |= set((file_, ))
         else:
             self._hit += 1
-        self._history.append(
-            len(self),
-            self.hit_rate()
-        )
+
+        self._size_history.append(len(self))
+        self._hit_rate_history.append(self.hit_rate)
+
         return self
 
 
@@ -72,10 +84,10 @@ class Evaluator(object):
 
         if initial_values:
             cache = self.__cache_types[self.__cache_type](
-                initial_values['cache']
+                initial_values['cache'].state
             )
             ai_cache = self.__cache_types[self.__ai_cache_type](
-                initial_values['ai_cache']
+                initial_values['ai_cache'].state
             )
 
         generator = None
@@ -103,12 +115,12 @@ class Evaluator(object):
 
         self._plot_stats(
             {
-                'cache': result['cache']['size'],
-                'ai_cache': result['ai_cache']['size']
+                'cache': result['cache'].size_history,
+                'ai_cache': result['ai_cache'].size_history
             },
             {
-                'cache': result['cache']['hit_ratio'],
-                'ai_cache': result['ai_cache']['hit_ratio']
+                'cache': result['cache'].hit_rate_history,
+                'ai_cache': result['ai_cache'].hit_rate_history
             }
         )
         if show:
@@ -121,12 +133,12 @@ class Evaluator(object):
 
         self._plot_stats(
             {
-                'cache': result['cache']['size'],
-                'ai_cache': result['ai_cache']['size']
+                'cache': result['cache'].size_history,
+                'ai_cache': result['ai_cache'].size_history
             },
             {
-                'cache': result['cache']['hit_ratio'],
-                'ai_cache': result['ai_cache']['hit_ratio']
+                'cache': result['cache'].hit_rate_history,
+                'ai_cache': result['ai_cache'].hit_rate_history
             }
         )
         if show:
@@ -136,7 +148,7 @@ class Evaluator(object):
 
     def compare_all(self, show: bool=False):
         result = self._compare()
-        separator = len(result['cache']['size'])
+        separator = len(result['cache'].size_history)
         result = self._compare(
             initial_values=result,
             next_window=True
@@ -144,12 +156,12 @@ class Evaluator(object):
 
         self._plot_stats(
             {
-                'cache': result['cache']['size'],
-                'ai_cache': result['ai_cache']['size']
+                'cache': result['cache'].size_history,
+                'ai_cache': result['ai_cache'].size_history
             },
             {
-                'cache': result['cache']['hit_ratio'],
-                'ai_cache': result['ai_cache']['hit_ratio']
+                'cache': result['cache'].hit_rate_history,
+                'ai_cache': result['ai_cache'].hit_rate_history
             }
         )
         plt.axvline(x=separator)
@@ -158,21 +170,40 @@ class Evaluator(object):
         else:
             plt.savefig("compare_all.png")
 
-    @staticmethod
-    def _plot_stats(size, hit_rate):
+    def _plot_stats(self, size, hit_rate):
         plt.clf()
         # Size
-        plt.subplot(2, 1, 1)
-        plt.plot(range(len(size['cache'])),
-                 size['cache'], label="cache size", alpha=0.9)
-        plt.plot(range(len(size['ai_cache'])), size['ai_cache'],
-                 label="ai_cache size", alpha=0.9)
+        axes = plt.subplot(2, 1, 1)
+        plt.plot(
+            range(len(size['cache'])),
+            size['cache'],
+            label="cache [{}] size".format(self.__cache_type),
+            alpha=0.9
+        )
+        plt.plot(
+            range(len(size['ai_cache'])),
+            size['ai_cache'],
+            label="ai_cache size",
+            alpha=0.9
+        )
+        axes.set_ylim(0)
+        axes.set_xlim(0)
         plt.legend()
         # Hit rate
-        plt.subplot(2, 1, 2)
-        plt.plot(range(len(hit_rate['cache'])),
-                 hit_rate['cache'], label="cache hit rate", alpha=0.9)
-        plt.plot(range(len(hit_rate['ai_cache'])), hit_rate['ai_cache'],
-                 label="ai_cache hit rate", alpha=0.9)
+        axes = plt.subplot(2, 1, 2)
+        plt.plot(
+            range(len(hit_rate['cache'])),
+            hit_rate['cache'],
+            label="cache [{}] hit rate".format(self.__cache_type),
+            alpha=0.9
+        )
+        plt.plot(
+            range(len(hit_rate['ai_cache'])),
+            hit_rate['ai_cache'],
+            label="ai_cache hit rate",
+            alpha=0.9
+        )
+        axes.set_ylim(0, 100)
+        axes.set_xlim(0)
         plt.xlabel("Num. request accepted")
         plt.legend()
