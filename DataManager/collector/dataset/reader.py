@@ -24,14 +24,14 @@ class CMSDatasetV0Reader(object):
 
     def get_raw_window(self):
         for record in self._collector.start_from(
-            self._meta.raw_window_start, 
+            self._meta.raw_window_start,
             self._meta.raw_window_start + self._meta.len_raw_window
         ):
             yield record
-    
+
     def get_raw_next_window(self):
         for record in self._collector.start_from(
-            self._meta.raw_next_window_start, 
+            self._meta.raw_next_window_start,
             self._meta.raw_next_window_start + self._meta.len_raw_next_window
         ):
             yield record
@@ -67,14 +67,24 @@ class CMSDatasetV0Reader(object):
         else:
             return self._collector[index]
 
-    def train_set(self, one_hot: bool=True):
-        return self.features(), self.labels(one_hot=one_hot)
+    def train_set(self, f_normalized: bool=True, f_one_hot_categories: bool=False, l_one_hot: bool=True):
+        return self.features(f_normalized, f_one_hot_categories), self.labels(one_hot=l_one_hot)
 
-    def features(self):
+    def features(self, normalized: bool=True, one_hot_categories: bool=False):
         features = []
         for record in self.records:
             if self._use_tensor:
-                features.append(np.array(record['tensor']))
+                if normalized:
+                    features.append(np.array(record['tensor']))
+                else:
+                    features.append(np.array(
+                        self.meta.support_tables.close_conversion(
+                            'features',
+                            record['features'],
+                            normalized=normalized,
+                            one_hot_categories=one_hot_categories
+                        )
+                    ))
             else:
                 np.array(record['features'])
         return np.array(features)
