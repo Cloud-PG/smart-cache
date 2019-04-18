@@ -22,12 +22,12 @@ class SupportTable(object):
                 for key in table.keys():
                     self._tables[table_name][key] = set(table[key].keys())
 
-    def close_conversion(self, table_name: str, data: dict):
+    def close_conversion(self, table_name: str, data: dict, one_hot_categories: bool=False):
         """Convert data value following the support tables."""
         if table_name not in self.__sorted_keys:
             self.__sorted_keys[table_name] = self.get_sorted_keys(table_name)
         sorted_keys = self.__sorted_keys[table_name]
-        return [
+        res = [
             float(
                 self.get_close_value(
                     table_name,
@@ -37,6 +37,19 @@ class SupportTable(object):
             )
             for key in sorted_keys
         ]
+        if one_hot_categories:
+            tmp = []
+            for idx, key in enumerate(sorted_keys):
+                inner_tmp = [
+                    0. for _ in range(
+                        len(self._indexed_tables[table_name][key])
+                    )
+                ]
+                inner_tmp[int(res[idx])] = 1.
+                for elm in inner_tmp:
+                    tmp.append(elm)
+            res = tmp
+        return res
 
     @staticmethod
     def _filter_split_process(process: str):
