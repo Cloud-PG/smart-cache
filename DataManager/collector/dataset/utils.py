@@ -39,18 +39,6 @@ class SupportTable(object):
         ]
 
     @staticmethod
-    def __get_similarity(_a_: str, _b_: str):
-        num_eq = 0
-        min_len = min([len(_a_), len(_b_)])
-        max_len = max([len(_a_), len(_b_)])
-        for idx in range(min_len):
-            if _a_[idx] == _b_[idx]:
-                num_eq += 1
-        if num_eq == 0:
-            num_eq = -1.
-        return float(num_eq / min_len)
-
-    @staticmethod
     def _filter_split_process(process: str):
         tmp = " ".join(process.split("-"))
         tmp = " ".join(tmp.split("_"))
