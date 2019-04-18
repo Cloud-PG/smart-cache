@@ -15,6 +15,7 @@ class SupportTable(object):
             'split_process': self._filter_split_process
         })
         self.__sorted_keys = {}
+        self.__sizes = {}
         if support_table:
             self._indexed_tables = support_table
             for table_name, table in self._indexed_tables.items():
@@ -22,30 +23,38 @@ class SupportTable(object):
                 for key in table.keys():
                     self._tables[table_name][key] = set(table[key].keys())
 
-    def close_conversion(self, table_name: str, data: dict, one_hot_categories: bool=False):
+    def close_conversion(self, table_name: str, data: dict, normalized: bool=True, one_hot_categories: bool=False):
         """Convert data value following the support tables."""
         if table_name not in self.__sorted_keys:
             self.__sorted_keys[table_name] = self.get_sorted_keys(table_name)
-        sorted_keys = self.__sorted_keys[table_name]
-        res = [
-            float(
-                self.get_close_value(
-                    table_name,
-                    key,
-                    data[key]
+        if table_name not in self.__sizes:
+            self.__sizes[table_name] = []
+            for key in self.__sorted_keys[table_name]:
+                self.__sizes[table_name].append(
+                    len(self._indexed_tables[table_name][key])
                 )
+        sorted_keys = self.__sorted_keys[table_name]
+        sizes = self.__sizes[table_name]
+        res = [
+            self.get_close_value(
+                table_name,
+                key,
+                data[key]
             )
             for key in sorted_keys
         ]
-        if one_hot_categories:
+        if normalized:
+            for idx, value in enumerate(res):
+                res[idx] = float(value / sizes[idx])
+        elif one_hot_categories:
             tmp = []
             for idx, key in enumerate(sorted_keys):
                 inner_tmp = [
                     0. for _ in range(
-                        len(self._indexed_tables[table_name][key])
+                        sizes[key]
                     )
                 ]
-                inner_tmp[int(res[idx])] = 1.
+                inner_tmp[res[idx]] = 1.
                 for elm in inner_tmp:
                     tmp.append(elm)
             res = tmp
