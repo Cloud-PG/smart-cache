@@ -43,6 +43,7 @@ class SupportTable(object):
             )
             for key in sorted_keys
         ]
+        assert normalized != one_hot_categories, "You can choose normalized or one hot features..."
         if normalized:
             for idx, value in enumerate(res):
                 res[idx] = float(value / sizes[idx])
