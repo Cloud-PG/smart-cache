@@ -231,18 +231,20 @@ class Evaluator(object):
             {
                 'cache': result['cache'].hit_rate_history,
                 'ai_cache': result['ai_cache'].hit_rate_history
-            }
+            },
+            x_separator=separator
         )
-        plt.axvline(x=separator)
         if show:
             plt.show()
         else:
             plt.savefig("compare_all.png")
 
-    def _plot_stats(self, size, hit_rate):
+    def _plot_stats(self, size, hit_rate, x_separator: int=-1):
         plt.clf()
         # Size
         axes = plt.subplot(2, 1, 1)
+        if x_separator != -1:
+            axes.axvline(x=x_separator)
         plt.plot(
             range(len(size['cache'])),
             size['cache'],
@@ -261,6 +263,8 @@ class Evaluator(object):
         plt.legend()
         # Hit rate
         axes = plt.subplot(2, 1, 2)
+        if x_separator != -1:
+            axes.axvline(x=x_separator)
         plt.plot(
             range(len(hit_rate['cache'])),
             hit_rate['cache'],
