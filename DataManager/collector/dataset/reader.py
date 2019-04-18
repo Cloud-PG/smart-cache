@@ -90,7 +90,7 @@ class CMSDatasetV0Reader(object):
                 labels.append(int(score >= self.score_avg))
         return np.array(labels)
 
-    def toggle_feature_support(self):
+    def toggle_tensor(self):
         self._use_tensor = not self._use_tensor
 
     @property
