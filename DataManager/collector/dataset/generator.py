@@ -180,7 +180,7 @@ class CMSDataset(object):
                 collector = self.get_data_collector(year, month, day)
                 for elm in tqdm(pool.imap(
                     self.task_raw_extraction, collector
-                )):
+                ), desc="Extract {}-{}-{}".format(year, month, day)):
                     if elm:
                         result.append(elm)
 
@@ -220,6 +220,7 @@ class CMSDataset(object):
             os.remove(out_name)
 
             spinner.write("[Dataset saved]")
+
 
 class CMSDatasetProcess(Process):
 
