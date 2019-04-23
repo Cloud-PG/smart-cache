@@ -16,7 +16,7 @@ from ..api import DataFile
 from ..datafeatures.extractor import (CMSDataPopularity, CMSDataPopularityRaw,
                                       CMSSimpleRecord)
 from ..datafile.json import JSONDataFileWriter
-from .utils import ReadableDictAsAttribute, SupportTable
+from .utils import ReadableDictAsAttribute, SupportTable, flush_queue
 
 
 class CMSDatasetV0Process(Process):
@@ -225,11 +225,11 @@ class CMSDatasetV0(object):
 
         return tmp_data, tmp_indexes
 
-    def spark_extract(self, start_date: str, window_size: int,
-                      extract_support_tables: bool=True,
-                      num_partitions: int=10, chunk_size: int=1000,
-                      log_level: str="WARN"
-                      ):
+    def _spark_extract(self, start_date: str, window_size: int,
+                       extract_support_tables: bool=True,
+                       num_partitions: int=10, chunk_size: int=1000,
+                       log_level: str="WARN"
+                       ):
         """Extract data in a time window with Spark.
 
         Args:
@@ -325,27 +325,10 @@ class CMSDatasetV0(object):
 
         return out_data, out_indexes
 
-    @staticmethod
-    def __flush_queue(queue):
-        """Get all data from the queue.
-
-        Notes: this is just a multiprocessing support function.
-
-        Args:
-            queue (Queue): the multiprocessing queue
-
-        Returns:
-            list: the result data pushed in the queue
-        """
-        data = []
-        while not queue.empty():
-            data.append(queue.get())
-        return data
-
-    def extract(self, start_date: str, window_size: int,
-                extract_support_tables: bool = True,
-                multiprocess: bool = False, num_processes: int = 2
-                ):
+    def _extract(self, start_date: str, window_size: int,
+                 extract_support_tables: bool = True,
+                 multiprocess: bool = False, num_processes: int = 2
+                 ):
         """Extract data in a time window.
 
         Args:
@@ -449,13 +432,13 @@ class CMSDatasetV0(object):
                                 process.pid, process.is_alive()), flush=True)
                         print("[Flush queues...]", flush=True)
                         # Get some data...
-                        data += self.__flush_queue(task_data)
-                        next_data += self.__flush_queue(task_next_data)
+                        data += self.flush_queue(task_data)
+                        next_data += self.flush_queue(task_next_data)
                         window_indexes |= set(
-                            self.__flush_queue(task_window_indexes)
+                            self.flush_queue(task_window_indexes)
                         )
                         next_window_indexes |= set(
-                            self.__flush_queue(task_next_window_indexes)
+                            self.flush_queue(task_next_window_indexes)
                         )
                         # Update launched proces list
                         launched_processes = [
@@ -468,13 +451,13 @@ class CMSDatasetV0(object):
                         )
 
             # Update data and indexes with latest results
-            data += self.__flush_queue(task_data)
-            next_data += self.__flush_queue(task_next_data)
+            data += self.flush_queue(task_data)
+            next_data += self.flush_queue(task_next_data)
             window_indexes |= set(
-                self.__flush_queue(task_window_indexes)
+                self.flush_queue(task_window_indexes)
             )
             next_window_indexes |= set(
-                self.__flush_queue(task_next_window_indexes)
+                self.flush_queue(task_next_window_indexes)
             )
             # Close queues
             task_data.close()
@@ -535,15 +518,16 @@ class CMSDatasetV0(object):
             if cur_data_pop:
                 all_raw_data.append(cur_data_pop)
                 raw_info['len_raw_window'] += 1
-        
+
         for raw_data in tqdm(next_data, desc="Merge next raw data"):
             cur_data_pop = CMSDataPopularity(raw_data.data)
             if cur_data_pop:
                 all_raw_data.append(cur_data_pop)
                 raw_info['len_raw_next_window'] += 1
-        
+
         print("[filtered raw data: {}]".format(raw_info['len_raw_window']))
-        print("[filtered raw next data: {}]".format(raw_info['len_raw_next_window']))
+        print("[filtered raw next data: {}]".format(
+            raw_info['len_raw_next_window']))
 
         # Create output data
         for idx, record in tqdm(enumerate(data), desc="Create output data"):
@@ -606,14 +590,14 @@ class CMSDatasetV0(object):
         """
         start_time = time()
         if not use_spark:
-            data, support_tables, raw_data, raw_info = self.extract(
+            data, support_tables, raw_data, raw_info = self._extract(
                 from_, window_size,
                 extract_support_tables=extract_support_tables,
                 multiprocess=multiprocess,
                 num_processes=num_processes
             )
         else:
-            data, support_tables, raw_data, raw_info = self.spark_extract(
+            data, support_tables, raw_data, raw_info = self._spark_extract(
                 from_, window_size,
                 extract_support_tables=extract_support_tables,
             )

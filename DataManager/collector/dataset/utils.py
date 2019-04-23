@@ -4,6 +4,23 @@ import json
 from tqdm import tqdm
 
 
+def flush_queue(queue):
+    """Get all data from the queue.
+
+    Notes: this is just a multiprocessing support function.
+
+    Args:
+        queue (Queue): the multiprocessing queue
+
+    Returns:
+        list: the result data pushed in the queue
+    """
+    data = []
+    while not queue.empty():
+        data.append(queue.get())
+    return data
+
+
 class SupportTable(object):
 
     """Class to manage support tables for feature conversions."""
