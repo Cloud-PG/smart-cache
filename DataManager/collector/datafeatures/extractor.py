@@ -3,54 +3,7 @@ import json
 
 import numpy as np
 
-
-class FeatureData(object):
-
-    def __init__(self):
-        self._features = {}
-
-    def __getstate__(self):
-        """Make object serializable by pickle."""
-        return self.to_dict()
-
-    def __setstate__(self, state):
-        """Make object loaded by pickle."""
-        raise NotImplementedError
-
-    def to_dict(self):
-        raise NotImplementedError
-
-    @property
-    def feature(self):
-        return self._features
-
-    @property
-    def features(self):
-        for feature in sorted(self._features):
-            yield feature, self._features[feature]
-
-    @property
-    def feature_list(self):
-        return [
-            (feature, self._features[feature])
-            for feature in sorted(self._features)
-        ]
-    
-    @property
-    def feature_dict(self):
-        return self._features
-
-    def features2array(self):
-        tmp = []
-        for feature in sorted(self._features):
-            tmp.append(self._features[feature])
-        return np.array(tmp)
-
-    def __repr__(self):
-        return json.dumps(list(self.features))
-
-    def add_feature(self, name, value):
-        self._features[name] = value
+from .utils import FeatureData
 
 
 class CMSSimpleRecord(FeatureData):
