@@ -38,6 +38,8 @@ class DataFile(object):
                 return AvroDataFileReader(source)
             else:
                 raise Exception("File type {} is not supported...".format(ext))
+        elif not path.exists(source):
+            raise FileNotFoundError("{}".format(source))
 
         raise Exception(
             "Collector for source:\n  -> '{}'\nis not yet implemented...".format(source))
