@@ -283,9 +283,5 @@ class CMSDataPopularityRaw(FeatureData):
     def record_id(self):
         return self.__id
 
-    @property
-    def data(self):
-        return self._features
-
     def __repr__(self):
         return json.dumps(self._features)
