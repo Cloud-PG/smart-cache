@@ -1,9 +1,10 @@
 import json
+import os
 import sys
 from collections import OrderedDict
-from datetime import date, timedelta
-from multiprocessing import Process, Queue
-from os import path
+from dataclasses import dataclass
+from multiprocessing import Pool, Process, Queue
+from os import makedirs, path
 from time import time
 
 import findspark
@@ -16,10 +17,210 @@ from ..api import DataFile
 from ..datafeatures.extractor import (CMSDataPopularity, CMSDataPopularityRaw,
                                       CMSSimpleRecord)
 from ..datafile.json import JSONDataFileWriter
-from .utils import ReadableDictAsAttribute, SupportTable, flush_queue
+from .utils import (ReadableDictAsAttribute, SupportTable, flush_queue,
+                    gen_window_dates)
 
 
-class CMSDatasetV0Process(Process):
+@dataclass
+class Resource:
+    httpfs: "HTTPFS" = None
+    httpfs_base_path: str = ""
+    hdfs_base_path: str = ""
+    local_folder: str = ""
+
+    @property
+    def type(self):
+        if self.httpfs:
+            return 'httpfs'
+        elif self.hdfs_base_path:
+            return 'hdfs'
+        elif self.local_folder:
+            return 'local'
+        else:
+            raise Exception("Cannot determine type...")
+
+
+class CMSDataset(object):
+
+    """Generator of CMS dataset.
+
+    This generator uses Python multiprocessing or Spark.
+    Data source could be HDFS, HTTPFS or local folders"""
+
+    def __init__(self, spark_conf: dict={}, source: dict={}, dest: dict={}):
+        self._source = Resource()
+        self._dest = Resource()
+        self._spark_context = None
+
+        # Spark defaults
+        self._spark_master = spark_conf.get('master', "local")
+        self._spark_app_name = spark_conf.get('app_name', "CMSDataset")
+        self._spark_conf = spark_conf.get('config', {})
+
+        self.__analyse_source(source)
+        self.__analyse_dest(dest)
+
+    def __analyse_dest(self, dest):
+        if 'httpfs' in dest:
+            self._dest.httpfs = HTTPFS(
+                dest['httpfs'].get('url'),
+                dest['httpfs'].get('user'),
+                dest['httpfs'].get('password')
+            )
+            self._dest.httpfs_base_path = dest['httpfs'].get(
+                'base_path', "/raw-data/"
+            )
+        elif 'hdfs' in dest:
+            self._dest.hdfs_base_path = dest['hdfs'].get(
+                'hdfs_base_path', "hdfs://raw-data",
+            )
+        elif 'local' in dest:
+            self._dest.local_folder = dest['local'].get(
+                'folder', "data",
+            )
+
+    def __analyse_source(self, source):
+        if 'httpfs' in source:
+            self._source.httpfs = HTTPFS(
+                source['httpfs'].get('url'),
+                source['httpfs'].get('user'),
+                source['httpfs'].get('password')
+            )
+            self._source.httpfs_base_path = source['httpfs'].get(
+                'base_path', "/project/awg/cms/jm-data-popularity/avro-snappy/"
+            )
+        elif 'hdfs' in source:
+            self._source.hdfs_base_path = source['hdfs'].get(
+                'hdfs_base_path', "hdfs://analytix/project/awg/cms/jm-data-popularity/avro-snappy",
+            )
+        elif 'local' in source:
+            self._source.local_folder = source['local'].get(
+                'folder', "data",
+            )
+
+    @property
+    def spark_context(self):
+        """Detects and returns the Spark context."""
+        if not self._spark_context and 'sc' not in locals():
+            findspark.init()
+            conf = SparkConf()
+            conf.setMaster(self._spark_master)
+            conf.setAppName(self._spark_app_name)
+
+            for name, value in self._spark_conf.items():
+                conf.set(name, value)
+
+            self._spark_context = SparkContext.getOrCreate(conf=conf)
+        elif 'sc' in locals():
+            self._spark_context = sc
+        return self._spark_context
+
+    def get_data_collector(self, year, month, day):
+        if self._source.httpfs is not None:
+            for type_, name, full_path in self._source.httpfs.liststatus(
+                    "{}year={}/month={}/day={}".format(
+                        self._source.httpfs_base_path, year, month, day
+                    )
+            ):
+                cur_file = self._source.httpfs.open(full_path)
+                collector = DataFile(cur_file)
+        elif self._source.hdfs_base_path:
+            sc = self.spark_context
+            binary_file = sc.binaryFiles("{}/year={:4d}/month={:d}/day={:d}/part-m-00000.avro".format(
+                self._source.hdfs_base_path, year, month, day)
+            ).collect()
+            collector = DataFile(binary_file[0])
+        elif self._source.local_folder:
+            cur_file_path = path.join(
+                path.abspath(self._source.local_folder),
+                "year={}".format(year),
+                "month={}".format(month),
+                "day={}".format(day),
+                "part-m-00000.avro"
+            )
+            collector = DataFile(cur_file_path)
+        else:
+            raise Exception("No methods to retrieve data...")
+        return collector
+
+    @staticmethod
+    def task_raw_extraction(elm):
+        return CMSDataPopularityRaw(elm)
+
+    def gen_raw(self, start_date: str, window_size: int, use_spark: bool=True):
+        result = []
+        start_year, start_month, start_day = [
+            int(elm) for elm in start_date.split()
+        ]
+
+        if use_spark:
+            sc = self.spark_context
+
+            with yaspin(text="[Spark extraction]") as spinner:
+                for year, month, day in gen_window_dates(
+                    start_year, start_month, start_day, window_size
+                ):
+                    spinner.write(
+                        "[Spark task] Get RAW data for {}/{}/{}".format(year, month, day))
+                    collector = self.get_data_collector(year, month, day)
+                    spinner.write("[Spark task] Extract data...")
+                    processed_data = sc.parallelize(collector).map(
+                        self.task_raw_extraction
+                    ).filter(
+                        lambda cur_elm: cur_elm.valid == True
+                    )
+                    result += processed_data.collect()
+        else:
+            pool = Pool()
+
+            for year, month, day in gen_window_dates(
+                start_year, start_month, start_day, window_size
+            ):
+                collector = self.get_data_collector(year, month, day)
+                for elm in tqdm(pool.imap(
+                    self.task_raw_extraction, collector
+                )):
+                    if elm:
+                        result.append(elm)
+
+        return result
+
+    def save_raw(self, start_date: str, window_size: int):
+        raw_data = self.gen_raw(start_date, window_size)
+
+        out_name = "Dataset_start-{}_ndays-{}.json.gz".format(
+            "-".join(start_date.split()),
+            window_size
+        )
+
+        with JSONDataFileWriter(out_name) as out_file:
+            for data in tqdm(raw_data, desc="Create file"):
+                out_file.append(data)
+
+        with yaspin(text="[Save Dataset]") as spinner:
+            if self._dest.type == 'local':
+                makedirs(self._dest.local_folder, exist_ok=True)
+                with open(out_name, 'rb') as cur_file:
+                    with open(path.join(
+                            self._dest.local_folder, out_name), 'wb'
+                    ) as out_file:
+                        out_file.write(cur_file.read())
+            elif self._dest.type == 'httpfs':
+                self._dest.httpfs.create(
+                    path.join(self._dest.httpfs_base_path, out_name),
+                    out_name,
+                    overwrite=True
+                )
+            else:
+                raise Exception(
+                    "Save dest '{}' not implemented...".format(self._dest.type))
+
+            spinner.text = "[Remove temporary data]"
+            os.remove(out_name)
+
+            spinner.write("[Dataset saved]")
+
+class CMSDatasetProcess(Process):
 
     """Multiprocessing process to extract data."""
 
@@ -30,7 +231,7 @@ class CMSDatasetV0Process(Process):
             return_data (Queue): the queue where the proces will put the data
             return_indexes (Queue): the queue where the proces will put the indexes
         """
-        super(CMSDatasetV0Process, self).__init__()
+        super(CMSDatasetProcess, self).__init__()
         self.__window_date = None
         self.__collector = None
         self.__return_data = return_data
@@ -63,6 +264,9 @@ class CMSDatasetV0Process(Process):
                         counter_delta / time_delta, extractions, idx, self.__window_date)
                     start_time = time()
 
+                if extractions >= 100:
+                    break
+
             spinner.write("[Extracted {} of {} items from '{}' in {:0.2f}s]".format(
                 extractions, idx, self.__window_date, time() - extraction_start_time)
             )
@@ -70,113 +274,14 @@ class CMSDatasetV0Process(Process):
         print("[Process -> {}] Done!".format(self.pid))
 
 
-class CMSDatasetV0(object):
+class CMSDatasetV0(CMSDataset):
 
     """Generator of CMS dataset V0.
 
     This generator uses HTTPFS or Spark"""
 
-    def __init__(self, spark_conf: dict={}, source: dict={}):
-        self._httpfs = None
-        self._spark_context = None
-        self._hdfs_base_path = None
-        self._local_folder = None
-
-        # Spark defaults
-        self._spark_master = spark_conf.get('master', "local")
-        self._spark_app_name = spark_conf.get('app_name', "CMSDatasetV0")
-        self._spark_conf = spark_conf.get('config', {})
-
-        if 'httpfs' in source:
-            self._httpfs = HTTPFS(
-                source['httpfs'].get('url'),
-                source['httpfs'].get('user'),
-                source['httpfs'].get('password')
-            )
-            self._httpfs_base_path = source['httpfs'].get(
-                'base_path', "/project/awg/cms/jm-data-popularity/avro-snappy/"
-            )
-        elif 'hdfs' in source:
-            self._hdfs_base_path = source['hdfs'].get(
-                'hdfs_base_path', "hdfs://analytix/project/awg/cms/jm-data-popularity/avro-snappy",
-            )
-        elif 'local' in source:
-            self._local_folder = source['local'].get(
-                'folder', "data",
-            )
-
-    @property
-    def spark_context(self):
-        if not self._spark_context and 'sc' not in locals():
-            findspark.init()
-            conf = SparkConf()
-            conf.setMaster(self._spark_master)
-            conf.setAppName(self._spark_app_name)
-
-            for name, value in self._spark_conf.items():
-                conf.set(name, value)
-
-            self._spark_context = SparkContext.getOrCreate(conf=conf)
-        elif 'sc' in locals():
-            self._spark_context = sc
-
-        return self._spark_context
-
-    def get_data_collector(self, year, month, day):
-        if self._httpfs is not None:
-            for type_, name, full_path in self._httpfs.liststatus(
-                    "{}year={}/month={}/day={}".format(
-                        self._httpfs_base_path, year, month, day
-                    )
-            ):
-                cur_file = self._httpfs.open(full_path)
-                collector = DataFile(cur_file)
-        elif self._hdfs_base_path:
-            sc = self.spark_context
-            binary_file = sc.binaryFiles("{}/year={:4d}/month={:d}/day={:d}/part-m-00000.avro".format(
-                self._spark_hdfs_base_path, year, month, day)
-            ).collect()
-            collector = DataFile(binary_file[0])
-        elif self._local_folder:
-            cur_file_path = path.join(
-                path.abspath(self._local_folder),
-                "year={}".format(year),
-                "month={}".format(month),
-                "day={}".format(day),
-                "part-m-00000.avro"
-            )
-            collector = DataFile(cur_file_path)
-        else:
-            raise Exception("No methods to retrieve data...")
-        return collector
-
-    @staticmethod
-    def __gen_interval(year: int, month: int, day: int, window_size: int, step: int=1, next_window: bool=False):
-        """Create date interval in the window view requested.
-
-        Args:
-            year (int): year of the start date
-            month (int): month of the start date
-            day (int): day of the start date
-            window_size (int): number of days of the interval
-            step (int): number of days for each step (stride)
-            next_window (bool): indicates if you need the next window period
-
-        Returns:
-            generator (year: int, month:int, day: int): a list of tuples of the
-                generated days
-
-        """
-        window_step = timedelta(days=step)
-        window_size = timedelta(days=window_size)
-        if not next_window:
-            start_date = date(year, month, day)
-        else:
-            start_date = date(year, month, day) + window_size
-        end_date = start_date + window_size
-        while start_date != end_date:
-            yield (start_date.year, start_date.month, start_date.day)
-            start_date += window_step
+    def __init__(self, *args, **kwargs):
+        super(CMSDatasetV0, self).__init__(*args, **kwargs)
 
     def __get_raw_data(self, year: int, month: int, day: int):
         """Take raw data from a cms data popularity file in avro format.
@@ -259,10 +364,10 @@ class CMSDatasetV0(object):
         sc = self.spark_context
         sc.setLogLevel(log_level)
 
-        window = self.__gen_interval(
+        window = gen_window_dates(
             start_year, start_month, start_day, window_size
         )
-        next_window = self.__gen_interval(
+        next_window = gen_window_dates(
             start_year, start_month, start_day, window_size, next_window=True
         )
 
@@ -359,14 +464,14 @@ class CMSDatasetV0(object):
         # Get raw data
         if not multiprocess:
 
-            for year, month, day in self.__gen_interval(
+            for year, month, day in gen_window_dates(
                 start_year, start_month, start_day, window_size
             ):
                 new_data, new_indexes = self.__get_raw_data(year, month, day)
                 data += new_data
                 window_indexes |= new_indexes
 
-            for year, month, day in self.__gen_interval(
+            for year, month, day in gen_window_dates(
                 start_year, start_month, start_day, window_size, next_window=True
             ):
                 new_data, new_indexes = self.__get_raw_data(
@@ -381,25 +486,25 @@ class CMSDatasetV0(object):
             task_window_indexes = Queue()
             task_next_window_indexes = Queue()
 
-            for year, month, day in self.__gen_interval(
+            for year, month, day in gen_window_dates(
                 start_year, start_month, start_day, window_size
             ):
                 all_tasks.append(
                     (
                         (year, month, day),
-                        CMSDatasetV0Process(
+                        CMSDatasetProcess(
                             task_data, task_window_indexes
                         )
                     )
                 )
 
-            for year, month, day in self.__gen_interval(
+            for year, month, day in gen_window_dates(
                 start_year, start_month, start_day, window_size, next_window=True
             ):
                 all_tasks.append(
                     (
                         (year, month, day),
-                        CMSDatasetV0Process(
+                        CMSDatasetProcess(
                             task_next_data, task_next_window_indexes
                         )
 
@@ -432,13 +537,13 @@ class CMSDatasetV0(object):
                                 process.pid, process.is_alive()), flush=True)
                         print("[Flush queues...]", flush=True)
                         # Get some data...
-                        data += self.flush_queue(task_data)
-                        next_data += self.flush_queue(task_next_data)
+                        data += flush_queue(task_data)
+                        next_data += flush_queue(task_next_data)
                         window_indexes |= set(
-                            self.flush_queue(task_window_indexes)
+                            flush_queue(task_window_indexes)
                         )
                         next_window_indexes |= set(
-                            self.flush_queue(task_next_window_indexes)
+                            flush_queue(task_next_window_indexes)
                         )
                         # Update launched proces list
                         launched_processes = [
@@ -451,13 +556,13 @@ class CMSDatasetV0(object):
                         )
 
             # Update data and indexes with latest results
-            data += self.flush_queue(task_data)
-            next_data += self.flush_queue(task_next_data)
+            data += flush_queue(task_data)
+            next_data += flush_queue(task_next_data)
             window_indexes |= set(
-                self.flush_queue(task_window_indexes)
+                flush_queue(task_window_indexes)
             )
             next_window_indexes |= set(
-                self.flush_queue(task_next_window_indexes)
+                flush_queue(task_next_window_indexes)
             )
             # Close queues
             task_data.close()
@@ -514,13 +619,13 @@ class CMSDatasetV0(object):
             spinner.write("Indexes merged...")
 
         for raw_data in tqdm(data, desc="Merge raw data"):
-            cur_data_pop = CMSDataPopularity(raw_data.data)
+            cur_data_pop = CMSDataPopularity(raw_data.feature_dict)
             if cur_data_pop:
                 all_raw_data.append(cur_data_pop)
                 raw_info['len_raw_window'] += 1
 
         for raw_data in tqdm(next_data, desc="Merge next raw data"):
-            cur_data_pop = CMSDataPopularity(raw_data.data)
+            cur_data_pop = CMSDataPopularity(raw_data.feature_dict)
             if cur_data_pop:
                 all_raw_data.append(cur_data_pop)
                 raw_info['len_raw_next_window'] += 1
@@ -531,7 +636,7 @@ class CMSDatasetV0(object):
 
         # Create output data
         for idx, record in tqdm(enumerate(data), desc="Create output data"):
-            cur_data_pop = CMSDataPopularity(record.data)
+            cur_data_pop = CMSDataPopularity(record.feature_dict)
             if cur_data_pop:
                 if cur_data_pop.FileName in next_window_indexes:
                     cur_data_pop.is_in_next_window()

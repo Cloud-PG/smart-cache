@@ -132,7 +132,7 @@ class CMSSimpleRecord(FeatureData):
 
 class CMSDataPopularity(FeatureData):
 
-    def __init__(self, data,
+    def __init__(self, data: dict,
                  filters=[
                      ('store_type', lambda elm: elm == "data" or elm == "mc")
                  ]
@@ -225,7 +225,7 @@ class CMSDataPopularity(FeatureData):
 
 class CMSDataPopularityRaw(FeatureData):
 
-    def __init__(self, data=None,
+    def __init__(self, data: dict={},
                  feature_list=['FileName', 'TaskMonitorId', 'WrapCPU'],
                  filters=[('Type', lambda elm: elm == "analysis")]
                  ):

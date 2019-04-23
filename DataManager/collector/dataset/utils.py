@@ -1,7 +1,36 @@
 
 import json
+from datetime import date, timedelta
 
 from tqdm import tqdm
+
+
+def gen_window_dates(year: int, month: int, day: int, window_size: int, step: int=1, next_window: bool=False):
+    """Generate date interval in the window view requested.
+
+    Args:
+        year (int): year of the start date
+        month (int): month of the start date
+        day (int): day of the start date
+        window_size (int): number of days of the interval
+        step (int): number of days for each step (stride)
+        next_window (bool): indicates if you need the next window period
+
+    Returns:
+        generator (year: int, month:int, day: int): a list of tuples of the
+                                                    generated days
+
+    """
+    window_step = timedelta(days=step)
+    window_size = timedelta(days=window_size)
+    if not next_window:
+        start_date = date(year, month, day)
+    else:
+        start_date = date(year, month, day) + window_size
+    end_date = start_date + window_size
+    while start_date != end_date:
+        yield (start_date.year, start_date.month, start_date.day)
+        start_date += window_step
 
 
 def flush_queue(queue):
