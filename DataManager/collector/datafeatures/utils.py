@@ -13,7 +13,10 @@ class FeatureData(object):
         self._features[name] = value
 
     def __getstate__(self):
-        """Make object serializable by pickle."""
+        """Make object serializable by pickle.
+        
+        Note: By default it takes the dict representation of the object.
+        """
         return self.to_dict()
 
     def __setstate__(self, state):
