@@ -147,7 +147,7 @@ class CMSDataset(object):
     def task_raw_extraction(elm):
         return CMSDataPopularityRaw(elm)
 
-    def gen_raw(self, start_date: str, window_size: int, use_spark: bool=True):
+    def gen_raw(self, start_date: str, window_size: int, use_spark: bool=False):
         result = []
         start_year, start_month, start_day = [
             int(elm) for elm in start_date.split()
@@ -164,12 +164,13 @@ class CMSDataset(object):
                         "[Spark task] Get RAW data for {}/{}/{}".format(year, month, day))
                     collector = self.get_data_collector(year, month, day)
                     spinner.write("[Spark task] Extract data...")
-                    processed_data = sc.parallelize(collector).map(
-                        self.task_raw_extraction
-                    ).filter(
-                        lambda cur_elm: cur_elm.valid == True
-                    )
-                    result += processed_data.collect()
+                    for chunk in collector.get_chunks(1000):
+                        processed_data = sc.parallelize(chunk, 20).map(
+                            self.task_raw_extraction
+                        ).filter(
+                            lambda cur_elm: cur_elm.valid == True
+                        )
+                        result += processed_data.collect()
         else:
             pool = Pool()
 
