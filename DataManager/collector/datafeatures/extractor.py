@@ -191,9 +191,9 @@ class CMSDataPopularity(FeatureData):
         if cur_file != "unknown":
             logical_file_name = [elm for elm in cur_file.split("/") if elm]
             try:
-                store_type, campain, process, file_type = logical_file_name[1:5]
+                store_type, campaign, process, file_type = logical_file_name[1:5]
                 self.add_feature('store_type', store_type)
-                self.add_feature('campain', campain)
+                self.add_feature('campaign', campaign)
                 self.add_feature('process', process)
                 self.add_feature('file_type', file_type)
                 # Check validity
