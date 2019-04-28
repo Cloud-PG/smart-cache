@@ -56,22 +56,29 @@ class Resource(BaseSpark):
     def get(self):
         raise NotImplementedError
 
+    def set(self):
+        raise NotImplementedError
+
 
 class Stage(BaseSpark):
 
     def __init__(
         self,
         name: str,
-        input_source: 'Resource'=None,
+        source: 'Resource'=None,
         save_stage: bool=False,
         spark_conf: dict={}
     ):
-        super(Resource, self).__init__(spark_conf=spark_conf)
+        super(Stage, self).__init__(spark_conf=spark_conf)
         self._name = name
-        self._input_source = input_source
+        self._source = source
         self._input = None
         self._output = None
         self.__save_stage = save_stage
+
+    @property
+    def name(self):
+        return self._name
 
     @property
     def output(self):
@@ -85,16 +92,16 @@ class Stage(BaseSpark):
     def set_input(self, input):
         self._input = input
 
-    def task(self, input):
+    def task(self, input, use_spark:bool=False):
         raise NotImplementedError
 
     def save(self):
-        raise NotImplementedError
+        self._source.set(self.output, prefix="{}-".format(self.name))
 
-    def run(self, input=None, save_stage: bool=False):
+    def run(self, input=None, use_spark:bool=False, save_stage: bool=False):
         if not input or not self._input:
-            self._input = self._input_source.get()
-        self._output = self.task(self._input)
+            self._input = self._source.get()
+        self._output = self.task(self._input, use_spark=use_spark)
         if self.__save_stage or save_stage:
             self.save()
         return self._output
