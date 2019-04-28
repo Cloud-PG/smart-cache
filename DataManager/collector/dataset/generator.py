@@ -2,7 +2,6 @@ import json
 import os
 import sys
 from collections import OrderedDict
-from dataclasses import dataclass
 from multiprocessing import Pool, Process, Queue
 from os import makedirs, path
 from time import time
@@ -21,23 +20,104 @@ from .utils import (ReadableDictAsAttribute, SupportTable, flush_queue,
                     gen_window_dates)
 
 
-@dataclass
-class Resource:
-    httpfs: "HTTPFS" = None
-    httpfs_base_path: str = ""
-    hdfs_base_path: str = ""
-    local_folder: str = ""
+class BaseSpark(object):
+
+    def __init__(self, spark_conf: dict={}):
+        self._spark_context = None
+
+        # Spark defaults
+        self._spark_master = spark_conf.get('master', "local")
+        self._spark_app_name = spark_conf.get('app_name', "SPARK")
+        self._spark_conf = spark_conf.get('config', {})
 
     @property
-    def type(self):
-        if self.httpfs:
-            return 'httpfs'
-        elif self.hdfs_base_path:
-            return 'hdfs'
-        elif self.local_folder:
-            return 'local'
-        else:
-            raise Exception("Cannot determine type...")
+    def spark_context(self):
+        """Detects and returns the Spark context."""
+        if not self._spark_context and 'sc' not in locals():
+            findspark.init()
+            conf = SparkConf()
+            conf.setMaster(self._spark_master)
+            conf.setAppName(self._spark_app_name)
+
+            for name, value in self._spark_conf.items():
+                conf.set(name, value)
+
+            self._spark_context = SparkContext.getOrCreate(conf=conf)
+        elif 'sc' in locals():
+            self._spark_context = sc
+        return self._spark_context
+
+
+class Resource(BaseSpark):
+
+    def __init__(self, spark_conf: dict={}):
+        super(Resource, self).__init__(spark_conf=spark_conf)
+
+    def get(self):
+        raise NotImplementedError
+
+
+class Stage(BaseSpark):
+
+    def __init__(
+        self,
+        name: str,
+        input_source: 'Resource'=None,
+        save_stage: bool=False,
+        spark_conf: dict={}
+    ):
+        super(Resource, self).__init__(spark_conf=spark_conf)
+        self._name = name
+        self._input_source = input_source
+        self._input = None
+        self._output = None
+        self.__save_stage = save_stage
+
+    @property
+    def output(self):
+        return self._output
+
+    @property
+    def input(self):
+        return self._input
+
+    @input.setter
+    def set_input(self, input):
+        self._input = input
+
+    def task(self, input):
+        raise NotImplementedError
+
+    def save(self):
+        raise NotImplementedError
+
+    def run(self, input=None, save_stage: bool=False):
+        if not input or not self._input:
+            self._input = self._input_source.get()
+        self._output = self.task(self._input)
+        if self.__save_stage or save_stage:
+            self.save()
+        return self._output
+
+
+class Composer(object):
+
+    def __init__(self, stages: list=[]):
+        assert all(isinstance(stage, Stage)
+                   for stage in stages), "You can pass only a list of Stages..."
+        self._stages = [] + stages
+        self._result = None
+
+    @property
+    def result(self):
+        return self._result
+
+    def compose(self, save_stages: bool=False):
+        output = None
+        for stage in self._stages:
+            output = stage.run(output, save_stages)
+        self._result = output
+        return self
 
 
 class CMSDataset(object):

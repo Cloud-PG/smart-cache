@@ -242,24 +242,24 @@ class CMSDataPopularityRaw(FeatureData):
                 if key in feature_list:
                     self.add_feature(key, value)
 
-    def __setstate__(self, state):
+    def __setstate__(self, state) -> 'CMSDataPopularityRaw':
         """Make object loaded by pickle."""
         self._features = state['features']
         self.__id = state['id']
         self.__valid = state['valid']
         return self
 
-    def to_dict(self):
+    def to_dict(self) -> dict:
         return {
             'features': self._features,
             'id': self.__id,
             'valid': self.__valid
         }
 
-    def dumps(self):
+    def dumps(self) -> str:
         return json.dumps(self.to_dict)
 
-    def loads(self, input_string):
+    def loads(self, input_string) -> 'CMSDataPopularityRaw':
         data = json.loads(input_string)
         self._features = data['features']
         self.__id = data['id']
@@ -267,10 +267,10 @@ class CMSDataPopularityRaw(FeatureData):
         return self
 
     @property
-    def valid(self):
+    def valid(self) -> bool:
         return self.__valid
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         return self.valid
 
     def __getattr__(self, name):
@@ -280,8 +280,8 @@ class CMSDataPopularityRaw(FeatureData):
             raise AttributeError("Attribute '{}' not found...".format(name))
 
     @property
-    def record_id(self):
+    def record_id(self) -> str:
         return self.__id
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return json.dumps(self._features)
