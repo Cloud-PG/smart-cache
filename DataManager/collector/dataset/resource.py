@@ -1,5 +1,5 @@
 import os
-from os import path
+from os import makedirs, path
 
 from tqdm import tqdm
 from yaspin import yaspin
@@ -91,13 +91,13 @@ class CMSResourceManager(Resource):
                 raise Exception("No methods to retrieve data...")
             yield collector
 
-    def set(self, data, prefix: str=''):
-        out_name = "{}raw-dataset_y{}-m{}-d{}_ws{}.json.gz".format(
-            prefix,
+    def set(self, data, stage_name: str='', out_dir: str='cache'):
+        out_name = "dataset_y{}-m{}-d{}_ws{}_stage-{}.json.gz".format(
             self._year,
             self._month,
             self._day,
-            self._window_size
+            self._window_size,
+            stage_name
         )
         tmp_name = "tmp_{}".format(out_name)
 
@@ -107,14 +107,18 @@ class CMSResourceManager(Resource):
 
         with yaspin(text="[Save Dataset]") as spinner:
             if self.type == 'local':
-                makedirs(self._local_folder, exist_ok=True)
+                cur_base_path = path.join(
+                    self._local_folder,
+                    out_dir
+                )
+                makedirs(cur_base_path, exist_ok=True)
                 with open(tmp_name, 'rb') as cur_file:
-                    with open(path.join(self._local_folder, out_name), 'wb'
+                    with open(path.join(cur_base_path, out_name), 'wb'
                               ) as out_file:
                         out_file.write(cur_file.read())
             elif self.type == 'httpfs':
                 self._httpfs.create(
-                    path.join("/raw-data/", out_name),
+                    path.join(out_dir, out_name),
                     tmp_name,
                     overwrite=True
                 )

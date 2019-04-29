@@ -74,7 +74,7 @@ class JSONDataFileWriter(object):
 
         """
         if isinstance(data, str):
-            return self.__write(self.__valid_json(elm))
+            return self.__write(self.__valid_json(data))
         elif isinstance(data, dict):
             return self.__write(json.dumps(data))
         elif isinstance(data, (list, GeneratorType)):

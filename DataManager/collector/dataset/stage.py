@@ -1,14 +1,17 @@
-from .generator import Stage
+from multiprocessing import Process, Queue
 
-from multiprocessing import Pool
+from yaspin import yaspin
+
 from ..datafeatures.extractor import CMSDataPopularityRaw
+from .generator import Stage
+from .utils import flush_queue
 
 
 class CMSRawStage(Stage):
 
     def __init__(
         self,
-        name: str="CMS-RAW-STAGE",
+        name: str="CMS-raw",
         source: 'Resource'=None,
         save_stage: bool=False,
         spark_conf: dict={}
@@ -20,24 +23,64 @@ class CMSRawStage(Stage):
             spark_conf=spark_conf
         )
 
-    def _inner_task(self, records):
+    @staticmethod
+    def _process(records, queue):
         tmp = []
         for record in records:
             new_record = CMSDataPopularityRaw(record)
             if new_record:
-                tmp.append(new_record)
-            
-            if len(tmp) >= 100:
-                break
+                tmp.append(new_record.dumps())
 
-        return tmp
+            # Limit processing for test
+            # if len(tmp) >= 100:
+            #     break
 
-    def task(self, input, use_spark: bool=False):
+        for record in tmp:
+            queue.put(record)
+
+    @staticmethod
+    def __update_tasks(task_list):
+        return [
+            task for task in task_list if task.is_alive()
+        ]
+
+    def task(self, input, num_process: int=2, use_spark: bool=False):
         result = []
         if use_spark:
             pass
         else:
-            pool = Pool()
-            for res in pool.imap(self._inner_task, input):
-                result += res
+            tasks = []
+            output_queue = Queue()
+            with yaspin(text="[STAGE][CMS RAW]") as spinner:
+                for cur_input in input:
+                    if len(tasks) < num_process:
+                        new_process = Process(
+                            target=self._process,
+                            args=(cur_input, output_queue)
+                        )
+                        tasks.append(new_process)
+                        new_process.start()
+                        spinner.write("[STAGE][CMS RAW][TASK ADDED]")
+                    else:
+                        while len(tasks) == num_process:
+                            for task in tasks:
+                                task.join(5)
+                            else:
+                                tasks = self.__update_tasks(tasks)
+                                result += flush_queue(output_queue)
+                    spinner.text = "[STAGE][CMS RAW][{} task{} running]".format(
+                        len(tasks),
+                        's' if len(tasks) > 1 else ''
+                    )
+                else:
+                    while len(tasks) > 0:
+                        spinner.text = "[STAGE][CMS RAW][{} task{} running]".format(
+                            len(tasks),
+                            's' if len(tasks) > 1 else ''
+                        )
+                        for task in tasks:
+                            task.join(5)
+                        else:
+                            tasks = self.__update_tasks(tasks)
+                            result += flush_queue(output_queue)
         return result

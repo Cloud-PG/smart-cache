@@ -257,7 +257,7 @@ class CMSDataPopularityRaw(FeatureData):
         }
 
     def dumps(self) -> str:
-        return json.dumps(self.to_dict)
+        return json.dumps(self.to_dict())
 
     def loads(self, input_string) -> 'CMSDataPopularityRaw':
         data = json.loads(input_string)

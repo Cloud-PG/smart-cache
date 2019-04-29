@@ -96,7 +96,7 @@ class Stage(BaseSpark):
         raise NotImplementedError
 
     def save(self):
-        self._source.set(self.output, prefix="{}-".format(self.name))
+        self._source.set(self.output, stage_name=self.name)
 
     def run(self, input=None, use_spark:bool=False, save_stage: bool=False):
         if not input or not self._input:
@@ -109,15 +109,26 @@ class Stage(BaseSpark):
 
 class Composer(object):
 
-    def __init__(self, stages: list=[]):
+    def __init__(self, dataset_name: str="dataset", stages: list=[]):
         assert all(isinstance(stage, Stage)
                    for stage in stages), "You can pass only a list of Stages..."
         self._stages = [] + stages
         self._result = None
+        self._dataset_name = dataset_name
 
     @property
     def result(self):
         return self._result
+    
+    def save(self, out_dir: str='.'):
+        out_name = "{}.json.gz".format(self._dataset_name)
+        makedirs(out_dir, exist_ok=True)
+        out_file_path = path.join(out_dir, out_name)
+        with JSONDataFileWriter(out_file_path) as out_file:
+            for record in self.result:
+                out_file.append(record)
+        return self
+
 
     def compose(self, save_stages: bool=False):
         output = None
