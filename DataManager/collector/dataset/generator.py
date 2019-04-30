@@ -130,10 +130,10 @@ class Composer(object):
         return self
 
 
-    def compose(self, save_stages: bool=False):
+    def compose(self, save_stage: bool=False, use_spark: bool=False):
         output = None
         for stage in self._stages:
-            output = stage.run(output, save_stages)
+            output = stage.run(output, save_stage=save_stage, use_spark=use_spark)
         self._result = output
         return self
 

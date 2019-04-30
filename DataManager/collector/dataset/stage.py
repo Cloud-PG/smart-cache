@@ -44,10 +44,28 @@ class CMSRawStage(Stage):
             task for task in task_list if task.is_alive()
         ]
 
-    def task(self, input, num_process: int=2, use_spark: bool=False):
+    def task(self, input, num_process: int=4, use_spark: bool=False):
         result = []
         if use_spark:
-            pass
+            sc = self.spark_context
+            print("[STAGE][CMS RAW][SPARK]")
+            for cur_input in input:
+                for chunk in cur_input.get_chunks(100000):
+                    processed_data = sc.parallelize(
+                        chunk, num_process
+                    ).map(
+                        lambda record: CMSDataPopularityRaw(record)
+                    ).filter(
+                        lambda cur_elm: cur_elm.valid == True
+                    ).map(
+                        lambda record: record.to_dict()
+                    )
+                    result += processed_data.collect()
+                    print("[STAGE][CMS RAW][SPARK][Processed {} records][Tot. extracted records: {}]".format(
+                        len(chunk),
+                        len(result)
+                    ))
+                    break
         else:
             tasks = []
             output_queue = Queue()

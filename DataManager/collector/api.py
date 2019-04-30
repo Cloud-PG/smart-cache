@@ -3,6 +3,7 @@ from os import path
 
 from .datafile.avro import AvroDataFileReader
 from .datafile.json import JSONDataFileReader
+from tqdm import tqdm
 
 __all__ = ['DataFile']
 
@@ -46,7 +47,9 @@ class DataFile(object):
 
     def get_chunks(self, chunksize=100):
         tmp = []
-        for data in self.get_data():
+        for data in tqdm(
+            self.get_data(), total=chunksize, desc="Chunk extraction"
+        ):
             tmp.append(data)
             if len(tmp) == chunksize:
                 yield tmp
