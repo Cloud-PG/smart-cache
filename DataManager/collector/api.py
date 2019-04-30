@@ -48,7 +48,7 @@ class DataFile(object):
     def get_chunks(self, chunksize=100):
         tmp = []
         for data in tqdm(
-            self.get_data(), total=chunksize, desc="Chunk extraction"
+            self.get_data(), unit="record", desc="Chunk extraction"
         ):
             tmp.append(data)
             if len(tmp) == chunksize:
