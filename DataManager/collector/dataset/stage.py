@@ -65,7 +65,9 @@ class CMSRawStage(Stage):
                         len(chunk),
                         len(result)
                     ))
-                    break
+
+                    # Limit processing for test
+                    # break
         else:
             tasks = []
             output_queue = Queue()
