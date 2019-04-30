@@ -118,7 +118,7 @@ class CMSResourceManager(Resource):
                         out_file.write(cur_file.read())
             elif self.type == 'httpfs':
                 self._httpfs.create(
-                    path.join(out_dir, out_name),
+                    "/{}".format(path.join(out_dir, out_name)),
                     tmp_name,
                     overwrite=True
                 )
