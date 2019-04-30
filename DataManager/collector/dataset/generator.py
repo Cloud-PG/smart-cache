@@ -92,13 +92,13 @@ class Stage(BaseSpark):
     def set_input(self, input):
         self._input = input
 
-    def task(self, input, use_spark:bool=False):
+    def task(self, input, use_spark: bool=False):
         raise NotImplementedError
 
     def save(self):
         self._source.set(self.output, stage_name=self.name)
 
-    def run(self, input=None, use_spark:bool=False, save_stage: bool=False):
+    def run(self, input=None, use_spark: bool=False, save_stage: bool=False):
         if not input or not self._input:
             self._input = self._source.get()
         self._output = self.task(self._input, use_spark=use_spark)
@@ -115,26 +115,50 @@ class Composer(object):
         self._stages = [] + stages
         self._result = None
         self._dataset_name = dataset_name
+        self.__stats = {
+            'time': {
+                'stages': {},
+                'out_file': None
+            },
+            'result': {
+                'len': 0
+            }
+        }
 
     @property
     def result(self):
         return self._result
-    
+
+    @property
+    def stats(self):
+        return self.__stats
+
     def save(self, out_dir: str='.'):
         out_name = "{}.json.gz".format(self._dataset_name)
         makedirs(out_dir, exist_ok=True)
         out_file_path = path.join(out_dir, out_name)
+        # Write output
+        start_time = time()
         with JSONDataFileWriter(out_file_path) as out_file:
             for record in self.result:
                 out_file.append(record)
+        self.__stats['time']['out_file'] = time() - start_time
+        # Write stats
+        with open(
+            path.join(out_dir, "{}.stats.json".format(self._dataset_name)), 'w'
+        ) as stat_file:
+            json.dump(self.stats, stat_file, indent=2)
         return self
-
 
     def compose(self, save_stage: bool=False, use_spark: bool=False):
         output = None
         for stage in self._stages:
-            output = stage.run(output, save_stage=save_stage, use_spark=use_spark)
+            start_time = time()
+            output = stage.run(output, save_stage=save_stage,
+                               use_spark=use_spark)
+            self.__stats['time']['stages'][stage.name] = time() - start_time
         self._result = output
+        self.__stats['result']['len'] = len(self.result)
         return self
 
 
