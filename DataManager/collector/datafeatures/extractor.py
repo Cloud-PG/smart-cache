@@ -226,7 +226,7 @@ class CMSDataPopularity(FeatureData):
 class CMSDataPopularityRaw(FeatureData):
 
     def __init__(self, data: dict={},
-                 feature_list=['FileName', 'TaskMonitorId', 'WrapCPU'],
+                 feature_list=['FileName', 'TaskMonitorId', 'WrapCPU', 'StartedRunningTimeStamp'],
                  filters=[('Type', lambda elm: elm == "analysis")]
                  ):
         super(CMSDataPopularityRaw, self).__init__()
@@ -238,9 +238,8 @@ class CMSDataPopularityRaw(FeatureData):
                 [fun(data[name]) for name, fun in filters]
             )
         if self.__valid:
-            for key, value in data.items():
-                if key in feature_list:
-                    self.add_feature(key, value)
+            for feature in feature_list:
+                self.add_feature(feature, data[feature])
 
     def __setstate__(self, state) -> 'CMSDataPopularityRaw':
         """Make object loaded by pickle."""
