@@ -44,13 +44,13 @@ class CMSRawStage(Stage):
             task for task in task_list if task.is_alive()
         ]
 
-    def task(self, input, num_process: int=4, use_spark: bool=False):
+    def task(self, input, num_process: int=4, use_spark: bool=False, spark_chunk_size: int=2000):
         result = []
         if use_spark:
             sc = self.spark_context
             print("[STAGE][CMS RAW][SPARK]")
             for cur_input in input:
-                for chunk in cur_input.get_chunks(100000):
+                for chunk in cur_input.get_chunks(spark_chunk_size):
                     processed_data = sc.parallelize(
                         chunk, num_process
                     ).map(
