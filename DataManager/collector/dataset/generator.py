@@ -30,8 +30,8 @@ class BaseSpark(object):
         self._spark_app_name = spark_conf.get('app_name', "SPARK")
         self._spark_conf = spark_conf.get('config', {
             'spark.driver.cores': 4,
-            'spark.driver.memory': "512m",
-            'spark.executor.memory': "2g",
+            'spark.driver.memory': "2g",
+            'spark.executor.memory': "1g",
         })
 
     @property
