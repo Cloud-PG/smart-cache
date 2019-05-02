@@ -31,10 +31,11 @@ class BaseSpark(object):
             "local[{}]".format(cpu_count())
         )
         self._spark_app_name = spark_conf.get('app_name', "SPARK")
-        self._spark_conf = spark_conf.get('config', {
+        self._spark_conf = {
             'spark.driver.memory': "2g",
             'spark.executor.memory': "1g"
-        })
+        }
+        self._spark_conf.update(spark_conf.get('config', {}))
 
     @property
     def spark_context(self):

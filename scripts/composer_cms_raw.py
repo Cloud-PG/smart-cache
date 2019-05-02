@@ -17,7 +17,11 @@ if __name__ == "__main__":
         resource=eval(sys.argv[3])
     )
 
-    raw_stage = CMSRawStage(save_stage=True, source=cms_resource_manager)
+    raw_stage = CMSRawStage(
+            save_stage=True,
+            source=cms_resource_manager,
+            spark_conf=eval(sys.argv[4]) if len(sys.argv) == 5 else {}
+    )
 
     composer = Composer(
         dataset_name="CMS-RAW-Dataset",
