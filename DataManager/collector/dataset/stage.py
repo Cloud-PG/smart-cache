@@ -41,8 +41,8 @@ class CMSRawStage(Stage):
                 tmp.append(new_record.dumps())
 
             # Limit processing for test
-            if len(tmp) >= 1:
-                break
+            # if len(tmp) >= 1:
+            #     break
 
         if queue:
             for record in tmp:
