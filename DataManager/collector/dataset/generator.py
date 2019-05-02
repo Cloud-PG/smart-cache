@@ -93,17 +93,17 @@ class Stage(BaseSpark):
         return self._input
 
     @input.setter
-    def set_input(self, input):
-        self._input = input
+    def set_input(self, input_):
+        self._input = input_
 
-    def task(self, input, use_spark: bool=False):
+    def task(self, input_, use_spark: bool=False):
         raise NotImplementedError
 
     def save(self):
         self._source.set(self.output, stage_name=self.name)
 
-    def run(self, input=None, use_spark: bool=False, save_stage: bool=False):
-        if not input or not self._input:
+    def run(self, input_=None, use_spark: bool=False, save_stage: bool=False):
+        if not input_ or not self._input:
             self._input = self._source.get()
         self._output = self.task(self._input, use_spark=use_spark)
         if self.__save_stage or save_stage:

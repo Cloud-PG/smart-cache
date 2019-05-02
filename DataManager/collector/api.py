@@ -18,6 +18,16 @@ class DataFile(object):
         self.__iter = None
         self.__index = 0
 
+    def __setstate__(self, state):
+        cur_source = state['source']
+        self.__source = cur_source
+        self.__data_collector = self.__get_collector(cur_source)
+
+    def __getstate__(self):
+        return {
+            'source': self.__source
+        }
+
     @staticmethod
     def __get_collector(source):
         if isinstance(source, BytesIO):

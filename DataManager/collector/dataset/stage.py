@@ -7,6 +7,24 @@ from .generator import Stage
 from .utils import flush_queue
 
 
+def CMSRawStageProcess(records, queue: 'Queue'= None):
+    tmp = []
+    for record in records:
+        new_record = CMSDataPopularityRaw(record)
+        if new_record:
+            tmp.append(new_record.dumps())
+
+        # Limit processing for test
+        if len(tmp) >= 1:
+            break
+
+    if queue:
+        for record in tmp:
+            queue.put(record)
+    else:
+        return tmp
+
+
 class CMSRawStage(Stage):
 
     def __init__(
@@ -28,50 +46,27 @@ class CMSRawStage(Stage):
         self._spark_records_x_worker = spark_records_x_worker
 
     @staticmethod
-    def _process(records, queue):
-        tmp = []
-        for record in records:
-            new_record = CMSDataPopularityRaw(record)
-            if new_record:
-                tmp.append(new_record.dumps())
-
-            # Limit processing for test
-            # if len(tmp) >= 100:
-            #     break
-
-        for record in tmp:
-            queue.put(record)
-
-    @staticmethod
     def __update_tasks(task_list):
         return [
             task for task in task_list if task.is_alive()
         ]
 
-    def task(self, input, num_process: int=4, use_spark: bool=False):
+    @staticmethod
+    def _spark_process(input_):
+        result = []
+        for cur_input in input_:
+            result += CMSRawStageProcess(cur_input)
+        return result
+
+    def task(self, input_, num_process: int=4, use_spark: bool=False):
         result = []
         if use_spark:
             sc = self.spark_context
             print("[STAGE][CMS RAW][SPARK]")
-            for cur_input in input:
-                for chunk in cur_input.get_chunks(self._spark_chunk_size):
-                    processed_data = sc.parallelize(
-                        chunk, self._spark_chunk_size // self._spark_records_x_worker
-                    ).map(
-                        lambda record: CMSDataPopularityRaw(record)
-                    ).filter(
-                        lambda cur_elm: cur_elm.valid == True
-                    ).map(
-                        lambda record: record.to_dict()
-                    )
-                    result += processed_data.collect()
-                    print("[STAGE][CMS RAW][SPARK][Processed {} records][Tot. extracted records: {}]".format(
-                        len(chunk),
-                        len(result)
-                    ))
-
-                    # Limit processing for test
-                    # break
+            tasks = sc.parallelize(input_, num_process)
+            results = tasks.map(self._spark_process).collect()
+            for cur_result in results:
+                result += cur_result
         else:
             tasks = []
             output_queue = Queue()
@@ -79,7 +74,7 @@ class CMSRawStage(Stage):
                 for cur_input in input:
                     if len(tasks) < num_process:
                         new_process = Process(
-                            target=self._process,
+                            target=CMSRawStageProcess,
                             args=(cur_input, output_queue)
                         )
                         tasks.append(new_process)
@@ -107,4 +102,6 @@ class CMSRawStage(Stage):
                         else:
                             tasks = self.__update_tasks(tasks)
                             result += flush_queue(output_queue)
+        
+        print(result)
         return result
