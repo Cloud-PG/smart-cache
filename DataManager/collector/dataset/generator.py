@@ -28,7 +28,11 @@ class BaseSpark(object):
         # Spark defaults
         self._spark_master = spark_conf.get('master', "local")
         self._spark_app_name = spark_conf.get('app_name', "SPARK")
-        self._spark_conf = spark_conf.get('config', {})
+        self._spark_conf = spark_conf.get('config', {
+            'spark.driver.cores': 4,
+            'spark.driver.memory': "256m",
+            'spark.executor.memory': "1g",
+        })
 
     @property
     def spark_context(self):
