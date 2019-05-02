@@ -7,9 +7,6 @@ from .generator import Stage
 from .utils import flush_queue
 
 
-
-
-
 class CMSRawStage(Stage):
 
     def __init__(
@@ -55,9 +52,12 @@ class CMSRawStage(Stage):
         if use_spark:
             sc = self.spark_context
             print("[STAGE][CMS RAW][SPARK]")
-            tasks = sc.parallelize(input_, num_process)
-            results = tasks.map(self._process).collect()
-            for cur_result in results:
+            tasks_results = sc.parallelize(
+                input_, num_process
+            ).map(
+                self._process
+            ).collect()
+            for cur_result in tasks_results:
                 result += cur_result
         else:
             tasks = []
@@ -94,6 +94,4 @@ class CMSRawStage(Stage):
                         else:
                             tasks = self.__update_tasks(tasks)
                             result += flush_queue(output_queue)
-        
-        print(result)
         return result

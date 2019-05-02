@@ -2,7 +2,7 @@ import json
 import os
 import sys
 from collections import OrderedDict
-from multiprocessing import Pool, Process, Queue
+from multiprocessing import Pool, Process, Queue, cpu_count
 from os import makedirs, path
 from time import time
 
@@ -26,12 +26,14 @@ class BaseSpark(object):
         self._spark_context = None
 
         # Spark defaults
-        self._spark_master = spark_conf.get('master', "local")
+        self._spark_master = spark_conf.get(
+            'master',
+            "local[{}]".format(cpu_count())
+        )
         self._spark_app_name = spark_conf.get('app_name', "SPARK")
         self._spark_conf = spark_conf.get('config', {
-            'spark.driver.cores': 4,
             'spark.driver.memory': "2g",
-            'spark.executor.memory': "1g",
+            'spark.executor.memory': "1g"
         })
 
     @property
