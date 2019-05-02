@@ -7,22 +7,7 @@ from .generator import Stage
 from .utils import flush_queue
 
 
-def CMSRawStageProcess(records, queue: 'Queue'= None):
-    tmp = []
-    for record in records:
-        new_record = CMSDataPopularityRaw(record)
-        if new_record:
-            tmp.append(new_record.dumps())
 
-        # Limit processing for test
-        if len(tmp) >= 1:
-            break
-
-    if queue:
-        for record in tmp:
-            queue.put(record)
-    else:
-        return tmp
 
 
 class CMSRawStage(Stage):
@@ -32,9 +17,7 @@ class CMSRawStage(Stage):
         name: str="CMS-raw",
         source: 'Resource'=None,
         save_stage: bool=False,
-        spark_conf: dict={},
-        spark_chunk_size: int=42000,
-        spark_records_x_worker: int = 42
+        spark_conf: dict={}
     ):
         super(CMSRawStage, self).__init__(
             name,
@@ -42,8 +25,6 @@ class CMSRawStage(Stage):
             save_stage=save_stage,
             spark_conf=spark_conf
         )
-        self._spark_chunk_size = spark_chunk_size
-        self._spark_records_x_worker = spark_records_x_worker
 
     @staticmethod
     def __update_tasks(task_list):
@@ -52,11 +33,22 @@ class CMSRawStage(Stage):
         ]
 
     @staticmethod
-    def _spark_process(input_):
-        result = []
-        for cur_input in input_:
-            result += CMSRawStageProcess(cur_input)
-        return result
+    def _process(records, queue: 'Queue'= None):
+        tmp = []
+        for record in records:
+            new_record = CMSDataPopularityRaw(record)
+            if new_record:
+                tmp.append(new_record.dumps())
+
+            # Limit processing for test
+            if len(tmp) >= 1:
+                break
+
+        if queue:
+            for record in tmp:
+                queue.put(record)
+        else:
+            return tmp
 
     def task(self, input_, num_process: int=4, use_spark: bool=False):
         result = []
@@ -64,7 +56,7 @@ class CMSRawStage(Stage):
             sc = self.spark_context
             print("[STAGE][CMS RAW][SPARK]")
             tasks = sc.parallelize(input_, num_process)
-            results = tasks.map(self._spark_process).collect()
+            results = tasks.map(_process).collect()
             for cur_result in results:
                 result += cur_result
         else:
@@ -74,7 +66,7 @@ class CMSRawStage(Stage):
                 for cur_input in input:
                     if len(tasks) < num_process:
                         new_process = Process(
-                            target=CMSRawStageProcess,
+                            target=_process,
                             args=(cur_input, output_queue)
                         )
                         tasks.append(new_process)
