@@ -66,7 +66,7 @@ class CMSRawStage(Stage):
                         lambda record: record.to_dict()
                     )
                     result += processed_data.collect()
-                    print("[STAGE][CMS RAW][SPARK][Processed {} records][Tot. extracted records: {}]".format(
+                    print("\n[STAGE][CMS RAW][SPARK][Processed {} records][Tot. extracted records: {}]\n".format(
                         len(chunk),
                         len(result)
                     ))

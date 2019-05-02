@@ -182,10 +182,11 @@ class HTTPFS(object):
                 hdfs_path, json.dumps(res.json(), indent=2)))
 
         content = io.BytesIO()
-        with yaspin(text="Opening file {}...".format(hdfs_path)) as spinner:
+        with yaspin(text="[Opening file {}...]".format(hdfs_path)) as spinner:
             for chunk in res.iter_content(chunk_size):
                 content.write(chunk)
-            spinner.write("File {} is ready...".format(hdfs_path))
+            spinner.write("[File {} is ready...]".format(hdfs_path))
+        print("[-----]")
         content.seek(0)
         return content
 
