@@ -44,7 +44,12 @@ class CMSRawStage(Stage):
             task for task in task_list if task.is_alive()
         ]
 
-    def task(self, input, num_process: int=4, use_spark: bool=False, spark_chunk_size: int=2000):
+    def task(
+        self, input, num_process: int=4,
+        use_spark: bool=False,
+        spark_chunk_size: int=10000,
+        spark_records_x_worker: int = 100
+    ):
         result = []
         if use_spark:
             sc = self.spark_context
@@ -52,7 +57,7 @@ class CMSRawStage(Stage):
             for cur_input in input:
                 for chunk in cur_input.get_chunks(spark_chunk_size):
                     processed_data = sc.parallelize(
-                        chunk, num_process
+                        chunk, spark_chunk_size // spark_records_x_worker
                     ).map(
                         lambda record: CMSDataPopularityRaw(record)
                     ).filter(
