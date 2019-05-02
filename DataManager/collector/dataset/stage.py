@@ -58,7 +58,7 @@ class CMSRawStage(Stage):
                     tasks.append(cur_input)
                 else:
                     tasks_results = sc.parallelize(
-                        tasks, num_process
+                        tasks
                     ).map(
                         self._process
                     ).collect()
