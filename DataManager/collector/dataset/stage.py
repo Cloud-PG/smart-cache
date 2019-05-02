@@ -1,4 +1,4 @@
-from multiprocessing import Process, Queue
+from multiprocessing import Process, Queue, cpu_count
 
 from yaspin import yaspin
 
@@ -47,18 +47,24 @@ class CMSRawStage(Stage):
         else:
             return tmp
 
-    def task(self, input_, num_process: int=4, use_spark: bool=False):
+    def task(self, input_, num_process: int=cpu_count(), use_spark: bool=False):
         result = []
         if use_spark:
             sc = self.spark_context
             print("[STAGE][CMS RAW][SPARK]")
-            tasks_results = sc.parallelize(
-                input_, num_process
-            ).map(
-                self._process
-            ).collect()
-            for cur_result in tasks_results:
-                result += cur_result
+            tasks = []
+            for cur_input in input_:
+                if len(tasks) < num_process:
+                    tasks.append(cur_input)
+                else:
+                    tasks_results = sc.parallelize(
+                        tasks, num_process
+                    ).map(
+                        self._process
+                    ).collect()
+                    for cur_result in tasks_results:
+                        result += cur_result
+                    tasks = []
         else:
             tasks = []
             output_queue = Queue()
