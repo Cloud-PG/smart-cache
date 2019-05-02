@@ -54,9 +54,19 @@ class CMSRawStage(Stage):
             print("[STAGE][CMS RAW][SPARK]")
             tasks = []
             for cur_input in input_:
-                if len(tasks) < num_process:
+                if len(tasks) < sc.defaultParallelism:
                     tasks.append(cur_input)
-                else:
+                    continue
+                tasks_results = sc.parallelize(
+                    tasks
+                ).map(
+                    self._process
+                ).collect()
+                for cur_result in tasks_results:
+                    result += cur_result
+                tasks = []
+            else:
+                if tasks:
                     tasks_results = sc.parallelize(
                         tasks
                     ).map(
@@ -64,7 +74,6 @@ class CMSRawStage(Stage):
                     ).collect()
                     for cur_result in tasks_results:
                         result += cur_result
-                    tasks = []
         else:
             tasks = []
             output_queue = Queue()
