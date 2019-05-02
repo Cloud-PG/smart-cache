@@ -47,8 +47,8 @@ class CMSRawStage(Stage):
     def task(
         self, input, num_process: int=4,
         use_spark: bool=False,
-        spark_chunk_size: int=100000,
-        spark_records_x_worker: int = 64
+        spark_chunk_size: int=42000,
+        spark_records_x_worker: int = 42
     ):
         result = []
         if use_spark:
