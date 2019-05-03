@@ -7,6 +7,7 @@ from ..datafile.json import JSONDataFileReader, JSONDataFileWriter
 from ..datafeatures.extractor import CMSDataPopularityRaw
 from .generator import Stage
 from .utils import flush_queue
+from tqdm import tqdm
 
 
 class CMSRawStage(Stage):
