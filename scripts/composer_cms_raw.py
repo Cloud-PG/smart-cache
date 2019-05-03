@@ -18,9 +18,16 @@ if __name__ == "__main__":
     )
 
     raw_stage = CMSRawStage(
-            save_stage=True,
-            source=cms_resource_manager,
-            spark_conf=eval(sys.argv[4]) if len(sys.argv) == 5 else {}
+        save_stage=True,
+        source=cms_resource_manager,
+        spark_conf=eval(sys.argv[4]) if len(sys.argv) == 5 else {
+            'master': "local[4]",
+            'config': {
+                'spark.driver.memory': "4g",
+                'spark.executor.memory': "2g",
+                'spark.driver.maxResultSize': "2g"
+            }
+        }
     )
 
     composer = Composer(
