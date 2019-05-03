@@ -1,7 +1,9 @@
+import tempfile
 from multiprocessing import Process, Queue, cpu_count
 
 from yaspin import yaspin
 
+from ..datafile.json import JSONDataFileReader, JSONDataFileWriter
 from ..datafeatures.extractor import CMSDataPopularityRaw
 from .generator import Stage
 from .utils import flush_queue
@@ -52,28 +54,37 @@ class CMSRawStage(Stage):
         if use_spark:
             sc = self.spark_context
             print("[STAGE][CMS RAW][SPARK]")
-            tasks = []
-            for cur_input in input_:
-                if len(tasks) < sc.defaultParallelism:
-                    tasks.append(cur_input)
-                    continue
-                tasks_results = sc.parallelize(
-                    tasks
-                ).map(
-                    self._process
-                ).collect()
-                for cur_result in tasks_results:
-                    result += cur_result
-                tasks = [cur_input]
-            else:
-                if tasks:
+            print("[STAGE][CMS RAW][SPARK][Create tempfile]")
+
+            with tempfile.TemporaryFile() as fp:
+                tmp_writer = JSONDataFileWriter(descriptor=fp)
+                tasks = []
+                for cur_input in input_:
+                    if len(tasks) < sc.defaultParallelism:
+                        tasks.append(cur_input)
+                        continue
                     tasks_results = sc.parallelize(
                         tasks
                     ).map(
                         self._process
                     ).collect()
                     for cur_result in tasks_results:
-                        result += cur_result
+                        tmp_writer.append(cur_result)
+                    tasks = [cur_input]
+                else:
+                    if tasks:
+                        tasks_results = sc.parallelize(
+                            tasks
+                        ).map(
+                            self._process
+                        ).collect()
+                        for cur_result in tasks_results:
+                            tmp_writer.append(cur_result)
+
+                print("[STAGE][CMS RAW][SPARK][Read tempfile]")
+                collector = JSONDataFileWriter(descriptor=fp)
+                for record in tqdm(collector):
+                    result.append(record)
         else:
             tasks = []
             output_queue = Queue()

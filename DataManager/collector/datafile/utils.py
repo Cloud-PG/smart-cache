@@ -3,7 +3,7 @@ import gzip
 import bz2
 from os import path
 
-__all__ = ['gen_increasing_slice', 'get_stream']
+__all__ = ['gen_increasing_slice', 'get_or_create_descriptor']
 
 
 def gen_increasing_slice(slice):
@@ -30,7 +30,7 @@ def gen_increasing_slice(slice):
         cur += step
 
 
-def get_stream(filename, open_mode='rb'):
+def get_or_create_descriptor(filename, open_mode='rb'):
     """Open a stream to write or read data.
 
     Depending on the file requested it opens a different

@@ -1,8 +1,9 @@
 import json
+from io import IOBase
 from string import whitespace
 from types import GeneratorType
 
-from .utils import gen_increasing_slice, get_stream
+from .utils import gen_increasing_slice, get_or_create_descriptor
 
 __all__ = ['JSONDataFileReader', 'JSONDataFileWriter']
 
@@ -11,7 +12,7 @@ class JSONDataFileWriter(object):
 
     """Write json.gz file."""
 
-    def __init__(self, filename, data=None, append: bool=False):
+    def __init__(self, filename: str=None, descriptor: 'IOBase'=None, data=None, append: bool=False):
         """Init function of data writer for json.gz files.
 
         Args:
@@ -22,13 +23,19 @@ class JSONDataFileWriter(object):
             JSONDataFileWriter: the instance of this object
 
         """
+        assert any((filename is not None) or (descriptor is not None)
+                   ), "You have to specify a filename or a descriptor..."
         self.__filename = filename
-        self.__descriptor = None
+        self.__descriptor = descriptor
+        if not self.__descriptor:
+            if append:
+                self.__descriptor = get_or_create_descriptor(self.__filename, "ab")
+            else:
+                self.__descriptor = get_or_create_descriptor(self.__filename, "wb")
+
         if append:
-            self.__descriptor = get_stream(self.__filename, "ab")
             self.__descriptor.seek(0, 2)
-        else:
-            self.__descriptor = get_stream(self.__filename, "wb")
+
         if data is not None:
             self.append(data)
 
@@ -113,7 +120,7 @@ class JSONDataFileReader(object):
 
     """Read json.gz file with easy access to data."""
 
-    def __init__(self, filename):
+    def __init__(self, filename: str=None, descriptor: 'IOBase'=None):
         """Init function of data reader for json.gz files.
 
         Args:
@@ -123,8 +130,12 @@ class JSONDataFileReader(object):
             JSONDataFileReader: the instance of this object
 
         """
+        assert any((filename is not None) or (descriptor is not None)
+                   ), "You have to specify a filename or a descriptor..."
         self.__filename = filename
-        self.__descriptor = get_stream(self.__filename)
+        self.__descriptor = descriptor
+        if not self.__descriptor:
+            self.__descriptor = get_or_create_descriptor(self.__filename)
         self.__last_index = 0
         self.__last_index_pos = 0
         self.__len = None
