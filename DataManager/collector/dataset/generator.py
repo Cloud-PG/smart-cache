@@ -25,17 +25,19 @@ class BaseSpark(object):
     def __init__(self, spark_conf: dict={}):
         self._spark_context = None
 
-        # Spark defaults
-        self._spark_master = spark_conf.get(
-            'master',
-            "local[{}]".format(cpu_count())
-        )
-        self._spark_app_name = spark_conf.get('app_name', "SPARK")
+        # Spark configuration
+        self._spark_master = "local[{}]".format(cpu_count())
+        self._spark_app_name = "SPARK"
         self._spark_conf = {
             'spark.driver.memory': "2g",
             'spark.executor.memory': "1g"
         }
-        self._spark_conf.update(spark_conf.get('config', {}))
+        self.update_config(spark_conf)
+        self.__configured = True if len(spark_conf) != 0 else False
+
+    @property
+    def configured_spark(self) -> bool:
+        return self.__configured
 
     @property
     def spark_context(self):
@@ -53,6 +55,19 @@ class BaseSpark(object):
         elif 'sc' in locals():
             self._spark_context = sc
         return self._spark_context
+
+    def update_config(self, spark_conf: dict):
+        """Update Spark configuration."""
+        self._spark_master = spark_conf.get(
+            'master',
+            self._spark_master
+        )
+        self._spark_app_name = spark_conf.get(
+            'app_name',
+            self._spark_app_name
+        )
+        self._spark_conf.update(spark_conf.get('config', {}))
+        return self
 
 
 class Resource(BaseSpark):
@@ -116,7 +131,7 @@ class Stage(BaseSpark):
 
 class Composer(object):
 
-    def __init__(self, dataset_name: str="dataset", stages: list=[]):
+    def __init__(self, dataset_name: str="dataset", stages: list=[], spark_conf: dict={}):
         assert all(isinstance(stage, Stage)
                    for stage in stages), "You can pass only a list of Stages..."
         self._stages = [] + stages
@@ -131,6 +146,10 @@ class Composer(object):
                 'len': 0
             }
         }
+        # Update spakr config if not present in stage
+        for stage in self._stages:
+            if not stage.configured_spark:
+                stage.update_config(spark_conf)
 
     @property
     def result(self):
