@@ -1,33 +1,21 @@
 
-import json
-from collections import namedtuple
 from datetime import date, datetime, timedelta
 
 from tqdm import tqdm
 
 
-def date_from_timestamp_ms(
-    timestamp: (int, float),
-    output: list=['year', 'month', 'day']
-) -> 'namedtuple':
+def date_from_timestamp_ms(timestamp: (int, float)) -> 'datetime':
     """Convert a millisecond timestamp to a date.
 
     Args:
         timestamp (int or float): the timestamp in milliseconds
-        output (list of str): the ouyput requested. By default,
-                              you have:
-                              (year: int, month: int, day: int)
 
     Returns:
-        namedtuple: a tuple with the output key requested
+        datetime: The corresponding date of the timestamp
 
     NOTE: for example, millisecond timestamp is used in HDFS
     """
-    cur_date = datetime.fromtimestamp(float(timestamp) / 1000.)
-    DateTuple = namedtuple('DateTuple', output)
-    return DateTuple(
-        *[getattr(cur_date, elm) for elm in output]
-    )
+    return datetime.fromtimestamp(float(timestamp) / 1000.)
 
 
 def gen_window_dates(year: int, month: int, day: int, window_size: int, step: int=1, next_window: bool=False):
