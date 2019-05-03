@@ -68,7 +68,7 @@ class CMSRawStage(Stage):
                     ).map(
                         self._process
                     ).collect()
-                    for cur_result in tasks_results:
+                    for cur_result in tqdm(tasks_results, desc="[STAGE][CMS RAW][SPARK][Update temp results]"):
                         tmp_writer.append(cur_result)
                     tasks = [cur_input]
                 else:
@@ -78,7 +78,7 @@ class CMSRawStage(Stage):
                         ).map(
                             self._process
                         ).collect()
-                        for cur_result in tasks_results:
+                        for cur_result in tqdm(tasks_results, desc="[STAGE][CMS RAW][SPARK][Update temp results]"):
                             tmp_writer.append(cur_result)
 
                 print("[STAGE][CMS RAW][SPARK][Read tempfile]")
