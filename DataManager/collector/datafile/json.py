@@ -23,8 +23,8 @@ class JSONDataFileWriter(object):
             JSONDataFileWriter: the instance of this object
 
         """
-        assert any((filename is not None) or (descriptor is not None)
-                   ) is True, "You have to specify a filename or a descriptor..."
+        assert any([filename is not None, descriptor is not None]
+                   ), "You have to specify a filename or a descriptor..."
         self.__filename = filename
         self.__descriptor = descriptor
         if not self.__descriptor:
@@ -130,8 +130,8 @@ class JSONDataFileReader(object):
             JSONDataFileReader: the instance of this object
 
         """
-        assert any((filename is not None) or (descriptor is not None)
-                   ) is True, "You have to specify a filename or a descriptor..."
+        assert any([filename is not None, descriptor is not None]
+                   ), "You have to specify a filename or a descriptor..."
         self.__filename = filename
         self.__descriptor = descriptor
         if not self.__descriptor:
