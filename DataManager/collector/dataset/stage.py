@@ -64,7 +64,7 @@ class CMSRawStage(Stage):
                 ).collect()
                 for cur_result in tasks_results:
                     result += cur_result
-                tasks = []
+                tasks = [cur_input]
             else:
                 if tasks:
                     tasks_results = sc.parallelize(
