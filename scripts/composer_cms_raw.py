@@ -23,7 +23,7 @@ if __name__ == "__main__":
         spark_conf=eval(sys.argv[4]) if len(sys.argv) == 5 else {
             'master': "local[4]",
             'config': {
-                'spark.driver.memory': "6g",
+                'spark.driver.memory': "8g",
                 'spark.driver.maxResultSize': "2g",
                 'spark.executor.memory': "2g"
             }
