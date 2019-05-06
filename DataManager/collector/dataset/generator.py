@@ -88,15 +88,12 @@ class Stage(BaseSpark):
         self,
         name: str,
         source: 'Resource'=None,
-        save_stage: bool=False,
         spark_conf: dict={}
     ):
         super(Stage, self).__init__(spark_conf=spark_conf)
         self._name = name
-        self._source = source
         self._input = None
         self._output = None
-        self.__save_stage = save_stage
 
     @property
     def name(self):
@@ -114,27 +111,109 @@ class Stage(BaseSpark):
     def set_input(self, input_):
         self._input = input_
 
-    def task(self, input_, use_spark: bool=False):
+    @staticmethod
+    def __update_tasks(task_list):
+        return [
+            task for task in task_list if task.is_alive()
+        ]
+
+    @staticmethod
+    def process(records, queue: 'Queue'= None):
         raise NotImplementedError
 
-    def save(self):
-        self._source.set(self.output, stage_name=self.name)
+    def task(self, input_, num_process: int=cpu_count(), use_spark: bool=False):
+        result = []
+        if use_spark:
+            sc = self.spark_context
+            print("[STAGE][{}][SPARK]".format(self.name))
+            print("[STAGE][{}][SPARK][Create tempfile]".format(self.name))
 
-    def run(self, input_=None, use_spark: bool=False, save_stage: bool=False):
-        if not input_ or not self._input:
-            self._input = self._source.get()
-        self._output = self.task(self._input, use_spark=use_spark)
-        if self.__save_stage or save_stage:
-            self.save()
-        return self._output
+            with tempfile.TemporaryFile() as fp:
+                tmp_writer = JSONDataFileWriter(descriptor=fp)
+                tasks = []
+                for cur_input in input_:
+                    if len(tasks) < sc.defaultParallelism:
+                        tasks.append(cur_input)
+                        continue
+                    tasks_results = sc.parallelize(
+                        tasks
+                    ).map(
+                        self.process
+                    ).collect()
+                    for cur_result in tqdm(
+                        tasks_results, desc="[STAGE][{}}][SPARK][Update temp results]".format(
+                            self.name)
+                    ):
+                        tmp_writer.append(cur_result)
+                    tasks = [cur_input]
+                else:
+                    if tasks:
+                        tasks_results = sc.parallelize(
+                            tasks
+                        ).map(
+                            self.process
+                        ).collect()
+                        for cur_result in tqdm(
+                            tasks_results, desc="[STAGE][{}}][SPARK][Update temp results]".format(
+                                self.name)
+                        ):
+                            tmp_writer.append(cur_result)
+
+                print("[STAGE][{}}][SPARK][Read tempfile]".format(self.name))
+                collector = JSONDataFileWriter(descriptor=fp)
+                for record in tqdm(collector):
+                    result.append(record)
+        else:
+            tasks = []
+            output_queue = Queue()
+            with yaspin(text="[STAGE][{}}]") as spinner:
+                for cur_input in input:
+                    if len(tasks) < num_process:
+                        new_process = Process(
+                            target=self.process,
+                            args=(cur_input, output_queue)
+                        )
+                        tasks.append(new_process)
+                        new_process.start()
+                        spinner.write(
+                            "[STAGE][{}}][TASK ADDED]".format(self.name))
+                    else:
+                        while len(tasks) == num_process:
+                            for task in tasks:
+                                task.join(5)
+                            else:
+                                tasks = self.__update_tasks(tasks)
+                                result += flush_queue(output_queue)
+                    spinner.text = "[STAGE][{}}][{} task{} running]".format(
+                        self.name,
+                        len(tasks),
+                        's' if len(tasks) > 1 else ''
+                    )
+                else:
+                    while len(tasks) > 0:
+                        spinner.text = "[STAGE][{}}][{} task{} running]".format(
+                            self.name,
+                            len(tasks),
+                            's' if len(tasks) > 1 else ''
+                        )
+                        for task in tasks:
+                            task.join(5)
+                        else:
+                            tasks = self.__update_tasks(tasks)
+                            result += flush_queue(output_queue)
+        return result
+
+    def run(self, input_=None, use_spark: bool=False):
+        return self.task(self._input, use_spark=use_spark)
 
 
-class Composer(object):
+class PipelineComposer(object):
 
-    def __init__(self, dataset_name: str="dataset", stages: list=[], spark_conf: dict={}):
+    def __init__(self, dataset_name: str="dataset", stages: list=[], source: 'Resource'=None, spark_conf: dict={}):
         assert all(isinstance(stage, Stage)
                    for stage in stages), "You can pass only a list of Stages..."
         self._stages = [] + stages
+        self._source = source
         self._result = None
         self._dataset_name = dataset_name
         self.__stats = {
@@ -177,11 +256,12 @@ class Composer(object):
         return self
 
     def compose(self, save_stage: bool=False, use_spark: bool=False):
-        output = None
+        output = self._source.get()
         for stage in self._stages:
             start_time = time()
-            output = stage.run(output, save_stage=save_stage,
-                               use_spark=use_spark)
+            output = stage.run(output, use_spark=use_spark)
+            if save_stage:
+                self._source.set(stage.output, stage_name=stage.name)
             self.__stats['time']['stages'][stage.name] = time() - start_time
         self._result = output
         self.__stats['result']['len'] = len(self.result)
