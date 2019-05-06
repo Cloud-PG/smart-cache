@@ -52,7 +52,7 @@ class CMSSimpleRecord(FeatureData):
 
         }
 
-    def to_dict(self):
+    def to_dict(self) -> dict:
         return {
             'features': self._features,
             'score': self.score,
@@ -139,42 +139,25 @@ class CMSDataPopularity(FeatureData):
                  ):
         super(CMSDataPopularity, self).__init__()
         self.__data = data
-        self.__record_id = None
+        self.__id = None
         self.__valid = False
-        self.__next_window = False
         self.__filters = filters
-        self.__tensor = []
         self.__extract_features()
-
-    def gen_tensor(self):
-        self.__tensor = [
-            float(self._features[feature_name])
-            for feature_name in sorted(self._features.keys())
-        ]
-        return self
-
-    def add_tensor(self, tensor):
-        self.__tensor = tensor
-        return self
 
     def __setstate__(self, state):
         """Make object loaded by pickle."""
         self.__data = state['data']
         self._features = state['features']
-        self.__record_id = state['record_id']
+        self.__id = state['id']
         self.__valid = state['valid']
-        self.__next_window = state['next_window']
-        self.__tensor = state['tensor']
         return self
 
-    def to_dict(self):
+    def to_dict(self) -> dict:
         return {
             'data': self.__data,
             'features': self._features,
-            'record_id': self.__record_id,
+            'id': self.__id,
             'valid': self.__valid,
-            'next_window': self.__next_window,
-            'tensor': self.__tensor
         }
 
     def __bool__(self):
@@ -200,6 +183,8 @@ class CMSDataPopularity(FeatureData):
                 self.__valid = all(
                     [fun(self.feature[name]) for name, fun in self.__filters]
                 )
+                if self.__valid:
+                    self.__gen_id()
             except ValueError as err:
                 print(
                     "Cannot extract features from '{}'".format(cur_file))
@@ -207,20 +192,15 @@ class CMSDataPopularity(FeatureData):
                 pass
 
     @property
-    def record_id(self):
-        if self.__record_id is None:
-            blake2s = hashlib.blake2s()
-            blake2s.update(str(self).encode("utf-8"))
-            self.__record_id = blake2s.hexdigest()
-        return self.__record_id
+    def record_id(self) -> str:
+        if self.__id is None:
+            self.__gen_id()
+        return self.__id
 
-    @property
-    def next_window(self):
-        return self.__next_window
-
-    def is_in_next_window(self):
-        self.__next_window = True
-        return self
+    def __gen_id(self):
+        blake2s = hashlib.blake2s()
+        blake2s.update(str(self).encode("utf-8"))
+        self.__id = blake2s.hexdigest()
 
 
 class CMSDataPopularityRaw(FeatureData):

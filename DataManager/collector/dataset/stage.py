@@ -1,4 +1,3 @@
-import tempfile
 from multiprocessing import Process, Queue, cpu_count
 
 from yaspin import yaspin
@@ -30,7 +29,7 @@ class CMSRawStage(Stage):
         for record in records:
             new_record = CMSDataPopularityRaw(record)
             if new_record:
-                tmp.append(new_record.dumps())
+                tmp.append(new_record)
 
             # Limit processing for test
             # if len(tmp) >= 100:
@@ -41,6 +40,7 @@ class CMSRawStage(Stage):
                 queue.put(record)
         else:
             return tmp
+
 
 class CMSFeaturedStage(Stage):
 
@@ -60,9 +60,9 @@ class CMSFeaturedStage(Stage):
     def process(records, queue: 'Queue'= None):
         tmp = []
         for record in records:
-            new_record = CMSDataPopularity(record)
+            new_record = CMSDataPopularity(record.feature_dict)
             if new_record:
-                tmp.append(new_record.dumps())
+                tmp.append(new_record)
 
             # Limit processing for test
             # if len(tmp) >= 100:

@@ -126,48 +126,39 @@ class Stage(BaseSpark):
         if use_spark:
             sc = self.spark_context
             print("[STAGE][{}][SPARK]".format(self.name))
-            print("[STAGE][{}][SPARK][Create tempfile]".format(self.name))
-
-            with tempfile.TemporaryFile() as fp:
-                tmp_writer = JSONDataFileWriter(descriptor=fp)
-                tasks = []
-                for cur_input in input_:
-                    if len(tasks) < sc.defaultParallelism:
-                        tasks.append(cur_input)
-                        continue
+            tasks = []
+            for cur_input in input_:
+                if len(tasks) < sc.defaultParallelism:
+                    tasks.append(cur_input)
+                    continue
+                tasks_results = sc.parallelize(
+                    tasks
+                ).map(
+                    self.process
+                ).collect()
+                for cur_result in tqdm(
+                    tasks_results, desc="[STAGE][{}][SPARK][Update results]".format(
+                        self.name)
+                ):
+                    result += cur_result
+                tasks = [cur_input]
+            else:
+                if tasks:
                     tasks_results = sc.parallelize(
                         tasks
                     ).map(
                         self.process
                     ).collect()
                     for cur_result in tqdm(
-                        tasks_results, desc="[STAGE][{}}][SPARK][Update temp results]".format(
+                        tasks_results, desc="[STAGE][{}][SPARK][Update results]".format(
                             self.name)
                     ):
-                        tmp_writer.append(cur_result)
-                    tasks = [cur_input]
-                else:
-                    if tasks:
-                        tasks_results = sc.parallelize(
-                            tasks
-                        ).map(
-                            self.process
-                        ).collect()
-                        for cur_result in tqdm(
-                            tasks_results, desc="[STAGE][{}}][SPARK][Update temp results]".format(
-                                self.name)
-                        ):
-                            tmp_writer.append(cur_result)
-
-                print("[STAGE][{}}][SPARK][Read tempfile]".format(self.name))
-                collector = JSONDataFileWriter(descriptor=fp)
-                for record in tqdm(collector):
-                    result.append(record)
+                        result += cur_result
         else:
             tasks = []
             output_queue = Queue()
-            with yaspin(text="[STAGE][{}}]") as spinner:
-                for cur_input in input:
+            with yaspin(text="[STAGE][{}]") as spinner:
+                for cur_input in input_:
                     if len(tasks) < num_process:
                         new_process = Process(
                             target=self.process,
@@ -176,22 +167,23 @@ class Stage(BaseSpark):
                         tasks.append(new_process)
                         new_process.start()
                         spinner.write(
-                            "[STAGE][{}}][TASK ADDED]".format(self.name))
-                    else:
-                        while len(tasks) == num_process:
-                            for task in tasks:
-                                task.join(5)
-                            else:
-                                tasks = self.__update_tasks(tasks)
-                                result += flush_queue(output_queue)
-                    spinner.text = "[STAGE][{}}][{} task{} running]".format(
+                            "[STAGE][{}][TASK ADDED]".format(self.name))
+                        continue
+
+                    while len(tasks) == num_process:
+                        for task in tasks:
+                            task.join(5)
+                        else:
+                            tasks = self.__update_tasks(tasks)
+                            result += flush_queue(output_queue)
+                    spinner.text = "[STAGE][{}][{} task{} running]".format(
                         self.name,
                         len(tasks),
                         's' if len(tasks) > 1 else ''
                     )
                 else:
                     while len(tasks) > 0:
-                        spinner.text = "[STAGE][{}}][{} task{} running]".format(
+                        spinner.text = "[STAGE][{}][{} task{} running]".format(
                             self.name,
                             len(tasks),
                             's' if len(tasks) > 1 else ''
@@ -201,10 +193,12 @@ class Stage(BaseSpark):
                         else:
                             tasks = self.__update_tasks(tasks)
                             result += flush_queue(output_queue)
-        return result
 
-    def run(self, input_=None, use_spark: bool=False):
-        return self.task(self._input, use_spark=use_spark)
+        self._output = result
+        return self._output
+
+    def run(self, input_, use_spark: bool=False):
+        return self.task(input_, use_spark=use_spark)
 
 
 class PipelineComposer(object):
@@ -238,6 +232,17 @@ class PipelineComposer(object):
     def stats(self):
         return self.__stats
 
+    @staticmethod
+    def batch(collection: list, batch_size: int=1000):
+        batch = []
+        for item in collection:
+            batch.append(item)
+            if len(batch) == batch_size:
+                yield batch
+                batch = []
+        if len(batch) != 0:
+            yield batch
+
     def save(self, out_dir: str='.'):
         out_name = "{}.json.gz".format(self._dataset_name)
         makedirs(out_dir, exist_ok=True)
@@ -246,7 +251,7 @@ class PipelineComposer(object):
         start_time = time()
         with JSONDataFileWriter(out_file_path) as out_file:
             for record in self.result:
-                out_file.append(record)
+                out_file.append(record.to_dict())
         self.__stats['time']['out_file'] = time() - start_time
         # Write stats
         with open(
@@ -255,13 +260,21 @@ class PipelineComposer(object):
             json.dump(self.stats, stat_file, indent=2)
         return self
 
-    def compose(self, save_stage: bool=False, use_spark: bool=False):
-        output = self._source.get()
+    def run(self, save_stage: bool=False, use_spark: bool=False):
+        output = None
+        print("[Pipeline][{}][START]".format(self._dataset_name))
         for stage in self._stages:
             start_time = time()
+            if output is None:
+                output = self._source.get()
+            else:
+                output = self.batch(output)
             output = stage.run(output, use_spark=use_spark)
             if save_stage:
-                self._source.set(stage.output, stage_name=stage.name)
+                self._source.set(
+                    (record.to_dict() for record in stage.output),
+                    stage_name=stage.name
+                )
             self.__stats['time']['stages'][stage.name] = time() - start_time
         self._result = output
         self.__stats['result']['len'] = len(self.result)

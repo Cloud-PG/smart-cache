@@ -37,5 +37,5 @@ if __name__ == "__main__":
         }
     )
 
-    composer.compose(use_spark=True)
+    composer.run(use_spark=True)
     composer.save()

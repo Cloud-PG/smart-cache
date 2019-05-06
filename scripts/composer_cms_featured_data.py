@@ -24,7 +24,7 @@ if __name__ == "__main__":
     featured_Stage = CMSFeaturedStage()
 
     composer = PipelineComposer(
-        dataset_name="CMS-RAW-Dataset",
+        dataset_name="CMS-Featured-Dataset",
         stages=[
             raw_stage,
             featured_Stage
@@ -40,5 +40,5 @@ if __name__ == "__main__":
         }
     )
 
-    composer.compose(use_spark=True)
+    composer.run(use_spark=False, save_stage=True)
     composer.save()
