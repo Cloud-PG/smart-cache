@@ -32,7 +32,7 @@ class CMSRawStage(Stage):
                 tmp.append(new_record)
 
             # Limit processing for test
-            # if len(tmp) >= 1:
+            # if len(tmp) >= 1000:
             #     break
 
         if queue:
@@ -65,7 +65,7 @@ class CMSFeaturedStage(Stage):
                 tmp.append(new_record)
 
             # Limit processing for test
-            # if len(tmp) >= 1:
+            # if len(tmp) >= 1000:
             #     break
 
         if queue:

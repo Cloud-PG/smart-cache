@@ -155,7 +155,8 @@ class Stage(BaseSpark):
                     cur_tmpfile_name = self.__get_tmpfile_name()
                     tmp_files.append(cur_tmpfile_name)
                     sc.parallelize(
-                        tasks
+                        tasks,
+                        len(tasks)
                     ).map(
                         self.process
                     ).saveAsPickleFile(
