@@ -1,9 +1,11 @@
 import json
-import os
 import sys
 from collections import OrderedDict
 from multiprocessing import Pool, Process, Queue, cpu_count
 from os import makedirs, path
+from os import remove as os_remove
+from shutil import rmtree
+from tempfile import NamedTemporaryFile
 from time import time
 
 import findspark
@@ -118,6 +120,12 @@ class Stage(BaseSpark):
         ]
 
     @staticmethod
+    def __get_tmpfile_name() -> str:
+        tmpFile = NamedTemporaryFile(delete=True)
+        tmpFile.close()
+        return tmpFile.name
+
+    @staticmethod
     def process(records, queue: 'Queue'= None):
         raise NotImplementedError
 
@@ -127,33 +135,40 @@ class Stage(BaseSpark):
             sc = self.spark_context
             print("[STAGE][{}][SPARK]".format(self.name))
             tasks = []
+            tmp_files = []
             for cur_input in input_:
                 if len(tasks) < sc.defaultParallelism:
                     tasks.append(cur_input)
                     continue
-                tasks_results = sc.parallelize(
+                cur_tmpfile_name = self.__get_tmpfile_name()
+                tmp_files.append(cur_tmpfile_name)
+                sc.parallelize(
                     tasks
                 ).map(
                     self.process
-                ).collect()
-                for cur_result in tqdm(
-                    tasks_results, desc="[STAGE][{}][SPARK][Update results]".format(
-                        self.name)
-                ):
-                    result += cur_result
+                ).saveAsPickleFile(
+                    cur_tmpfile_name, sc.defaultParallelism
+                )
                 tasks = [cur_input]
             else:
                 if tasks:
-                    tasks_results = sc.parallelize(
+                    cur_tmpfile_name = self.__get_tmpfile_name()
+                    tmp_files.append(cur_tmpfile_name)
+                    sc.parallelize(
                         tasks
                     ).map(
                         self.process
-                    ).collect()
-                    for cur_result in tqdm(
-                        tasks_results, desc="[STAGE][{}][SPARK][Update results]".format(
-                            self.name)
-                    ):
-                        result += cur_result
+                    ).saveAsPickleFile(
+                        cur_tmpfile_name, sc.defaultParallelism
+                    )
+            for tmp_filename in tmp_files:
+                cur_res = sc.pickleFile(
+                    tmp_filename, sc.defaultParallelism
+                ).flatMap(
+                    lambda list_: list_
+                ).collect()
+                result += cur_res
+                rmtree(tmp_filename)
         else:
             tasks = []
             output_queue = Queue()
@@ -233,7 +248,7 @@ class PipelineComposer(object):
         return self.__stats
 
     @staticmethod
-    def batch(collection: list, batch_size: int=1000):
+    def batch(collection: list, batch_size: int=2000):
         batch = []
         for item in collection:
             batch.append(item)
@@ -458,7 +473,7 @@ class CMSDataset(object):
                     "Save dest '{}' not implemented...".format(self._dest.type))
 
             spinner.text = "[Remove temporary data]"
-            os.remove(out_name)
+            os_remove(out_name)
 
             spinner.write("[Dataset saved]")
 

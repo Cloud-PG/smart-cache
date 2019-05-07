@@ -102,7 +102,7 @@ class CMSResourceManager(Resource):
         tmp_name = "tmp_{}".format(out_name)
 
         with JSONDataFileWriter(tmp_name) as tmp_file:
-            for record in tqdm(data, desc="Create temporary file"):
+            for record in tqdm(data, desc="[CMS Resource][Create temporary file]"):
                 tmp_file.append(record)
 
         with yaspin(text="[Save Dataset]") as spinner:
