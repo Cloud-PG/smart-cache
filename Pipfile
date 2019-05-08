@@ -6,7 +6,6 @@ verify_ssl = true
 [dev-packages]
 
 [packages]
-avro-python3 = "*"
 python-snappy = "*"
 requests = "*"
 snakebite = "*"
@@ -18,6 +17,7 @@ matplotlib = "*"
 pyspark = "*"
 findspark = "*"
 urllib3 = ">=1.24.2"
+fastavro = "*"
 
 [requires]
 python_version = "3"
