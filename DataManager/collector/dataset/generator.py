@@ -173,7 +173,7 @@ class Stage(BaseSpark):
         else:
             tasks = []
             output_queue = Queue()
-            with yaspin(text="[STAGE][{}]") as spinner:
+            with yaspin(text="[STAGE][{}]".format(self.name)) as spinner:
                 for cur_input in input_:
                     if len(tasks) < num_process:
                         new_process = Process(
