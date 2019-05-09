@@ -1,9 +1,9 @@
 import json
 from io import BytesIO
 
-import avro.schema
-from avro.datafile import DataFileReader, DataFileWriter
-from avro.io import DatumReader, DatumWriter
+from fastavro import writer as fast_writer
+from fastavro import reader as fast_reader
+from fastavro import parse_schema
 
 from .utils import gen_increasing_slice
 
@@ -14,7 +14,7 @@ class AvroDataFileWriter(object):
 
     """Write an avro file."""
 
-    def __init__(self, filename, data=None, schema=None):
+    def __init__(self, filename, data=None, schema=None, codec: str='snappy'):
         """Create an avro archive.
 
         Note:
@@ -30,8 +30,8 @@ class AvroDataFileWriter(object):
         """
         self.__filename = filename
         self.__descriptor = open(self.__filename, 'wb')
-        self.__writer = None
         self.__schema = None
+        self.__codec = codec
         if schema:
             self.__schema = json.dumps(schema).encode("utf-8")
         if data is not None:
@@ -87,14 +87,10 @@ class AvroDataFileWriter(object):
 
     def __write(self, data):
         """Write data into the avro file."""
-        if not self.__writer:
-            if not self.__schema:
-                self.__schema = avro.schema.parse(self.__get_schema(data[0]))
-            self.__writer = DataFileWriter(
-                self.__descriptor, DatumWriter(), self.__schema)
+        if not self.__schema:
+            self.__schema = parse_schema(self.__get_schema(data[0]))
 
-        for record in data:
-            self.__writer.append(data)
+        fast_writer(self.__descriptor, self.__schema, data, self.__codec)
 
     def append(self, data):
         """Add data to the avro archive."""
@@ -114,7 +110,6 @@ class AvroDataFileWriter(object):
 
     def __del__(self):
         """Object destructor."""
-        self.__writer.close()
         if not self.__descriptor.closed:
             self.__descriptor.close()
 
@@ -129,7 +124,8 @@ class AvroDataFileWriter(object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Closing function for the 'with' statement."""
-        self.__writer.close()
+        if not self.__descriptor.closed:
+            self.__descriptor.close()
 
 
 class AvroDataFileReader(object):
@@ -154,7 +150,6 @@ class AvroDataFileReader(object):
         else:
             raise Exception(
                 "Type '{}' for file_ is not supported...".format(type(file_)))
-        self.__avro_file = None
         self.__avro_iter = None
 
     def __getitem__(self, idx):
@@ -175,8 +170,6 @@ class AvroDataFileReader(object):
         assert isinstance(
             idx, (int, slice)), "Index Could be an integer or a slice"
 
-        self.__avro_file = DataFileReader(self.__descriptor, DatumReader())
-
         if isinstance(idx, slice):
             to_extract = [elm for elm in gen_increasing_slice(idx)]
         else:
@@ -184,7 +177,7 @@ class AvroDataFileReader(object):
 
         results = []
         cur_idx = -1
-        self.__avro_iter = iter(self.__avro_file)
+        self.__avro_iter = fast_reader(self.__descriptor)
 
         while len(to_extract):
             try:
@@ -212,8 +205,7 @@ class AvroDataFileReader(object):
             AvroDataFileReader: this object instance
 
         """
-        self.__avro_file = DataFileReader(self.__descriptor, DatumReader())
-        self.__avro_iter = iter(self.__avro_file)
+        self.__avro_iter = fast_reader(self.__descriptor)
         return self
 
     def __next__(self):
@@ -230,8 +222,6 @@ class AvroDataFileReader(object):
 
     def __del__(self):
         """Object destructor."""
-        if self.__avro_file:
-            self.__avro_file.close()
         if not self.__descriptor.closed:
             self.__descriptor.close()
 
@@ -246,4 +236,5 @@ class AvroDataFileReader(object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Closing function for the 'with' statement."""
-        self.__avro_file.close()
+        if not self.__descriptor.closed:
+            self.__descriptor.close()
