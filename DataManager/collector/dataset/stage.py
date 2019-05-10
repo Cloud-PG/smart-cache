@@ -15,6 +15,7 @@ class CMSRawStage(Stage):
         self,
         name: str="CMS-raw",
         source: 'Resource'=None,
+        batch_size: int=42000,
         spark_conf: dict={}
     ):
         super(CMSRawStage, self).__init__(
@@ -22,6 +23,21 @@ class CMSRawStage(Stage):
             source=source,
             spark_conf=spark_conf
         )
+        self._batch_size = batch_size
+
+    def pre_input(self, input_):
+        batch = []
+        for cur_input in input_:
+            for record in cur_input:
+                batch.append(record)
+                print("[Cur Batch len: {}]".format(len(batch)), end='\r')
+                if len(batch) == self._batch_size:
+                    yield batch
+                    print("[Batch Done! {} records]".format(len(batch)))
+                    batch = []
+        else:
+            if len(batch) != 0:
+                yield batch
 
     @staticmethod
     def process(records, queue: 'Queue'= None):

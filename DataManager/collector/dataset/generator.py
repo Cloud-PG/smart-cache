@@ -4,8 +4,6 @@ from collections import OrderedDict
 from multiprocessing import Pool, Process, Queue, cpu_count
 from os import makedirs, path
 from os import remove as os_remove
-from shutil import rmtree
-from tempfile import NamedTemporaryFile
 from time import time
 
 import findspark
@@ -24,7 +22,29 @@ from .utils import (ReadableDictAsAttribute, SupportTable, flush_queue,
 
 class BaseSpark(object):
 
+    """Class that allows objects to interact with Spark context."""
+
     def __init__(self, spark_conf: dict={}):
+        """Initialize the Spark configuration.
+
+        Args:
+            spark_conf (dict): a dictionary with Spark properties
+
+        Returns:
+            BaseSpark: this object
+
+        Note:
+            The spark_conf dictionary has these schema:
+
+            {
+                'master': "...",
+                'app_name': "...",
+                'config': {
+                    'spark.executor.cores': 4
+                    ...
+                }
+            }
+        """
         self._spark_context = None
 
         # Spark configuration
@@ -35,11 +55,6 @@ class BaseSpark(object):
             'spark.executor.memory': "1g"
         }
         self.update_config(spark_conf)
-        self.__configured = True if len(spark_conf) != 0 else False
-
-    @property
-    def configured_spark(self) -> bool:
-        return self.__configured
 
     @property
     def spark_context(self):
@@ -56,19 +71,37 @@ class BaseSpark(object):
             self._spark_context = SparkContext.getOrCreate(conf=conf)
         elif 'sc' in locals():
             self._spark_context = sc
+
         return self._spark_context
 
-    def update_config(self, spark_conf: dict):
-        """Update Spark configuration."""
+    def update_config(self, spark_conf: dict, overwrite_config: bool=True) -> 'BaseSpark':
+        """Update Spark configuration.
+
+        Args:
+            spark_conf (dict): a Spark configuration, same as in init function.
+            overwrite_config (bool): indicates if the Spark config have to be overwritten
+
+        Returs:
+            BaseSpark: this object
+        """
         self._spark_master = spark_conf.get(
             'master',
             self._spark_master
         )
+
         self._spark_app_name = spark_conf.get(
             'app_name',
             self._spark_app_name
         )
-        self._spark_conf.update(spark_conf.get('config', {}))
+
+        if overwrite_config:
+            self._spark_conf.update(spark_conf.get('config', {}))
+        else:
+            new_config = spark_conf.get('config', {})
+            for key, value in new_config.items():
+                if key not in self._spark_conf:
+                    self._spark_conf[key] = value
+
         return self
 
 
@@ -120,14 +153,14 @@ class Stage(BaseSpark):
         ]
 
     @staticmethod
-    def __get_tmpfile_name() -> str:
-        tmpFile = NamedTemporaryFile(delete=True)
-        tmpFile.close()
-        return tmpFile.name
-
-    @staticmethod
     def process(records, queue: 'Queue'= None):
         raise NotImplementedError
+
+    def pre_input(self, input_):
+        return input_
+
+    def pre_output(self, input_):
+        return input_
 
     def task(self, input_, num_process: int=cpu_count(), use_spark: bool=False):
         result = []
@@ -135,41 +168,30 @@ class Stage(BaseSpark):
             sc = self.spark_context
             print("[STAGE][{}][SPARK]".format(self.name))
             tasks = []
-            tmp_files = []
             for cur_input in input_:
                 if len(tasks) < sc.defaultParallelism:
                     tasks.append(cur_input)
                     continue
-                cur_tmpfile_name = self.__get_tmpfile_name()
-                tmp_files.append(cur_tmpfile_name)
-                sc.parallelize(
+                tasks = [cur_input]
+
+                tmp_res = sc.parallelize(
                     tasks
                 ).map(
                     self.process
-                ).saveAsPickleFile(
-                    cur_tmpfile_name, sc.defaultParallelism
-                )
-                tasks = [cur_input]
+                ).collect()
+
+                for cur_res in tmp_res:
+                    result += cur_res
             else:
                 if tasks:
-                    cur_tmpfile_name = self.__get_tmpfile_name()
-                    tmp_files.append(cur_tmpfile_name)
-                    sc.parallelize(
+                    tmp_res = sc.parallelize(
                         tasks,
                         len(tasks)
                     ).map(
                         self.process
-                    ).saveAsPickleFile(
-                        cur_tmpfile_name, sc.defaultParallelism
-                    )
-            for tmp_filename in tmp_files:
-                cur_res = sc.pickleFile(
-                    tmp_filename, sc.defaultParallelism
-                ).flatMap(
-                    lambda list_: list_
-                ).collect()
-                result += cur_res
-                rmtree(tmp_filename)
+                    ).collect()
+                    for cur_res in tmp_res:
+                        result += cur_res
         else:
             tasks = []
             output_queue = Queue()
@@ -214,18 +236,21 @@ class Stage(BaseSpark):
         return self._output
 
     def run(self, input_, use_spark: bool=False):
-        return self.task(input_, use_spark=use_spark)
+        cur_input = self.pre_input(input_)
+        cur_output = self.task(cur_input, use_spark=use_spark)
+        cur_output = self.pre_output(cur_output)
+        return cur_output
 
 
-class PipelineComposer(object):
+class Pipeline(object):
 
     def __init__(self, dataset_name: str="dataset", stages: list=[], source: 'Resource'=None, spark_conf: dict={}):
         assert all(isinstance(stage, Stage)
                    for stage in stages), "You can pass only a list of Stages..."
+        self._dataset_name = dataset_name
         self._stages = [] + stages
         self._source = source
         self._result = None
-        self._dataset_name = dataset_name
         self.__stats = {
             'time': {
                 'stages': {},
@@ -235,10 +260,9 @@ class PipelineComposer(object):
                 'len': 0
             }
         }
-        # Update spakr config if not present in stage
+        # Update Spark config without overwrite
         for stage in self._stages:
-            if not stage.configured_spark:
-                stage.update_config(spark_conf)
+            stage.update_config(spark_conf, overwrite_config=False)
 
     @property
     def result(self):
@@ -247,17 +271,6 @@ class PipelineComposer(object):
     @property
     def stats(self):
         return self.__stats
-
-    @staticmethod
-    def batch(collection: list, batch_size: int=2000):
-        batch = []
-        for item in collection:
-            batch.append(item)
-            if len(batch) == batch_size:
-                yield batch
-                batch = []
-        if len(batch) != 0:
-            yield batch
 
     def save(self, out_dir: str='.'):
         out_name = "{}.json.gz".format(self._dataset_name)
@@ -278,20 +291,24 @@ class PipelineComposer(object):
 
     def run(self, save_stage: bool=False, use_spark: bool=False):
         output = None
+
         print("[Pipeline][{}][START]".format(self._dataset_name))
         for stage in self._stages:
             start_time = time()
+
             if output is None:
                 output = self._source.get()
-            else:
-                output = self.batch(output)
+
             output = stage.run(output, use_spark=use_spark)
+
             if save_stage:
                 self._source.set(
                     (record.to_dict() for record in stage.output),
                     stage_name=stage.name
                 )
+
             self.__stats['time']['stages'][stage.name] = time() - start_time
+
         self._result = output
         self.__stats['result']['len'] = len(self.result)
         return self

@@ -3,7 +3,7 @@ from os import chdir
 
 sys.path.append("..")
 
-from DataManager.collector.dataset.generator import PipelineComposer
+from DataManager.collector.dataset.generator import Pipeline
 from DataManager.collector.dataset.resource import CMSResourceManager
 from DataManager.collector.dataset.stage import CMSRawStage
 
@@ -21,7 +21,7 @@ if __name__ == "__main__":
         spark_conf=eval(sys.argv[4]) if len(sys.argv) == 5 else {}
     )
 
-    composer = PipelineComposer(
+    composer = Pipeline(
         dataset_name="CMS-RAW-Dataset",
         stages=[
             raw_stage
