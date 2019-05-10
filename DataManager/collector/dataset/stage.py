@@ -15,7 +15,7 @@ class CMSRawStage(Stage):
         self,
         name: str="CMS-raw",
         source: 'Resource'=None,
-        batch_size: int=42000,
+        batch_size: int=100000,
         spark_conf: dict={}
     ):
         super(CMSRawStage, self).__init__(
