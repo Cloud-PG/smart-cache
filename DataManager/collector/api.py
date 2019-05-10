@@ -17,6 +17,9 @@ class DataFile(object):
         self.__data_collector = self.__get_collector(source)
         self.__iter = None
         self.__index = 0
+    
+    def __len__(self):
+        return len(self.__data_collector)
 
     def __setstate__(self, state):
         cur_source = state['source']

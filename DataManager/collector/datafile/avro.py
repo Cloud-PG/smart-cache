@@ -151,6 +151,18 @@ class AvroDataFileReader(object):
             raise Exception(
                 "Type '{}' for file_ is not supported...".format(type(file_)))
         self.__avro_iter = None
+        self.__len = None
+
+    def __len__(self):
+        if not self.__len:
+            counter = 0
+            self.__descriptor.seek(0, 0)
+            print("[Check avro lenght...]")
+            for _ in fast_reader(self.__descriptor):
+                counter += 1
+            self.__len = counter
+        return self.__len
+
 
     def __getitem__(self, idx):
         """Select an item or a group of item from the file.
@@ -177,6 +189,7 @@ class AvroDataFileReader(object):
 
         results = []
         cur_idx = -1
+        self.__descriptor.seek(0, 0)
         self.__avro_iter = fast_reader(self.__descriptor)
 
         while len(to_extract):
@@ -205,6 +218,7 @@ class AvroDataFileReader(object):
             AvroDataFileReader: this object instance
 
         """
+        self.__descriptor.seek(0, 0)
         self.__avro_iter = fast_reader(self.__descriptor)
         return self
 
