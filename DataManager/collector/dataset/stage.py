@@ -30,10 +30,9 @@ class CMSRawStage(Stage):
         for cur_input in input_:
             for record in cur_input:
                 batch.append(record)
-                print("[Cur Batch len: {}]".format(len(batch)), end='\r')
                 if len(batch) == self._batch_size:
                     yield batch
-                    print("[Batch Done! {} records]".format(len(batch)))
+                    print("[Batch creation done! {} records]".format(len(batch)))
                     batch = []
         else:
             if len(batch) != 0:

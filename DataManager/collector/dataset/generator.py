@@ -4,6 +4,7 @@ from collections import OrderedDict
 from multiprocessing import Pool, Process, Queue, cpu_count
 from os import makedirs, path
 from os import remove as os_remove
+from tempfile import TemporaryFile
 from time import time
 
 import findspark
@@ -128,7 +129,7 @@ class Stage(BaseSpark):
         super(Stage, self).__init__(spark_conf=spark_conf)
         self._name = name
         self._input = None
-        self._output = None
+        self._output = JSONDataFileWriter(descriptor=TemporaryFile())
 
     @property
     def name(self):
@@ -181,7 +182,7 @@ class Stage(BaseSpark):
                 ).collect()
 
                 for cur_res in tmp_res:
-                    result += cur_res
+                    self._output.append(cur_res)
             else:
                 if tasks:
                     tmp_res = sc.parallelize(
@@ -191,7 +192,7 @@ class Stage(BaseSpark):
                         self.process
                     ).collect()
                     for cur_res in tmp_res:
-                        result += cur_res
+                        self._output.append(cur_res)
         else:
             tasks = []
             output_queue = Queue()
@@ -213,7 +214,7 @@ class Stage(BaseSpark):
                             task.join(5)
                         else:
                             tasks = self.__update_tasks(tasks)
-                            result += flush_queue(output_queue)
+                            self._output.append(flush_queue(output_queue))
                     spinner.text = "[STAGE][{}][{} task{} running]".format(
                         self.name,
                         len(tasks),
@@ -230,9 +231,8 @@ class Stage(BaseSpark):
                             task.join(5)
                         else:
                             tasks = self.__update_tasks(tasks)
-                            result += flush_queue(output_queue)
+                            self._output.append(flush_queue(output_queue))
 
-        self._output = result
         return self._output
 
     def run(self, input_, use_spark: bool=False):
@@ -240,6 +240,9 @@ class Stage(BaseSpark):
         cur_output = self.task(cur_input, use_spark=use_spark)
         cur_output = self.pre_output(cur_output)
         return cur_output
+    
+    def __del__(self):
+        self._output.close()
 
 
 class Pipeline(object):
