@@ -31,10 +31,10 @@ if __name__ == "__main__":
         ],
         source=cms_resource_manager,
         spark_conf={
-            'master': "local[4]",
+            'master': "local[8]",
             'config': {
-                'spark.driver.memory': "4g",
-                'spark.driver.maxResultSize': "2g",
+                'spark.driver.memory': "8g",
+                'spark.driver.maxResultSize': "4g",
                 'spark.executor.memory': "2g"
             }
         }
