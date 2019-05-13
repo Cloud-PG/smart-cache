@@ -133,7 +133,7 @@ class CMSRawStage(Stage):
         name: str = "CMS-raw",
         source: 'Resource' = None,
         spark_conf: dict = {},
-        batch_size: int = 100000
+        batch_size: int = 42000
     ):
         super(CMSRawStage, self).__init__(
             name,

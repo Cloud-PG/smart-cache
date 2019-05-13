@@ -27,7 +27,7 @@ class Pipeline(object):
         stages: list = [],
         source: 'Resource' = None,
         spark_conf: dict = {},
-        batch_size: int = 100000
+        batch_size: int = 42000
     ):
         assert all(isinstance(stage, Stage)
                    for stage in stages), "You can pass only a list of Stages..."
