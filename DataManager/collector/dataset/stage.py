@@ -148,6 +148,7 @@ class CMSRawStage(Stage):
             for record in cur_input:
                 tmp_data.append(record)
                 if len(tmp_data) == self.__batch_size:
+                    print("[Pre-input][Generated batch of size {}]".format(len(tmp_data)))
                     yield tmp_data
                     tmp_data = []
         else:
