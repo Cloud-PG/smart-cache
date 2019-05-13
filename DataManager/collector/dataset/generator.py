@@ -63,11 +63,13 @@ class Pipeline(object):
         out_file_path = path.join(out_dir, out_name)
         # Write output
         start_time = time()
+        print("[Pipeline][{}][Write output]".format(self._dataset_name))
         with JSONDataFileWriter(out_file_path) as out_file:
-            for record in self.result:
+            for record in tqdm(self.result, desc="[Save dataset]"):
                 out_file.append(record)
         self.__stats['time']['out_file'] = time() - start_time
         # Write stats
+        print("[Pipeline][{}][Write stats]".format(self._dataset_name))
         with open(
             path.join(out_dir, "{}.stats.json".format(self._dataset_name)), 'w'
         ) as stat_file:
@@ -126,6 +128,8 @@ class Pipeline(object):
 
         self._result = output
         self.__stats['result']['len'] = len(self.result)
+        print("[Pipeline][{}][END]".format(self._dataset_name))
+
         return self
 
 
