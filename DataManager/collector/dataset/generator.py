@@ -23,11 +23,11 @@ class Pipeline(object):
 
     def __init__(
         self,
-        dataset_name: str="dataset",
-        stages: list=[],
-        source: 'Resource'=None,
-        spark_conf: dict={},
-        batch_size: int=100000
+        dataset_name: str = "dataset",
+        stages: list = [],
+        source: 'Resource' = None,
+        spark_conf: dict = {},
+        batch_size: int = 100000
     ):
         assert all(isinstance(stage, Stage)
                    for stage in stages), "You can pass only a list of Stages..."
@@ -57,7 +57,7 @@ class Pipeline(object):
     def stats(self):
         return self.__stats
 
-    def save(self, out_dir: str='PipelineResults'):
+    def save(self, out_dir: str = 'PipelineResults'):
         out_name = "{}.json.gz".format(self._dataset_name)
         makedirs(out_dir, exist_ok=True)
         out_file_path = path.join(out_dir, out_name)
@@ -74,20 +74,24 @@ class Pipeline(object):
             json.dump(self.stats, stat_file, indent=2)
         return self
 
-    def gen_batches(self, data):
+    def gen_batches(self, data, stage_name):
         batch = []
         for record in data:
             batch.append(record)
             if len(batch) == self._batch_size:
-                print("[Batch creation done! {} records]".format(len(batch)))
+                print("[Pipeline][{}][{}][Batch creation][Generated with {} records]".format(
+                    self._dataset_name, stage_name, len(batch)
+                ))
                 yield batch
                 batch = []
         else:
             if len(batch) != 0:
-                print("[Batch creation done! {} records]".format(len(batch)))
+                print("[Pipeline][{}][{}][Batch creation][Generated with {} records]".format(
+                    self._dataset_name, stage_name, len(batch)
+                ))
                 yield batch
 
-    def run(self, save_stage: bool=False, use_spark: bool=False):
+    def run(self, save_stage: bool = False, use_spark: bool = False):
         output = None
 
         print("[Pipeline][{}][START]".format(self._dataset_name))
@@ -96,13 +100,19 @@ class Pipeline(object):
 
             if output is None:
                 output = self._source.get()
+                print("[Pipeline][{}][{}][RUN]".format(
+                    self._dataset_name, stage.name)
+                )
                 output = stage.run(
                     output,
                     use_spark=use_spark
                 )
             else:
+                print("[Pipeline][{}][{}][RUN]".format(
+                    self._dataset_name, stage.name)
+                )
                 output = stage.run(
-                    self.gen_batches(output),
+                    self.gen_batches(output, stage.name),
                     use_spark=use_spark
                 )
 
@@ -126,7 +136,7 @@ class CMSDataset(object):
     This generator uses Python multiprocessing or Spark.
     Data source could be HDFS, HTTPFS or local folders"""
 
-    def __init__(self, spark_conf: dict={}, source: dict={}, dest: dict={}):
+    def __init__(self, spark_conf: dict = {}, source: dict = {}, dest: dict = {}):
         self._source = Resource()
         self._dest = Resource()
         self._spark_context = None
@@ -226,7 +236,7 @@ class CMSDataset(object):
     def task_raw_extraction(elm):
         return CMSDataPopularityRaw(elm)
 
-    def gen_raw(self, start_date: str, window_size: int, use_spark: bool=False):
+    def gen_raw(self, start_date: str, window_size: int, use_spark: bool = False):
         result = []
         start_year, start_month, start_day = [
             int(elm) for elm in start_date.split()
@@ -412,9 +422,9 @@ class CMSDatasetV0(CMSDataset):
         return tmp_data, tmp_indexes
 
     def _spark_extract(self, start_date: str, window_size: int,
-                       extract_support_tables: bool=True,
-                       num_partitions: int=10, chunk_size: int=1000,
-                       log_level: str="WARN"
+                       extract_support_tables: bool = True,
+                       num_partitions: int = 10, chunk_size: int = 1000,
+                       log_level: str = "WARN"
                        ):
         """Extract data in a time window with Spark.
 
@@ -473,7 +483,7 @@ class CMSDatasetV0(CMSDataset):
             next_data, next_window_indexes, extract_support_tables
         )
 
-    def __spark_run(self, window: list, num_partitions: int=10, chunk_size: int=1000,):
+    def __spark_run(self, window: list, num_partitions: int = 10, chunk_size: int = 1000,):
         """The spark run task that extract a window.
 
         Args:
@@ -657,7 +667,7 @@ class CMSDatasetV0(CMSDataset):
 
     def __gen_output(self, data: list, window_indexes: set,
                      next_data: list, next_window_indexes: set,
-                     extract_support_tables: bool=True
+                     extract_support_tables: bool = True
                      ):
         """Generate output data.
 
@@ -748,10 +758,10 @@ class CMSDatasetV0(CMSDataset):
         else:
             return res_data, {}, all_raw_data, raw_info
 
-    def save(self, from_: str, window_size: int, outfile_name: str='',
-             use_spark: bool=False, extract_support_tables: bool=True,
-             multiprocess: bool=False, num_processes: int=2,
-             checkpoint_step: int=10000
+    def save(self, from_: str, window_size: int, outfile_name: str = '',
+             use_spark: bool = False, extract_support_tables: bool = True,
+             multiprocess: bool = False, num_processes: int = 2,
+             checkpoint_step: int = 10000
              ):
         """Extract and save a dataset.
 
