@@ -1,5 +1,5 @@
 import json
-from io import BytesIO
+from io import BytesIO, IOBase
 
 from fastavro import writer as fast_writer
 from fastavro import reader as fast_reader
@@ -14,7 +14,7 @@ class AvroDataFileWriter(object):
 
     """Write an avro file."""
 
-    def __init__(self, filename, data=None, schema=None, codec: str='snappy'):
+    def __init__(self, filename, data=None, schema=None, codec: str = 'snappy'):
         """Create an avro archive.
 
         Note:
@@ -36,6 +36,11 @@ class AvroDataFileWriter(object):
             self.__schema = json.dumps(schema).encode("utf-8")
         if data is not None:
             self.append(data)
+
+    @property
+    def raw_data(self):
+        self.__descriptor.seek(0, 0)
+        return self.__descriptor.read()
 
     @staticmethod
     def __get_primitive_type(key, value):
@@ -101,7 +106,8 @@ class AvroDataFileWriter(object):
                 self.__write(data)
             else:
                 raise Exception(
-                    "You can pass only a list of 'dict'".format(type(data)))
+                    "You can pass only a list of 'dict'"
+                )
         else:
             raise Exception(
                 "'{}' is not a valid input data type".format(type(data)))
@@ -145,7 +151,7 @@ class AvroDataFileReader(object):
         self.__descriptor = None
         if isinstance(file_, str):
             self.__descriptor = open(file_, 'rb')
-        elif isinstance(file_, BytesIO):
+        elif isinstance(file_, (BytesIO, IOBase)):
             self.__descriptor = file_
         else:
             raise Exception(
@@ -163,6 +169,10 @@ class AvroDataFileReader(object):
             self.__len = counter
         return self.__len
 
+    @property
+    def raw_data(self):
+        self.__descriptor.seek(0, 0)
+        return self.__descriptor.read()
 
     def __getitem__(self, idx):
         """Select an item or a group of item from the file.

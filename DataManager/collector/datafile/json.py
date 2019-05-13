@@ -12,7 +12,7 @@ class JSONDataFileWriter(object):
 
     """Write json.gz file."""
 
-    def __init__(self, filename: str=None, descriptor: 'IOBase'=None, data=None, append: bool=False):
+    def __init__(self, filename: str = None, descriptor: 'IOBase' = None, data=None, append: bool = False):
         """Init function of data writer for json.gz files.
 
         Args:
@@ -29,9 +29,11 @@ class JSONDataFileWriter(object):
         self.__descriptor = descriptor
         if not self.__descriptor:
             if append:
-                self.__descriptor = get_or_create_descriptor(self.__filename, "ab")
+                self.__descriptor = get_or_create_descriptor(
+                    self.__filename, "ab")
             else:
-                self.__descriptor = get_or_create_descriptor(self.__filename, "wb")
+                self.__descriptor = get_or_create_descriptor(
+                    self.__filename, "wb")
 
         if append:
             self.__descriptor.seek(0, 2)
@@ -57,6 +59,11 @@ class JSONDataFileWriter(object):
         else:
             return json.dumps(obj)
 
+    @property
+    def raw_data(self):
+        self.__descriptor.seek(0, 0)
+        return self.__descriptor.read()
+
     def __write(self, data):
         """Write data to the json.gz file.
 
@@ -67,8 +74,7 @@ class JSONDataFileWriter(object):
             JSONDataFileWriter: this object instance
 
         """
-        self.__descriptor.write(data.encode("utf-8") + b'\n')
-        return self.__descriptor.tell()
+        return self.__descriptor.write(data.encode("utf-8") + b'\n')
 
     def append(self, data):
         """Append data to the json.gz file.
@@ -87,15 +93,20 @@ class JSONDataFileWriter(object):
         elif isinstance(data, (list, GeneratorType)):
             for elm in data:
                 if isinstance(elm, dict):
-                    return self.__write(json.dumps(elm))
-                elif self.__valid_json(elm) != False:
-                    return self.__write(self.__valid_json(elm))
+                    self.__write(json.dumps(elm))
                 else:
-                    raise Exception(
-                        "You can pass only a list of 'dict' or JSON strings".format(type(data)))
+                    valid_json = self.__valid_json(elm)
+                    if valid_json:
+                        self.__write(valid_json)
+                    else:
+                        raise Exception(
+                            "You can pass only a list of 'dict' or JSON strings"
+                        )
         else:
             raise Exception(
                 "'{}' is not a valid input data type".format(type(data)))
+        
+        return self
 
     def __del__(self):
         """Object destructor."""
@@ -120,7 +131,7 @@ class JSONDataFileReader(object):
 
     """Read json.gz file with easy access to data."""
 
-    def __init__(self, filename: str=None, descriptor: 'IOBase'=None):
+    def __init__(self, filename: str = None, descriptor: 'IOBase' = None):
         """Init function of data reader for json.gz files.
 
         Args:
@@ -143,6 +154,11 @@ class JSONDataFileReader(object):
         self.__getitem_start = 0
         self.__checkpoints = {}
 
+    @property
+    def raw_data(self):
+        self.__descriptor.seek(0, 0)
+        return self.__descriptor.read()
+
     def add_checkpoint(self, index: int, pos: int):
         self.__checkpoints[index] = pos
 
@@ -159,7 +175,7 @@ class JSONDataFileReader(object):
             self.__len = num_lines
         return self.__len
 
-    def __get_json_from_end(self, step: int=1024):
+    def __get_json_from_end(self, step: int = 1024):
         buffer = b''
         index = -step - 1
         cur_chars = b''
@@ -195,7 +211,7 @@ class JSONDataFileReader(object):
 
         return (None, -1)
 
-    def start_from(self, index: int, stop: int=-1):
+    def start_from(self, index: int, stop: int = -1):
         """Set the cursor to a specific object index to start.
 
         Returns:

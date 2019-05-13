@@ -1,7 +1,95 @@
 
 from datetime import date, datetime, timedelta
+from multiprocessing import cpu_count
 
+import findspark
+from pyspark import SparkConf, SparkContext
 from tqdm import tqdm
+
+
+class BaseSpark(object):
+
+    """Class that allows objects to interact with Spark context."""
+
+    def __init__(self, spark_conf: dict={}):
+        """Initialize the Spark configuration.
+
+        Args:
+            spark_conf (dict): a dictionary with Spark properties
+
+        Returns:
+            BaseSpark: this object
+
+        Note:
+            The spark_conf dictionary has these schema:
+
+            {
+                'master': "...",
+                'app_name': "...",
+                'config': {
+                    'spark.executor.cores': 4
+                    ...
+                }
+            }
+        """
+        self._spark_context = None
+
+        # Spark configuration
+        self._spark_master = "local[{}]".format(cpu_count())
+        self._spark_app_name = "SPARK"
+        self._spark_conf = {
+            'spark.driver.memory': "2g",
+            'spark.executor.memory': "1g"
+        }
+        self.update_config(spark_conf)
+
+    @property
+    def spark_context(self):
+        """Detects and returns the Spark context."""
+        if not self._spark_context and 'sc' not in locals():
+            findspark.init()
+            conf = SparkConf()
+            conf.setMaster(self._spark_master)
+            conf.setAppName(self._spark_app_name)
+
+            for name, value in self._spark_conf.items():
+                conf.set(name, value)
+
+            self._spark_context = SparkContext.getOrCreate(conf=conf)
+        elif 'sc' in locals():
+            self._spark_context = sc
+
+        return self._spark_context
+
+    def update_config(self, spark_conf: dict, overwrite_config: bool=True) -> 'BaseSpark':
+        """Update Spark configuration.
+
+        Args:
+            spark_conf (dict): a Spark configuration, same as in init function.
+            overwrite_config (bool): indicates if the Spark config have to be overwritten
+
+        Returs:
+            BaseSpark: this object
+        """
+        self._spark_master = spark_conf.get(
+            'master',
+            self._spark_master
+        )
+
+        self._spark_app_name = spark_conf.get(
+            'app_name',
+            self._spark_app_name
+        )
+
+        if overwrite_config:
+            self._spark_conf.update(spark_conf.get('config', {}))
+        else:
+            new_config = spark_conf.get('config', {})
+            for key, value in new_config.items():
+                if key not in self._spark_conf:
+                    self._spark_conf[key] = value
+
+        return self
 
 
 def date_from_timestamp_ms(timestamp: (int, float)) -> 'datetime':

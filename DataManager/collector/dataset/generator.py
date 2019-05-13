@@ -1,14 +1,11 @@
 import json
 import sys
 from collections import OrderedDict
-from multiprocessing import Pool, Process, Queue, cpu_count
+from multiprocessing import Pool, Process, Queue
 from os import makedirs, path
 from os import remove as os_remove
-from tempfile import TemporaryFile
 from time import time
 
-import findspark
-from pyspark import SparkConf, SparkContext
 from tqdm import tqdm
 from yaspin import yaspin
 
@@ -17,243 +14,28 @@ from ..api import DataFile
 from ..datafeatures.extractor import (CMSDataPopularity, CMSDataPopularityRaw,
                                       CMSSimpleRecord)
 from ..datafile.json import JSONDataFileWriter
+from .stage import Stage
 from .utils import (ReadableDictAsAttribute, SupportTable, flush_queue,
                     gen_window_dates)
 
 
-class BaseSpark(object):
-
-    """Class that allows objects to interact with Spark context."""
-
-    def __init__(self, spark_conf: dict={}):
-        """Initialize the Spark configuration.
-
-        Args:
-            spark_conf (dict): a dictionary with Spark properties
-
-        Returns:
-            BaseSpark: this object
-
-        Note:
-            The spark_conf dictionary has these schema:
-
-            {
-                'master': "...",
-                'app_name': "...",
-                'config': {
-                    'spark.executor.cores': 4
-                    ...
-                }
-            }
-        """
-        self._spark_context = None
-
-        # Spark configuration
-        self._spark_master = "local[{}]".format(cpu_count())
-        self._spark_app_name = "SPARK"
-        self._spark_conf = {
-            'spark.driver.memory': "2g",
-            'spark.executor.memory': "1g"
-        }
-        self.update_config(spark_conf)
-
-    @property
-    def spark_context(self):
-        """Detects and returns the Spark context."""
-        if not self._spark_context and 'sc' not in locals():
-            findspark.init()
-            conf = SparkConf()
-            conf.setMaster(self._spark_master)
-            conf.setAppName(self._spark_app_name)
-
-            for name, value in self._spark_conf.items():
-                conf.set(name, value)
-
-            self._spark_context = SparkContext.getOrCreate(conf=conf)
-        elif 'sc' in locals():
-            self._spark_context = sc
-
-        return self._spark_context
-
-    def update_config(self, spark_conf: dict, overwrite_config: bool=True) -> 'BaseSpark':
-        """Update Spark configuration.
-
-        Args:
-            spark_conf (dict): a Spark configuration, same as in init function.
-            overwrite_config (bool): indicates if the Spark config have to be overwritten
-
-        Returs:
-            BaseSpark: this object
-        """
-        self._spark_master = spark_conf.get(
-            'master',
-            self._spark_master
-        )
-
-        self._spark_app_name = spark_conf.get(
-            'app_name',
-            self._spark_app_name
-        )
-
-        if overwrite_config:
-            self._spark_conf.update(spark_conf.get('config', {}))
-        else:
-            new_config = spark_conf.get('config', {})
-            for key, value in new_config.items():
-                if key not in self._spark_conf:
-                    self._spark_conf[key] = value
-
-        return self
-
-
-class Resource(BaseSpark):
-
-    def __init__(self, spark_conf: dict={}):
-        super(Resource, self).__init__(spark_conf=spark_conf)
-
-    def get(self):
-        raise NotImplementedError
-
-    def set(self):
-        raise NotImplementedError
-
-
-class Stage(BaseSpark):
+class Pipeline(object):
 
     def __init__(
         self,
-        name: str,
+        dataset_name: str="dataset",
+        stages: list=[],
         source: 'Resource'=None,
-        spark_conf: dict={}
+        spark_conf: dict={},
+        batch_size: int=100000
     ):
-        super(Stage, self).__init__(spark_conf=spark_conf)
-        self._name = name
-        self._input = None
-        self._output = JSONDataFileWriter(descriptor=TemporaryFile())
-
-    @property
-    def name(self):
-        return self._name
-
-    @property
-    def output(self):
-        return self._output
-
-    @property
-    def input(self):
-        return self._input
-
-    @input.setter
-    def set_input(self, input_):
-        self._input = input_
-
-    @staticmethod
-    def __update_tasks(task_list):
-        return [
-            task for task in task_list if task.is_alive()
-        ]
-
-    @staticmethod
-    def process(records, queue: 'Queue'= None):
-        raise NotImplementedError
-
-    def pre_input(self, input_):
-        return input_
-
-    def pre_output(self, input_):
-        return input_
-
-    def task(self, input_, num_process: int=cpu_count(), use_spark: bool=False):
-        result = []
-        if use_spark:
-            sc = self.spark_context
-            print("[STAGE][{}][SPARK]".format(self.name))
-            tasks = []
-            for cur_input in input_:
-                if len(tasks) < sc.defaultParallelism:
-                    tasks.append(cur_input)
-                    continue
-                tasks = [cur_input]
-
-                tmp_res = sc.parallelize(
-                    tasks
-                ).map(
-                    self.process
-                ).collect()
-
-                for cur_res in tmp_res:
-                    self._output.append(cur_res)
-            else:
-                if tasks:
-                    tmp_res = sc.parallelize(
-                        tasks,
-                        len(tasks)
-                    ).map(
-                        self.process
-                    ).collect()
-                    for cur_res in tmp_res:
-                        self._output.append(cur_res)
-        else:
-            tasks = []
-            output_queue = Queue()
-            with yaspin(text="[STAGE][{}]".format(self.name)) as spinner:
-                for cur_input in input_:
-                    if len(tasks) < num_process:
-                        new_process = Process(
-                            target=self.process,
-                            args=(cur_input, output_queue)
-                        )
-                        tasks.append(new_process)
-                        new_process.start()
-                        spinner.write(
-                            "[STAGE][{}][TASK ADDED]".format(self.name))
-                        continue
-
-                    while len(tasks) == num_process:
-                        for task in tasks:
-                            task.join(5)
-                        else:
-                            tasks = self.__update_tasks(tasks)
-                            self._output.append(flush_queue(output_queue))
-                    spinner.text = "[STAGE][{}][{} task{} running]".format(
-                        self.name,
-                        len(tasks),
-                        's' if len(tasks) > 1 else ''
-                    )
-                else:
-                    while len(tasks) > 0:
-                        spinner.text = "[STAGE][{}][{} task{} running]".format(
-                            self.name,
-                            len(tasks),
-                            's' if len(tasks) > 1 else ''
-                        )
-                        for task in tasks:
-                            task.join(5)
-                        else:
-                            tasks = self.__update_tasks(tasks)
-                            self._output.append(flush_queue(output_queue))
-
-        return self._output
-
-    def run(self, input_, use_spark: bool=False):
-        cur_input = self.pre_input(input_)
-        cur_output = self.task(cur_input, use_spark=use_spark)
-        cur_output = self.pre_output(cur_output)
-        return cur_output
-    
-    def __del__(self):
-        self._output.close()
-
-
-class Pipeline(object):
-
-    def __init__(self, dataset_name: str="dataset", stages: list=[], source: 'Resource'=None, spark_conf: dict={}):
         assert all(isinstance(stage, Stage)
                    for stage in stages), "You can pass only a list of Stages..."
         self._dataset_name = dataset_name
         self._stages = [] + stages
         self._source = source
         self._result = None
+        self._batch_size = batch_size
         self.__stats = {
             'time': {
                 'stages': {},
@@ -275,7 +57,7 @@ class Pipeline(object):
     def stats(self):
         return self.__stats
 
-    def save(self, out_dir: str='.'):
+    def save(self, out_dir: str='PipelineResults'):
         out_name = "{}.json.gz".format(self._dataset_name)
         makedirs(out_dir, exist_ok=True)
         out_file_path = path.join(out_dir, out_name)
@@ -283,7 +65,7 @@ class Pipeline(object):
         start_time = time()
         with JSONDataFileWriter(out_file_path) as out_file:
             for record in self.result:
-                out_file.append(record.to_dict())
+                out_file.append(record)
         self.__stats['time']['out_file'] = time() - start_time
         # Write stats
         with open(
@@ -291,6 +73,18 @@ class Pipeline(object):
         ) as stat_file:
             json.dump(self.stats, stat_file, indent=2)
         return self
+
+    def gen_batches(self, data):
+        batch = []
+        for record in data:
+            batch.append(record)
+            if len(batch) == self._batch_size:
+                yield batch
+                print("[Batch creation done! {} records]".format(len(batch)))
+                batch = []
+        else:
+            if len(batch) != 0:
+                yield batch
 
     def run(self, save_stage: bool=False, use_spark: bool=False):
         output = None
@@ -301,12 +95,19 @@ class Pipeline(object):
 
             if output is None:
                 output = self._source.get()
-
-            output = stage.run(output, use_spark=use_spark)
+                output = stage.run(
+                    output,
+                    use_spark=use_spark
+                )
+            else:
+                output = stage.run(
+                    self.gen_batches(output),
+                    use_spark=use_spark
+                )
 
             if save_stage:
                 self._source.set(
-                    (record.to_dict() for record in stage.output),
+                    stage.output,
                     stage_name=stage.name
                 )
 

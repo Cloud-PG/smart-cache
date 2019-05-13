@@ -49,7 +49,6 @@ class CMSSimpleRecord(FeatureData):
             'record_id': self.__record_id,
             'next_window_counter': self.__next_window_counter,
             'tensor': self.__tensor,
-
         }
 
     def to_dict(self) -> dict:
@@ -117,7 +116,7 @@ class CMSSimpleRecord(FeatureData):
     def add_wrap_cpu(self, value: float):
         self.__tot_wrap_cpu += value
 
-    def add_next_window_counter(self, true_values: int=0, false_values: int=0):
+    def add_next_window_counter(self, true_values: int = 0, false_values: int = 0):
         self.__next_window_counter[0] += true_values
         self.__next_window_counter[1] += false_values
 
@@ -205,8 +204,9 @@ class CMSDataPopularity(FeatureData):
 
 class CMSDataPopularityRaw(FeatureData):
 
-    def __init__(self, data: dict={},
-                 feature_list=['FileName', 'TaskMonitorId', 'WrapCPU', 'StartedRunningTimeStamp'],
+    def __init__(self, data: dict = {},
+                 feature_list=['FileName', 'TaskMonitorId',
+                               'WrapCPU', 'StartedRunningTimeStamp'],
                  filters=[('Type', lambda elm: elm == "analysis")]
                  ):
         super(CMSDataPopularityRaw, self).__init__()
@@ -234,9 +234,6 @@ class CMSDataPopularityRaw(FeatureData):
             'id': self.__id,
             'valid': self.__valid
         }
-
-    def dumps(self) -> str:
-        return json.dumps(self.to_dict())
 
     def loads(self, input_string) -> 'CMSDataPopularityRaw':
         data = json.loads(input_string)

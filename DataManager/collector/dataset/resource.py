@@ -1,4 +1,5 @@
 import os
+from io import BytesIO
 from os import makedirs, path
 
 from tqdm import tqdm
@@ -6,9 +7,20 @@ from yaspin import yaspin
 
 from ...agent.api import HTTPFS
 from ..api import DataFile
-from ..datafile.json import JSONDataFileWriter
-from .generator import Resource
-from .utils import gen_window_dates
+from ..datafile.json import JSONDataFileReader, JSONDataFileWriter
+from .utils import BaseSpark, gen_window_dates
+
+
+class Resource(BaseSpark):
+
+    def __init__(self, spark_conf: dict={}):
+        super(Resource, self).__init__(spark_conf=spark_conf)
+
+    def get(self):
+        raise NotImplementedError
+
+    def set(self):
+        raise NotImplementedError
 
 
 class CMSResourceManager(Resource):
@@ -91,7 +103,7 @@ class CMSResourceManager(Resource):
                 raise Exception("No methods to retrieve data...")
             yield collector
 
-    def set(self, data, stage_name: str='', out_dir: str='cache'):
+    def set(self, data: 'DataFile', stage_name: str='', out_dir: str='cache'):
         out_name = "dataset_y{}-m{}-d{}_ws{}_stage-{}.json.gz".format(
             self._year,
             self._month,
@@ -99,11 +111,6 @@ class CMSResourceManager(Resource):
             self._window_size,
             stage_name
         )
-        tmp_name = "tmp_{}".format(out_name)
-
-        with JSONDataFileWriter(tmp_name) as tmp_file:
-            for record in tqdm(data, desc="[CMS Resource][Create temporary file]"):
-                tmp_file.append(record)
 
         with yaspin(text="[Save Dataset]") as spinner:
             if self.type == 'local':
@@ -112,21 +119,18 @@ class CMSResourceManager(Resource):
                     out_dir
                 )
                 makedirs(cur_base_path, exist_ok=True)
-                with open(tmp_name, 'rb') as cur_file:
-                    with open(path.join(cur_base_path, out_name), 'wb'
-                              ) as out_file:
-                        out_file.write(cur_file.read())
+                with JSONDataFileWriter(path.join(cur_base_path, out_name)) as out_data:
+                    with JSONDataFileReader(descriptor=BytesIO(data.raw_data)) as records:
+                        for record in tqdm(records, desc="Store {}".format(path.join(cur_base_path, out_name))):
+                            out_data.append(record)
             elif self.type == 'httpfs':
                 self._httpfs.create(
                     "/{}".format(path.join(out_dir, out_name)),
-                    tmp_name,
+                    data,
                     overwrite=True
                 )
             else:
                 raise Exception(
                     "Save to '{}' not implemented...".format(self.type))
-
-            spinner.text = "[Remove temporary data]"
-            os.remove(tmp_name)
 
             spinner.write("[Dataset saved]")

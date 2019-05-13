@@ -14,7 +14,7 @@ class FeatureData(object):
 
     def __getstate__(self):
         """Make object serializable by pickle.
-        
+
         Note: By default it takes the dict representation of the object.
         """
         return self.to_dict()
@@ -53,6 +53,9 @@ class FeatureData(object):
         NOTE: Alias for feature, used just for sugar syntax
         """
         return self._features
+
+    def dumps(self) -> str:
+        return json.dumps(self.to_dict())
 
     def features2array(self):
         """Get the feature values as numpy array, ordered by feature names."""

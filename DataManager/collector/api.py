@@ -1,8 +1,8 @@
 from io import BytesIO
 from os import path
 
-from .datafile.avro import AvroDataFileReader
-from .datafile.json import JSONDataFileReader
+from .datafile.avro import AvroDataFileReader, AvroDataFileWriter
+from .datafile.json import JSONDataFileReader, JSONDataFileWriter
 from tqdm import tqdm
 
 __all__ = ['DataFile']
@@ -17,7 +17,7 @@ class DataFile(object):
         self.__data_collector = self.__get_collector(source)
         self.__iter = None
         self.__index = 0
-    
+
     def __len__(self):
         return len(self.__data_collector)
 
@@ -31,6 +31,10 @@ class DataFile(object):
             'source': self.__source
         }
 
+    @property
+    def raw_data(self):
+        return self.__data_collector.raw_data
+
     @staticmethod
     def __get_collector(source):
         if isinstance(source, BytesIO):
@@ -40,6 +44,12 @@ class DataFile(object):
                 return AvroDataFileReader(source)
             else:
                 return JSONDataFileReader(source)
+        elif isinstance(source, AvroDataFileWriter):
+            tmp = BytesIO(source.raw_data)
+            return AvroDataFileReader(tmp)
+        elif isinstance(source, JSONDataFileWriter):
+            tmp = BytesIO(source.raw_data)
+            return JSONDataFileReader(descriptor=tmp)
         elif path.isfile(source):
             filename, ext = path.splitext(source)
             if ext == ".gz" or ext == ".bz2":

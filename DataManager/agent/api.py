@@ -189,12 +189,12 @@ class HTTPFS(object):
         content.seek(0)
         return content
 
-    def create(self, hdfs_path, file_path, overwrite=False, noredirect=True):
+    def create(self, hdfs_path, data, overwrite=False, noredirect=True):
         """Create a file in hadoop with httpfs.
 
         Args:
             hdfs_path (str): path to delete
-            file_path (str): the path of the file to write into hdfs
+            data (str, IOBytes): the path of the file to write into hdfs
             overwrite (bool): overwrite or not the file in hdfs
             noredirect (bool): not redirect the request
 
@@ -225,7 +225,26 @@ class HTTPFS(object):
         if res.status_code not in [200, 201, 307]:
             raise Exception("Error on create file:\n{}".format(
                 json.dumps(res.json(), indent=2)))
-        with open(file_path, 'rb') as file_:
+        if isinstance(data, str) and path.isfile(data):
+            with open(data, 'rb') as file_:
+                res = requests.put(
+                    file_url,
+                    headers={
+                        'content-type': "application/octet-stream"
+                    },
+                    params={
+                        'op': "CREATE",
+                        'user.name': self._hadoop_user,
+                        'noredirect': noredirect,
+                        'overwrite': overwrite,
+                        'data': True
+                    },
+                    auth=(self._http_user, self._http_password),
+                    verify=self._verify,
+                    allow_redirects=self._allow_redirects,
+                    data=file_
+                )
+        elif isinstance(data, io.IOBase):
             res = requests.put(
                 file_url,
                 headers={
@@ -241,8 +260,13 @@ class HTTPFS(object):
                 auth=(self._http_user, self._http_password),
                 verify=self._verify,
                 allow_redirects=self._allow_redirects,
-                data=file_
+                data=data
             )
+        else:
+            raise Exception(
+                "ERROR: You can pass a file or a byte stream, you passed '{}'".format(
+                    type(data)))
+
         if res.status_code not in [200, 201, 307]:
             raise Exception("Error on upload file:\n{}".format(
                 json.dumps(res.json(), indent=2)))
