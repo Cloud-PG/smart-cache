@@ -30,9 +30,9 @@ if __name__ == "__main__":
         spark_conf={
             'master': "local[4]",
             'config': {
-                'spark.driver.memory': "8g",
-                'spark.driver.maxResultSize': "4g",
-                'spark.executor.memory': "4g"
+                'spark.driver.memory': "4g",
+                'spark.driver.maxResultSize': "2g",
+                'spark.executor.memory': "2g"
             }
         }
     )

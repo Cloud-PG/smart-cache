@@ -132,13 +132,27 @@ class CMSRawStage(Stage):
         self,
         name: str = "CMS-raw",
         source: 'Resource' = None,
-        spark_conf: dict = {}
+        spark_conf: dict = {},
+        batch_size: int = 100000
     ):
         super(CMSRawStage, self).__init__(
             name,
             source=source,
             spark_conf=spark_conf
         )
+        self.__batch_size = batch_size
+
+    def pre_input(self, input_):
+        tmp_data = []
+        for cur_input in input_:
+            for record in cur_input:
+                tmp_data.append(record)
+                if len(tmp_data) == self.__batch_size:
+                    yield tmp_data
+                    tmp_data = []
+        else:
+            if len(tmp_data) != 0:
+                yield tmp_data
 
     @staticmethod
     def process(records, queue: 'Queue' = None):
@@ -149,7 +163,7 @@ class CMSRawStage(Stage):
                 tmp.append(new_record.dumps())
 
             # Limit processing for test
-            if len(tmp) >= 10:
+            if len(tmp) >= 1000:
                 break
 
         if queue:
