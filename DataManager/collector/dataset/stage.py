@@ -52,7 +52,6 @@ class Stage(BaseSpark):
             print("[STAGE][{}][SPARK]".format(self.name))
             tasks = []
             for cur_input in input_:
-                print("Cur input", cur_input)
                 if len(tasks) < sc.defaultParallelism:
                     tasks.append(cur_input)
                     continue
