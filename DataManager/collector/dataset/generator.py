@@ -79,11 +79,12 @@ class Pipeline(object):
         for record in data:
             batch.append(record)
             if len(batch) == self._batch_size:
-                yield batch
                 print("[Batch creation done! {} records]".format(len(batch)))
+                yield batch
                 batch = []
         else:
             if len(batch) != 0:
+                print("[Batch creation done! {} records]".format(len(batch)))
                 yield batch
 
     def run(self, save_stage: bool=False, use_spark: bool=False):
