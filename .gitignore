@@ -193,3 +193,6 @@ $RECYCLE.BIN/
 
 # Plots
 *.png
+
+# Pipeline results
+PipelineResults

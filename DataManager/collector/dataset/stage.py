@@ -120,10 +120,10 @@ class Stage(BaseSpark):
         return self._output
 
     def run(self, input_, use_spark: bool = False):
-        cur_input = self.pre_input(input_)
-        cur_output = self.task(cur_input, use_spark=use_spark)
-        cur_output = self.pre_output(DataFile(cur_output))
-        return cur_output
+        task_input = self.pre_input(input_)
+        task_output = self.task(task_input, use_spark=use_spark)
+        self._output = self.pre_output(DataFile(task_output))
+        return self._output
 
 
 class CMSRawStage(Stage):
@@ -169,8 +169,8 @@ class CMSRawStage(Stage):
                 tmp.append(new_record.dumps())
 
             # Limit processing for test
-            if len(tmp) >= 1000:
-                break
+            # if len(tmp) >= 1000:
+            #     break
 
         if queue:
             for record in tmp:
