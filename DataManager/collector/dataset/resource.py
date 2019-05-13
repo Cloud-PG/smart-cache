@@ -1,7 +1,7 @@
 import os
 from io import BytesIO
 from os import makedirs, path
-from tempfile import TemporaryFile
+from tempfile import NamedTemporaryFile
 
 from tqdm import tqdm
 from yaspin import yaspin
@@ -113,7 +113,7 @@ class CMSResourceManager(Resource):
             stage_name
         )
 
-        with TemporaryFile() as tmp_file:
+        with NamedTemporaryFile() as tmp_file:
             with JSONDataFileWriter(descriptor=tmp_file) as tmp_data:
                 for record in tqdm(data, desc="[Prepare tempfile]"):
                     tmp_data.append(record)
