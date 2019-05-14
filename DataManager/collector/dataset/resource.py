@@ -26,7 +26,7 @@ class Resource(BaseSpark):
 
 class CMSDatasetResourceManager(BaseSpark):
 
-    def __init__(self, dataset_local_path: str, spark_conf: dict = {}, batch_size: int=5000):
+    def __init__(self, dataset_local_path: str, spark_conf: dict = {}, batch_size: int=10000):
         super(CMSDatasetResourceManager, self).__init__(spark_conf=spark_conf)
         self.__dataset_path = dataset_local_path
         self.__batch_size = batch_size
