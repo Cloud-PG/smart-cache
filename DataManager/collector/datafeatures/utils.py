@@ -1,4 +1,7 @@
+import hashlib
 import json
+
+import numpy as np
 
 
 class FeatureData(object):
@@ -6,6 +9,7 @@ class FeatureData(object):
     """A basic object that contains and manages features."""
 
     def __init__(self):
+        self._id = None
         self._features = {}
 
     def add_feature(self, name, value):
@@ -26,6 +30,17 @@ class FeatureData(object):
     def to_dict(self):
         """This function have to be implemented by the derived object."""
         raise NotImplementedError
+
+    def _gen_id(self):
+        blake2s = hashlib.blake2s()
+        blake2s.update(json.dumps(list(self.features)).encode("utf-8"))
+        self._id = blake2s.hexdigest()
+
+    @property
+    def record_id(self) -> str:
+        if self._id is None:
+            self._gen_id()
+        return self._id
 
     @property
     def features(self):
@@ -64,6 +79,6 @@ class FeatureData(object):
             tmp.append(self._features[feature])
         return np.array(tmp)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Get the printable representation of feature object."""
-        return json.dumps(list(self.features))
+        return json.dumps(self._features)

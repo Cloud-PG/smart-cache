@@ -5,7 +5,8 @@ from tqdm import tqdm
 from yaspin import yaspin
 
 from ..api import DataFile
-from ..datafeatures.extractor import CMSDataPopularity, CMSDataPopularityRaw
+from ..datafeatures.extractor import (CMSDataPopularity, CMSDataPopularityRaw,
+                                      CMSRecordTest0)
 from ..datafile.json import JSONDataFileReader, JSONDataFileWriter
 from .utils import BaseSpark, flush_queue
 
@@ -126,6 +127,96 @@ class Stage(BaseSpark):
         return self._output
 
 
+class CMSRecordTest0Stage(Stage):
+
+    def __init__(
+        self,
+        name: str = "CMS-Record-Test0",
+        source: 'Resource' = None,
+        spark_conf: dict = {}
+    ):
+        super(CMSRecordTest0Stage, self).__init__(
+            name,
+            source=source,
+            spark_conf=spark_conf
+        )
+
+    @staticmethod
+    def process(records, queue: 'Queue' = None):
+        tmp = {}
+
+        for record in records:
+            new_record = CMSRecordTest0(record)
+            if new_record.record_id not in tmp:
+                tmp[new_record.record_id] = new_record
+            else:
+                tmp[new_record.record_id] += new_record
+
+            # Limit processing for test
+            if len(tmp) >= 100:
+                break
+
+        if queue:
+            for record in tmp.values():
+                queue.put(record.dumps())
+        else:
+            return [elm.dumps() for elm in tmp.values()]
+
+    def pre_output(self, output):
+        tmp = {}
+
+        for record in output:
+            cur_record = CMSRecordTest0().load(record)
+            if cur_record.record_id not in tmp:
+                tmp[cur_record.record_id] = cur_record
+            else:
+                tmp[cur_record.record_id] += cur_record
+        
+        avg_score = sum(elm.score for elm in tmp.values()) / len(tmp)
+
+        for record in tmp.values():
+            if record.score >= avg_score:
+                record.set_class('good')
+            else:
+                record.set_class('bad')
+
+        return [elm.to_dict() for elm in tmp.values()]
+
+
+class CMSFeaturedStage(Stage):
+
+    def __init__(
+        self,
+        name: str = "CMS-Featured",
+        source: 'Resource' = None,
+        spark_conf: dict = {}
+    ):
+        super(CMSFeaturedStage, self).__init__(
+            name,
+            source=source,
+            spark_conf=spark_conf
+        )
+
+    @staticmethod
+    def process(records, queue: 'Queue' = None):
+        tmp = []
+
+        for record in records:
+            new_record = CMSDataPopularity(record['features'])
+            if new_record:
+                tmp.append(new_record.dumps())
+
+            # Limit processing for test
+            # if len(tmp) >= 1000:
+            #     break
+
+        if queue:
+            for record in tmp:
+                queue.put(record)
+        else:
+            return tmp
+
+
 class CMSRawStage(Stage):
 
     def __init__(
@@ -165,40 +256,6 @@ class CMSRawStage(Stage):
         tmp = []
         for record in records:
             new_record = CMSDataPopularityRaw(record)
-            if new_record:
-                tmp.append(new_record.dumps())
-
-            # Limit processing for test
-            # if len(tmp) >= 1000:
-            #     break
-
-        if queue:
-            for record in tmp:
-                queue.put(record)
-        else:
-            return tmp
-
-
-class CMSFeaturedStage(Stage):
-
-    def __init__(
-        self,
-        name: str = "CMS-Featured",
-        source: 'Resource' = None,
-        spark_conf: dict = {}
-    ):
-        super(CMSFeaturedStage, self).__init__(
-            name,
-            source=source,
-            spark_conf=spark_conf
-        )
-
-    @staticmethod
-    def process(records, queue: 'Queue' = None):
-        tmp = []
-
-        for record in records:
-            new_record = CMSDataPopularity(record['features'])
             if new_record:
                 tmp.append(new_record.dumps())
 

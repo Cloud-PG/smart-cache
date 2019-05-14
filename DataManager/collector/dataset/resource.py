@@ -24,6 +24,48 @@ class Resource(BaseSpark):
         raise NotImplementedError
 
 
+class CMSDatasetResourceManager(BaseSpark):
+
+    def __init__(self, dataset_local_path: str, spark_conf: dict = {}, batch_size: int=5000):
+        super(CMSDatasetResourceManager, self).__init__(spark_conf=spark_conf)
+        self.__dataset_path = dataset_local_path
+        self.__batch_size = batch_size
+    
+    def gen_batches(self, data):
+        batch = []
+        for record in data:
+            batch.append(record)
+            if len(batch) == self.__batch_size:
+                print("[Pipeline][{}][GET SOURCE][Batch creation][Generated with {} records]".format(
+                    self.__dataset_path, len(batch)
+                ))
+                yield batch
+                batch = []
+        else:
+            if len(batch) != 0:
+                print("[Pipeline][{}][GET SOURCE][Batch creation][Generated with {} records]".format(
+                    self.__dataset_path, len(batch)
+                ))
+                yield batch
+
+    def get(self):
+        return self.gen_batches(DataFile(self.__dataset_path))
+
+    def set(self, data: 'DataFile', out_name: str, out_dir: str = 'cache'):
+        with NamedTemporaryFile() as tmp_file:
+            with JSONDataFileWriter(descriptor=tmp_file) as tmp_data:
+                for record in tqdm(data, desc="[Prepare tempfile]"):
+                    tmp_data.append(record)
+
+                with yaspin(text="[Save Dataset]") as spinner:
+                    cur_base_path = out_dir
+                    makedirs(cur_base_path, exist_ok=True)
+                    with open(path.join(cur_base_path, out_name), 'w') as out_data:
+                        out_data.write(tmp_data.raw_data)
+
+                    spinner.write("[Dataset saved]")
+
+
 class CMSResourceManager(Resource):
 
     def __init__(

@@ -6,6 +6,89 @@ import numpy as np
 from .utils import FeatureData
 
 
+class CMSRecordTest0(FeatureData):
+
+    def __init__(self, data: ('CMSDataPopularity', dict) = {}):
+        super(CMSRecordTest0, self).__init__()
+
+        self.__tot_wrap_cpu = 0.0
+        self.__tot_requests = 1
+        self.__num_next_window_hits = 0
+        self.__class = "UNKNOWN"
+
+        if isinstance(data, CMSDataPopularity):
+            for feature, value in data.features:
+                self.add_feature(feature, value)
+            self.__tot_wrap_cpu += float(data.WrapCPU)
+        else:
+            if 'features' in data:
+                for feature, value in data['features'].items():
+                    self.add_feature(feature, value)
+            if 'data' in data:
+                self.__tot_wrap_cpu += float(data['data']['WrapCPU'])
+
+    def to_dict(self) -> dict:
+        return {
+            'tot_wrap_cpu': self.__tot_wrap_cpu,
+            'tot_requests': self.__tot_requests,
+            'features': self._features,
+            'class': self.__class,
+            'id': self._id
+        }
+
+    def set_class(self, class_: str):
+        assert class_ == "good" or class_ == "bad", "Class could be 'good' or 'bad'"
+        self.__class = class_
+        return self
+
+    def __setstate__(self, state):
+        """Make object loaded by pickle."""
+        self.__tot_wrap_cpu = state['tot_wrap_cpu']
+        self.__tot_requests = state['tot_requests']
+        self._features = state['features']
+        self.__class = state['class']
+        self._id = state['id']
+        return self
+
+    def load(self, data: dict) -> 'CMSRecordTest0':
+        self.__tot_wrap_cpu = data['tot_wrap_cpu']
+        self.__tot_requests = data['tot_requests']
+        self._features = data['features']
+        self.__class = data['class']
+        self._id = data['id']
+        return self
+
+    @property
+    def record_class(self) -> str:
+        return self.__class
+
+    @property
+    def tot_wrap_cpu(self) -> float:
+        return self.__tot_wrap_cpu
+
+    @property
+    def tot_requests(self) -> int:
+        return self.__tot_requests
+
+    @property
+    def score(self) -> float:
+        return float(self.__tot_wrap_cpu / self.__tot_requests)
+
+    def inc_hits(self):
+        self.__num_next_window_hits += 1
+        return self
+
+    def __add__(self, other: 'CMSRecordTest0'):
+        self.__tot_wrap_cpu += other.tot_wrap_cpu
+        self.__tot_requests += other.tot_requests
+        return self
+
+    def __iadd__(self, other: 'CMSSimpleRecord'):
+        self.__tot_wrap_cpu += other.tot_wrap_cpu
+        self.__tot_requests += other.tot_requests
+        return self
+
+
 class CMSSimpleRecord(FeatureData):
 
     def __init__(self, data):
@@ -190,17 +273,6 @@ class CMSDataPopularity(FeatureData):
                 print(err)
                 pass
 
-    @property
-    def record_id(self) -> str:
-        if self.__id is None:
-            self.__gen_id()
-        return self.__id
-
-    def __gen_id(self):
-        blake2s = hashlib.blake2s()
-        blake2s.update(str(self).encode("utf-8"))
-        self.__id = blake2s.hexdigest()
-
 
 class CMSDataPopularityRaw(FeatureData):
 
@@ -210,7 +282,6 @@ class CMSDataPopularityRaw(FeatureData):
                  filters=[('Type', lambda elm: elm == "analysis")]
                  ):
         super(CMSDataPopularityRaw, self).__init__()
-        self.__id = None
         self.__valid = False
         if data:
             self.__id = data[feature_list[0]]
@@ -254,10 +325,3 @@ class CMSDataPopularityRaw(FeatureData):
             return self._features[name]
         else:
             raise AttributeError("Attribute '{}' not found...".format(name))
-
-    @property
-    def record_id(self) -> str:
-        return self.__id
-
-    def __repr__(self) -> str:
-        return json.dumps(self._features)
