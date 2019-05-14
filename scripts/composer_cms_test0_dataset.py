@@ -25,10 +25,10 @@ if __name__ == "__main__":
         ],
         source=cms_resource_manager,
         spark_conf={
-            'master': "local[8]",
+            'master': "local[6]",
             'config': {
                 'spark.driver.memory': "8g",
-                'spark.driver.maxResultSize': "2g",
+                'spark.driver.maxResultSize': "6g",
                 'spark.executor.memory': "2g"
             }
         }
