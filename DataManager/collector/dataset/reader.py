@@ -4,7 +4,39 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from ..datafile.json import JSONDataFileReader
+from ..datafeatures.extractor import CMSRecordTest0
 from .utils import ReadableDictAsAttribute, SupportTable
+
+
+class CMSDatasetTest0Reader(object):
+
+    def __init__(self, filename):
+        print("[Open dataset: {}]".format(filename))
+        self._collector = JSONDataFileReader(filename)
+        self._score_avg = 0.0
+        print("[Dataset loaded...]")
+
+    def __len__(self):
+        return len(self._collector)
+
+    @property
+    def scores(self):
+        return (CMSRecordTest0().load(elm).score for elm in self._collector)
+
+    @property
+    def score_avg(self):
+        if not self._score_avg:
+            self._score_avg = sum(self.scores) / len(self)
+        return self._score_avg
+
+    def score_show(self):
+        scores = list(self.scores)
+        avg = self.score_avg
+        plt.plot(range(len(scores)), scores, label="scores")
+        plt.plot(range(len(scores)), [
+                 avg for _ in range(len(scores))], label="avg")
+        plt.legend()
+        plt.show()
 
 
 class CMSDatasetV0Reader(object):
@@ -36,7 +68,7 @@ class CMSDatasetV0Reader(object):
         ):
             yield record
 
-    def get_raw(self, index, next_window: bool=False, as_tensor: bool=False):
+    def get_raw(self, index, next_window: bool = False, as_tensor: bool = False):
         assert index >= 0, "Index of raw data cannot be negative"
         if not next_window:
             if index >= self._meta.len_raw_window:
@@ -67,10 +99,10 @@ class CMSDatasetV0Reader(object):
         else:
             return self._collector[index]
 
-    def train_set(self, f_normalized: bool=True, f_one_hot_categories: bool=False, l_one_hot: bool=True):
+    def train_set(self, f_normalized: bool = True, f_one_hot_categories: bool = False, l_one_hot: bool = True):
         return self.features(f_normalized, f_one_hot_categories), self.labels(one_hot=l_one_hot)
 
-    def features(self, normalized: bool=True, one_hot_categories: bool=False):
+    def features(self, normalized: bool = True, one_hot_categories: bool = False):
         features = []
         for record in self.records:
             if self._use_tensor:
@@ -89,7 +121,7 @@ class CMSDatasetV0Reader(object):
                 np.array(record['features'])
         return np.array(features)
 
-    def labels(self, one_hot: bool=True):
+    def labels(self, one_hot: bool = True):
         labels = []
         for score in self.scores:
             res = np.zeros((2,))
