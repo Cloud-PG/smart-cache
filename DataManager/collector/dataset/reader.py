@@ -2,9 +2,10 @@ import json
 
 import matplotlib.pyplot as plt
 import numpy as np
+from tqdm import tqdm
 
-from ..datafile.json import JSONDataFileReader
 from ..datafeatures.extractor import CMSRecordTest0
+from ..datafile.json import JSONDataFileReader
 from .utils import ReadableDictAsAttribute, SupportTable
 
 
@@ -14,10 +15,35 @@ class CMSDatasetTest0Reader(object):
         print("[Open dataset: {}]".format(filename))
         self._collector = JSONDataFileReader(filename)
         self._score_avg = 0.0
+        self._support_table = SupportTable()
         print("[Dataset loaded...]")
 
     def __len__(self):
         return len(self._collector)
+
+    def gen_support_table(self, reduce_categories_to_lvl: int = 0):
+        categories = set()
+        # Insert data
+        for record in tqdm(self._collector, desc="[Gen Support Table]"):
+            for key, value in record['features'].items():
+                if key not in categories:
+                    categories |= set((key, ))
+                self._support_table.insert('features', key, value)
+        # Reduce categories
+        for category in categories:
+            self._support_table.reduce_categories(
+                'features',
+                category,
+                filter_=self._support_table.filters.simple_split,
+                lvls=reduce_categories_to_lvl
+            )
+        # Generate indexes
+        self._support_table.gen_indexes()
+        return self
+
+    @property
+    def support_table(self):
+        return self._support_table
 
     @property
     def scores(self):

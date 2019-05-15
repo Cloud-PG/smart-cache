@@ -11,4 +11,6 @@ if __name__ == "__main__":
     chdir("..")
 
     data_reader = CMSDatasetTest0Reader(sys.argv[1])
-    data_reader.score_show()
+    data_reader.gen_support_table()
+    print(data_reader.support_table)
+    # data_reader.score_show()

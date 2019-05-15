@@ -1,4 +1,5 @@
 
+import json
 from datetime import date, datetime, timedelta
 from multiprocessing import cpu_count
 
@@ -11,7 +12,7 @@ class BaseSpark(object):
 
     """Class that allows objects to interact with Spark context."""
 
-    def __init__(self, spark_conf: dict={}):
+    def __init__(self, spark_conf: dict = {}):
         """Initialize the Spark configuration.
 
         Args:
@@ -61,7 +62,7 @@ class BaseSpark(object):
 
         return self._spark_context
 
-    def update_config(self, spark_conf: dict, overwrite_config: bool=True) -> 'BaseSpark':
+    def update_config(self, spark_conf: dict, overwrite_config: bool = True) -> 'BaseSpark':
         """Update Spark configuration.
 
         Args:
@@ -106,7 +107,7 @@ def date_from_timestamp_ms(timestamp: (int, float)) -> 'datetime':
     return datetime.fromtimestamp(float(timestamp) / 1000.)
 
 
-def gen_window_dates(year: int, month: int, day: int, window_size: int, step: int=1, next_window: bool=False):
+def gen_window_dates(year: int, month: int, day: int, window_size: int, step: int = 1, next_window: bool = False):
     """Generate date interval in the window view requested.
 
     Args:
@@ -155,11 +156,11 @@ class SupportTable(object):
 
     """Class to manage support tables for feature conversions."""
 
-    def __init__(self, support_table: dict=None):
+    def __init__(self, support_table: dict = None):
         self._tables = {}
         self._indexed_tables = {}
         self.filters = ReadableDictAsAttribute({
-            'split_process': self._filter_split_process
+            'simple_split': self._filter_simple_split
         })
         self.__sorted_keys = {}
         self.__sizes = {}
@@ -170,7 +171,7 @@ class SupportTable(object):
                 for key in table.keys():
                     self._tables[table_name][key] = set(table[key].keys())
 
-    def close_conversion(self, table_name: str, data: dict, normalized: bool=True, one_hot_categories: bool=False):
+    def close_conversion(self, table_name: str, data: dict, normalized: bool = True, one_hot_categories: bool = False):
         """Convert data value following the support tables."""
         if table_name not in self.__sorted_keys:
             self.__sorted_keys[table_name] = self.get_sorted_keys(table_name)
@@ -209,12 +210,12 @@ class SupportTable(object):
         return res
 
     @staticmethod
-    def _filter_split_process(process: str):
+    def _filter_simple_split(process: str) -> list:
         tmp = " ".join(process.split("-"))
         tmp = " ".join(tmp.split("_"))
         return tmp.split()
 
-    def reduce_categories(self, table_name: str, target, filter_=None, lvls: int=0):
+    def reduce_categories(self, table_name: str, target, filter_: callable=None, lvls: int = 0) -> 'SupportTable':
         assert filter_ is not None, "You need to specify a filter"
         reduced_set = {}
         categories = list(
@@ -222,7 +223,7 @@ class SupportTable(object):
                 self._tables[table_name][target]
             ) if elm != "__unknown__"
         )
-        for category in tqdm(categories, desc="Get category '{}'".format(target)):
+        for category in tqdm(categories, desc="[Get category '{}']".format(target)):
             cur_category = filter_(category)
             cur_lvl = reduced_set
             for word in cur_category:
@@ -233,7 +234,7 @@ class SupportTable(object):
 
         result = set()
         cur_lvl = reduced_set
-        for key, value in tqdm(cur_lvl.items(), desc="Reduce category '{}'".format(target)):
+        for key, value in tqdm(cur_lvl.items(), desc="[Reduce category '{}']".format(target)):
             cur_output = [key]
             cur_inner = value
             for cur_lvl in range(lvls):
@@ -252,9 +253,10 @@ class SupportTable(object):
         result |= set(("__unknown__", ))
 
         self._tables[table_name][target] = result
+        return self
 
     @property
-    def list(self):
+    def list(self) -> list:
         return list(self._indexed_tables.keys())
 
     def __getattr__(self, name):
@@ -262,7 +264,7 @@ class SupportTable(object):
             return self._indexed_tables[name]
         raise AttributeError(name)
 
-    def insert(self, table_name: str, key, value, with_unknown: bool=True):
+    def insert(self, table_name: str, key, value, with_unknown: bool = True):
         """Insert a value in a table.
 
         Note: all tables are sets, so support tables manage
@@ -308,7 +310,7 @@ class SupportTable(object):
         """Make object interable to check if a specific table exists."""
         return list(self._indexed_tables.keys())[index]
 
-    def gen_indexes(self):
+    def gen_indexes(self) -> 'SupportTable':
         """Generate an unique index for each value in a table.
 
         Note: indexes are integer values sorted in ascending order in base
@@ -328,14 +330,14 @@ class SupportTable(object):
                 )
         return self
 
-    def to_dict(self):
+    def to_dict(self) -> dict:
         """Returns this object as a dictionary.
 
         Note: it exports only the indexed tables.
         """
         return self._indexed_tables
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return json.dumps(self.to_dict(), indent=2)
 
 
