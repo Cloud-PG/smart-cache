@@ -1,6 +1,7 @@
 
 import json
 from datetime import date, datetime, timedelta
+from functools import lru_cache
 from multiprocessing import cpu_count
 
 import findspark
@@ -283,6 +284,7 @@ class SupportTable(object):
         """Returns a sorted list of the sorted key in a table."""
         return sorted(self._indexed_tables[table_name].keys())
 
+    @lru_cache
     def get_value(self, table_name: str, key, value):
         """Convert a value with the respective index.
 
@@ -291,6 +293,7 @@ class SupportTable(object):
         """
         return self._indexed_tables[table_name][key][value]
 
+    @lru_cache
     def get_close_value(self, table_name: str, key, value):
         """Convert a value with the respective index.
 
