@@ -172,7 +172,7 @@ class SupportTable(object):
                 for key in table.keys():
                     self._tables[table_name][key] = set(table[key].keys())
 
-    def close_conversion(self, table_name: str, data: dict, normalized: bool = True, one_hot_categories: bool = False):
+    def close_conversion(self, table_name: str, data: dict, normalized: bool = True, one_hot: bool = False):
         """Convert data value following the support tables."""
         if table_name not in self.__sorted_keys:
             self.__sorted_keys[table_name] = self.get_sorted_keys(table_name)
@@ -192,16 +192,16 @@ class SupportTable(object):
             )
             for key in sorted_keys
         ]
-        assert normalized != one_hot_categories, "You can choose normalized or one hot features..."
+        assert normalized != one_hot, "You can choose normalized or one hot features..."
         if normalized:
             for idx, value in enumerate(res):
                 res[idx] = float(value / sizes[idx])
-        elif one_hot_categories:
+        elif one_hot:
             tmp = []
-            for idx, key in enumerate(sorted_keys):
+            for idx, size in enumerate(sizes):
                 inner_tmp = [
                     0. for _ in range(
-                        sizes[key]
+                        size
                     )
                 ]
                 inner_tmp[res[idx]] = 1.
@@ -216,7 +216,7 @@ class SupportTable(object):
         tmp = " ".join(tmp.split("_"))
         return tmp.split()
 
-    def reduce_categories(self, table_name: str, target, filter_: callable=None, lvls: int = 0) -> 'SupportTable':
+    def reduce_categories(self, table_name: str, target, filter_: callable = None, lvls: int = 0) -> 'SupportTable':
         assert filter_ is not None, "You need to specify a filter"
         reduced_set = {}
         categories = list(
@@ -284,7 +284,10 @@ class SupportTable(object):
         """Returns a sorted list of the sorted key in a table."""
         return sorted(self._indexed_tables[table_name].keys())
 
-    @lru_cache
+    def get_len(self, table_name: str, key):
+        return len(self._indexed_tables[table_name][key])
+
+    @lru_cache(256)
     def get_value(self, table_name: str, key, value):
         """Convert a value with the respective index.
 
@@ -293,7 +296,7 @@ class SupportTable(object):
         """
         return self._indexed_tables[table_name][key][value]
 
-    @lru_cache
+    @lru_cache(256)
     def get_close_value(self, table_name: str, key, value):
         """Convert a value with the respective index.
 

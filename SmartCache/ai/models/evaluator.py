@@ -130,8 +130,9 @@ class LRUCache(SimpleCache):
 
 class Evaluator(object):
 
-    def __init__(self, dataset, model, cache_type: str='simple', ai_cache_type: str='simple', cache_settings: dict={}):
+    def __init__(self, dataset, model, support_table, cache_type: str='simple', ai_cache_type: str='simple', cache_settings: dict={}):
         self._dataset = dataset
+        self._support_table = support_table
         self._model = model
         self.__cache_type = cache_type.lower()
         self.__ai_cache_type = ai_cache_type.lower()
@@ -143,7 +144,7 @@ class Evaluator(object):
         self.__cache_settings = cache_settings
 
     def _compare(
-        self, initial_values: dict={}, next_window: bool=False
+        self, initial_values: dict={}
     ):
         cache = self.__cache_types[self.__cache_type](**self.__cache_settings)
         ai_cache = self.__cache_types[self.__ai_cache_type](
@@ -159,25 +160,52 @@ class Evaluator(object):
                 **self.__cache_settings
             )
 
-        generator = None
-        if not next_window:
-            generator = self._dataset.get_raw_window()
-        else:
-            generator = self._dataset.get_raw_next_window()
-
-        for idx, obj in tqdm(enumerate(generator), desc="Simulation"):
+        for _, obj in tqdm(enumerate(self._dataset), desc="Simulation"):
             FileName = obj['data']['FileName']
-            tensor = obj['tensor']
+            ##
+            # TO DO
+            # Add support table configuration and dataset export
+            # configuration to be loaded to pass also normalized and
+            # one hot arguments
+            tensor = np.array(
+                self._support_table.close_conversion(
+                    'features',
+                    obj['features'],
+                    normalized=False,
+                    one_hot=True
+                )
+            )
 
             cache.update(FileName)
 
             prediction = self._model.predict_single(tensor)
             ai_cache.update(FileName, bool(prediction))
 
+            if _ == 10000:
+                break
+
         return {
             'cache': cache,
             'ai_cache': ai_cache
         }
+    
+    def compare(self, show: bool=False):
+        result = self._compare()
+
+        self._plot_stats(
+            {
+                'cache': result['cache'].size_history,
+                'ai_cache': result['ai_cache'].size_history
+            },
+            {
+                'cache': result['cache'].hit_rate_history,
+                'ai_cache': result['ai_cache'].hit_rate_history
+            }
+        )
+        if show:
+            plt.show()
+        else:
+            plt.savefig("compare_window.png")
 
     def compare_window(self, show: bool=False):
         result = self._compare()

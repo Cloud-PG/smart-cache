@@ -29,6 +29,13 @@ class CMSDatasetTest0Reader(object):
                 if key not in categories:
                     categories |= set((key, ))
                 self._support_table.insert('features', key, value)
+            if 'class' in record:
+                self._support_table.insert(
+                    'classes',
+                    'class',
+                    record['class'],
+                    with_unknown=False
+                )
         # Reduce categories
         for category in categories:
             self._support_table.reduce_categories(
@@ -40,6 +47,45 @@ class CMSDatasetTest0Reader(object):
         # Generate indexes
         self._support_table.gen_indexes()
         return self
+
+    def __translate(self, record, normalized: bool = False, one_hot: bool = True, one_hot_labels: bool = False):
+        features = np.array(
+            self._support_table.close_conversion(
+                'features',
+                record['features'],
+                normalized=normalized,
+                one_hot=one_hot
+            )
+        )
+        class_ = self._support_table.get_close_value(
+            'classes',
+            'class',
+            record['class']
+        )
+        if one_hot_labels:
+            tmp = np.zeros((self._support_table.get_len('classes', 'class'),))
+            tmp[class_] = 1
+            class_ = tmp
+        return features, class_
+
+    def get_num_classes(self):
+        try:
+            return self._support_table.get_len('classes', 'class')
+        except:
+            return 1
+
+    def train_set(self, k_fold: int = 0, normalized: bool = False, one_hot: bool = True, one_hot_labels: bool = False):
+        if k_fold == 0:
+            features_list = []
+            labels = []
+            for record in tqdm(self._collector, desc="[Generate train set]"):
+                features, class_ = self.__translate(
+                    record, normalized, one_hot)
+                features_list.append(features)
+                labels.append(class_)
+            return np.array(features_list), np.array(labels)
+        else:
+            raise Exception("K FOLD HAVE TO BE IMPLEMENTED...")
 
     @property
     def support_table(self):
