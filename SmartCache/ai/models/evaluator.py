@@ -52,7 +52,8 @@ class SimpleCache(object):
         return file_ in self._cache
 
     def update(self, file_, insert: bool=True, insert_index: int=-1):
-        if not self.check(file_):
+        hit = self.check(file_)
+        if not hit:
             self._miss += 1
             if insert:
                 if insert_index == -1:
@@ -65,7 +66,7 @@ class SimpleCache(object):
         self._size_history.append(len(self))
         self._hit_rate_history.append(self.hit_rate)
 
-        return self
+        return hit
 
 
 class FIFOCache(SimpleCache):
@@ -77,7 +78,7 @@ class FIFOCache(SimpleCache):
     def update(self, file_, insert: bool=True):
         if len(self._cache) == self._max_size:
             self._cache.pop(0)
-        super(FIFOCache, self).update(file_, insert)
+        return super(FIFOCache, self).update(file_, insert)
 
 
 class LRUCache(SimpleCache):
@@ -94,7 +95,8 @@ class LRUCache(SimpleCache):
     def update(self, file_, insert: bool=True):
         self._counters += 1
 
-        if self.check(file_):
+        hit = self.check(file_)
+        if hit:
             self._hit += 1
             idx = self._cache.index(file_)
             self._counters[idx] = 0
@@ -114,6 +116,8 @@ class LRUCache(SimpleCache):
 
         self._size_history.append(len(self))
         self._hit_rate_history.append(self.hit_rate)
+
+        return hit
 
     @property
     def state(self):
@@ -142,6 +146,20 @@ class Evaluator(object):
             'fifo': FIFOCache
         }
         self.__cache_settings = cache_settings
+        self._wrap_cpu = {
+            'cache': [],
+            'ai_cache': []
+        }
+
+    def add_wrap_cpu(self, cache: str, amount: float, hit: bool):
+        cur_cache = self._wrap_cpu[cache]
+        if len(cur_cache) == 0:
+            cur_cache.append(amount)
+        else:
+            if hit:
+                cur_cache.append(amount + cur_cache[-1])
+            else:
+                cur_cache.append(cur_cache[-1])
 
     def _compare(
         self, initial_values: dict={}
@@ -162,6 +180,7 @@ class Evaluator(object):
 
         for _, obj in tqdm(enumerate(self._dataset), desc="Simulation"):
             FileName = obj['data']['FileName']
+            WrapCPU = float(obj['data']['WrapCPU'])
             ##
             # TO DO
             # Add support table configuration and dataset export
@@ -176,13 +195,16 @@ class Evaluator(object):
                 )
             )
 
-            cache.update(FileName)
+            hit = cache.update(FileName)
+            self.add_wrap_cpu('cache', WrapCPU, hit)
 
             prediction = self._model.predict_single(tensor)
-            ai_cache.update(FileName, bool(prediction))
+            hit = ai_cache.update(FileName, bool(prediction))
+            self.add_wrap_cpu('ai_cache', WrapCPU, hit)
 
-            if _ == 10000:
-                break
+            # Block for debug
+            # if _ == 5000:
+            #     break
 
         return {
             'cache': cache,
@@ -205,7 +227,7 @@ class Evaluator(object):
         if show:
             plt.show()
         else:
-            plt.savefig("compare_window.png")
+            plt.savefig("cache_compare.png")
 
     def compare_window(self, show: bool=False):
         result = self._compare()
@@ -226,7 +248,7 @@ class Evaluator(object):
             plt.savefig("compare_window.png")
 
     def compare_next_window(self, show: bool=False):
-        result = self._compare(next_window=True)
+        result = self._compare()
 
         self._plot_stats(
             {
@@ -247,8 +269,7 @@ class Evaluator(object):
         result = self._compare()
         separator = len(result['cache'].size_history)
         result = self._compare(
-            initial_values=result,
-            next_window=True
+            initial_values=result
         )
 
         self._plot_stats(
@@ -270,7 +291,7 @@ class Evaluator(object):
     def _plot_stats(self, size, hit_rate, x_separator: int=-1):
         plt.clf()
         # Size
-        axes = plt.subplot(2, 1, 1)
+        axes = plt.subplot(3, 1, 1)
         if x_separator != -1:
             axes.axvline(x=x_separator)
         plt.plot(
@@ -290,7 +311,7 @@ class Evaluator(object):
         axes.set_xlim(0)
         plt.legend()
         # Hit rate
-        axes = plt.subplot(2, 1, 2)
+        axes = plt.subplot(3, 1, 2)
         if x_separator != -1:
             axes.axvline(x=x_separator)
         plt.plot(
@@ -307,6 +328,26 @@ class Evaluator(object):
         )
         axes.set_ylabel("Hit rate %")
         axes.set_ylim(0, 100)
+        axes.set_xlim(0)
+        plt.legend()
+        # WrapCPU
+        axes = plt.subplot(3, 1, 3)
+        if x_separator != -1:
+            axes.axvline(x=x_separator)
+        plt.plot(
+            range(len(self._wrap_cpu['cache'])),
+            self._wrap_cpu['cache'],
+            label="cache [{}] WrapCPU".format(self.__cache_type),
+            alpha=0.9
+        )
+        plt.plot(
+            range(len(self._wrap_cpu['ai_cache'])),
+            self._wrap_cpu['ai_cache'],
+            label="ai_cache [{}] WrapCPU".format(self.__ai_cache_type),
+            alpha=0.9
+        )
+        axes.set_ylabel("WrapCPU")
+        axes.set_ylim(0)
         axes.set_xlim(0)
         plt.xlabel("Num. request accepted")
         plt.legend()

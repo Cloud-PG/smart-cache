@@ -1,11 +1,12 @@
-from SmartCache.ai.models.generator import CMSTest0ModelGenerator
-from SmartCache.ai.models.evaluator import Evaluator
-from DataManager.collector.dataset.reader import CMSDatasetTest0Reader
-from DataManager.collector.api import DataFile
 import sys
 from os import chdir
 
 sys.path.append("..")
+
+from SmartCache.ai.models.generator import CMSTest0ModelGenerator
+from SmartCache.ai.models.evaluator import Evaluator
+from DataManager.collector.dataset.reader import CMSDatasetTest0Reader
+from DataManager.collector.api import DataFile
 
 
 if __name__ == "__main__":
@@ -27,4 +28,4 @@ if __name__ == "__main__":
         test_file, model, dataset.support_table,
         cache_type='lru', ai_cache_type='lru'
     )
-    evaluator.compare(show=True)
+    evaluator.compare(show=False)
