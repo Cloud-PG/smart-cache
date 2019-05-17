@@ -229,7 +229,7 @@ class Evaluator(object):
             }
         )
         if show:
-            plt.show(dpi=dpi)
+            plt.show()
         else:
             plt.savefig("cache_compare.png", dpi=dpi)
 
