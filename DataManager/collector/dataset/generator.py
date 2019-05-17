@@ -11,8 +11,7 @@ from yaspin import yaspin
 
 from ...agent.api import HTTPFS
 from ..api import DataFile
-from ..datafeatures.extractor import (CMSDataPopularity, CMSDataPopularityRaw,
-                                      CMSSimpleRecord)
+from ..datafeatures.extractor import CMSDataPopularity, CMSDataPopularityRaw
 from ..datafile.json import JSONDataFileWriter
 from .stage import Stage
 from .utils import (ReadableDictAsAttribute, SupportTable, flush_queue,
