@@ -22,11 +22,37 @@ class CMSTest0ModelGenerator(object):
                             loss='sparse_categorical_crossentropy',
                             metrics=['accuracy'])
 
-    def train(self, dataset, normalized: bool = False, one_hot: bool = True, one_hot_labels: bool = False):
-        train_data, train_labels = dataset.train_set(normalized=normalized, one_hot=one_hot, one_hot_labels=one_hot_labels)
-        if self._model is None:
-            self.__compile_model(train_data.shape[1], dataset.get_num_classes())
-        self._model.fit(train_data, train_labels, epochs=self._epochs)
+    def train(
+        self, dataset,
+        normalized: bool = False,
+        one_hot: bool = True,
+        one_hot_labels: bool = False,
+        k_fold: int = 0
+    ):
+        for train_data, train_labels, validation_set in dataset.train_set(
+                normalized=normalized,
+                one_hot=one_hot,
+                one_hot_labels=one_hot_labels,
+                k_fold=k_fold
+        ):
+            if self._model is None:
+                self.__compile_model(
+                    train_data.shape[1],
+                    dataset.get_num_classes()
+                )
+            if validation_set is not None:
+                self._model.fit(
+                    train_data,
+                    train_labels,
+                    epochs=self._epochs,
+                    validation_data=validation_set
+                )
+            else:
+                self._model.fit(
+                    train_data,
+                    train_labels,
+                    epochs=self._epochs
+                )
 
     def predict_single(self, data):
         tmp = np.expand_dims(data, 0)

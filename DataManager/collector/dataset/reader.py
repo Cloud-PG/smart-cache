@@ -83,9 +83,39 @@ class CMSDatasetTest0Reader(object):
                     record, normalized, one_hot)
                 features_list.append(features)
                 labels.append(class_)
-            return np.array(features_list), np.array(labels)
+            yield (np.array(features_list), np.array(labels), None)
         else:
-            raise Exception("K FOLD HAVE TO BE IMPLEMENTED...")
+            assert k_fold > 0, "k_fold argument have to be greater than 0"
+
+            chunk_size = len(self._collector) // k_fold
+            chunks_features = []
+            chunks_labels = []
+            tmp_features = []
+            tmp_labels = []
+
+            for record in tqdm(self._collector, desc="[Generate chunks]"):
+                features, class_ = self.__translate(
+                    record, normalized, one_hot)
+                tmp_features.append(features)
+                tmp_labels.append(class_)
+                if len(tmp_features) == chunk_size:
+                    chunks_features.append(tmp_features)
+                    chunks_labels.append(tmp_labels)
+                    tmp_features = []
+                    tmp_labels = []
+            else:
+                if len(tmp_features) > 0:
+                    chunks_features.append(tmp_features)
+                    chunks_labels.append(tmp_labels)
+                    tmp_features = []
+                    tmp_labels = []
+
+            for idx_fold in range(k_fold):
+                yield (
+                    np.array([features for idx, chunk in enumerate(chunks_features) if idx != idx_fold for features in chunk]),
+                    np.array([labels for idx, chunk in enumerate(chunks_labels) if idx != idx_fold for labels in chunk]),
+                    (np.array(chunks_features[idx_fold]), np.array(chunks_labels[idx_fold]))
+                )
 
     @property
     def support_table(self):

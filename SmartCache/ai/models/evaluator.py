@@ -235,7 +235,7 @@ class Evaluator(object):
             'separators': separators
         }
 
-    def compare(self, show: bool = False, dpi: int = 300):
+    def compare(self, show: bool = False, filename: str = "cache_compare.png", dpi: int = 300):
         result = self._compare()
 
         self._plot_stats(
@@ -256,7 +256,7 @@ class Evaluator(object):
         if show:
             plt.show()
         else:
-            plt.savefig("cache_compare.png", dpi=dpi)
+            plt.savefig(filename, dpi=dpi)
 
     def _plot_stats(self, size, hit_rate, wrap_cpu, x_separator: list = []):
         plt.clf()

@@ -18,10 +18,10 @@ if __name__ == "__main__":
     # print(dataset.support_table)
     # dataset.score_show()
 
-    model = CMSTest0ModelGenerator()
-    model.train(dataset)
-    model.save("model_test0")
-    model.load("model_test0")
+    model = CMSTest0ModelGenerator(epochs=10)
+    model.train(dataset, k_fold=10)
+    model.save("model_test0_kfold10_epochs10")
+    model.load("model_test0_kfold10_epochs10")
 
     test_file = DataFile(sys.argv[2])
     evaluator = Evaluator(
@@ -31,4 +31,4 @@ if __name__ == "__main__":
             'max_size': 100000
         }
     )
-    evaluator.compare(show=False)
+    evaluator.compare(show=False, filename="cache_compare_kfold10.png")
