@@ -203,15 +203,15 @@ class Evaluator(object):
             self.add_wrap_cpu('ai_cache', WrapCPU, hit)
 
             # Block for debug
-            # if _ == 5000:
-            #     break
+            if _ == 1000:
+                break
 
         return {
             'cache': cache,
-            'ai_cache': ai_cache
+            'ai_cache': ai_cache,
         }
     
-    def compare(self, show: bool=False):
+    def compare(self, show: bool=False, dpi: int=300):
         result = self._compare()
 
         self._plot_stats(
@@ -222,73 +222,18 @@ class Evaluator(object):
             {
                 'cache': result['cache'].hit_rate_history,
                 'ai_cache': result['ai_cache'].hit_rate_history
+            },
+            {
+                'cache': self._wrap_cpu['cache'],
+                'ai_cache': self._wrap_cpu['ai_cache']
             }
         )
         if show:
-            plt.show()
+            plt.show(dpi=dpi)
         else:
-            plt.savefig("cache_compare.png")
+            plt.savefig("cache_compare.png", dpi=dpi)
 
-    def compare_window(self, show: bool=False):
-        result = self._compare()
-
-        self._plot_stats(
-            {
-                'cache': result['cache'].size_history,
-                'ai_cache': result['ai_cache'].size_history
-            },
-            {
-                'cache': result['cache'].hit_rate_history,
-                'ai_cache': result['ai_cache'].hit_rate_history
-            }
-        )
-        if show:
-            plt.show()
-        else:
-            plt.savefig("compare_window.png")
-
-    def compare_next_window(self, show: bool=False):
-        result = self._compare()
-
-        self._plot_stats(
-            {
-                'cache': result['cache'].size_history,
-                'ai_cache': result['ai_cache'].size_history
-            },
-            {
-                'cache': result['cache'].hit_rate_history,
-                'ai_cache': result['ai_cache'].hit_rate_history
-            }
-        )
-        if show:
-            plt.show()
-        else:
-            plt.savefig("compare_next_window.png")
-
-    def compare_all(self, show: bool=False):
-        result = self._compare()
-        separator = len(result['cache'].size_history)
-        result = self._compare(
-            initial_values=result
-        )
-
-        self._plot_stats(
-            {
-                'cache': result['cache'].size_history,
-                'ai_cache': result['ai_cache'].size_history
-            },
-            {
-                'cache': result['cache'].hit_rate_history,
-                'ai_cache': result['ai_cache'].hit_rate_history
-            },
-            x_separator=separator
-        )
-        if show:
-            plt.show()
-        else:
-            plt.savefig("compare_all.png")
-
-    def _plot_stats(self, size, hit_rate, x_separator: int=-1):
+    def _plot_stats(self, size, hit_rate, wrap_cpu, x_separator: int=-1):
         plt.clf()
         # Size
         axes = plt.subplot(3, 1, 1)
@@ -335,19 +280,20 @@ class Evaluator(object):
         if x_separator != -1:
             axes.axvline(x=x_separator)
         plt.plot(
-            range(len(self._wrap_cpu['cache'])),
-            self._wrap_cpu['cache'],
+            range(len(wrap_cpu['cache'])),
+            wrap_cpu['cache'],
             label="cache [{}] WrapCPU".format(self.__cache_type),
             alpha=0.9
         )
         plt.plot(
-            range(len(self._wrap_cpu['ai_cache'])),
-            self._wrap_cpu['ai_cache'],
+            range(len(wrap_cpu['ai_cache'])),
+            wrap_cpu['ai_cache'],
             label="ai_cache [{}] WrapCPU".format(self.__ai_cache_type),
             alpha=0.9
         )
-        axes.set_ylabel("WrapCPU")
+        axes.set_ylabel("WrapCPU on hit")
         axes.set_ylim(0)
         axes.set_xlim(0)
         plt.xlabel("Num. request accepted")
         plt.legend()
+        plt.tight_layout()
