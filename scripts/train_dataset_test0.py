@@ -26,6 +26,9 @@ if __name__ == "__main__":
     test_file = DataFile(sys.argv[2])
     evaluator = Evaluator(
         test_file, model, dataset.support_table,
-        cache_type='lru', ai_cache_type='lru'
+        cache_type='lru', ai_cache_type='lru',
+        cache_settings={
+            'max_size': 100000
+        }
     )
     evaluator.compare(show=False)
