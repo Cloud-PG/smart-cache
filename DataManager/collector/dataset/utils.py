@@ -172,6 +172,22 @@ class SupportTable(object):
                 for key in table.keys():
                     self._tables[table_name][key] = set(table[key].keys())
 
+    def __getstate__(self):
+        """Makes obj pickable."""
+        return {
+            'tables': self._tables,
+            'indexed_tables': self._indexed_tables,
+            'sorted_keys': self.__sorted_keys,
+            'sizes': self.__sizes,
+        }
+
+    def __setstate__(self, state):
+        """Makes obj pickable."""
+        self._tables = state['tables']
+        self._indexed_tables = state['indexed_tables']
+        self.__sorted_keys = state['sorted_keys']
+        self.__sizes = state['sizes']
+
     def close_conversion(self, table_name: str, data: dict, normalized: bool = True, one_hot: bool = False):
         """Convert data value following the support tables."""
         if table_name not in self.__sorted_keys:
