@@ -138,7 +138,14 @@ class LRUCache(SimpleCache):
 
 class Evaluator(object):
 
-    def __init__(self, dataset, model, support_table, cache_type: str = 'simple', ai_cache_type: str = 'simple', cache_settings: dict = {}):
+    def __init__(
+        self,
+        dataset, model, support_table,
+        cache_type: str = 'simple',
+        ai_cache_type: str = 'simple',
+        cache_settings: dict = {},
+        ai_stride: int = 1000
+    ):
         self._dataset = dataset
         self._support_table = support_table
         self._model = model
@@ -154,6 +161,7 @@ class Evaluator(object):
             'cache': [],
             'ai_cache': []
         }
+        self.__ai_stride = ai_stride
 
     def add_wrap_cpu(self, cache: str, amount: float, hit: bool):
         cur_cache = self._wrap_cpu[cache]
@@ -186,6 +194,10 @@ class Evaluator(object):
 
         last_day = None
         delta_time = timedelta(days=1)
+        lazy_predictions = {
+            'tensors': [],
+            'data': []
+        }
 
         for idx, obj in tqdm(enumerate(self._dataset), desc="Simulation"):
             FileName = obj['data']['FileName']
@@ -221,13 +233,39 @@ class Evaluator(object):
             hit = cache.update(FileName)
             self.add_wrap_cpu('cache', WrapCPU, hit)
 
-            prediction = self._model.predict_single(tensor)
-            hit = ai_cache.update(FileName, bool(prediction))
-            self.add_wrap_cpu('ai_cache', WrapCPU, hit)
+            lazy_predictions['data'].append((FileName, WrapCPU))
+            lazy_predictions['tensors'].append(tensor)
+
+            if len(lazy_predictions['tensors']) == self.__ai_stride:
+                cur_data = lazy_predictions['data']
+                predictions = self._model.predict(
+                    np.array(lazy_predictions['tensors']))
+                for idx, prediction in enumerate(predictions):
+                    FileName, WrapCPU = cur_data[idx]
+                    hit = ai_cache.update(FileName, bool(prediction))
+                    self.add_wrap_cpu('ai_cache', WrapCPU, hit)
+                else:
+                    lazy_predictions = {
+                        'tensors': [],
+                        'data': []
+                    }
+
+            # prediction = self._model.predict_single(tensor)
+            # hit = ai_cache.update(FileName, bool(prediction))
+            # self.add_wrap_cpu('ai_cache', WrapCPU, hit)
 
             # Block for debug
-            # if idx == 10000:
-            #     break
+            if idx == 1000:
+                break
+        else:
+            if len(lazy_predictions['tensors']) > 0:
+                cur_data = lazy_predictions['data']
+                predictions = self._model.predict(
+                    np.array(lazy_predictions['tensors']))
+                for idx, prediction in enumerate(predictions):
+                    FileName, WrapCPU = cur_data[idx]
+                    hit = ai_cache.update(FileName, bool(prediction))
+                    self.add_wrap_cpu('ai_cache', WrapCPU, hit)
 
         return {
             'cache': cache,
@@ -236,7 +274,21 @@ class Evaluator(object):
         }
 
     def compare(self, show: bool = False, filename: str = "cache_compare.png", dpi: int = 300):
+        # import cProfile
+        # import pstats
+        # import io
+        # from pstats import SortKey
+        # pr = cProfile.Profile()
+        # pr.enable()
+
         result = self._compare()
+
+        # pr.disable()
+        # s = io.StringIO()
+        # sortby = SortKey.CUMULATIVE
+        # ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+        # ps.print_stats()
+        # print(s.getvalue())
 
         self._plot_stats(
             {
