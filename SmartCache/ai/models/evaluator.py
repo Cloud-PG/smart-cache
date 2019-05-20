@@ -255,8 +255,8 @@ class Evaluator(object):
             # self.add_wrap_cpu('ai_cache', WrapCPU, hit)
 
             # Block for debug
-            if idx == 1000:
-                break
+            # if idx == 1000:
+            #     break
         else:
             if len(lazy_predictions['tensors']) > 0:
                 cur_data = lazy_predictions['data']

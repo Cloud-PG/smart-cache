@@ -19,9 +19,10 @@ if __name__ == "__main__":
     # dataset.score_show()
 
     model = CMSTest0ModelGenerator(epochs=10)
-    model.train(dataset, k_fold=10)
+    model.train(dataset, k_fold=5)
     model.save("model_test0_kfold10_epochs10")
     model.load("model_test0_kfold10_epochs10")
+    model.load("model_test0")
 
     test_file = DataFile(sys.argv[2])
     evaluator = Evaluator(
