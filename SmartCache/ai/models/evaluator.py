@@ -144,7 +144,7 @@ class Evaluator(object):
         cache_type: str = 'simple',
         ai_cache_type: str = 'simple',
         cache_settings: dict = {},
-        ai_stride: int = 1000
+        ai_stride: int = 100
     ):
         self._dataset = dataset
         self._support_table = support_table
