@@ -20,6 +20,7 @@ pyspark = "*"
 findspark = "*"
 urllib3 = ">=1.24.2"
 fastavro = "*"
+minio = "*"
 
 [requires]
 python_version = "3"
