@@ -153,11 +153,60 @@ class CMSDataPopularity(FeatureData):
 
 class CMSDataPopularityRaw(FeatureData):
 
-    def __init__(self, data: dict = {},
-                 feature_list=['FileName', 'TaskMonitorId',
-                               'WrapCPU', 'StartedRunningTimeStamp'],
-                 filters=[('Type', lambda elm: elm == "analysis")]
-                 ):
+    def __init__(
+        self,
+        data: dict = {},
+        feature_list=[
+            'FileName',
+            'Application',
+            'ApplicationVersion',
+            'BlockId',
+            'BlockName',
+            'ExeCPU',
+            'FileType',
+            'FinishedTimeStamp',
+            'GenericType',
+            'GridName',
+            'InputCollection',
+            'InputSE',
+            'IsParentFile',
+            'JobExecExitCode',
+            'JobExecExitTimeStamp',
+            'JobId',
+            'JobMonitorId',
+            'JobType',
+            'LumiRanges',
+            'NCores',
+            'NEventsPerJob',
+            'NEvProc',
+            'NEvReq',
+            'NewGenericType',
+            'NewType',
+            'NTaskSteps',
+            'ProtocolUsed',
+            'SchedulerJobIdV2',
+            'SchedulerName',
+            'SiteName',
+            'StartedRunningTimeStamp',
+            'StrippedBlocks',
+            'StrippedFiles',
+            'SubmissionTool',
+            'SuccessFlag',
+            'TargetCE',
+            'TaskId',
+            'TaskJobId',
+            'TaskMonitorId',
+            'Type',
+            'UserId',
+            'ValidityFlag',
+            'WNHostName',
+            'WrapCPU',
+            'WrapWC',
+        ],
+        filters=[
+            ('Type', lambda elm: elm == "analysis")
+        ]
+    ):
         super(CMSDataPopularityRaw, self).__init__()
         self.__valid = False
         if data:
