@@ -8,6 +8,7 @@ from ..api import DataFile
 from ..datafeatures.extractor import (CMSDataPopularity, CMSDataPopularityRaw,
                                       CMSRecordTest0)
 from ..datafile.json import JSONDataFileReader, JSONDataFileWriter
+from ..datafile.avro import AvroDataFileReader, AvroDataFileWriter
 from .utils import BaseSpark, flush_queue
 
 
@@ -21,7 +22,7 @@ class Stage(BaseSpark):
     ):
         super(Stage, self).__init__(spark_conf=spark_conf)
         self._name = name
-        self._output = JSONDataFileWriter(descriptor=TemporaryFile())
+        self._output = AvroDataFileWriter(TemporaryFile())
 
     @property
     def name(self):
@@ -92,31 +93,46 @@ class Stage(BaseSpark):
                         new_process.start()
                         spinner.write(
                             "[STAGE][{}][TASK ADDED]".format(self.name))
+                        spinner.write("[STAGE][{}][{} task{} running]".format(
+                            self.name,
+                            len(tasks),
+                            's' if len(tasks) > 1 else ''
+                        ))
                         continue
 
                     while len(tasks) == num_process:
                         for task in tasks:
+                            spinner.text = "[STAGE][{}][{} task{} running]".format(
+                                self.name,
+                                len(tasks),
+                                's' if len(tasks) > 1 else ''
+                            )
                             task.join(5)
                         else:
                             tasks = self.__update_tasks(tasks)
                             self._output.append(flush_queue(output_queue))
-                    spinner.text = "[STAGE][{}][{} task{} running]".format(
-                        self.name,
-                        len(tasks),
-                        's' if len(tasks) > 1 else ''
-                    )
+                            spinner.text = "[STAGE][{}][{} task{} running]".format(
+                                self.name,
+                                len(tasks),
+                                's' if len(tasks) > 1 else ''
+                            )
                 else:
                     while len(tasks) > 0:
-                        spinner.text = "[STAGE][{}][{} task{} running]".format(
-                            self.name,
-                            len(tasks),
-                            's' if len(tasks) > 1 else ''
-                        )
                         for task in tasks:
+                            spinner.text = "[STAGE][{}][{} task{} running]".format(
+                                self.name,
+                                len(tasks),
+                                's' if len(tasks) > 1 else ''
+                            )
                             task.join(5)
                         else:
                             tasks = self.__update_tasks(tasks)
                             self._output.append(flush_queue(output_queue))
+                            spinner.text = "[STAGE][{}][{} task{} running]".format(
+                                self.name,
+                                len(tasks),
+                                's' if len(tasks) > 1 else ''
+                            )
 
         return self._output
 
@@ -171,7 +187,7 @@ class CMSRecordTest0Stage(Stage):
                 tmp[cur_record.record_id] = cur_record
             else:
                 tmp[cur_record.record_id] += cur_record
-        
+
         avg_score = sum(elm.score for elm in tmp.values()) / len(tmp)
 
         for record in tmp.values():
@@ -257,10 +273,10 @@ class CMSRawStage(Stage):
         for record in records:
             new_record = CMSDataPopularityRaw(record)
             if new_record:
-                tmp.append(new_record.dumps())
+                tmp.append(new_record.to_dict())
 
             # Limit processing for test
-            # if len(tmp) >= 1000:
+            # if len(tmp) >= 1:
             #     break
 
         if queue:

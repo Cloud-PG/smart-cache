@@ -5,35 +5,42 @@ from fastavro import writer as fast_writer
 from fastavro import reader as fast_reader
 from fastavro import parse_schema
 
-from .utils import gen_increasing_slice
+from .utils import gen_increasing_slice, AvroObjectTranslator
 
-__all__ = ['AvroDataFileReader']
+__all__ = ['AvroDataFileWriter', 'AvroDataFileReader']
 
 
 class AvroDataFileWriter(object):
 
     """Write an avro file."""
 
-    def __init__(self, filename, data=None, schema=None, codec: str = 'snappy'):
+    def __init__(self, file_, data=None, schema=None, codec: str = 'snappy'):
         """Create an avro archive.
 
         Note:
             Specification: https://avro.apache.org/docs/1.8.2/spec.html
 
         Args:
-            filename (str): the output filename
+            file_ (str, BytesIO, IOBase): the output file_
             data (dict, list(dict)): the data to write
             schema (dict): the avro schema as dictionary
 
         Returns:
             AvroDataFileWriter: the instance of this object
         """
-        self.__filename = filename
-        self.__descriptor = open(self.__filename, 'wb')
+        self.__descriptor = None
+        if isinstance(file_, str):
+            self.__descriptor = open(file_, 'wb')
+        elif isinstance(file_, (BytesIO, IOBase)):
+            self.__descriptor = file_
+        else:
+            raise Exception(
+                "Type '{}' for file_ is not supported...".format(type(file_)))
         self.__schema = None
         self.__codec = codec
+        self.__avro_translator = AvroObjectTranslator()
         if schema:
-            self.__schema = json.dumps(schema).encode("utf-8")
+            self.__schema = parse_schema(schema)
         if data is not None:
             self.append(data)
 
@@ -42,58 +49,10 @@ class AvroDataFileWriter(object):
         self.__descriptor.seek(0, 0)
         return self.__descriptor.read()
 
-    @staticmethod
-    def __get_primitive_type(key, value):
-        if isinstance(value, bool):
-            return "boolean"
-        elif isinstance(value, int):
-            return "int"
-        elif isinstance(value, float):
-            return "float"
-        elif isinstance(value, str):
-            return "string"
-        elif isinstance(value, bytes):
-            return "bytes"
-
-    def __get_schema(self, data):
-        """Generate an avro schema from data automatically.
-
-        NOTE:
-            Only supports basic types and arrays.
-        """
-        schema = {
-            'namespace': "datamanager.avro",
-            'type': "record",
-            'name': "data",
-            'fields': []
-        }
-        for key, value in data.items():
-            prim_type = self.__get_primitive_type(value)
-            if prim_type is not None:
-                schema['fields'].append(
-                    {'name': key, 'type': prim_type}
-                )
-            else:
-                if isinstance(value, list):
-                    prim_type = self.__get_primitive_type(value[0])
-                    schema['fields'].append(
-                        {'name': key, 'type': "array", 'items': prim_type}
-                    )
-                elif isinstance(value, dict):
-                    prim_type = self.__get_primitive_type(value.values()[0])
-                    schema['fields'].append(
-                        {'name': key, 'type': "map", 'items': prim_type}
-                    )
-                else:
-                    raise Exception(
-                        "Type '{}' of field '{}' is not supported...".format(type(value), key))
-
-        return json.dumps(schema).encode("utf-8")
-
     def __write(self, data):
         """Write data into the avro file."""
         if not self.__schema:
-            self.__schema = parse_schema(self.__get_schema(data[0]))
+            self.__schema = parse_schema(self.__avro_translator.deduce_scheme(data[0]))
 
         fast_writer(self.__descriptor, self.__schema, data, self.__codec)
 
@@ -106,7 +65,9 @@ class AvroDataFileWriter(object):
                 self.__write(data)
             else:
                 raise Exception(
-                    "You can pass only a list of 'dict'"
+                    "You can pass only a list of 'dict', not a list of {}".format(
+                        type(data[0])
+                    )
                 )
         else:
             raise Exception(

@@ -1,9 +1,11 @@
 
-import gzip
 import bz2
+import gzip
+import json
 from os import path
 
-__all__ = ['gen_increasing_slice', 'get_or_create_descriptor']
+__all__ = ['gen_increasing_slice',
+           'get_or_create_descriptor', 'AvroObjectTranslator']
 
 
 def gen_increasing_slice(slice):
@@ -60,3 +62,66 @@ def get_or_create_descriptor(filename, open_mode='rb'):
         raise Exception(
             "Stream format '{}' not supported...".format(ext_0))
     return stream
+
+
+class AvroObjectTranslator(object):
+
+    def deduce_scheme(self, obj, lvl: int = 0):
+
+        primitive_type = self.__get_primitive_type(obj)
+        if primitive_type != "complex":
+            return {'type': primitive_type}
+
+        complex_type = self.__get_complex_type(obj)
+        if complex_type == 'array':
+            return {'type': complex_type, 'items': self.__get_primitive_type(obj[0])}
+        elif complex_type == 'map':
+            return {'type': complex_type, 'values': self.__get_primitive_type(list(obj.values())[0])}
+        else:
+            schema = {
+                "namespace": "translator.avro",
+                'type': "record",
+                'name': "data_lvl_{}".format(lvl),
+                'fields': []
+            }
+            for key, value in obj.items():
+                schema['fields'].append(
+                    {"name": key, "type": self.deduce_scheme(value, lvl + 1)}
+                )
+            return schema
+
+    @staticmethod
+    def __get_primitive_type(value):
+        if isinstance(value, bool):
+            return "boolean"
+        elif isinstance(value, int):
+            return "int"
+        elif isinstance(value, float):
+            return "float"
+        elif isinstance(value, str):
+            return "string"
+        elif isinstance(value, bytes):
+            return "bytes"
+        if value is None:
+            return "null"
+        else:
+            return "complex"
+
+    @staticmethod
+    def __get_complex_type(obj):
+        if isinstance(obj, dict):
+            first_type = type(list(obj.values())[0])
+            if all([type(elm) == first_type for elm in obj.values()]):
+                return "map"
+            else:
+                return "record"
+        elif isinstance(obj, list):
+            first_type = type(obj[0])
+            if all([type(elm) == first_type for elm in obj]):
+                return "array"
+            else:
+                return "record"
+        else:
+            raise Exception(
+                "Unknown type '{}' of object {}...".format(type(obj), obj)
+            )
