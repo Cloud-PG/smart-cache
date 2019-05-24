@@ -1,12 +1,9 @@
 import sys
 from os import chdir
 
-sys.path.append("..")
-
 from DataManager.collector.dataset.generator import Pipeline
 from DataManager.collector.dataset.resource import CMSDatasetResourceManager
 from DataManager.collector.dataset.stage import CMSRecordTest0Stage
-
 
 if __name__ == "__main__":
     # needed until the libraries are installed as a package

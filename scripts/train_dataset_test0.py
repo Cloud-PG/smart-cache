@@ -1,13 +1,10 @@
 import sys
 from os import chdir
 
-sys.path.append("..")
-
-from SmartCache.ai.models.generator import CMSTest0ModelGenerator
-from SmartCache.ai.models.evaluator import Evaluator
-from DataManager.collector.dataset.reader import CMSDatasetTest0Reader
 from DataManager.collector.api import DataFile
-
+from DataManager.collector.dataset.reader import CMSDatasetTest0Reader
+from SmartCache.ai.models.evaluator import Evaluator
+from SmartCache.ai.models.generator import CMSTest0ModelGenerator
 
 if __name__ == "__main__":
     # needed until the libraries are installed as a package

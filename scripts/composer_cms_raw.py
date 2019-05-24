@@ -1,12 +1,9 @@
 import sys
 from os import chdir
 
-sys.path.append("..")
-
 from DataManager.collector.dataset.generator import Pipeline
 from DataManager.collector.dataset.resource import CMSResourceManager
 from DataManager.collector.dataset.stage import CMSRawStage
-
 
 if __name__ == "__main__":
     # needed until the libraries are installed as a package
@@ -37,5 +34,5 @@ if __name__ == "__main__":
         }
     )
 
-    composer.run(use_spark=True)
+    composer.run(use_spark=False)
     composer.save()
