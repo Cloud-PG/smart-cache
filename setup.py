@@ -10,6 +10,9 @@ setup(
         'DataManager.agent',
         'DataManager.agent.converter',
         'DataManager.collector',
+        'DataManager.collector.datafeatures',
+        'DataManager.collector.datafile',
+        'DataManager.collector.dataset',
         'SmartCache',
         'SmartCache.ai',
         'SmartCache.ai.models'
