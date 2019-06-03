@@ -5,7 +5,15 @@ setup(
     version='0.0.0',
     author='Mirco Tracolli',
     author_email='mirco.tracolli@pg.infn.it',
-    packages=['DataManager', 'SmartCache'],
+    packages=[
+        'DataManager',
+        'DataManager.agent',
+        'DataManager.agent.converter',
+        'DataManager.collector',
+        'SmartCache',
+        'SmartCache.ai',
+        'SmartCache.ai.models'
+    ],
     scripts=[],
     url='https://github.com/Cloud-PG/smart-cache',
     license='Apache 2.0 License',
