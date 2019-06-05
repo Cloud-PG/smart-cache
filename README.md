@@ -1,5 +1,11 @@
 # smart-cache
 
+## Install
+
+```
+python3 -m pip install git+https://github.com/Cloud-PG/smart-cache.git
+```
+
 ## References
 
 * [Netflix MetaFlow](https://www.youtube.com/watch?v=XV5VGddmP24)
