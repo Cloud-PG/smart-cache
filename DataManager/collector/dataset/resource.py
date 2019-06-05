@@ -24,7 +24,7 @@ class Resource(BaseSpark):
         raise NotImplementedError
 
 
-class CMSDatasetResourceManager(BaseSpark):
+class CMSDatasetResourceManager(Resource):
 
     def __init__(self, dataset_local_path: str, spark_conf: dict = {}, batch_size: int=100000):
         super(CMSDatasetResourceManager, self).__init__(spark_conf=spark_conf)
