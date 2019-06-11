@@ -2,12 +2,15 @@ import subprocess
 import sys
 from datetime import datetime, timedelta
 from os import remove
+from tempfile import NamedTemporaryFile
 
 import urllib3
 from minio import Minio
 from minio.error import (BucketAlreadyExists, BucketAlreadyOwnedByYou,
                          ResponseError)
 
+from DataManager import DataFile, AvroDataFileWriter
+from tqdm import tqdm
 
 def period(start_date, num_days):
     delta = timedelta(days=1)
@@ -50,27 +53,38 @@ def main():
     num_days = int(sys.argv[6])
 
     for year, month, day in period(start_date, num_days):
-        print("[Original Data][{}-{}-{}]".format(year, month, day))
+        print(f"[Original Data][{year}-{month}-{day}]")
         print("[Original Data][Download...]")
-        ret = subprocess.check_call(
-            "hdfs dfs -get /project/awg/cms/jm-data-popularity/avro-snappy/year={}/month={}/day={}/part-m-00000.avro".format(
-                year, month, day),
-            shell=True
-        )
+        try:
+            minioClient.fget_object(
+                f"{sys.argv[4]}", 
+                f'year{year}_month{month}_day{day}.avro',
+                './tmp.avro'
+            )
+        except ResponseError:
+            raise
         print("[Original Data][Downloaded]")
-        if ret == 0:
-            try:
-                print("[Original Data][Copying...]")
-                minioClient.fput_object(
-                    sys.argv[4],  # Bucket name
-                    'year{}_month{}_day{}.avro'.format(year, month, day),
-                    'part-m-00000.avro'
-                )
-            except ResponseError as err:
-                print(err)
+        print("[Original Data][Open File]")
+        collector = DataFile("./tmp.avro")
+        print("[Original Data][Create New File]")
+        tmp_file = NamedTemporaryFile()
+        new_data = AvroDataFileWriter(tmp_file.file)
+        for record in collector:
+            if record['Type'].lower() == "analysis":
+                new_data.append(record)
+        try:
+            print("[Original Data][Copying...]")
+            minioClient.fput_object(
+                f'{sys.argv[4]}-analysis',  # Bucket name
+                f'year{year}_month{month}_day{day}.avro',
+                tmp_file.name
+            )
+        except ResponseError:
+            raise
 
-            remove("part-m-00000.avro")
-            print("[Original Data][DONE][{}-{}-{}]".format(year, month, day))
+        remove("./tmp.avro")
+        tmp_file.close()
+        print(f"[Original Data][DONE][{year}-{month}-{day}]")
 
 
 if __name__ == "__main__":
