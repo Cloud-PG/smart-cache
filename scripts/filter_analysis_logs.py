@@ -69,9 +69,12 @@ def main():
         print("[Original Data][Create New File]")
         tmp_file = NamedTemporaryFile()
         new_data = AvroDataFileWriter(tmp_file.file)
+        pbar = tqdm(desc="Filtering records")
         for record in collector:
             if record['Type'].lower() == "analysis":
                 new_data.append(record)
+            pbar.update(1)
+        pbar.close()
         try:
             print("[Original Data][Copying...]")
             minioClient.fput_object(
