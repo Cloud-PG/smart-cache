@@ -6,6 +6,7 @@ verify_ssl = true
 [dev-packages]
 pylint = "*"
 autopep8 = "*"
+flake8 = "*"
 
 [packages]
 python-snappy = "*"
@@ -21,6 +22,7 @@ findspark = "*"
 urllib3 = ">=1.24.2"
 fastavro = "*"
 minio = "*"
+jupyterlab = "*"
 
 [requires]
 python_version = "3"
