@@ -81,7 +81,7 @@ def main():
             print("[Original Data][Copying...]")
             minioClient.fput_object(
                 f'{sys.argv[4]}-analysis',  # Bucket name
-                f'year{year}_month{month}_day{day}.avro',
+                f'year{year}_month{month}_day{day}.json.gz',
                 "./tmp.json.gz"
             )
         except ResponseError:
