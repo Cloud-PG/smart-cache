@@ -68,7 +68,7 @@ def main():
         collector = DataFile("./tmp.avro")
 
         print("[Original Data][Create New File]")
-        descriptor = get_or_create_descriptor("./tmp.json.gz")
+        descriptor = get_or_create_descriptor("./tmp.json.gz", "wb")
         new_data = JSONDataFileWriter(descriptor=descriptor)
 
         pbar = tqdm(desc="Filtering records")
