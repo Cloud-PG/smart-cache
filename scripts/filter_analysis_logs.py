@@ -2,15 +2,15 @@ import subprocess
 import sys
 from datetime import datetime, timedelta
 from os import remove
-from tempfile import NamedTemporaryFile
 
 import urllib3
 from minio import Minio
 from minio.error import (BucketAlreadyExists, BucketAlreadyOwnedByYou,
                          ResponseError)
-
-from DataManager import DataFile, AvroDataFileWriter
 from tqdm import tqdm
+
+from DataManager import DataFile, JSONDataFileWriter, get_or_create_descriptor
+
 
 def period(start_date, num_days):
     delta = timedelta(days=1)
@@ -57,7 +57,7 @@ def main():
         print("[Original Data][Download...]")
         try:
             minioClient.fget_object(
-                f"{sys.argv[4]}", 
+                f"{sys.argv[4]}",
                 f'year{year}_month{month}_day{day}.avro',
                 './tmp.avro'
             )
@@ -66,9 +66,11 @@ def main():
         print("[Original Data][Downloaded]")
         print("[Original Data][Open File]")
         collector = DataFile("./tmp.avro")
+
         print("[Original Data][Create New File]")
-        tmp_file = NamedTemporaryFile()
-        new_data = AvroDataFileWriter(tmp_file.file)
+        descriptor = get_or_create_descriptor("./tmp.json.gz")
+        new_data = JSONDataFileWriter(descriptor=descriptor)
+
         pbar = tqdm(desc="Filtering records")
         for record in collector:
             if record['Type'].lower() == "analysis":
@@ -80,13 +82,14 @@ def main():
             minioClient.fput_object(
                 f'{sys.argv[4]}-analysis',  # Bucket name
                 f'year{year}_month{month}_day{day}.avro',
-                tmp_file.name
+                "./tmp.json.gz"
             )
         except ResponseError:
             raise
 
         remove("./tmp.avro")
-        tmp_file.close()
+        remove("./tmp.json.gz")
+
         print(f"[Original Data][DONE][{year}-{month}-{day}]")
 
 
