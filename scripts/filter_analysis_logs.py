@@ -75,8 +75,6 @@ def main():
                 if record['Type'].lower() == "analysis":
                     new_data.append(record)
                 pbar.update(1)
-                if pbar.n == 50000:
-                    break
             pbar.close()
 
         try:
