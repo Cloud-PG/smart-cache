@@ -68,15 +68,17 @@ def main():
         collector = DataFile("./tmp.avro")
 
         print("[Original Data][Create New File]")
-        descriptor = get_or_create_descriptor("./tmp.json.gz", "wb")
-        new_data = JSONDataFileWriter(descriptor=descriptor)
+        with JSONDataFileWriter("./tmp.json.gz") as new_data:
 
-        pbar = tqdm(desc="Filtering records")
-        for record in collector:
-            if record['Type'].lower() == "analysis":
-                new_data.append(record)
-            pbar.update(1)
-        pbar.close()
+            pbar = tqdm(desc="Filtering records")
+            for record in collector:
+                if record['Type'].lower() == "analysis":
+                    new_data.append(record)
+                pbar.update(1)
+                if pbar.n == 50000:
+                    break
+            pbar.close()
+
         try:
             print("[Original Data][Copying...]")
             minioClient.fput_object(
