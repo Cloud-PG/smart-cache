@@ -63,7 +63,7 @@ def load_data():
     # print(word_to_id)
     # print(vocabulary)
     # print(" ".join([reversed_dictionary[x] for x in train_data[:10]]))
-    return train_data, valid_data, test_data, vocabulary, reversed_dictionary
+    return train_data, valid_data, test_data, vocabulary if vocabulary < 10000 else 10000, reversed_dictionary
 
 
 class KerasBatchGenerator(object):
@@ -222,13 +222,13 @@ def main():
                         choices=['train', 'test', 'data'])
     parser.add_argument('--data-path', type=str, default=DATA_PATH,
                         help='The full path of the training data')
-    parser.add_argument('--num-epochs', type=int, default=50,
+    parser.add_argument('--num-epochs', type=int, default=42,
                         help='Number of epochs')
     parser.add_argument('--num-steps', type=int, default=16,
                         help='Number of steps')
-    parser.add_argument('--batch-size', type=int, default=32,
+    parser.add_argument('--batch-size', type=int, default=16,
                         help='Batch size')
-    parser.add_argument('--hidden-size', type=int, default=256,
+    parser.add_argument('--hidden-size', type=int, default=512,
                         help='Hidden size')
     parser.add_argument('--gen-data-args', type=str, default="YY-MM-DD window_size",
                         help='gen_data_args')
@@ -268,10 +268,10 @@ def main():
         # model.fit_generator(train_data_generator.generate(), 2000, args.num_epochs,
         #                     validation_data=valid_data_generator.generate(),
         #                     validation_steps=10)
-        model.save(DATA_PATH + "final_model.hdf5")
+        model.save(DATA_PATH + "/final_model.hdf5")
     elif args.run_opt == "test":
         train_data, valid_data, test_data, vocabulary, reversed_dictionary = load_data()
-        model = load_model(DATA_PATH + "/model-50.hdf5")
+        model = load_model(DATA_PATH + "/final_model.hdf5")
         dummy_iters = 40
         example_training_generator = KerasBatchGenerator(
             train_data, args.num_steps, 1, vocabulary,
