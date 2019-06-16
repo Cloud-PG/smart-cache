@@ -131,7 +131,7 @@ def period(start_date, num_days):
 
 
 def convert_record(record, max_depth: int = 7):
-    tmp = "/".join(s.split("/")[:max_depth])
+    tmp = "/".join(record.split("/")[:max_depth])
     for elm in string.punctuation:
         tmp = tmp.replace(elm, " ")
     return tmp + "\n"
