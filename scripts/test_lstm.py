@@ -235,7 +235,7 @@ def main():
                         help='Number of steps')
     parser.add_argument('--batch-size', type=int, default=16,
                         help='Batch size')
-    parser.add_argument('--hidden-size', type=int, default=512,
+    parser.add_argument('--hidden-size', type=int, default=256,
                         help='Hidden size')
     parser.add_argument('--gen-data-args', type=str, default="YY-MM-DD window_size",
                         help='gen_data_args')
