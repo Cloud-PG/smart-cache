@@ -105,7 +105,8 @@ def gen_model(vocabulary, num_steps: int = 16, hidden_size: int = 256, use_dropo
     model = Sequential()
     model.add(Embedding(vocabulary, hidden_size, input_length=num_steps))
     model.add(LSTM(hidden_size, return_sequences=True))
-    model.add(LSTM(hidden_size, return_sequences=True))
+    model.add(LSTM(hidden_size//2, return_sequences=True))
+    model.add(LSTM(hidden_size//4, return_sequences=True))
     if use_dropout:
         model.add(Dropout(0.5))
     model.add(TimeDistributed(Dense(vocabulary)))
@@ -232,13 +233,13 @@ def main():
                         choices=['train', 'test', 'data'])
     parser.add_argument('--data-path', type=str, default=DATA_PATH,
                         help='The full path of the training data')
-    parser.add_argument('--num-epochs', type=int, default=42,
+    parser.add_argument('--num-epochs', type=int, default=10,
                         help='Number of epochs')
     parser.add_argument('--num-steps', type=int, default=16,
                         help='Number of steps')
     parser.add_argument('--batch-size', type=int, default=16,
                         help='Batch size')
-    parser.add_argument('--hidden-size', type=int, default=256,
+    parser.add_argument('--hidden-size', type=int, default=512,
                         help='Hidden size')
     parser.add_argument('--gen-data-args', type=str, default="YY-MM-DD window_size",
                         help='gen_data_args')
