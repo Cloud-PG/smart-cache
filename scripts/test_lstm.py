@@ -135,7 +135,7 @@ def convert_record(record):
         tmp = tmp.replace(elm, " ")
     return tmp + "\n"
 
-def gen_data(start_date, window_size, minio_config, validation_stride: int = 1000):
+def gen_data(start_date, window_size, minio_config, validation_stride: int = 100):
     os.makedirs(DATA_PATH, exist_ok=True)
 
     cert_reqs = "CERT_NONE"
