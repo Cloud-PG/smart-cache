@@ -129,7 +129,7 @@ def period(start_date, num_days):
         cur_date = cur_date+delta
 
 
-def gen_data(start_date, window_size, minio_config, validation_stride: int = 10000):
+def gen_data(start_date, window_size, minio_config, validation_stride: int = 1000):
     os.makedirs(DATA_PATH, exist_ok=True)
 
     cert_reqs = "CERT_NONE"
