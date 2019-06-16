@@ -129,11 +129,13 @@ def period(start_date, num_days):
         yield (cur_date.year, cur_date.month, cur_date.day)
         cur_date = cur_date+delta
 
-def convert_record(record):
-    tmp = record
+
+def convert_record(record, max_depth: int = 7):
+    tmp = "/".join(s.split("/")[:max_depth])
     for elm in string.punctuation:
         tmp = tmp.replace(elm, " ")
     return tmp + "\n"
+
 
 def gen_data(start_date, window_size, minio_config, validation_stride: int = 100):
     os.makedirs(DATA_PATH, exist_ok=True)
@@ -184,7 +186,8 @@ def gen_data(start_date, window_size, minio_config, validation_stride: int = 100
                 print("[Original Data][Open File]")
                 collector = DataFile("./tmp.json.gz")
                 counter = 0
-                print("[Original Data][Write record in train set and validation set...]")
+                print(
+                    "[Original Data][Write record in train set and validation set...]")
                 for record in tqdm(collector, desc="Extracting records"):
                     cur_record = convert_record(record['FileName'])
                     # print(cur_record)
