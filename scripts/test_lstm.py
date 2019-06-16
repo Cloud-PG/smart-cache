@@ -59,10 +59,10 @@ def load_data():
     vocabulary = len(word_to_id)
     reversed_dictionary = dict(zip(word_to_id.values(), word_to_id.keys()))
 
-    print(train_data[:5])
-    print(word_to_id)
-    print(vocabulary)
-    print(" ".join([reversed_dictionary[x] for x in train_data[:10]]))
+    # print(train_data[:5])
+    # print(word_to_id)
+    # print(vocabulary)
+    # print(" ".join([reversed_dictionary[x] for x in train_data[:10]]))
     return train_data, valid_data, test_data, vocabulary, reversed_dictionary
 
 
