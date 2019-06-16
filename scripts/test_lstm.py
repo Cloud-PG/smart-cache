@@ -19,6 +19,7 @@ from tensorflow.keras.utils import to_categorical
 from tqdm import tqdm
 
 from DataManager import DataFile
+import string
 
 DATA_PATH = "./tmp_lstm_data"
 
@@ -63,7 +64,7 @@ def load_data():
     # print(word_to_id)
     # print(vocabulary)
     # print(" ".join([reversed_dictionary[x] for x in train_data[:10]]))
-    return train_data, valid_data, test_data, vocabulary if vocabulary < 10000 else 10000, reversed_dictionary
+    return train_data, valid_data, test_data, vocabulary, reversed_dictionary
 
 
 class KerasBatchGenerator(object):
@@ -128,6 +129,11 @@ def period(start_date, num_days):
         yield (cur_date.year, cur_date.month, cur_date.day)
         cur_date = cur_date+delta
 
+def convert_record(record):
+    tmp = record
+    for elm in string.punctuation:
+        tmp = tmp.replace(elm, " ")
+    return tmp + "\n"
 
 def gen_data(start_date, window_size, minio_config, validation_stride: int = 1000):
     os.makedirs(DATA_PATH, exist_ok=True)
@@ -180,7 +186,8 @@ def gen_data(start_date, window_size, minio_config, validation_stride: int = 100
                 counter = 0
                 print("[Original Data][Write record in train set and validation set...]")
                 for record in tqdm(collector, desc="Extracting records"):
-                    cur_record = record['FileName'].replace("/", " ") + "\n"
+                    cur_record = convert_record(record['FileName'])
+                    print(cur_record)
                     if counter < validation_stride:
                         train_set.write(cur_record)
                         counter += 1
