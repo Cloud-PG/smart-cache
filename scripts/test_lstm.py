@@ -187,7 +187,7 @@ def gen_data(start_date, window_size, minio_config, validation_stride: int = 100
                 print("[Original Data][Write record in train set and validation set...]")
                 for record in tqdm(collector, desc="Extracting records"):
                     cur_record = convert_record(record['FileName'])
-                    print(cur_record)
+                    # print(cur_record)
                     if counter < validation_stride:
                         train_set.write(cur_record)
                         counter += 1
@@ -216,7 +216,7 @@ def gen_data(start_date, window_size, minio_config, validation_stride: int = 100
             collector = DataFile("./tmp.json.gz")
             print("[Original Data][Write record in test set...]")
             for record in tqdm(collector, desc="Extracting records"):
-                cur_record = record['FileName'].replace("/", " ") + "\n"
+                cur_record = convert_record(record['FileName'])
                 if counter < validation_stride:
                     test_set.write(cur_record)
             os.remove("./tmp.json.gz")
