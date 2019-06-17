@@ -254,7 +254,9 @@ def main():
 
     if args.run_opt == "data":
         gen_data(*args.gen_data_args.split(), args.minio_config)
+
     elif args.run_opt == "train":
+        print("Load data...")
         train_data, valid_data, test_data, vocabulary, reversed_dictionary = load_data()
         model = gen_model(vocabulary, args.num_steps, args.hidden_size)
         checkpointer = ModelCheckpoint(
@@ -276,11 +278,10 @@ def main():
             validation_steps=len(valid_data)//(args.batch_size*args.num_steps),
             callbacks=[checkpointer]
         )
-        # model.fit_generator(train_data_generator.generate(), 2000, args.num_epochs,
-        #                     validation_data=valid_data_generator.generate(),
-        #                     validation_steps=10)
         model.save(DATA_PATH + "/final_model.hdf5")
+
     elif args.run_opt == "test":
+        print("Load data...")
         train_data, valid_data, test_data, vocabulary, reversed_dictionary = load_data()
         model = load_model(DATA_PATH + "/final_model.hdf5")
         dummy_iters = 40
@@ -301,8 +302,8 @@ def main():
             true_print_out += reversed_dictionary[train_data[args.num_steps +
                                                              dummy_iters + i]] + " "
             pred_print_out += reversed_dictionary[predict_word] + " "
-        print(true_print_out)
-        print(pred_print_out)
+            print(true_print_out)
+            print(pred_print_out)
         # test data set
         dummy_iters = 40
         example_test_generator = KerasBatchGenerator(test_data, args.num_steps, 1, vocabulary,
@@ -320,8 +321,8 @@ def main():
             true_print_out += reversed_dictionary[test_data[args.num_steps +
                                                             dummy_iters + i]] + " "
             pred_print_out += reversed_dictionary[predict_word] + " "
-        print(true_print_out)
-        print(pred_print_out)
+            print(true_print_out)
+            print(pred_print_out)
 
 
 if __name__ == "__main__":
