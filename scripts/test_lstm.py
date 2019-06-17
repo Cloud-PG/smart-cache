@@ -333,7 +333,7 @@ def main():
             skip_step=args.num_steps
         ).generate()
 
-        model.evaluate(
+        model.evaluate_generator(
             test_data_generator,
             len(test_data)//(args.batch_size*args.num_steps)
         )
