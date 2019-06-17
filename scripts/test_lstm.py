@@ -306,8 +306,10 @@ def main():
             print(pred_print_out)
         # test data set
         dummy_iters = 40
-        example_test_generator = KerasBatchGenerator(test_data, args.num_steps, 1, vocabulary,
-                                                     skip_step=1)
+        example_test_generator = KerasBatchGenerator(
+            test_data, args.num_steps, 1, vocabulary,
+            skip_step=1
+        )
         print("Test data:")
         for i in range(dummy_iters):
             dummy = next(example_test_generator.generate())
@@ -318,11 +320,21 @@ def main():
             data = next(example_test_generator.generate())
             prediction = model.predict(data[0])
             predict_word = np.argmax(prediction[:, args.num_steps - 1, :])
-            true_print_out += reversed_dictionary[test_data[args.num_steps +
-                                                            dummy_iters + i]] + " "
+            true_print_out += reversed_dictionary[
+                test_data[
+                    args.num_steps + dummy_iters + i]
+            ] + " "
             pred_print_out += reversed_dictionary[predict_word] + " "
             print(true_print_out)
             print(pred_print_out)
+
+        test_data_generator = KerasBatchGenerator(
+            test_data, args.num_steps, args.batch_size, vocabulary,
+            skip_step=args.num_steps
+        ).generate()
+
+        model.evaluate(*next(test_data_generator))
+
 
 
 if __name__ == "__main__":
