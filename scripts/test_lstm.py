@@ -256,7 +256,7 @@ def main():
         gen_data(*args.gen_data_args.split(), args.minio_config)
 
     elif args.run_opt == "train":
-        print("Load data...")
+        print("Loading data...")
         train_data, valid_data, test_data, vocabulary, reversed_dictionary = load_data()
         model = gen_model(vocabulary, args.num_steps, args.hidden_size)
         checkpointer = ModelCheckpoint(
@@ -281,7 +281,7 @@ def main():
         model.save(DATA_PATH + "/final_model.hdf5")
 
     elif args.run_opt == "test":
-        print("Load data...")
+        print("Loading data...")
         train_data, valid_data, test_data, vocabulary, reversed_dictionary = load_data()
         model = load_model(DATA_PATH + "/final_model.hdf5")
         dummy_iters = 40
@@ -333,8 +333,10 @@ def main():
             skip_step=args.num_steps
         ).generate()
 
-        model.evaluate(*next(test_data_generator))
-
+        model.evaluate(
+            test_data_generator,
+            len(test_data)//(args.batch_size*args.num_steps)
+        )
 
 
 if __name__ == "__main__":
