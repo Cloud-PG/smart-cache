@@ -335,7 +335,7 @@ def main():
 
         model.evaluate_generator(
             test_data_generator,
-            len(test_data)//(args.batch_size*args.num_steps)
+            100
         )
 
 
