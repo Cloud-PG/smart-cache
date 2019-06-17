@@ -335,7 +335,8 @@ def main():
 
         model.evaluate_generator(
             test_data_generator,
-            100
+            100,
+            verbose=1
         )
 
 
