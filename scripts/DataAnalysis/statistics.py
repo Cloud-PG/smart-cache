@@ -153,9 +153,19 @@ def main():
                     for day in result
                 ]
             )
-            plt.legend()
             plt.tight_layout()
-            plt.savefig(f"{args.stats_file}.dayrequest.png", dpi=args.plot_dpi)
+            plt.savefig(f"{args.stats_file}.dayrequests.png", dpi=args.plot_dpi)
+
+            for day, stats in result.items():
+                plt.clf()
+                plt.hist(
+                    stats['file_requests'].values()
+                    bins=10
+                )
+                plt.ylabel("Num. Requests")
+                plt.xlabel("File")
+                plt.tight_layout()
+                plt.savefig(f"{args.stats_file}.nrequestxfile.png", dpi=args.plot_dpi)
 
         else:
             raise Exception("You have to pass the '--stats-file' argument...")
