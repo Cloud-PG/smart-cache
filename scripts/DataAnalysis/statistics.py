@@ -181,10 +181,9 @@ def main():
                     range(0, max_bin_perc, 5),
                     [f"{val}%" for val in range(0, max_bin_perc, 5)]
                 )
-                max_ticks = max([int(elm) for elm in xticks])
                 plt.xticks(
-                    range(0, max_ticks, 10),
-                    [xticks[idx] for idx in range(0, max_ticks, 10)],
+                    range(1, len(xticks), 10),
+                    [xticks[idx] for idx in range(1, len(xticks), 10)],
                     rotation='vertical'
                 )
                 plt.tight_layout()
