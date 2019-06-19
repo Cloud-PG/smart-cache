@@ -163,22 +163,22 @@ def main():
                 bins = []
                 xtics = []
 
-                for num in range(max_):
+                for num in tqdm(range(max_), desc="Make bins"):
                     counter = elements.count(num)
                     if counter > 0:
                         bins.append(counter)
                         xtics.append(str(num))
 
                 plt.bar(
-                    len(bins),
+                    range(bins),
                     bins
-                )
-                plt.xticks(
-                    len(bins),
-                    xtics
                 )
                 plt.ylabel("Num. File")
                 plt.xlabel("Num. Requests")
+                plt.xticks(
+                    range(xtics),
+                    xtics
+                )
                 plt.tight_layout()
                 plt.savefig(
                     f"{args.stats_file}.nrequestxfile.png", dpi=args.plot_dpi
