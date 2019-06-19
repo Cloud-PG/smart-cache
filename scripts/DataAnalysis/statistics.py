@@ -139,9 +139,18 @@ def main():
                 result = json.load(stats_file)
 
             plt.clf()
-            plt.hist([record['num_requests'] for record in result.values()])
+            plt.bar(
+                range(len(result)),
+                [record['num_requests'] for record in result.values()]
+            )
             plt.ylabel("Num. Requests")
             plt.xlabel("Day")
+            plt.xticks(
+                [
+                    datetime.fromtimestamp(float(day)).strftime("%Y-%m-%d")
+                    for day in result
+                ]
+            )
             plt.legend()
             plt.tight_layout()
             plt.savefig(f"{args.stats_file}.dayrequest.png", dpi=args.plot_dpi)
