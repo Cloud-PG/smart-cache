@@ -161,14 +161,14 @@ def main():
                 elements = list(stats['file_requests'].values())
                 max_ = max(elements)
                 bins = []
-                xtics = []
+                xticks = []
                 num_requests = stats['num_requests']
 
                 for num in tqdm(range(max_), desc="Make bins"):
                     counter = elements.count(num)
                     if counter > 0:
                         bins.append(counter)
-                        xtics.append(str(num))
+                        xticks.append(str(num))
 
                 plt.bar(
                     range(len(bins)),
@@ -181,9 +181,10 @@ def main():
                     range(0, max_bin_perc, 5),
                     [f"{val}%" for val in range(0, max_bin_perc, 5)]
                 )
+                max_ticks = max([int(elm) for elm in xticks])
                 plt.xticks(
-                    range(len(xtics)),
-                    xtics,
+                    range(0, max_ticks, 10),
+                    [xticks[idx] for idx in range(0, max_ticks, 10)],
                     rotation='vertical'
                 )
                 plt.tight_layout()
