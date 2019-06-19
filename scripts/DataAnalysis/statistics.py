@@ -181,7 +181,7 @@ def main():
                 )
                 plt.tight_layout()
                 plt.savefig(
-                    f"{args.stats_file}.nrequestxfile.png", dpi=args.plot_dpi
+                    f"{args.stats_file}.nrequestxfile.{day}.png", dpi=args.plot_dpi
                 )
 
         else:
