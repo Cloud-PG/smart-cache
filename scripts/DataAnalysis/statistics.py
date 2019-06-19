@@ -162,6 +162,7 @@ def main():
                 max_ = max(elements)
                 bins = []
                 xtics = []
+                num_requests = stats['num_requests']
 
                 for num in tqdm(range(max_), desc="Make bins"):
                     counter = elements.count(num)
@@ -171,13 +172,19 @@ def main():
 
                 plt.bar(
                     range(len(bins)),
-                    bins
+                    [float(elm / num_requests) * 100. for elm in bins]
                 )
-                plt.ylabel("Num. File")
+                plt.ylabel("Num. File %")
                 plt.xlabel("Num. Requests")
+                max_bin_perc = int(float(max(bins) / num_requests) * 100) + 10
+                plt.yticks(
+                    range(0, max_bin_perc, 10),
+                    [f"{val}%" for val in range(0, max_bin_perc, 10)]
+                )
                 plt.xticks(
                     range(len(xtics)),
-                    xtics
+                    xtics,
+                    rotation='vertical'
                 )
                 plt.tight_layout()
                 plt.savefig(
