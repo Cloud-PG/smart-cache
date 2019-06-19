@@ -157,7 +157,11 @@ def main():
 
             for day, stats in result.items():
                 plt.clf()
-                plt.hist(
+                # plt.hist(
+                #     stats['file_requests'].values()
+                # )
+                plt.bar(
+                    len(stats['file_requests']),
                     stats['file_requests'].values()
                 )
                 plt.ylabel("Num. File")
