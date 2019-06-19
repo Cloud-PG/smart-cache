@@ -92,15 +92,15 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('command', choices=['extract', 'plot'],
                         help="A string date: \"2019 5 5\"")
-    parser.add_argument(['--stats-file', '-sf'], type=str,
+    parser.add_argument('--stats-file', '-sf', type=str,
                         help="The json file to plot")
-    parser.add_argument(['--start-date', '-s'], type=str,
+    parser.add_argument('--start-date', '-s', type=str,
                         help="A string date: \"2019 5 5\"")
     parser.add_argument('--plot-dpi', type=int, default=300,
                         help="DPI for plot output")
-    parser.add_argument(['--window-size', '-ws'], type=int,
+    parser.add_argument('--window-size', '-ws', type=int,
                         help="Num. of days to extract")
-    parser.add_argument(['--minio-config', '-mcfg'], type=str,
+    parser.add_argument('--minio-config', '-mcfg', type=str,
                         help='MinIO configuration in the form: "url key secret bucket"')
 
     args, _ = parser.parse_known_args()
