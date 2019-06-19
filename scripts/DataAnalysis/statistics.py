@@ -176,10 +176,10 @@ def main():
                 )
                 plt.ylabel("Num. File %")
                 plt.xlabel("Num. Requests")
-                max_bin_perc = int(float(max(bins) / num_requests) * 100) + 10
+                max_bin_perc = int(float(max(bins) / num_requests) * 100) + 5
                 plt.yticks(
-                    range(0, max_bin_perc, 10),
-                    [f"{val}%" for val in range(0, max_bin_perc, 10)]
+                    range(0, max_bin_perc, 5),
+                    [f"{val}%" for val in range(0, max_bin_perc, 5)]
                 )
                 plt.xticks(
                     range(len(xtics)),
