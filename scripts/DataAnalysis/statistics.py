@@ -96,7 +96,7 @@ def main():
                         help="The json file to plot")
     parser.add_argument('--start-date', '-s', type=str,
                         help="A string date: \"2019 5 5\"")
-    parser.add_argument('--plot-dpi', type=int, default=300,
+    parser.add_argument('--plot-dpi', type=int, default=600,
                         help="DPI for plot output")
     parser.add_argument('--window-size', '-ws', type=int,
                         help="Num. of days to extract")
@@ -159,6 +159,7 @@ def main():
                 plt.clf()
                 plt.hist(
                     stats['file_requests'].values(),
+                    bins=100,
                     density=True,
                     stacked=True
                 )
