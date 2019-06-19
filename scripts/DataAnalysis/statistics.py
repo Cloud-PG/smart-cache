@@ -104,7 +104,6 @@ def main():
                         help='MinIO configuration in the form: "url key secret bucket"')
 
     args, _ = parser.parse_known_args()
-    print(args)
 
     stats = Statistics()
 
@@ -159,11 +158,10 @@ def main():
             for day, stats in result.items():
                 plt.clf()
                 plt.hist(
-                    stats['file_requests'].values(),
-                    bins=10
+                    stats['file_requests'].values()
                 )
-                plt.ylabel("Num. Requests")
-                plt.xlabel("File")
+                plt.ylabel("Num. File")
+                plt.xlabel("Num. Requests x File")
                 plt.tight_layout()
                 plt.savefig(f"{args.stats_file}.nrequestxfile.png", dpi=args.plot_dpi)
 
