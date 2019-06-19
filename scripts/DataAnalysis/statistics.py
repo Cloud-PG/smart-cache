@@ -170,13 +170,13 @@ def main():
                         xtics.append(str(num))
 
                 plt.bar(
-                    range(bins),
+                    range(len(bins)),
                     bins
                 )
                 plt.ylabel("Num. File")
                 plt.xlabel("Num. Requests")
                 plt.xticks(
-                    range(xtics),
+                    range(len(xtics)),
                     xtics
                 )
                 plt.tight_layout()
