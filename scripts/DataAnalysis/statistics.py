@@ -159,7 +159,7 @@ def main():
             for day, stats in result.items():
                 plt.clf()
                 plt.hist(
-                    stats['file_requests'].values()
+                    stats['file_requests'].values(),
                     bins=10
                 )
                 plt.ylabel("Num. Requests")
