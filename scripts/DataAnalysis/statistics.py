@@ -138,14 +138,16 @@ def main():
             with open(args.stats_file) as stats_file:
                 result = json.load(stats_file)
 
+            days_list = range(len(result))
             plt.clf()
             plt.bar(
-                range(len(result)),
+                days_list,
                 [record['num_requests'] for record in result.values()]
             )
             plt.ylabel("Num. Requests")
             plt.xlabel("Day")
             plt.xticks(
+                days_list,
                 [
                     datetime.fromtimestamp(float(day)).strftime("%Y-%m-%d")
                     for day in result
