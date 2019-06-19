@@ -157,12 +157,10 @@ def main():
 
             for day, stats in result.items():
                 plt.clf()
-                # plt.hist(
-                #     stats['file_requests'].values()
-                # )
-                plt.bar(
-                    len(stats['file_requests']),
-                    stats['file_requests'].values()
+                plt.hist(
+                    stats['file_requests'].values(),
+                    density=True,
+                    stacked=True
                 )
                 plt.ylabel("Num. File")
                 plt.xlabel("Num. Requests x File")
