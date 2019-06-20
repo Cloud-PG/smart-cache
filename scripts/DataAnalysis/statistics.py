@@ -438,7 +438,7 @@ def main():
                         }
 
                     plt.clf()
-                    plt.subplots(3, 2, figsize=(8, 8))
+                    fig, _ plt.subplots(3, 2, figsize=(8, 8))
 
                     file_request_bins, file_request_ticks = stats.gen_bins(
                         cur_stats['file_requests'])
@@ -494,6 +494,8 @@ def main():
                         dpi=args.plot_dpi,
                         bbox_inches='tight'
                     )
+
+                    plt.close(fig)
 
         plot_global(
             global_stats,
