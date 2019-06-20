@@ -389,13 +389,13 @@ def main():
                     minio_client.fget_object(
                         f"{bucket}",
                         f'year{year}_month{month}_day{day}.json.gz',
-                        './tmp.json.gz'
+                        os.path.join(args.out_folder, "tmp.json.gz")
                     )
                 except ResponseError:
                     raise
                 print("[Original Data][Downloaded]")
                 print("[Original Data][Open File]")
-                collector = DataFile(os.path.join(args.out_folder, "./tmp.json.gz"))
+                collector = DataFile(os.path.join(args.out_folder, "tmp.json.gz"))
 
                 counter = 0
                 for record in tqdm(collector, desc=f"Extract statistics from {year}-{month}-{day}]"):
@@ -404,7 +404,7 @@ def main():
                     if counter == 10000:
                         break
 
-                os.remove(os.path.join(args.out_folder, "./tmp.json.gz"))
+                os.remove(os.path.join(args.out_folder, "tmp.json.gz"))
 
                 with open(
                         os.path.join(
