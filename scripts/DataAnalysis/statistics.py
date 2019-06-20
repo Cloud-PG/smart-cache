@@ -422,7 +422,7 @@ def main():
         files = list(sorted(os.listdir(args.result_folder)))
         global_stats = OrderedDict()
 
-        for file_ in files:
+        for file_ in tqdm(files, desc="Open result"):
             _, tail = os.path.splitext(file_)
 
             if tail == ".json":
