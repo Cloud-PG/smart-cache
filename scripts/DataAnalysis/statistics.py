@@ -259,7 +259,8 @@ def plot_global(stats, result_folder, dpi: int = 300):
         [
             datetime.fromtimestamp(float(day)).strftime("%Y-%m-%d")
             for day in stats
-        ]
+        ],
+        rotation='vertical'
     )
 
     axes = plt.subplot(2, 2, 2)
@@ -299,7 +300,8 @@ def plot_global(stats, result_folder, dpi: int = 300):
         [
             datetime.fromtimestamp(float(day)).strftime("%Y-%m-%d")
             for day in stats
-        ]
+        ],
+        rotation='vertical'
     )
 
     axes = plt.subplot(2, 2, 3)
@@ -347,7 +349,8 @@ def plot_global(stats, result_folder, dpi: int = 300):
         [
             datetime.fromtimestamp(float(day)).strftime("%Y-%m-%d")
             for day in stats
-        ]
+        ],
+        rotation='vertical'
     )
 
     plt.tight_layout()
