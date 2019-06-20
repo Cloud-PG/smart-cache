@@ -397,12 +397,14 @@ def main():
                 print("[Original Data][Open File]")
                 collector = DataFile(os.path.join(args.out_folder, "tmp.json.gz"))
 
-                counter = 0
+                # TEST
+                # counter = 0
                 for record in tqdm(collector, desc=f"Extract statistics from {year}-{month}-{day}]"):
                     stats.add((year, month, day), record)
-                    counter += 1
-                    if counter == 10000:
-                        break
+                    # TEST
+                    # counter += 1
+                    # if counter == 10000:
+                    #     break
 
                 os.remove(os.path.join(args.out_folder, "tmp.json.gz"))
 
