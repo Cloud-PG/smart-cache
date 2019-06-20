@@ -248,7 +248,7 @@ def plot_global(stats, result_folder, dpi: int = 300):
             for record in stats.values()
         ],
         width=bar_width,
-        label="Num. Files"
+        label="Num. Unique Files"
     )
 
     plt.grid()
