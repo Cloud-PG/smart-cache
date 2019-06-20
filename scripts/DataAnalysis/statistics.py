@@ -441,7 +441,7 @@ def main():
                         }
 
                     plt.clf()
-                    fig, _ plt.subplots(3, 2, figsize=(8, 8))
+                    fig, _ = plt.subplots(3, 2, figsize=(8, 8))
 
                     file_request_bins, file_request_ticks = stats.gen_bins(
                         cur_stats['file_requests'])
