@@ -395,7 +395,7 @@ def main():
                     raise
                 print("[Original Data][Downloaded]")
                 print("[Original Data][Open File]")
-                collector = DataFile("./tmp.json.gz")
+                collector = DataFile(os.path.join(args.out_folder, "./tmp.json.gz"))
 
                 counter = 0
                 for record in tqdm(collector, desc=f"Extract statistics from {year}-{month}-{day}]"):
@@ -404,7 +404,7 @@ def main():
                     if counter == 10000:
                         break
 
-                os.remove("./tmp.json.gz")
+                os.remove(os.path.join(args.out_folder, "./tmp.json.gz"))
 
                 with open(
                         os.path.join(
