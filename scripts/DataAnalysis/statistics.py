@@ -495,12 +495,12 @@ def main():
     if args.command == "extract":
         if args.minio_config:
             minio_client, bucket = create_minio_client(args.minio_config)
-            day_list = zip(
+            day_list = list(zip(
                 list(period(args.start_date, args.window_size)),
                 [args.out_folder for _ in range(args.window_size)],
                 [minio_client for _ in range(args.window_size)],
                 [bucket for _ in range(args.window_size)]
-            )
+            ))
 
             pool = Pool()
 
