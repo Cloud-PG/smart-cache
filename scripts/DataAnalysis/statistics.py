@@ -139,7 +139,6 @@ class Statistics(object):
         site_name = record['SiteName']
         task_id = record['TaskMonitorId']
         protocol_type = record['ProtocolUsed']
-        
 
         job_start = record['StartedRunningTimeStamp']
         job_end = record['FinishedTimeStamp']
