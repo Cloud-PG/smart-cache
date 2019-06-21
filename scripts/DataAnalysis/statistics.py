@@ -204,7 +204,8 @@ def plot_bins(
     y_label: str, x_label: str,
     figure_num: int, label_step: int = 1,
     calc_perc: bool = True, ignore_x_step: bool = False,
-    sort: bool = False, extract_first_n: int = 0
+    sort: bool = False, extract_first_n: int = 0,
+    n_cols: int = 2, n_rows: int = 4
 ):
     if sort:
         bins, xticks = sort_bins(bins, xticks)
@@ -212,7 +213,7 @@ def plot_bins(
     if extract_first_n != 0:
         bins, xticks = extract_first(bins, xticks, extract_first_n)
 
-    axes = plt.subplot(3, 2, figure_num)
+    axes = plt.subplot(n_rows, n_cols, figure_num)
     tot = float(sum(bins))
     plt.bar(
         range(len(bins)),
@@ -297,6 +298,10 @@ def merge_and_plot_top10(axes, top10_list: list, tot_num_records: int, xlabel: s
         user_ticks,
         rotation='vertical'
     )
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        plt.tight_layout()
 
 
 def plot_global(stats, result_folder, dpi: int = 300):
@@ -504,13 +509,24 @@ def plot_global(stats, result_folder, dpi: int = 300):
     pbar.close()
 
 
+def extract_tail(bins, xticks, threshold: float = 0.05):
+    start_from = 0
+    for idx in range(len(bins) - 2):
+        value = bins[idx]
+        if float(value - bins[idx+1]) <= float(value * threshold):
+            start_from = idx + 1
+            break
+
+    return bins[start_from:], xticks[start_from:]
+
+
 def plot_day_stats(input_data):
     proc_num, cur_stats = input_data
     pbar = tqdm(
-        total=7, desc=f"Plot day {cur_stats['day']}", position=proc_num)
+        total=9, desc=f"Plot day {cur_stats['day']}", position=proc_num)
 
     plt.clf()
-    fig, _ = plt.subplots(3, 2, figsize=(8, 8))
+    fig, _ = plt.subplots(4, 2, figsize=(8, 8))
 
     file_request_bins, file_request_ticks = Statistics.gen_bins(
         cur_stats['file_requests'])
@@ -528,11 +544,28 @@ def plot_day_stats(input_data):
     )
     pbar.update(1)
 
+    file_request_bins, file_request_ticks = extract_tail(
+        file_request_bins, file_request_ticks)
+    if file_request_bins:
+        plot_bins(
+            file_request_bins, file_request_ticks,
+            "%", "Num. Requests x File [TAIL]", 3, label_step=10, calc_perc=False
+        )
+    pbar.update(1)
+
+    job_length_bins, job_length_ticks = extract_tail(
+        job_length_bins, job_length_ticks)
+    plot_bins(
+        job_length_bins, job_length_ticks,
+        "%", "Job Length (num. Hours) [TAIL]", 4, label_step=10
+    )
+    pbar.update(1)
+
     protocol_bins, protocol_ticks = Statistics.get_bins(
         cur_stats['protocols'], integer_x=False)
     plot_bins(
         protocol_bins, protocol_ticks,
-        "% of Requests", "Protocol Type", 3, label_step=20,
+        "% of Requests", "Protocol Type", 5, label_step=20,
         ignore_x_step=True
     )
     pbar.update(1)
@@ -541,7 +574,7 @@ def plot_day_stats(input_data):
         cur_stats['users'], integer_x=False)
     plot_bins(
         users_bins, users_ticks,
-        "% of Requests", "User ID (top 10)", 4,
+        "% of Requests", "User ID (top 10)", 6,
         label_step=10, ignore_x_step=True,
         sort=True, extract_first_n=10
     )
@@ -551,7 +584,7 @@ def plot_day_stats(input_data):
         cur_stats['sites'], integer_x=False)
     plot_bins(
         sites_bins, sites_ticks,
-        "% of Requests", "Site Name (top 10)", 5,
+        "% of Requests", "Site Name (top 10)", 7,
         label_step=10, ignore_x_step=True,
         sort=True, extract_first_n=10
     )
@@ -561,7 +594,7 @@ def plot_day_stats(input_data):
         cur_stats['tasks'], integer_x=False)
     plot_bins(
         task_bins, task_ticks,
-        "% of Requests", "Task ID (top 10)", 6,
+        "% of Requests", "Task ID (top 10)", 8,
         label_step=10, ignore_x_step=True,
         sort=True, extract_first_n=10
     )
