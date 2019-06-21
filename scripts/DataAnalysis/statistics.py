@@ -203,6 +203,7 @@ def plot_bins(
     bins, xticks,
     y_label: str, x_label: str,
     figure_num: int, label_step: int = 1,
+    y_step: int = -1,
     calc_perc: bool = True, 
     ignore_x_step: bool = False,
     ignore_y_step: bool = False,
@@ -224,20 +225,22 @@ def plot_bins(
     axes.set_ylabel(y_label)
     axes.set_xlabel(x_label)
 
+    if y_step == -1:
+        y_step = label_step
     if not calc_perc:
         max_bin_perc = int(max(bins)) + label_step + 1
         if ignore_y_step:
             y_range = range(0, max_bin_perc)
         else:
-            y_range = range(0, max_bin_perc, label_step)
+            y_range = range(0, max_bin_perc, y_step)
         axes.set_yticks(y_range)
         axes.set_yticklabels([f"{val}%" for val in y_range])
     else:
-        max_bin_perc = int((max(bins) / tot * 100.)) + label_step + 1
+        max_bin_perc = int((max(bins) / tot * 100.)) + y_step + 1
         if ignore_y_step:
             y_range = range(0, max_bin_perc)
         else:
-            y_range = range(0, max_bin_perc, label_step)
+            y_range = range(0, max_bin_perc, y_step)
         axes.set_yticks(y_range)
         axes.set_yticklabels([f"{val}%" for val in y_range])
 
@@ -558,7 +561,7 @@ def plot_day_stats(input_data):
         plot_bins(
             file_request_bins, file_request_ticks,
             "%", "Num. Requests x File [TAIL]", 3, label_step=10, 
-            calc_perc=False, ignore_y_step=True
+            calc_perc=False, y_step=2
         )
     pbar.update(1)
 
@@ -567,7 +570,7 @@ def plot_day_stats(input_data):
     plot_bins(
         job_length_bins, job_length_ticks,
         "%", "Job Length (num. Hours) [TAIL]", 4, label_step=10, 
-        ignore_y_step=True
+        y_step=2
     )
     pbar.update(1)
 
