@@ -549,7 +549,8 @@ def plot_day_stats(input_data):
     if file_request_bins:
         plot_bins(
             file_request_bins, file_request_ticks,
-            "%", "Num. Requests x File [TAIL]", 3, label_step=2, calc_perc=False
+            "%", "Num. Requests x File [TAIL]", 3, label_step=10, 
+            calc_perc=False
         )
     pbar.update(1)
 
@@ -557,7 +558,7 @@ def plot_day_stats(input_data):
         job_length_bins, job_length_ticks)
     plot_bins(
         job_length_bins, job_length_ticks,
-        "%", "Job Length (num. Hours) [TAIL]", 4, label_step=2
+        "%", "Job Length (num. Hours) [TAIL]", 4, label_step=10
     )
     pbar.update(1)
 
