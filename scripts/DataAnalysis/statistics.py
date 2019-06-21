@@ -1,8 +1,10 @@
 import argparse
 import json
 import os
+import warnings
 from collections import OrderedDict
 from datetime import datetime, timedelta
+from multiprocessing import Pool
 
 import matplotlib.pyplot as plt
 import urllib3
@@ -12,7 +14,6 @@ from minio.error import (BucketAlreadyExists, BucketAlreadyOwnedByYou,
 from tqdm import tqdm
 
 from DataManager import DataFile, date_from_timestamp_ms
-from multiprocessing import Pool
 
 
 def create_minio_client(minio_config: str):
@@ -218,10 +219,15 @@ def plot_bins(
         rotation='vertical'
     )
     plt.grid()
-    plt.tight_layout()
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        plt.tight_layout()
 
 
 def plot_global(stats, result_folder, dpi: int = 300):
+    pbar = tqdm(total=4, desc=f"Plot global stats")
+
     days_list = range(len(stats))
     bar_width = 0.1
 
@@ -263,6 +269,7 @@ def plot_global(stats, result_folder, dpi: int = 300):
         ],
         rotation='vertical'
     )
+    pbar.update(1)
 
     axes = plt.subplot(2, 2, 2)
     plt.bar(
@@ -304,6 +311,7 @@ def plot_global(stats, result_folder, dpi: int = 300):
         ],
         rotation='vertical'
     )
+    pbar.update(1)
 
     axes = plt.subplot(2, 2, 3)
     plt.bar(
@@ -353,15 +361,25 @@ def plot_global(stats, result_folder, dpi: int = 300):
         ],
         rotation='vertical'
     )
+    pbar.update(1)
 
-    plt.tight_layout()
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        plt.tight_layout()
+
     plt.savefig(
         os.path.join(result_folder, "global_stats.png"),
         dpi=dpi
     )
+    pbar.update(1)
+    pbar.close()
 
 
-def plot_day_stats(cur_stats):
+def plot_day_stats(input_data):
+    proc_num, cur_stats = input_data
+    pbar = tqdm(
+        total=7, desc=f"Plot day {cur_stats['day']}", position=proc_num)
+
     plt.clf()
     fig, _ = plt.subplots(3, 2, figsize=(8, 8))
 
@@ -371,6 +389,7 @@ def plot_day_stats(cur_stats):
         file_request_bins, file_request_ticks,
         "%", "Num. Requests x File", 1, label_step=10, calc_perc=False
     )
+    pbar.update(1)
 
     job_length_bins, job_length_ticks = Statistics.get_bins(
         cur_stats['job_length'])
@@ -378,6 +397,7 @@ def plot_day_stats(cur_stats):
         job_length_bins, job_length_ticks,
         "%", "Job Length (num. Hours)", 2, label_step=10
     )
+    pbar.update(1)
 
     protocol_bins, protocol_ticks = Statistics.get_bins(
         cur_stats['protocols'], integer_x=False)
@@ -386,6 +406,7 @@ def plot_day_stats(cur_stats):
         "% of Requests", "Protocol Type", 3, label_step=20,
         ignore_x_step=True
     )
+    pbar.update(1)
 
     users_bins, users_ticks = Statistics.get_bins(
         cur_stats['users'], integer_x=False)
@@ -395,6 +416,7 @@ def plot_day_stats(cur_stats):
         label_step=10, ignore_x_step=True,
         sort_bins=True, extract_first_n=10
     )
+    pbar.update(1)
 
     sites_bins, sites_ticks = Statistics.get_bins(
         cur_stats['sites'], integer_x=False)
@@ -404,6 +426,7 @@ def plot_day_stats(cur_stats):
         label_step=10, ignore_x_step=True,
         sort_bins=True, extract_first_n=10
     )
+    pbar.update(1)
 
     task_bins, task_ticks = Statistics.get_bins(
         cur_stats['tasks'], integer_x=False)
@@ -413,6 +436,7 @@ def plot_day_stats(cur_stats):
         label_step=10, ignore_x_step=True,
         sort_bins=True, extract_first_n=10
     )
+    pbar.update(1)
 
     plt.savefig(
         os.path.join(
@@ -422,8 +446,10 @@ def plot_day_stats(cur_stats):
         dpi=cur_stats['plot_dpi'],
         bbox_inches='tight'
     )
+    pbar.update(1)
 
     plt.close(fig)
+    pbar.close()
 
     return f"stats.{cur_stats['day']}.png"
 
@@ -479,7 +505,7 @@ def main():
                         help="A string date: \"2019 5 5\"")
     parser.add_argument('--start-date', '-s', type=str,
                         help="A string date: \"2019 5 5\"")
-    parser.add_argument('--plot-dpi', type=int, default=600,
+    parser.add_argument('--plot-dpi', type=int, default=300,
                         help="DPI for plot output")
     parser.add_argument('--window-size', '-ws', type=int,
                         help="Num. of days to extract")
@@ -489,6 +515,8 @@ def main():
                         help='The folder where the json results are stored.')
     parser.add_argument('--out-folder', type=str, default="./results",
                         help='The output folder.')
+    parser.add_argument('--jobs', '-j', type=int, default=2,
+                        help="Num. of concurrent jobs")
 
     args, _ = parser.parse_known_args()
 
@@ -502,7 +530,7 @@ def main():
                 [args.minio_config for _ in range(args.window_size)]
             ))
 
-            pool = Pool()
+            pool = Pool(processes=args.jobs)
 
             pbar = tqdm(total=len(day_list), desc="Extract stats")
             for day in tqdm(pool.imap(make_stats, day_list)):
@@ -517,11 +545,10 @@ def main():
         files = list(sorted(os.listdir(args.result_folder)))
         global_stats = OrderedDict()
 
-        pool = Pool()
+        pool = Pool(processes=args.jobs)
         day_stats = []
 
-        pbar = tqdm(desc="Open stat results")
-        for file_ in files:
+        for file_ in tqdm(files, desc="Search stat results"):
             _, tail = os.path.splitext(file_)
 
             if tail == ".json":
@@ -545,10 +572,10 @@ def main():
 
                     day_stats.append(cur_stats)
 
-                pbar.update(1)
-        pbar.close()
+        day_stats = list(enumerate(day_stats, 1))
 
-        pbar = tqdm(total=len(day_stats), desc="Create daily plots")
+        pbar = tqdm(total=len(day_stats),
+                    desc="Create daily plots", position=0)
         for day in tqdm(pool.imap(plot_day_stats, day_stats)):
             pbar.write(f"File {day} done!")
             pbar.update(1)
@@ -557,13 +584,13 @@ def main():
         pool.close()
         pool.join()
 
-        print("Plot global stats...")
+        print("[Plot global stats...]")
         plot_global(
             global_stats,
             args.result_folder,
             dpi=args.plot_dpi
         )
-        print("DONE!")
+        print("[DONE!]")
 
     else:
         parser.print_usage()
