@@ -228,7 +228,7 @@ def plot_bins(
     if y_step == -1:
         y_step = label_step
     if not calc_perc:
-        max_bin_perc = int(max(bins)) + label_step + 1
+        max_bin_perc = int(max(bins)) + y_step + 1
         if ignore_y_step:
             y_range = range(0, max_bin_perc)
         else:
