@@ -513,8 +513,8 @@ def main():
                         }
 
                     cur_stats['result_folder'] = args.result_folder
-                    cur_stats['day'] = args.day
                     cur_stats['plot_dpi'] = args.plot_dpi
+                    cur_stats['day'] = day
 
                     day_stats.append(cur_stats)
 
