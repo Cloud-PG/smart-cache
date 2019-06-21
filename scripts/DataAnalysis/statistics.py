@@ -455,7 +455,7 @@ def plot_day_stats(input_data):
 
 
 def make_stats(input_data):
-    date, out_folder, minio_config = input_data
+    num_process, date, out_folder, minio_config = input_data
     year, month, day = date
 
     minio_client, bucket = create_minio_client(minio_config)
@@ -478,7 +478,11 @@ def make_stats(input_data):
 
     # TEST
     # counter = 0
-    for record in tqdm(collector, desc=f"Extract statistics from {year}-{month}-{day}]"):
+    for record in tqdm(
+        collector,
+        desc=f"Extract statistics from {year}-{month}-{day}]",
+        position=num_process
+    ):
         stats.add((year, month, day), record)
         # TEST
         # counter += 1
@@ -525,6 +529,7 @@ def main():
     if args.command == "extract":
         if args.minio_config:
             day_list = list(zip(
+                range(1, args.window_size + 1),
                 list(period(args.start_date, args.window_size)),
                 [args.out_folder for _ in range(args.window_size)],
                 [args.minio_config for _ in range(args.window_size)]
@@ -532,7 +537,7 @@ def main():
 
             pool = Pool(processes=args.jobs)
 
-            pbar = tqdm(total=len(day_list), desc="Extract stats")
+            pbar = tqdm(total=len(day_list), desc="Extract stats", position=0)
             for day in tqdm(pool.imap(make_stats, day_list)):
                 pbar.write(f"File {day} done!")
                 pbar.update(1)
