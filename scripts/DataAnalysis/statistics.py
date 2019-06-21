@@ -80,7 +80,7 @@ class Statistics(object):
         dict_[key] |= set((value, ))
 
     @staticmethod
-    def gen_bins(dict_: dict):
+    def gen_bins(dict_: dict, percentage: bool = True):
         values = dict_.values()
         elements = list(values)
         max_ = max(elements)
@@ -94,7 +94,8 @@ class Statistics(object):
                 bins.append(counter)
                 xticks.append(str(num))
 
-        bins = [float(elm / num_requests) * 100. for elm in bins]
+        if percentage:
+            bins = [float(elm / num_requests) * 100. for elm in bins]
 
         return bins, xticks
 
@@ -158,7 +159,17 @@ class Statistics(object):
         cur_obj['job_success'] = int(record['JobExecExitCode']) == 0
 
     def to_dict(self):
-        return self._data
+        return {
+            'num_requests': self._data['num_requests'],
+            'file_requests': self._data['file_requests'],
+            'users': self._data['users'],
+            'user_files': list(self._data['user_files']),
+            'sites': self._data['sites'],
+            'tasks': self._data['tasks'],
+            'protocols': self._data['protocols'],
+            'job_length': self._data['job_length'],
+            'job_success': self._data['job_success']
+        }
 
 
 def plot_bins(
@@ -242,7 +253,7 @@ def plot_global(stats, result_folder, dpi: int = 300):
     bar_width = 0.1
 
     plt.clf()
-    axes = plt.subplot(2, 2, 1)
+    axes = plt.subplot(3, 2, 1)
     plt.bar(
         [
             day + (idx * bar_width) - bar_width / 2.
@@ -281,7 +292,7 @@ def plot_global(stats, result_folder, dpi: int = 300):
     )
     pbar.update(1)
 
-    axes = plt.subplot(2, 2, 2)
+    axes = plt.subplot(3, 2, 2)
     plt.bar(
         [
             day + (idx * bar_width) - bar_width
@@ -323,7 +334,57 @@ def plot_global(stats, result_folder, dpi: int = 300):
     )
     pbar.update(1)
 
-    axes = plt.subplot(2, 2, 3)
+    axes = plt.subplot(3, 2, 3)
+    plt.bar(
+        [
+            day + (idx * bar_width) - bar_width
+            for idx, day in enumerate(days_list)
+        ],
+        [
+            record['num_requests'] // record['len_users']
+            for record in stats.values()
+        ],
+        width=bar_width,
+        label="Avg Num. Requests x User"
+    )
+    plt.bar(
+        [
+            day + (idx * bar_width)
+            for idx, day in enumerate(days_list)
+        ],
+        [
+            record['num_requests'] // record['len_tasks']
+            for record in stats.values()
+        ],
+        width=bar_width,
+        label="Avg Num. Requests x Task"
+    )
+    plt.bar(
+        [
+            day + (idx * bar_width) + bar_width
+            for idx, day in enumerate(days_list)
+        ],
+        [
+            record['num_requests'] // record['len_sites']
+            for record in stats.values()
+        ],
+        width=bar_width,
+        label="Avg Num. Requests x Site"
+    )
+    plt.grid()
+    plt.legend()
+    plt.xlabel("Day")
+    axes.set_xticks(days_list)
+    axes.set_xticklabels(
+        [
+            datetime.fromtimestamp(float(day)).strftime("%Y-%m-%d")
+            for day in stats
+        ],
+        rotation='vertical'
+    )
+    pbar.update(1)
+
+    axes = plt.subplot(3, 2, 4)
     plt.bar(
         [
             day + (idx * bar_width) - bar_width
@@ -579,6 +640,15 @@ def main():
                             'len_users': len(cur_stats['users']),
                             'len_tasks': len(cur_stats['tasks']),
                             'len_sites': len(cur_stats['sites']),
+                            'top_10_users': Statistics.get_bins(
+                                cur_stats['users'], integer_x=False,
+                            ),
+                            'top_10_sites': Statistics.get_bins(
+                                cur_stats['sites'], integer_x=False,
+                            ),
+                            'top_10_tasks': Statistics.get_bins(
+                                cur_stats['tasks'], integer_x=False,
+                            )
                         }
 
                     cur_stats['result_folder'] = args.result_folder
