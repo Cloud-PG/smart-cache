@@ -494,7 +494,8 @@ def main():
         pool = Pool()
         day_stats = []
 
-        for file_ in tqdm(files, desc="Open stat results"):
+        pbar = tqdm(desc="Open stat results")
+        for file_ in files:
             _, tail = os.path.splitext(file_)
 
             if tail == ".json":
@@ -517,9 +518,15 @@ def main():
                     cur_stats['day'] = day
 
                     day_stats.append(cur_stats)
+                
+                pbar.update(1)
+        pbar.close()
 
+        pbar = tqdm(total=len(day_stats), desc="Create daily plots")
         for day in tqdm(pool.imap(plot_day_stats, day_stats)):
-            tqdm.write(f"File {day} done!")
+            pbar.write(f"File {day} done!")
+            pbar.update(1)
+        pbar.close()
 
         plot_global(
             global_stats,
