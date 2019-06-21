@@ -428,6 +428,49 @@ def plot_day_stats(cur_stats):
     return f"stats.{cur_stats['day']}.png"
 
 
+def make_stats(input_data):
+    date, out_folder, minio_client, bucket = input_data
+    year, month, day = date
+    stats = Statistics()
+
+    print(f"[Original Data][{year}-{month}-{day}]")
+    print("[Original Data][{year}-{month}-{day}][Download...]")
+    try:
+        minio_client.fget_object(
+            f"{bucket}",
+            f'year{year}_month{month}_day{day}.json.gz',
+            os.path.join(out_folder, f"tmp_{year}-{month}-{day}.json.gz")
+        )
+    except ResponseError:
+        raise
+    print("[Original Data][{year}-{month}-{day}][Downloaded]")
+    print("[Original Data][{year}-{month}-{day}][Open File]")
+    collector = DataFile(os.path.join(
+        out_folder, f"tmp_{year}-{month}-{day}.json.gz"))
+
+    # TEST
+    # counter = 0
+    for record in tqdm(collector, desc=f"Extract statistics from {year}-{month}-{day}]"):
+        stats.add((year, month, day), record)
+        # TEST
+        # counter += 1
+        # if counter == 10000:
+        #     break
+
+    os.remove(os.path.join(out_folder, f"tmp_{year}-{month}-{day}.json.gz"))
+
+    with open(
+            os.path.join(
+                out_folder, f"results_{year}-{month:02}-{day:02}.json"
+            ), "w"
+    ) as output_file:
+        json.dump(stats.to_dict(), output_file)
+
+    print("[Original Data][{year}-{month}-{day}][Statistics extracted]")
+
+    return date
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('command', choices=['extract', 'plot'],
@@ -447,45 +490,28 @@ def main():
 
     args, _ = parser.parse_known_args()
 
-    stats = Statistics()
     os.makedirs(args.out_folder, exist_ok=True)
 
     if args.command == "extract":
         if args.minio_config:
             minio_client, bucket = create_minio_client(args.minio_config)
-            for year, month, day in period(args.start_date, args.window_size):
-                print(f"[Original Data][{year}-{month}-{day}]")
-                print("[Original Data][Download...]")
-                try:
-                    minio_client.fget_object(
-                        f"{bucket}",
-                        f'year{year}_month{month}_day{day}.json.gz',
-                        os.path.join(args.out_folder, "tmp.json.gz")
-                    )
-                except ResponseError:
-                    raise
-                print("[Original Data][Downloaded]")
-                print("[Original Data][Open File]")
-                collector = DataFile(os.path.join(
-                    args.out_folder, "tmp.json.gz"))
+            day_list = zip(
+                list(period(args.start_date, args.window_size)),
+                [args.out_folder for _ in range(args.window_size)],
+                [minio_client for _ in range(args.window_size)],
+                [bucket for _ in range(args.window_size)]
+            )
 
-                # TEST
-                # counter = 0
-                for record in tqdm(collector, desc=f"Extract statistics from {year}-{month}-{day}]"):
-                    stats.add((year, month, day), record)
-                    # TEST
-                    # counter += 1
-                    # if counter == 10000:
-                    #     break
+            pool = Pool()
 
-                os.remove(os.path.join(args.out_folder, "tmp.json.gz"))
+            pbar = tqdm(total=len(day_list), desc="Extract stats")
+            for day in tqdm(pool.imap(plot_day_stats, day_list)):
+                pbar.write(f"File {day} done!")
+                pbar.update(1)
+            pbar.close()
 
-                with open(
-                        os.path.join(
-                            args.out_folder, f"results_{year}-{month:02}-{day:02}.json"
-                        ), "w"
-                ) as output_file:
-                    json.dump(stats.to_dict(), output_file)
+            pool.close()
+            pool.join()
 
     elif args.command == 'plot':
         files = list(sorted(os.listdir(args.result_folder)))
@@ -518,7 +544,7 @@ def main():
                     cur_stats['day'] = day
 
                     day_stats.append(cur_stats)
-                
+
                 pbar.update(1)
         pbar.close()
 
@@ -527,6 +553,9 @@ def main():
             pbar.write(f"File {day} done!")
             pbar.update(1)
         pbar.close()
+
+        pool.close()
+        pool.join()
 
         print("Plot global stats...")
         plot_global(
