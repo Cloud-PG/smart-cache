@@ -12,6 +12,7 @@ from minio.error import (BucketAlreadyExists, BucketAlreadyOwnedByYou,
 from tqdm import tqdm
 
 from DataManager import DataFile, date_from_timestamp_ms
+from multiprocessing import Pool
 
 
 def create_minio_client(minio_config: str):
@@ -80,7 +81,7 @@ class Statistics(object):
         xticks = []
         num_requests = sum(values)
 
-        for num in tqdm(range(max_), desc="Make bins"):
+        for num in range(max_):
             counter = elements.count(num)
             if counter > 0:
                 bins.append(counter)
@@ -360,6 +361,73 @@ def plot_global(stats, result_folder, dpi: int = 300):
     )
 
 
+def plot_day_stats(cur_stats):
+    plt.clf()
+    fig, _ = plt.subplots(3, 2, figsize=(8, 8))
+
+    file_request_bins, file_request_ticks = Statistics.gen_bins(
+        cur_stats['file_requests'])
+    plot_bins(
+        file_request_bins, file_request_ticks,
+        "%", "Num. Requests x File", 1, label_step=10, calc_perc=False
+    )
+
+    job_length_bins, job_length_ticks = Statistics.get_bins(
+        cur_stats['job_length'])
+    plot_bins(
+        job_length_bins, job_length_ticks,
+        "%", "Job Length (num. Hours)", 2, label_step=10
+    )
+
+    protocol_bins, protocol_ticks = Statistics.get_bins(
+        cur_stats['protocols'], integer_x=False)
+    plot_bins(
+        protocol_bins, protocol_ticks,
+        "% of Requests", "Protocol Type", 3, label_step=20,
+        ignore_x_step=True
+    )
+
+    users_bins, users_ticks = Statistics.get_bins(
+        cur_stats['users'], integer_x=False)
+    plot_bins(
+        users_bins, users_ticks,
+        "% of Requests", "User ID (top 10)", 4,
+        label_step=10, ignore_x_step=True,
+        sort_bins=True, extract_first_n=10
+    )
+
+    sites_bins, sites_ticks = Statistics.get_bins(
+        cur_stats['sites'], integer_x=False)
+    plot_bins(
+        sites_bins, sites_ticks,
+        "% of Requests", "Site Name (top 10)", 5,
+        label_step=10, ignore_x_step=True,
+        sort_bins=True, extract_first_n=10
+    )
+
+    task_bins, task_ticks = Statistics.get_bins(
+        cur_stats['tasks'], integer_x=False)
+    plot_bins(
+        task_bins, task_ticks,
+        "% of Requests", "Task ID (top 10)", 6,
+        label_step=10, ignore_x_step=True,
+        sort_bins=True, extract_first_n=10
+    )
+
+    plt.savefig(
+        os.path.join(
+            cur_stats['result_folder'],
+            f"stats.{cur_stats['day']}.png"
+        ),
+        dpi=cur_stats['plot_dpi'],
+        bbox_inches='tight'
+    )
+
+    plt.close(fig)
+
+    return f"stats.{cur_stats['day']}.png"
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('command', choices=['extract', 'plot'],
@@ -398,7 +466,8 @@ def main():
                     raise
                 print("[Original Data][Downloaded]")
                 print("[Original Data][Open File]")
-                collector = DataFile(os.path.join(args.out_folder, "tmp.json.gz"))
+                collector = DataFile(os.path.join(
+                    args.out_folder, "tmp.json.gz"))
 
                 # TEST
                 # counter = 0
@@ -422,7 +491,10 @@ def main():
         files = list(sorted(os.listdir(args.result_folder)))
         global_stats = OrderedDict()
 
-        for file_ in tqdm(files, desc="Open result"):
+        pool = Pool()
+        day_stats = []
+
+        for file_ in tqdm(files, desc="Open stat results"):
             _, tail = os.path.splitext(file_)
 
             if tail == ".json":
@@ -440,65 +512,14 @@ def main():
                             'len_sites': len(cur_stats['sites']),
                         }
 
-                    plt.clf()
-                    fig, _ = plt.subplots(3, 2, figsize=(8, 8))
+                    cur_stats['result_folder'] = args.result_folder
+                    cur_stats['day'] = args.day
+                    cur_stats['plot_dpi'] = args.plot_dpi
 
-                    file_request_bins, file_request_ticks = stats.gen_bins(
-                        cur_stats['file_requests'])
-                    plot_bins(
-                        file_request_bins, file_request_ticks,
-                        "%", "Num. Requests x File", 1, label_step=10, calc_perc=False
-                    )
+                    day_stats.append(cur_stats)
 
-                    job_length_bins, job_length_ticks = stats.get_bins(
-                        cur_stats['job_length'])
-                    plot_bins(
-                        job_length_bins, job_length_ticks,
-                        "%", "Job Length (num. Hours)", 2, label_step=10
-                    )
-
-                    protocol_bins, protocol_ticks = stats.get_bins(
-                        cur_stats['protocols'], integer_x=False)
-                    plot_bins(
-                        protocol_bins, protocol_ticks,
-                        "% of Requests", "Protocol Type", 3, label_step=20,
-                        ignore_x_step=True
-                    )
-
-                    users_bins, users_ticks = stats.get_bins(
-                        cur_stats['users'], integer_x=False)
-                    plot_bins(
-                        users_bins, users_ticks,
-                        "% of Requests", "User ID (top 10)", 4,
-                        label_step=10, ignore_x_step=True,
-                        sort_bins=True, extract_first_n=10
-                    )
-
-                    sites_bins, sites_ticks = stats.get_bins(
-                        cur_stats['sites'], integer_x=False)
-                    plot_bins(
-                        sites_bins, sites_ticks,
-                        "% of Requests", "Site Name (top 10)", 5,
-                        label_step=10, ignore_x_step=True,
-                        sort_bins=True, extract_first_n=10
-                    )
-
-                    task_bins, task_ticks = stats.get_bins(
-                        cur_stats['tasks'], integer_x=False)
-                    plot_bins(
-                        task_bins, task_ticks,
-                        "% of Requests", "Task ID (top 10)", 6,
-                        label_step=10, ignore_x_step=True,
-                        sort_bins=True, extract_first_n=10
-                    )
-
-                    plt.savefig(
-                        os.path.join(args.result_folder, f"stats.{day}.png"),
-                        dpi=args.plot_dpi,
-                        bbox_inches='tight'
-                    )
-
-                    plt.close(fig)
+        for day in tqdm(pool.imap(plot_day_stats, day_stats)):
+            tqdm.write(f"File {day} done!")
 
         plot_global(
             global_stats,
