@@ -570,7 +570,7 @@ def plot_day_stats(input_data):
     plot_bins(
         job_length_bins, job_length_ticks,
         "%", "Job Length (num. Hours) [TAIL]", 4, label_step=10, 
-        y_step=2
+        y_step=5
     )
     pbar.update(1)
 
