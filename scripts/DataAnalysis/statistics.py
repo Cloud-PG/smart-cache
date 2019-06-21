@@ -431,7 +431,7 @@ def plot_day_stats(cur_stats):
 def make_stats(input_data):
     date, out_folder, minio_config = input_data
     year, month, day = date
-    
+
     minio_client, bucket = create_minio_client(minio_config)
     stats = Statistics()
 
@@ -505,7 +505,7 @@ def main():
             pool = Pool()
 
             pbar = tqdm(total=len(day_list), desc="Extract stats")
-            for day in tqdm(pool.imap(plot_day_stats, day_list)):
+            for day in tqdm(pool.imap(make_stats, day_list)):
                 pbar.write(f"File {day} done!")
                 pbar.update(1)
             pbar.close()
