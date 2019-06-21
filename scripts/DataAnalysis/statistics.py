@@ -102,7 +102,7 @@ class Statistics(object):
         return bins, xticks
 
     @staticmethod
-    def get_bins(dict_: dict, integer_x: bool = True):
+    def get_bins(dict_: dict, integer_x: bool = True, to_dict: bool = False):
         if integer_x:
             xticks = [str(elm) for elm in sorted([int(elm) for elm in dict_])]
         else:
@@ -110,7 +110,10 @@ class Statistics(object):
 
         bins = [dict_[key] for key in xticks]
 
-        return bins, xticks
+        if to_dict:
+            return OrderedDict(zip(xticks, bins))
+        else:
+            return bins, xticks
 
     def make_buckets(self, date: tuple):
         if self.__last_date != date:
@@ -166,42 +169,48 @@ class Statistics(object):
         return self._data
 
 
+def sort_bins(bins, xticks):
+    new_bins = []
+    new_xticks = []
+    for idx, value in sorted(enumerate(bins), key=lambda elm: elm[1], reverse=True):
+        new_bins.append(value)
+        new_xticks.append(xticks[idx])
+
+    return new_bins, new_xticks
+
+
+def extract_first(bins, xticks, num):
+    new_bins = []
+    new_xticks = []
+    num_last_bucket = 0
+    sum_val_last_bucket = 0
+    for idx, value in enumerate(bins):
+        if len(new_bins) < num - 1:
+            new_bins.append(value)
+            new_xticks.append(xticks[idx])
+        else:
+            num_last_bucket += 1
+            sum_val_last_bucket += value
+
+    if num_last_bucket != 0 and len(new_bins) == num - 1:
+        new_bins.append(sum_val_last_bucket / num_last_bucket)
+        new_xticks.append("Others AVG.")
+
+    return new_bins, new_xticks
+
+
 def plot_bins(
     bins, xticks,
     y_label: str, x_label: str,
     figure_num: int, label_step: int = 1,
     calc_perc: bool = True, ignore_x_step: bool = False,
-    sort_bins: bool = False, extract_first_n: int = 0
+    sort: bool = False, extract_first_n: int = 0
 ):
-    if sort_bins:
-        new_bins = []
-        new_xticks = []
-        for idx, value in sorted(enumerate(bins), key=lambda elm: elm[1], reverse=True):
-            new_bins.append(value)
-            new_xticks.append(xticks[idx])
-
-        bins = new_bins
-        xticks = new_xticks
+    if sort:
+        bins, xticks = sort_bins(bins, xticks)
 
     if extract_first_n != 0:
-        new_bins = []
-        new_xticks = []
-        num_last_bucket = 0
-        sum_val_last_bucket = 0
-        for idx, value in enumerate(bins):
-            if len(new_bins) < extract_first_n - 1:
-                new_bins.append(value)
-                new_xticks.append(xticks[idx])
-            else:
-                num_last_bucket += 1
-                sum_val_last_bucket += value
-
-        if len(new_bins) == extract_first_n - 1:
-            new_bins.append(sum_val_last_bucket / num_last_bucket)
-            new_xticks.append("Others AVG.")
-
-        bins = new_bins
-        xticks = new_xticks
+        bins, xticks = extract_first(bins, xticks, extract_first_n)
 
     axes = plt.subplot(3, 2, figure_num)
     tot = float(sum(bins))
@@ -252,6 +261,44 @@ def merge_stats(dict_list: list):
     return tmp
 
 
+def merge_and_plot_top10(axes, top10_list: list, tot_num_records: int, xlabel: str):
+    top10 = merge_stats(top10_list)
+    top10 = OrderedDict(
+        (key, value)
+        for key, value in sorted(
+            top10.items(), key=lambda elm: sum(elm[1]),
+            reverse=True
+        )
+    )
+    user_ticks = list(top10.keys())
+    bottom_values = [0 for _ in range(len(top10))]
+    for cur_index in range(max([len(elm) for elm in top10.values()])):
+        values = []
+        for value in top10.values():
+            try:
+                values.append(
+                    float(value[cur_index] / tot_num_records)*100.)
+            except IndexError:
+                values.append(0)
+        plt.bar(
+            range(len(top10)),
+            values,
+            bottom=bottom_values
+        )
+        for idx, value in enumerate(values):
+            bottom_values[idx] += value
+
+    plt.grid()
+    plt.legend()
+    plt.ylabel("%")
+    plt.xlabel(xlabel)
+    axes.set_xticks(range(len(user_ticks)))
+    axes.set_xticklabels(
+        user_ticks,
+        rotation='vertical'
+    )
+
+
 def plot_global(stats, result_folder, dpi: int = 300):
     pbar = tqdm(total=4, desc=f"Plot global stats")
 
@@ -259,6 +306,8 @@ def plot_global(stats, result_folder, dpi: int = 300):
     bar_width = 0.1
 
     plt.clf()
+    fig, _ = plt.subplots(3, 2, figsize=(8, 8))
+
     axes = plt.subplot(3, 2, 1)
     plt.bar(
         [
@@ -296,7 +345,11 @@ def plot_global(stats, result_folder, dpi: int = 300):
         ],
         rotation='vertical'
     )
+
     pbar.update(1)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        plt.tight_layout()
 
     axes = plt.subplot(3, 2, 2)
     plt.bar(
@@ -338,7 +391,11 @@ def plot_global(stats, result_folder, dpi: int = 300):
         ],
         rotation='vertical'
     )
+
     pbar.update(1)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        plt.tight_layout()
 
     axes = plt.subplot(3, 2, 3)
     plt.bar(
@@ -388,33 +445,51 @@ def plot_global(stats, result_folder, dpi: int = 300):
         ],
         rotation='vertical'
     )
+
     pbar.update(1)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        plt.tight_layout()
 
-    num_global_requests = sum([record['num_requests']
-                               for record in stats.values()])
-    axes = plt.subplot(3, 2, 4)
-    all_top_users = merge_stats([record['top_10_users']
-                                 for record in stats.values()])
-    user_ticks = []
-    for index, (user, values) in enumerate(all_top_users.items()):
-        user_ticks.append(user)
-        for num_requests in values:
-            plt.bar(
-                index,
-                int((num_requests / num_global_requests)*100.),
-                width=bar_width,
-            )
-
-    plt.grid()
-    plt.legend()
-    plt.xlabel("User ID")
-    axes.set_xticks(range(len(user_ticks)))
-    axes.set_xticklabels(
-        user_ticks,
-        rotation='vertical'
+    num_global_requests = sum(
+        [record['num_requests']for record in stats.values()]
     )
-    pbar.update(1)
 
+    axes = plt.subplot(3, 2, 4)
+    merge_and_plot_top10(
+        axes,
+        [record['top_10_users']for record in stats.values()],
+        num_global_requests,
+        "User ID"
+    )
+
+    pbar.update(1)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        plt.tight_layout()
+
+    axes = plt.subplot(3, 2, 5)
+    merge_and_plot_top10(
+        axes,
+        [record['top_10_sites']for record in stats.values()],
+        num_global_requests,
+        "Site Name"
+    )
+
+    pbar.update(1)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        plt.tight_layout()
+
+    axes = plt.subplot(3, 2, 6)
+    merge_and_plot_top10(
+        axes,
+        [record['top_10_tasks']for record in stats.values()],
+        num_global_requests,
+        "Task ID"
+    )
+
+    pbar.update(1)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         plt.tight_layout()
@@ -423,6 +498,8 @@ def plot_global(stats, result_folder, dpi: int = 300):
         os.path.join(result_folder, "global_stats.png"),
         dpi=dpi
     )
+    plt.close(fig)
+
     pbar.update(1)
     pbar.close()
 
@@ -466,7 +543,7 @@ def plot_day_stats(input_data):
         users_bins, users_ticks,
         "% of Requests", "User ID (top 10)", 4,
         label_step=10, ignore_x_step=True,
-        sort_bins=True, extract_first_n=10
+        sort=True, extract_first_n=10
     )
     pbar.update(1)
 
@@ -476,7 +553,7 @@ def plot_day_stats(input_data):
         sites_bins, sites_ticks,
         "% of Requests", "Site Name (top 10)", 5,
         label_step=10, ignore_x_step=True,
-        sort_bins=True, extract_first_n=10
+        sort=True, extract_first_n=10
     )
     pbar.update(1)
 
@@ -486,7 +563,7 @@ def plot_day_stats(input_data):
         task_bins, task_ticks,
         "% of Requests", "Task ID (top 10)", 6,
         label_step=10, ignore_x_step=True,
-        sort_bins=True, extract_first_n=10
+        sort=True, extract_first_n=10
     )
     pbar.update(1)
 
@@ -548,7 +625,7 @@ def make_stats(input_data):
                 out_folder, f"results_{year}-{month:02}-{day:02}.json"
             ), "w"
     ) as output_file:
-        json.dump(stats.to_dict(), output_file)
+        json.dump(stats.to_dict(), output_file, indent=2)
 
     print("[Original Data][{year}-{month}-{day}][Statistics extracted]")
 
@@ -615,21 +692,42 @@ def main():
                 for day in result:
                     cur_stats = result[day]
                     if day not in global_stats:
+                        # Get stats for top 10
+                        top_10_users = Statistics.get_bins(
+                            cur_stats['users'], integer_x=False
+                        )
+                        top_10_sites = Statistics.get_bins(
+                            cur_stats['sites'], integer_x=False
+                        )
+                        top_10_tasks = Statistics.get_bins(
+                            cur_stats['tasks'], integer_x=False
+                        )
+
+                        # Extract Top 10
+                        top_10_users = extract_first(
+                            *sort_bins(*top_10_users), 11)
+                        top_10_sites = extract_first(
+                            *sort_bins(*top_10_sites), 11)
+                        top_10_tasks = extract_first(
+                            *sort_bins(*top_10_tasks), 11)
+
+                        # Make top 10 dictionary
+                        top_10_users = OrderedDict(
+                            zip(top_10_users[1][:-1], top_10_users[0][:-1]))
+                        top_10_sites = OrderedDict(
+                            zip(top_10_sites[1][:-1], top_10_sites[0][:-1]))
+                        top_10_tasks = OrderedDict(
+                            zip(top_10_tasks[1][:-1], top_10_tasks[0][:-1]))
+
                         global_stats[day] = {
                             'num_requests': cur_stats['num_requests'],
                             'len_file_requests': len(cur_stats['file_requests']),
                             'len_users': len(cur_stats['users']),
                             'len_tasks': len(cur_stats['tasks']),
                             'len_sites': len(cur_stats['sites']),
-                            'top_10_users': Statistics.get_bins(
-                                cur_stats['users'], integer_x=False,
-                            ),
-                            'top_10_sites': Statistics.get_bins(
-                                cur_stats['sites'], integer_x=False,
-                            ),
-                            'top_10_tasks': Statistics.get_bins(
-                                cur_stats['tasks'], integer_x=False,
-                            )
+                            'top_10_users': top_10_users,
+                            'top_10_sites': top_10_sites,
+                            'top_10_tasks': top_10_tasks
                         }
 
                     cur_stats['result_folder'] = args.result_folder
