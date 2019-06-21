@@ -74,6 +74,12 @@ class Statistics(object):
         dict_[key] += 1
 
     @staticmethod
+    def make_a_set(dict_: dict, key, value):
+        if key not in dict_:
+            dict_[key] = set()
+        dict_[key] |= set((value, ))
+
+    @staticmethod
     def gen_bins(dict_: dict):
         values = dict_.values()
         elements = list(values)
@@ -118,10 +124,12 @@ class Statistics(object):
                 'num_requests': 0,
                 'file_requests': OrderedDict(),
                 'users': OrderedDict(),
+                'user_files': OrderedDict(),
                 'sites': OrderedDict(),
                 'tasks': OrderedDict(),
                 'protocols': OrderedDict(),
-                'job_length': OrderedDict()
+                'job_length': OrderedDict(),
+                'job_success': False
             }
 
         cur_obj = self._data[self.__cur_date]
@@ -131,6 +139,7 @@ class Statistics(object):
         site_name = record['SiteName']
         task_id = record['TaskMonitorId']
         protocol_type = record['ProtocolUsed']
+        
 
         job_start = record['StartedRunningTimeStamp']
         job_end = record['FinishedTimeStamp']
@@ -142,10 +151,12 @@ class Statistics(object):
         self.insert_and_count(cur_obj, 'num_requests')
         self.insert_and_count(cur_obj['file_requests'], filename)
         self.insert_and_count(cur_obj['users'], user_id)
+        self.make_a_set(cur_obj['user_files'], user_id, filename)
         self.insert_and_count(cur_obj['sites'], site_name)
         self.insert_and_count(cur_obj['tasks'], task_id)
         self.insert_and_count(cur_obj['protocols'], protocol_type)
         self.insert_and_count(cur_obj['job_length'], delta)
+        cur_obj['job_success'] = int(record['JobExecExitCode']) == 0
 
     def to_dict(self):
         return self._data
