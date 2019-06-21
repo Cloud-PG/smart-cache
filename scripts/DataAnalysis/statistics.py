@@ -528,11 +528,13 @@ def main():
             pbar.update(1)
         pbar.close()
 
+        print("Plot global stats...")
         plot_global(
             global_stats,
             args.result_folder,
             dpi=args.plot_dpi
         )
+        print("DONE!")
 
     else:
         parser.print_usage()
