@@ -429,8 +429,10 @@ def plot_day_stats(cur_stats):
 
 
 def make_stats(input_data):
-    date, out_folder, minio_client, bucket = input_data
+    date, out_folder, minio_config = input_data
     year, month, day = date
+    
+    minio_client, bucket = create_minio_client(minio_config)
     stats = Statistics()
 
     print(f"[Original Data][{year}-{month}-{day}]")
@@ -494,12 +496,10 @@ def main():
 
     if args.command == "extract":
         if args.minio_config:
-            minio_client, bucket = create_minio_client(args.minio_config)
             day_list = list(zip(
                 list(period(args.start_date, args.window_size)),
                 [args.out_folder for _ in range(args.window_size)],
-                [minio_client for _ in range(args.window_size)],
-                [bucket for _ in range(args.window_size)]
+                [args.minio_config for _ in range(args.window_size)]
             ))
 
             pool = Pool()
