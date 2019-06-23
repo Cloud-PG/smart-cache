@@ -1,4 +1,5 @@
 import argparse
+import gzip
 import json
 import os
 import warnings
@@ -200,17 +201,15 @@ def extract_first(bins, xticks, num):
     return new_bins, new_xticks
 
 
-def plot_bins(
-    bins, xticks,
-    y_label: str, x_label: str,
-    figure_num: int, label_step: int = 1,
-    y_step: int = -1,
-    calc_perc: bool = True, 
-    ignore_x_step: bool = False,
-    ignore_y_step: bool = False,
-    sort: bool = False, extract_first_n: int = 0,
-    n_cols: int = 2, n_rows: int = 4
-):
+def plot_bins(bins, xticks,
+              y_label: str, x_label: str,
+              figure_num: int, label_step: int = 1,
+              y_step: int = -1,
+              calc_perc: bool = True,
+              ignore_x_step: bool = False,
+              ignore_y_step: bool = False,
+              sort: bool = False, extract_first_n: int = 0,
+              n_cols: int = 2, n_rows: int = 4):
     if sort:
         bins, xticks = sort_bins(bins, xticks)
 
@@ -561,7 +560,7 @@ def plot_day_stats(input_data):
     if file_request_bins:
         plot_bins(
             file_request_bins, file_request_ticks,
-            "%", "Num. Requests x File [TAIL]", 3, label_step=10, 
+            "%", "Num. Requests x File [TAIL]", 3, label_step=10,
             calc_perc=False, y_step=2
         )
     pbar.update(1)
@@ -570,7 +569,7 @@ def plot_day_stats(input_data):
         job_length_bins, job_length_ticks)
     plot_bins(
         job_length_bins, job_length_ticks,
-        "%", "Job Length (num. Hours) [TAIL]", 4, label_step=10, 
+        "%", "Job Length (num. Hours) [TAIL]", 4, label_step=10,
         y_step=5
     )
     pbar.update(1)
@@ -667,10 +666,10 @@ def make_stats(input_data):
 
     os.remove(os.path.join(out_folder, f"tmp_{year}-{month}-{day}.json.gz"))
 
-    with open(
+    with gzip.GzipFile(
             os.path.join(
-                out_folder, f"results_{year}-{month:02}-{day:02}.json"
-            ), "w"
+                out_folder, f"results_{year}-{month:02}-{day:02}.json.gz"
+            ), mode="wb"
     ) as output_file:
         json.dump(stats.to_dict(), output_file, indent=2)
 
@@ -733,7 +732,9 @@ def main():
             _, tail = os.path.splitext(file_)
 
             if tail == ".json":
-                with open(os.path.join(args.result_folder, file_)) as stats_file:
+                with gzip.GzipFile(
+                    os.path.join(args.result_folder, file_), mode="rb"
+                ) as stats_file:
                     result = json.load(stats_file)
 
                 for day in result:
