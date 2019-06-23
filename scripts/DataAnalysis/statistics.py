@@ -135,7 +135,8 @@ class Statistics(object):
                 'sites': OrderedDict(),
                 'tasks': OrderedDict(),
                 'protocols': OrderedDict(),
-                'job_length': OrderedDict(),
+                'job_length_h': OrderedDict(),
+                'job_length_MxH': OrderedDict(),
                 'job_success': False
             }
 
@@ -162,7 +163,8 @@ class Statistics(object):
         self.insert_and_count(cur_obj['sites'], site_name)
         self.insert_and_count(cur_obj['tasks'], task_id)
         self.insert_and_count(cur_obj['protocols'], protocol_type)
-        self.insert_and_count(cur_obj['job_length'], (delta_h, delta_m))
+        self.insert_and_count(cur_obj['job_length_h'], delta_h)
+        self.make_a_set(cur_obj['job_length_MxH'], delta_h, delta_m)
         cur_obj['job_success'] = int(record['JobExecExitCode']) == 0
 
     def to_dict(self):
@@ -671,7 +673,7 @@ def make_stats(input_data):
                 out_folder, f"results_{year}-{month:02}-{day:02}.json.gz"
             ), mode="wb"
     ) as output_file:
-        json.dump(stats.to_dict(), output_file, indent=2)
+        output_file.write(json.dumps(stats.to_dict(), indent=2, sort_keys=True).encode("utf-8"))
 
     print("[Original Data][{year}-{month}-{day}][Statistics extracted]")
 
@@ -735,7 +737,7 @@ def main():
                 with gzip.GzipFile(
                     os.path.join(args.result_folder, file_), mode="rb"
                 ) as stats_file:
-                    result = json.load(stats_file)
+                    result = json.loads(stats_file.read())
 
                 for day in result:
                     cur_stats = result[day]
