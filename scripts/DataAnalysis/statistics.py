@@ -151,7 +151,8 @@ class Statistics(object):
 
         job_start = date_from_timestamp_ms(job_start)
         job_end = date_from_timestamp_ms(job_end)
-        delta = int((job_end - job_start) // timedelta(hours=1))
+        delta_h = int((job_end - job_start) // timedelta(hours=1))
+        delta_m = int((job_end - job_start) // timedelta(minutes=1))
 
         self.insert_and_count(cur_obj, 'num_requests')
         self.insert_and_count(cur_obj['file_requests'], filename)
@@ -160,7 +161,7 @@ class Statistics(object):
         self.insert_and_count(cur_obj['sites'], site_name)
         self.insert_and_count(cur_obj['tasks'], task_id)
         self.insert_and_count(cur_obj['protocols'], protocol_type)
-        self.insert_and_count(cur_obj['job_length'], delta)
+        self.insert_and_count(cur_obj['job_length'], (delta_h, delta_m))
         cur_obj['job_success'] = int(record['JobExecExitCode']) == 0
 
     def to_dict(self):
