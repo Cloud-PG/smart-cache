@@ -170,6 +170,7 @@ class Statistics(object):
     def to_dict(self):
         for day in self._data.values():
             day['user_files'] = list(day['user_files'])
+            day['job_length_MxH'] = list(day['job_length_MxH'])
         return self._data
 
 
