@@ -244,7 +244,7 @@ def main():
     parser.add_argument('--gen-data-args', type=str, default="YY-MM-DD window_size",
                         help='gen_data_args')
     parser.add_argument('--minio-config', type=str, default="url key secret bucket",
-                        help='gen_data_args')
+                        help='minio configuration')
     args = parser.parse_args()
 
     if args.data_path:
