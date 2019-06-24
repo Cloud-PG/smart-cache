@@ -75,6 +75,12 @@ class Statistics(object):
         dict_[key] += 1
 
     @staticmethod
+    def make_a_list(dict_: dict, key, value):
+        if key not in dict_:
+            dict_[key] = []
+        dict_[key].append(value)
+
+    @staticmethod
     def make_a_set(dict_: dict, key, value):
         if key not in dict_:
             dict_[key] = set()
@@ -136,8 +142,8 @@ class Statistics(object):
                 'tasks': OrderedDict(),
                 'protocols': OrderedDict(),
                 'job_length_h': OrderedDict(),
-                'job_length_MxH': OrderedDict(),
-                'job_success': False
+                'job_length_m': OrderedDict(),
+                'job_success': OrderedDict()
             }
 
         cur_obj = self._data[self.__cur_date]
@@ -164,13 +170,13 @@ class Statistics(object):
         self.insert_and_count(cur_obj['tasks'], task_id)
         self.insert_and_count(cur_obj['protocols'], protocol_type)
         self.insert_and_count(cur_obj['job_length_h'], delta_h)
-        self.make_a_set(cur_obj['job_length_MxH'], delta_h, delta_m)
-        cur_obj['job_success'] = int(record['JobExecExitCode']) == 0
+        self.insert_and_count(cur_obj['job_length_m'], delta_m)
+        self.make_a_list(cur_obj['job_success'], filename,
+                         int(record['JobExecExitCode']) == 0)
 
     def to_dict(self):
         for day in self._data.values():
             day['user_files'] = list(day['user_files'])
-            day['job_length_MxH'] = list(day['job_length_MxH'])
         return self._data
 
 
@@ -212,7 +218,7 @@ def plot_bins(bins, xticks,
               ignore_x_step: bool = False,
               ignore_y_step: bool = False,
               sort: bool = False, extract_first_n: int = 0,
-              n_cols: int = 2, n_rows: int = 4):
+              n_cols: int = 2, n_rows: int = 5):
     if sort:
         bins, xticks = sort_bins(bins, xticks)
 
@@ -523,7 +529,7 @@ def plot_global(stats, result_folder, dpi: int = 300):
     pbar.close()
 
 
-def extract_tail(bins, xticks, threshold: float = 0.05):
+def split_bins(bins, xticks, threshold: float = 0.05):
     start_from = 0
     for idx in range(len(bins) - 2):
         value = bins[idx]
@@ -531,16 +537,19 @@ def extract_tail(bins, xticks, threshold: float = 0.05):
             start_from = idx + 1
             break
 
-    return bins[start_from:], xticks[start_from:]
+    return (
+        (bins[:start_from], xticks[:start_from]),  # HEAD
+        (bins[start_from:], xticks[start_from:])  # TAIL
+    )
 
 
 def plot_day_stats(input_data):
     proc_num, cur_stats = input_data
     pbar = tqdm(
-        total=9, desc=f"Plot day {cur_stats['day']}", position=proc_num)
+        total=11, desc=f"Plot day {cur_stats['day']}", position=proc_num)
 
     plt.clf()
-    fig, _ = plt.subplots(4, 2, figsize=(8, 8))
+    fig, _ = plt.subplots(5, 2, figsize=(8, 12))
 
     file_request_bins, file_request_ticks = Statistics.gen_bins(
         cur_stats['file_requests'])
@@ -550,15 +559,15 @@ def plot_day_stats(input_data):
     )
     pbar.update(1)
 
-    job_length_bins, job_length_ticks = Statistics.get_bins(
-        cur_stats['job_length'])
+    job_length_h_bins, job_length_h_ticks = Statistics.get_bins(
+        cur_stats['job_length_h'])
     plot_bins(
-        job_length_bins, job_length_ticks,
+        job_length_h_bins, job_length_h_ticks,
         "%", "Job Length (num. Hours)", 2, label_step=10
     )
     pbar.update(1)
 
-    file_request_bins, file_request_ticks = extract_tail(
+    _, (file_request_bins, file_request_ticks) = split_bins(
         file_request_bins, file_request_ticks)
     if file_request_bins:
         plot_bins(
@@ -568,12 +577,29 @@ def plot_day_stats(input_data):
         )
     pbar.update(1)
 
-    job_length_bins, job_length_ticks = extract_tail(
-        job_length_bins, job_length_ticks)
+    job_length_h_bin_head, (job_length_h_bins, job_length_h_ticks) = split_bins(
+        job_length_h_bins, job_length_h_ticks)
     plot_bins(
-        job_length_bins, job_length_ticks,
+        job_length_h_bins, job_length_h_ticks,
         "%", "Job Length (num. Hours) [TAIL]", 4, label_step=10,
         y_step=5
+    )
+    pbar.update(1)
+
+    job_length_h_head_bins, job_length_h_thead_icks = job_length_h_bin_head
+    plot_bins(
+        job_length_h_head_bins, job_length_h_thead_icks,
+        "%", "Job Length (num. Hours) [HEAD]", 5, label_step=5,
+        y_step=10
+    )
+    pbar.update(1)
+
+    job_length_m_bins, job_length_m_ticks = Statistics.get_bins(
+        cur_stats['job_length_m'])
+    plot_bins(
+        job_length_m_bins, job_length_m_ticks,
+        "%", "Job Length (num. Minutes) (top 100)", 6, label_step=10,
+        y_step=5, extract_first_n=100
     )
     pbar.update(1)
 
@@ -581,7 +607,7 @@ def plot_day_stats(input_data):
         cur_stats['protocols'], integer_x=False)
     plot_bins(
         protocol_bins, protocol_ticks,
-        "% of Requests", "Protocol Type", 5, label_step=20,
+        "% of Requests", "Protocol Type", 7, label_step=20,
         ignore_x_step=True
     )
     pbar.update(1)
@@ -590,7 +616,7 @@ def plot_day_stats(input_data):
         cur_stats['users'], integer_x=False)
     plot_bins(
         users_bins, users_ticks,
-        "% of Requests", "User ID (top 10)", 6,
+        "% of Requests", "User ID (top 10)", 8,
         label_step=10, ignore_x_step=True,
         sort=True, extract_first_n=10
     )
@@ -600,7 +626,7 @@ def plot_day_stats(input_data):
         cur_stats['sites'], integer_x=False)
     plot_bins(
         sites_bins, sites_ticks,
-        "% of Requests", "Site Name (top 10)", 7,
+        "% of Requests", "Site Name (top 10)", 9,
         label_step=10, ignore_x_step=True,
         sort=True, extract_first_n=10
     )
@@ -608,9 +634,13 @@ def plot_day_stats(input_data):
 
     task_bins, task_ticks = Statistics.get_bins(
         cur_stats['tasks'], integer_x=False)
+    task_ticks = [
+        tick if len(tick) < 11 else tick[:4] + "..." + tick[-4:]
+        for tick in task_ticks
+    ]
     plot_bins(
         task_bins, task_ticks,
-        "% of Requests", "Task ID (top 10)", 8,
+        "% of Requests", "Task ID (top 10)", 10,
         label_step=10, ignore_x_step=True,
         sort=True, extract_first_n=10
     )
@@ -674,7 +704,8 @@ def make_stats(input_data):
                 out_folder, f"results_{year}-{month:02}-{day:02}.json.gz"
             ), mode="wb"
     ) as output_file:
-        output_file.write(json.dumps(stats.to_dict(), indent=2, sort_keys=True).encode("utf-8"))
+        output_file.write(json.dumps(stats.to_dict(), indent=2,
+                                     sort_keys=True).encode("utf-8"))
 
     print("[Original Data][{year}-{month}-{day}][Statistics extracted]")
 
@@ -732,9 +763,10 @@ def main():
         day_stats = []
 
         for file_ in tqdm(files, desc="Search stat results"):
-            _, tail = os.path.splitext(file_)
+            head, tail0 = os.path.splitext(file_)
+            _, tail1 = os.path.splitext(head)
 
-            if tail == ".json":
+            if tail0 == ".gz" and tail1 == ".json":
                 with gzip.GzipFile(
                     os.path.join(args.result_folder, file_), mode="rb"
                 ) as stats_file:
