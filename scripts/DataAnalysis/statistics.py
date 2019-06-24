@@ -357,7 +357,7 @@ def plot_global(stats, result_folder, dpi: int = 300):
             for record in stats.values()
         ],
         width=bar_width,
-        label="Num. Unique Files"
+        label="Num. Files"
     )
 
     plt.grid()
@@ -510,7 +510,7 @@ def plot_global(stats, result_folder, dpi: int = 300):
     pbar.close()
 
 
-def split_bins(bins, xticks, threshold: float = 0.05):
+def split_bins(bins, xticks, threshold: float = 0.1):
     start_from = 0
     for idx in range(len(bins) - 2):
         value = bins[idx]
