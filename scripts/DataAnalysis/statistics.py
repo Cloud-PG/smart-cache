@@ -176,7 +176,8 @@ class Statistics(object):
 
     def to_dict(self):
         for day in self._data.values():
-            day['user_files'] = list(day['user_files'])
+            for user, files in day['user_files'].items():
+                day['user_files'][user] = list(files)
         return self._data
 
 
@@ -291,7 +292,7 @@ def merge_and_plot_top10(axes, top10_list: list, tot_num_records: int, xlabel: s
             reverse=True
         )
     )
-    user_ticks = list(top10.keys())
+    ticks = list(top10.keys())
     bottom_values = [0 for _ in range(len(top10))]
     for cur_index in range(max([len(elm) for elm in top10.values()])):
         values = []
@@ -313,9 +314,9 @@ def merge_and_plot_top10(axes, top10_list: list, tot_num_records: int, xlabel: s
     plt.legend()
     plt.ylabel("%")
     plt.xlabel(xlabel)
-    axes.set_xticks(range(len(user_ticks)))
+    axes.set_xticks(range(len(ticks)))
     axes.set_xticklabels(
-        user_ticks,
+        cut_ticks(ticks),
         rotation='vertical'
     )
 
@@ -425,42 +426,22 @@ def plot_global(stats, result_folder, dpi: int = 300):
     axes = plt.subplot(3, 2, 3)
     plt.bar(
         [
-            day + (idx * bar_width) - bar_width
-            for idx, day in enumerate(days_list)
-        ],
-        [
-            record['num_requests'] // record['len_users']
-            for record in stats.values()
-        ],
-        width=bar_width,
-        label="Avg Num. Requests x User"
-    )
-    plt.bar(
-        [
             day + (idx * bar_width)
             for idx, day in enumerate(days_list)
         ],
         [
-            record['num_requests'] // record['len_tasks']
+            (sum(
+                elm.count(True)
+                for elm in record['job_success'].values()
+            ) / record['num_requests']) * 100.
             for record in stats.values()
         ],
         width=bar_width,
-        label="Avg Num. Requests x Task"
-    )
-    plt.bar(
-        [
-            day + (idx * bar_width) + bar_width
-            for idx, day in enumerate(days_list)
-        ],
-        [
-            record['num_requests'] // record['len_sites']
-            for record in stats.values()
-        ],
-        width=bar_width,
-        label="Avg Num. Requests x Site"
+        label="Num. successed jobs"
     )
     plt.grid()
     plt.legend()
+    plt.ylabel("%")
     plt.xlabel("Day")
     axes.set_xticks(days_list)
     axes.set_xticklabels(
@@ -477,13 +458,13 @@ def plot_global(stats, result_folder, dpi: int = 300):
         plt.tight_layout()
 
     num_global_requests = sum(
-        [record['num_requests']for record in stats.values()]
+        [record['num_requests'] for record in stats.values()]
     )
 
     axes = plt.subplot(3, 2, 4)
     merge_and_plot_top10(
         axes,
-        [record['top_10_users']for record in stats.values()],
+        [record['top_10_users'] for record in stats.values()],
         num_global_requests,
         "User ID"
     )
@@ -496,7 +477,7 @@ def plot_global(stats, result_folder, dpi: int = 300):
     axes = plt.subplot(3, 2, 5)
     merge_and_plot_top10(
         axes,
-        [record['top_10_sites']for record in stats.values()],
+        [record['top_10_sites'] for record in stats.values()],
         num_global_requests,
         "Site Name"
     )
@@ -509,7 +490,7 @@ def plot_global(stats, result_folder, dpi: int = 300):
     axes = plt.subplot(3, 2, 6)
     merge_and_plot_top10(
         axes,
-        [record['top_10_tasks']for record in stats.values()],
+        [record['top_10_tasks'] for record in stats.values()],
         num_global_requests,
         "Task ID"
     )
@@ -541,6 +522,13 @@ def split_bins(bins, xticks, threshold: float = 0.05):
         (bins[:start_from], xticks[:start_from]),  # HEAD
         (bins[start_from:], xticks[start_from:])  # TAIL
     )
+
+
+def cut_ticks(ticks):
+    return [
+        tick if len(tick) < 11 else tick[:4] + "..." + tick[-4:]
+        for tick in ticks
+    ]
 
 
 def plot_day_stats(input_data):
@@ -634,10 +622,7 @@ def plot_day_stats(input_data):
 
     task_bins, task_ticks = Statistics.get_bins(
         cur_stats['tasks'], integer_x=False)
-    task_ticks = [
-        tick if len(tick) < 11 else tick[:4] + "..." + tick[-4:]
-        for tick in task_ticks
-    ]
+    task_ticks = cut_ticks(task_ticks)
     plot_bins(
         task_bins, task_ticks,
         "% of Requests", "Task ID (top 10)", 10,
@@ -810,7 +795,9 @@ def main():
                             'len_sites': len(cur_stats['sites']),
                             'top_10_users': top_10_users,
                             'top_10_sites': top_10_sites,
-                            'top_10_tasks': top_10_tasks
+                            'top_10_tasks': top_10_tasks,
+                            'job_success': cur_stats['job_success'],
+                            'user_files': cur_stats['user_files']
                         }
 
                     cur_stats['result_folder'] = args.result_folder
