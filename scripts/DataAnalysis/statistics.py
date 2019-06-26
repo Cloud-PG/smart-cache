@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from multiprocessing import Pool
 
 import matplotlib.pyplot as plt
+import pandas as pd
 import urllib3
 from minio import Minio
 from minio.error import (BucketAlreadyExists, BucketAlreadyOwnedByYou,
@@ -128,6 +129,18 @@ class Statistics(object):
             self.__last_date = date
 
     def add(self, date: tuple, record: dict):
+        filename = record['FileName']
+        user_id = record['UserId']
+        site_name = record['SiteName']
+        task_id = record['TaskMonitorId']
+        protocol_type = record['ProtocolUsed']
+        exit_code = record['JobExecExitCode']
+        job_start = date_from_timestamp_ms(record['StartedRunningTimeStamp'])
+        job_end = date_from_timestamp_ms(record['FinishedTimeStamp'])
+
+        delta_h = (job_end - job_start) // timedelta(hours=1)
+        delta_m = (job_end - job_start) // timedelta(minutes=1)
+
         if self.__last_date != date:
             self.__cur_date = int(datetime(*date).timestamp())
             self.__last_date = date
@@ -135,49 +148,35 @@ class Statistics(object):
         if self.__cur_date not in self._data:
             self._data[self.__cur_date] = {
                 'num_requests': 0,
-                'file_requests': OrderedDict(),
-                'users': OrderedDict(),
-                'user_files': OrderedDict(),
-                'sites': OrderedDict(),
-                'tasks': OrderedDict(),
-                'protocols': OrderedDict(),
-                'job_length_h': OrderedDict(),
-                'job_length_m': OrderedDict(),
-                'job_success': OrderedDict()
+                'files': OrderedDict()
             }
 
         cur_obj = self._data[self.__cur_date]
 
-        filename = record['FileName']
-        user_id = record['UserId']
-        site_name = record['SiteName']
-        task_id = record['TaskMonitorId']
-        protocol_type = record['ProtocolUsed']
-
-        job_start = record['StartedRunningTimeStamp']
-        job_end = record['FinishedTimeStamp']
-
-        job_start = date_from_timestamp_ms(job_start)
-        job_end = date_from_timestamp_ms(job_end)
-        delta_h = int((job_end - job_start) // timedelta(hours=1))
-        delta_m = int((job_end - job_start) // timedelta(minutes=1))
-
         self.insert_and_count(cur_obj, 'num_requests')
-        self.insert_and_count(cur_obj['file_requests'], filename)
-        self.insert_and_count(cur_obj['users'], user_id)
-        self.make_a_set(cur_obj['user_files'], user_id, filename)
-        self.insert_and_count(cur_obj['sites'], site_name)
-        self.insert_and_count(cur_obj['tasks'], task_id)
-        self.insert_and_count(cur_obj['protocols'], protocol_type)
-        self.insert_and_count(cur_obj['job_length_h'], delta_h)
-        self.insert_and_count(cur_obj['job_length_m'], delta_m)
-        self.make_a_list(cur_obj['job_success'], filename,
-                         int(record['JobExecExitCode']) == 0)
+
+        if filename not in cur_obj['files']:
+            cur_obj['files'][filename] = {
+                'protocol': [],
+                'task_id': [],
+                'site_name': [],
+                'job_success': [],
+                'job_length_h': [],
+                'job_length_m': [],
+                'users': []
+            }
+
+        cur_file = cur_obj['files'][filename]
+
+        cur_file['task_id'].append(task_id)
+        cur_file['site_name'].append(site_name)
+        cur_file['protocol'].append(protocol_type)
+        cur_file['job_success'].append(int(exit_code) == 0)
+        cur_file['job_length_h'].append(delta_h)
+        cur_file['job_length_m'].append(delta_m)
+        cur_file['users'].append(user_id)
 
     def to_dict(self):
-        for day in self._data.values():
-            for user, files in day['user_files'].items():
-                day['user_files'][user] = list(files)
         return self._data
 
 
@@ -647,6 +646,10 @@ def plot_day_stats(input_data):
     return f"stats.{cur_stats['day']}.png"
 
 
+def plot_dataframe_collection(df):
+    pass
+
+
 def make_stats(input_data):
     num_process, date, out_folder, minio_config = input_data
     year, month, day = date
@@ -676,6 +679,8 @@ def make_stats(input_data):
         desc=f"Extract statistics from {year}-{month}-{day}]",
         position=num_process
     ):
+        # print(json.dumps(record, indent=2, sort_keys=True))
+        # break
         stats.add((year, month, day), record)
         # TEST
         # counter += 1
@@ -707,6 +712,8 @@ def main():
                         help="DPI for plot output")
     parser.add_argument('--window-size', '-ws', type=int,
                         help="Num. of days to extract")
+    parser.add_argument('--plot-window-size', '-pws', type=int, default=7,
+                        help="Num. of days to plot")
     parser.add_argument('--minio-config', '-mcfg', type=str,
                         help='MinIO configuration in the form: "url key secret bucket"')
     parser.add_argument('--result-folder', type=str, default="./results",
@@ -745,8 +752,8 @@ def main():
         global_stats = OrderedDict()
 
         pool = Pool(processes=args.jobs)
-        day_stats = []
 
+        data_frames = OrderedDict()
         for file_ in tqdm(files, desc="Search stat results"):
             head, tail0 = os.path.splitext(file_)
             _, tail1 = os.path.splitext(head)
@@ -758,62 +765,59 @@ def main():
                     result = json.loads(stats_file.read())
 
                 for day in result:
-                    cur_stats = result[day]
-                    if day not in global_stats:
-                        # Get stats for top 10
-                        top_10_users = Statistics.get_bins(
-                            cur_stats['users'], integer_x=False
-                        )
-                        top_10_sites = Statistics.get_bins(
-                            cur_stats['sites'], integer_x=False
-                        )
-                        top_10_tasks = Statistics.get_bins(
-                            cur_stats['tasks'], integer_x=False
-                        )
+                    assert day not in data_frames
 
-                        # Extract Top 10
-                        top_10_users = extract_first(
-                            *sort_bins(*top_10_users), 11)
-                        top_10_sites = extract_first(
-                            *sort_bins(*top_10_sites), 11)
-                        top_10_tasks = extract_first(
-                            *sort_bins(*top_10_tasks), 11)
+                    cur_result = result[day]
 
-                        # Make top 10 dictionary
-                        top_10_users = OrderedDict(
-                            zip(top_10_users[1][:-1], top_10_users[0][:-1]))
-                        top_10_sites = OrderedDict(
-                            zip(top_10_sites[1][:-1], top_10_sites[0][:-1]))
-                        top_10_tasks = OrderedDict(
-                            zip(top_10_tasks[1][:-1], top_10_tasks[0][:-1]))
+                    data_frames[day] = {
+                        'num_requests': cur_result['num_requests'],
+                        'df': None
+                    }
 
-                        global_stats[day] = {
-                            'num_requests': cur_stats['num_requests'],
-                            'len_file_requests': len(cur_stats['file_requests']),
-                            'len_users': len(cur_stats['users']),
-                            'len_tasks': len(cur_stats['tasks']),
-                            'len_sites': len(cur_stats['sites']),
-                            'top_10_users': top_10_users,
-                            'top_10_sites': top_10_sites,
-                            'top_10_tasks': top_10_tasks,
-                            'job_success': cur_stats['job_success'],
-                            'user_files': cur_stats['user_files']
-                        }
+                    cur_data = []
 
-                    cur_stats['result_folder'] = args.result_folder
-                    cur_stats['plot_dpi'] = args.plot_dpi
-                    cur_stats['day'] = day
+                    for file_, stats in tqdm(cur_result['files'].items(), desc="Read file stats"):
+                        num_jobs = stats['job_succes']
+                        assert all([len(elm) == num_jobs for _, elm in stats.items(
+                        )]), f'problem with {file_} and {stats}'
 
-                    day_stats.append(cur_stats)
+                        for idx in range(num_jobs):
+                            cur_data.append(
+                                [
+                                    day,
+                                    file_,
+                                    stats['protocol'][idx],
+                                    stats['task_id'][idx],
+                                    stats['site_name'][idx],
+                                    stats['job_success'][idx],
+                                    stats['job_length_h'][idx],
+                                    stats['job_length_m'][idx],
+                                    stats['users'][idx]
+                                ]
+                            )
 
-        day_stats = list(enumerate(day_stats, 1))
+                    data_frames[day]['df'] = pd.DataFrame(
+                        cur_data,
+                        columns=[
+                            'day',
+                            'filename',
+                            'protocol',
+                            'task_id',
+                            'site_name',
+                            'job_success',
+                            'job_length_h',
+                            'job_length_m',
+                            'users'
+                        ]
+                    )
 
-        pbar = tqdm(total=len(day_stats),
-                    desc="Create daily plots", position=0)
-        for day in tqdm(pool.imap(plot_day_stats, day_stats)):
-            pbar.write(f"File {day} done!")
-            pbar.update(1)
-        pbar.close()
+            if len(data_frames) == args.plot_day_stats:
+                plot_dataframe_collection(data_frames)
+                data_frames = OrderedDict()
+
+        if len(data_frames) > 0:
+            plot_dataframe_collection(data_frames)
+            data_frames = OrderedDict()
 
         pool.close()
         pool.join()
