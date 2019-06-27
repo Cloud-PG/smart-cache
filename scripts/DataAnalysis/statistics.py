@@ -646,8 +646,132 @@ def plot_day_stats(input_data):
     return f"stats.{cur_stats['day']}.png"
 
 
-def plot_dataframe_collection(df):
-    pass
+def plot_windows(windows, result_folder, dpi):
+    plt.clf()
+    fig, _ = plt.subplots(2, 1, figsize=(8, 8))
+    bar_width = 0.5
+
+    axes = plt.subplot(2, 1, 1)
+    plt.bar(
+        [
+            idx - bar_width / 2.
+            for idx, _ in enumerate(windows)
+        ],
+        [
+            record['num_requests']
+            for record in windows
+        ],
+        width=bar_width,
+        label="Num. Requests"
+    )
+    plt.bar(
+        [
+            idx + bar_width / 2.
+            for idx, _ in enumerate(windows)
+        ],
+        [
+            record['num_files']
+            for record in windows
+        ],
+        width=bar_width,
+        label="Num. Files"
+    )
+    plt.grid()
+    plt.legend()
+    plt.xlabel("Window")
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        plt.tight_layout()
+    
+    axes = plt.subplot(2, 1, 2)
+    plt.bar(
+        [
+            idx - bar_width / 2.
+            for idx, _ in enumerate(windows)
+        ],
+        [
+            record['mean_num_req_x_file']
+            for record in windows
+        ],
+        width=bar_width,
+        label="Mean Num. Requests"
+    )
+    plt.bar(
+        [
+            idx + bar_width / 2.
+            for idx, _ in enumerate(windows)
+        ],
+        [
+            record['mean_num_req_x_file_g1']
+            for record in windows
+        ],
+        width=bar_width,
+        label="Mean Num. Requests > 1"
+    )
+    plt.grid()
+    plt.legend()
+    plt.xlabel("Window")
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        plt.tight_layout()
+
+    plt.savefig(
+        os.path.join(result_folder, "window_stats.png"),
+        dpi=dpi
+    )
+    plt.close(fig)
+
+
+def make_dataframe_stats(data):
+    """Plot window stats.
+
+    Data:
+        - num_requests
+        - df
+
+    df columns:
+        - day
+        - filename
+        - protocol
+        - task_id
+        - site_name
+        - job_success
+        - job_length_h
+        - job_length_m
+        - users
+    """
+    df = pd.concat([obj['df'] for obj in data.values()])
+
+    num_requests = sum([obj['num_requests'] for obj in data.values()])
+    assert num_requests == df.shape[0]
+
+    num_files = len(df['filename'].unique().tolist())
+    num_users = len(df['users'].unique().tolist())
+    num_sites = len(df['site_name'].unique().tolist())
+    num_tasks = len(df['task_id'].unique().tolist())
+    num_local = df['protocol'].value_counts().to_dict()
+    # print(json.dumps(num_local, indent=2, sort_keys=True))
+
+    num_req_x_file = df['filename'].value_counts()
+    # print(num_req_x_file.describe())
+    num_req_x_file_g1 = num_req_x_file[
+        num_req_x_file > num_req_x_file.describe()['min']]
+    # print(num_req_x_file_g1.describe())
+    mean_num_req_x_file = num_req_x_file.describe()['mean']
+    mean_num_req_x_file_g1 = num_req_x_file_g1.describe()['mean']
+    # print(f"MEAN: '{mean_num_req_x_file}'")
+    # print(f"MEAN g1: '{mean_num_req_x_file_g1}'")
+
+    return {
+        'num_requests': num_requests,
+        'num_files': num_files,
+        'num_users': num_users,
+        'num_sites': num_sites,
+        'num_tasks': num_tasks,
+        'num_local': num_local,
+        'mean_num_req_x_file': mean_num_req_x_file,
+        'mean_num_req_x_file_g1': mean_num_req_x_file_g1
+    }
 
 
 def make_stats(input_data):
@@ -754,14 +878,24 @@ def main():
         pool = Pool(processes=args.jobs)
 
         data_frames = OrderedDict()
+        windows = []
+
+        # TO TEST
+        # counter = 0
         for file_ in tqdm(files, desc="Search stat results"):
             head, tail0 = os.path.splitext(file_)
             _, tail1 = os.path.splitext(head)
 
+            # counter += 1
+            # if counter == 3:
+            #     break
+
             if tail0 == ".gz" and tail1 == ".json":
+                cur_file = os.path.join(args.result_folder, file_)
                 with gzip.GzipFile(
-                    os.path.join(args.result_folder, file_), mode="rb"
+                    cur_file, mode="rb"
                 ) as stats_file:
+                    tqdm.write(f"Open file: '{cur_file}'")
                     result = json.loads(stats_file.read())
 
                 for day in result:
@@ -776,8 +910,8 @@ def main():
 
                     cur_data = []
 
-                    for file_, stats in tqdm(cur_result['files'].items(), desc="Read file stats"):
-                        num_jobs = stats['job_succes']
+                    for file_, stats in tqdm(cur_result['files'].items(), desc=f"Read {day} stats"):
+                        num_jobs = len(stats['job_success'])
                         assert all([len(elm) == num_jobs for _, elm in stats.items(
                         )]), f'problem with {file_} and {stats}'
 
@@ -811,23 +945,16 @@ def main():
                         ]
                     )
 
-            if len(data_frames) == args.plot_day_stats:
-                plot_dataframe_collection(data_frames)
+            if len(data_frames) == args.plot_window_size:
+                windows.append(make_dataframe_stats(data_frames))
                 data_frames = OrderedDict()
 
         if len(data_frames) > 0:
-            plot_dataframe_collection(data_frames)
+            windows.append(make_dataframe_stats(data_frames))
             data_frames = OrderedDict()
 
-        pool.close()
-        pool.join()
-
-        print("[Plot global stats...]")
-        plot_global(
-            global_stats,
-            args.result_folder,
-            dpi=args.plot_dpi
-        )
+        print("[Plot window stats...]")
+        plot_windows(windows, args.result_folder, args.plot_dpi)
         print("[DONE!]")
 
     else:
