@@ -2,6 +2,7 @@ import argparse
 import gzip
 import json
 import os
+import sqlite3
 import warnings
 from collections import OrderedDict
 from datetime import datetime, timedelta
@@ -61,12 +62,29 @@ def period(start_date, num_days):
 class Statistics(object):
 
     def __init__(self):
-        self._data = OrderedDict()
+        self.__columns = [
+                'day',
+                'filename',
+                'protocol',
+                'task_monitor_id',
+                'task_id',
+                'job_id',
+                'site_name',
+                'job_success',
+                'job_length_h',
+                'job_length_m',
+                'users'
+            ]
+        self._data = pd.DataFrame(
+            columns=self.__columns
+        )
+        self.__buffer = []
         self.__last_date = None
         self.__cur_date = None
 
     @property
     def data(self):
+        self.__flush_buffer()
         return self._data
 
     @staticmethod
@@ -109,6 +127,18 @@ class Statistics(object):
 
         return bins, xticks
 
+    def __flush_buffer(self):
+        if self.__buffer:
+            new_df =pd.DataFrame(
+                self.__buffer,
+                columns=self.__columns
+            )
+            self._data = pd.concat([
+                self._data,
+                new_df
+            ])
+            self.__buffer = []
+
     @staticmethod
     def get_bins(dict_: dict, integer_x: bool = True, to_dict: bool = False):
         if integer_x:
@@ -123,18 +153,17 @@ class Statistics(object):
         else:
             return bins, xticks
 
-    def make_buckets(self, date: tuple):
-        if self.__last_date != date:
-            self.__cur_date = int(datetime(*date).timestamp())
-            self.__last_date = date
-
     def add(self, date: tuple, record: dict):
         filename = record['FileName']
         user_id = record['UserId']
         site_name = record['SiteName']
-        task_id = record['TaskMonitorId']
+        task_monitor_id = record['TaskMonitorId']
+        task_id = record['TaskId']
+        job_id = record['JobId']
         protocol_type = record['ProtocolUsed']
         exit_code = record['JobExecExitCode']
+
+        job_success = int(exit_code) == 0
         job_start = date_from_timestamp_ms(record['StartedRunningTimeStamp'])
         job_end = date_from_timestamp_ms(record['FinishedTimeStamp'])
 
@@ -142,42 +171,27 @@ class Statistics(object):
         delta_m = (job_end - job_start) // timedelta(minutes=1)
 
         if self.__last_date != date:
-            self.__cur_date = int(datetime(*date).timestamp())
+            self.__cur_date = datetime(*date).timestamp()
             self.__last_date = date
 
-        if self.__cur_date not in self._data:
-            self._data[self.__cur_date] = {
-                'num_requests': 0,
-                'files': OrderedDict()
+        self.__buffer.append(
+            {
+                'day': self.__cur_date,
+                'filename': filename,
+                'task_monitor_id': task_monitor_id,
+                'task_id': task_id,
+                'job_id': job_id,
+                'site_name': site_name,
+                'protocol': protocol_type,
+                'job_success': job_success,
+                'job_length_h': delta_h,
+                'job_length_m': delta_m,
+                'users': user_id,
             }
+        )
 
-        cur_obj = self._data[self.__cur_date]
-
-        self.insert_and_count(cur_obj, 'num_requests')
-
-        if filename not in cur_obj['files']:
-            cur_obj['files'][filename] = {
-                'protocol': [],
-                'task_id': [],
-                'site_name': [],
-                'job_success': [],
-                'job_length_h': [],
-                'job_length_m': [],
-                'users': []
-            }
-
-        cur_file = cur_obj['files'][filename]
-
-        cur_file['task_id'].append(task_id)
-        cur_file['site_name'].append(site_name)
-        cur_file['protocol'].append(protocol_type)
-        cur_file['job_success'].append(int(exit_code) == 0)
-        cur_file['job_length_h'].append(delta_h)
-        cur_file['job_length_m'].append(delta_m)
-        cur_file['users'].append(user_id)
-
-    def to_dict(self):
-        return self._data
+        if len(self.__buffer) == 100:
+            self.__flush_buffer()
 
 
 def sort_bins(bins, xticks):
@@ -649,7 +663,7 @@ def plot_day_stats(input_data):
 def plot_windows(windows, result_folder, dpi):
     plt.clf()
     fig, _ = plt.subplots(2, 1, figsize=(8, 8))
-    bar_width = 0.5
+    bar_width = 0.4
 
     axes = plt.subplot(2, 1, 1)
     plt.bar(
@@ -676,13 +690,17 @@ def plot_windows(windows, result_folder, dpi):
         width=bar_width,
         label="Num. Files"
     )
+    axes.set_xticks(range(len(windows)))
+    axes.set_xticklabels(
+        [str(idx) for idx in range(len(windows))]
+    )
     plt.grid()
     plt.legend()
     plt.xlabel("Window")
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         plt.tight_layout()
-    
+
     axes = plt.subplot(2, 1, 2)
     plt.bar(
         [
@@ -707,6 +725,10 @@ def plot_windows(windows, result_folder, dpi):
         ],
         width=bar_width,
         label="Mean Num. Requests > 1"
+    )
+    axes.set_xticks(range(len(windows)))
+    axes.set_xticklabels(
+        [str(idx) for idx in range(len(windows))]
     )
     plt.grid()
     plt.legend()
@@ -733,23 +755,28 @@ def make_dataframe_stats(data):
         - day
         - filename
         - protocol
+        - task_monitor_id
         - task_id
+        - job_id
         - site_name
         - job_success
         - job_length_h
         - job_length_m
         - users
     """
-    df = pd.concat([obj['df'] for obj in data.values()])
+    df = pd.concat(data)
 
-    num_requests = sum([obj['num_requests'] for obj in data.values()])
-    assert num_requests == df.shape[0]
+    num_requests = df.shape[0]
 
     num_files = len(df['filename'].unique().tolist())
     num_users = len(df['users'].unique().tolist())
     num_sites = len(df['site_name'].unique().tolist())
+    num_task_monitors = len(df['task_monitor_id'].unique().tolist())
     num_tasks = len(df['task_id'].unique().tolist())
+    num_jobs = len(df['job_id'].unique().tolist())
     num_local = df['protocol'].value_counts().to_dict()
+
+    assert num_task_monitors == num_tasks
     # print(json.dumps(num_local, indent=2, sort_keys=True))
 
     num_req_x_file = df['filename'].value_counts()
@@ -767,7 +794,9 @@ def make_dataframe_stats(data):
         'num_files': num_files,
         'num_users': num_users,
         'num_sites': num_sites,
+        'num_task_monitors': num_task_monitors,
         'num_tasks': num_tasks,
+        'num_jobs': num_jobs,
         'num_local': num_local,
         'mean_num_req_x_file': mean_num_req_x_file,
         'mean_num_req_x_file_g1': mean_num_req_x_file_g1
@@ -781,8 +810,6 @@ def make_stats(input_data):
     minio_client, bucket = create_minio_client(minio_config)
     stats = Statistics()
 
-    print(f"[Original Data][{year}-{month}-{day}]")
-    print("[Original Data][{year}-{month}-{day}][Download...]")
     try:
         minio_client.fget_object(
             f"{bucket}",
@@ -791,8 +818,7 @@ def make_stats(input_data):
         )
     except ResponseError:
         raise
-    print("[Original Data][{year}-{month}-{day}][Downloaded]")
-    print("[Original Data][{year}-{month}-{day}][Open File]")
+
     collector = DataFile(os.path.join(
         out_folder, f"tmp_{year}-{month}-{day}.json.gz"))
 
@@ -808,22 +834,20 @@ def make_stats(input_data):
         stats.add((year, month, day), record)
         # TEST
         # counter += 1
-        # if counter == 10000:
+        # if counter == 1000:
         #     break
 
     os.remove(os.path.join(out_folder, f"tmp_{year}-{month}-{day}.json.gz"))
 
     with gzip.GzipFile(
             os.path.join(
-                out_folder, f"results_{year}-{month:02}-{day:02}.json.gz"
+                out_folder, f"results_{year}-{month:02}-{day:02}.feather.gz"
             ), mode="wb"
     ) as output_file:
-        output_file.write(json.dumps(stats.to_dict(), indent=2,
-                                     sort_keys=True).encode("utf-8"))
+        new_df = stats.data.reset_index()
+        new_df.to_feather(output_file)
 
-    print("[Original Data][{year}-{month}-{day}][Statistics extracted]")
-
-    return date
+    return year, month, day
 
 
 def main():
@@ -846,6 +870,8 @@ def main():
                         help='The output folder.')
     parser.add_argument('--jobs', '-j', type=int, default=2,
                         help="Num. of concurrent jobs")
+    parser.add_argument('--db-file-size-path', type=str,
+                        help="Path to size database")
 
     args, _ = parser.parse_known_args()
 
@@ -854,7 +880,7 @@ def main():
     if args.command == "extract":
         if args.minio_config:
             day_list = list(zip(
-                range(1, args.window_size + 1),
+                [(elm % args.jobs) + 1 for elm in range(0, args.window_size)],
                 list(period(args.start_date, args.window_size)),
                 [args.out_folder for _ in range(args.window_size)],
                 [args.minio_config for _ in range(args.window_size)]
@@ -863,8 +889,8 @@ def main():
             pool = Pool(processes=args.jobs)
 
             pbar = tqdm(total=len(day_list), desc="Extract stats", position=0)
-            for day in tqdm(pool.imap(make_stats, day_list)):
-                pbar.write(f"File {day} done!")
+            for year, month, day in tqdm(pool.imap(make_stats, day_list)):
+                pbar.write(f"==> [DONE] Date {year}-{month}-{day}")
                 pbar.update(1)
             pbar.close()
 
@@ -873,16 +899,28 @@ def main():
 
     elif args.command == 'plot':
         files = list(sorted(os.listdir(args.result_folder)))
-        global_stats = OrderedDict()
 
         pool = Pool(processes=args.jobs)
 
-        data_frames = OrderedDict()
+        data_frames = []
         windows = []
+
+        conn_mc = sqlite3.connect(os.path.join(
+            args.db_file_size_path, "files_mc.db"))
+        conn_user = sqlite3.connect(os.path.join(
+            args.db_file_size_path, "files_user.db"))
+        conn_data = sqlite3.connect(os.path.join(
+            args.db_file_size_path, "files_data.db"))
+
+        size_db_cursors = {
+            'mc': conn_mc.cursor(),
+            'user': conn_user.cursor(),
+            'data': conn_data.cursor()
+        }
 
         # TO TEST
         # counter = 0
-        for file_ in tqdm(files, desc="Search stat results"):
+        for file_ in tqdm(files, desc="Search stat results", position=0):
             head, tail0 = os.path.splitext(file_)
             _, tail1 = os.path.splitext(head)
 
@@ -890,68 +928,26 @@ def main():
             # if counter == 3:
             #     break
 
-            if tail0 == ".gz" and tail1 == ".json":
+            if tail0 == ".gz" and tail1 == ".feather":
                 cur_file = os.path.join(args.result_folder, file_)
                 with gzip.GzipFile(
                     cur_file, mode="rb"
                 ) as stats_file:
                     tqdm.write(f"Open file: '{cur_file}'")
-                    result = json.loads(stats_file.read())
-
-                for day in result:
-                    assert day not in data_frames
-
-                    cur_result = result[day]
-
-                    data_frames[day] = {
-                        'num_requests': cur_result['num_requests'],
-                        'df': None
-                    }
-
-                    cur_data = []
-
-                    for file_, stats in tqdm(cur_result['files'].items(), desc=f"Read {day} stats"):
-                        num_jobs = len(stats['job_success'])
-                        assert all([len(elm) == num_jobs for _, elm in stats.items(
-                        )]), f'problem with {file_} and {stats}'
-
-                        for idx in range(num_jobs):
-                            cur_data.append(
-                                [
-                                    day,
-                                    file_,
-                                    stats['protocol'][idx],
-                                    stats['task_id'][idx],
-                                    stats['site_name'][idx],
-                                    stats['job_success'][idx],
-                                    stats['job_length_h'][idx],
-                                    stats['job_length_m'][idx],
-                                    stats['users'][idx]
-                                ]
-                            )
-
-                    data_frames[day]['df'] = pd.DataFrame(
-                        cur_data,
-                        columns=[
-                            'day',
-                            'filename',
-                            'protocol',
-                            'task_id',
-                            'site_name',
-                            'job_success',
-                            'job_length_h',
-                            'job_length_m',
-                            'users'
-                        ]
-                    )
+                    data_frames.append(pd.read_feather(stats_file))
 
             if len(data_frames) == args.plot_window_size:
+                tqdm.write("Build window")
                 windows.append(make_dataframe_stats(data_frames))
-                data_frames = OrderedDict()
+                data_frames = []
 
         if len(data_frames) > 0:
             windows.append(make_dataframe_stats(data_frames))
-            data_frames = OrderedDict()
+            data_frames = []
+
+        conn_mc.close()
+        conn_user.close()
+        conn_data.close()
 
         print("[Plot window stats...]")
         plot_windows(windows, args.result_folder, args.plot_dpi)
