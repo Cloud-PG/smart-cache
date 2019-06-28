@@ -73,7 +73,9 @@ class Statistics(object):
                 'job_success',
                 'job_length_h',
                 'job_length_m',
-                'users'
+                'users',
+                'cpu_time',
+                'io_time'
             ]
         self._data = pd.DataFrame(
             columns=self.__columns
@@ -154,6 +156,7 @@ class Statistics(object):
             return bins, xticks
 
     def add(self, date: tuple, record: dict):
+        # print(json.dumps(record, indent=2, sort_keys=True))
         filename = record['FileName']
         user_id = record['UserId']
         site_name = record['SiteName']
@@ -162,6 +165,12 @@ class Statistics(object):
         job_id = record['JobId']
         protocol_type = record['ProtocolUsed']
         exit_code = record['JobExecExitCode']
+
+        num_cores = int(record['NCores'])
+        wrap_wc = float(record['WrapWC'])
+        wrap_cpu = float(record['WrapCPU'])
+        cpu_time = wrap_cpu / num_cores
+        io_time = wrap_wc - cpu_time
 
         job_success = int(exit_code) == 0
         job_start = date_from_timestamp_ms(record['StartedRunningTimeStamp'])
@@ -187,6 +196,8 @@ class Statistics(object):
                 'job_length_h': delta_h,
                 'job_length_m': delta_m,
                 'users': user_id,
+                'cpu_time': cpu_time,
+                'io_time': io_time
             }
         )
 
@@ -744,25 +755,25 @@ def plot_windows(windows, result_folder, dpi):
     plt.close(fig)
 
 
-def make_dataframe_stats(data):
+def make_dataframe_stats(data: list):
     """Plot window stats.
 
-    Data:
-        - num_requests
-        - df
+    Data: list of dataframes (df)
 
-    df columns:
-        - day
-        - filename
-        - protocol
-        - task_monitor_id
-        - task_id
-        - job_id
-        - site_name
-        - job_success
-        - job_length_h
-        - job_length_m
-        - users
+        df columns:
+            - day
+            - filename
+            - protocol
+            - task_monitor_id
+            - task_id
+            - job_id
+            - site_name
+            - job_success
+            - job_length_h
+            - job_length_m
+            - users
+            - cpu_time
+            - io_time
     """
     df = pd.concat(data)
 
