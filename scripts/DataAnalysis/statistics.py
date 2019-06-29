@@ -6,9 +6,11 @@ import sqlite3
 import warnings
 from collections import OrderedDict
 from datetime import datetime, timedelta
+from functools import lru_cache
 from multiprocessing import Pool
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import urllib3
 from minio import Minio
@@ -61,28 +63,55 @@ def period(start_date, num_days):
 
 class Statistics(object):
 
-    def __init__(self):
+    def __init__(self, file_size_db_path: str = None):
         self.__columns = [
-                'day',
-                'filename',
-                'protocol',
-                'task_monitor_id',
-                'task_id',
-                'job_id',
-                'site_name',
-                'job_success',
-                'job_length_h',
-                'job_length_m',
-                'users',
-                'cpu_time',
-                'io_time'
-            ]
+            'day',
+            'filename',
+            'protocol',
+            'task_monitor_id',
+            'task_id',
+            'job_id',
+            'site_name',
+            'job_success',
+            'job_length_h',
+            'job_length_m',
+            'users',
+            'cpu_time',
+            'io_time',
+            'size'
+        ]
         self._data = pd.DataFrame(
             columns=self.__columns
         )
         self.__buffer = []
         self.__last_date = None
         self.__cur_date = None
+        self.__cursors = None
+        self.__conn_mc = None
+        self.__conn_data = None
+        self.__conn_user = None
+
+        if file_size_db_path:
+            self.__conn_mc = sqlite3.connect(os.path.join(
+                file_size_db_path, "files_mc.db"))
+            self.__conn_user = sqlite3.connect(os.path.join(
+                file_size_db_path, "files_user.db"))
+            self.__conn_data = sqlite3.connect(os.path.join(
+                file_size_db_path, "files_data.db"))
+
+            self.__cursors = {
+                'mc': self.__conn_mc.cursor(),
+                'user': self.__conn_user.cursor(),
+                'data': self.__conn_data.cursor()
+            }
+
+    def __del__(self):
+        if self.__conn_mc:
+            self.__conn_mc.close()
+        if self.__conn_data:
+            self.__conn_data.close()
+        if self.__conn_user:
+            self.__conn_user.close()
 
     @property
     def data(self):
@@ -129,9 +158,36 @@ class Statistics(object):
 
         return bins, xticks
 
+    @staticmethod
+    @lru_cache(128)
+    def __get_type(string):
+        return [elm for elm in string.split("/") if elm][1]
+
     def __flush_buffer(self):
         if self.__buffer:
-            new_df =pd.DataFrame(
+            if self.__cursors:
+                tmp_iterators = {
+                    'mc': [],
+                    'user': [],
+                    'data': []
+                }
+                for idx, record in enumerate(self.__buffer):
+                    cur_type = self.__get_type(record['filename'])
+                    if cur_type in tmp_iterators:
+                        tmp_iterators[cur_type].append(
+                            (idx, record['filename']))
+
+                for db_type, values in tmp_iterators.items():
+                    cur_cursor = self.__cursors[db_type]
+                    for idx, value in values:
+                        result = cur_cursor.execute(
+                            f"SELECT f_file_size FROM file_sizes WHERE f_logical_file_name=?",
+                            (value.encode("ascii"), )
+                        ).fetchone()
+                        if result:
+                            self.__buffer[idx]['size'] = float(result[0])
+
+            new_df = pd.DataFrame(
                 self.__buffer,
                 columns=self.__columns
             )
@@ -172,7 +228,7 @@ class Statistics(object):
         cpu_time = wrap_cpu / num_cores
         io_time = wrap_wc - cpu_time
 
-        job_success = int(exit_code) == 0
+        job_success = int(exit_code if exit_code else 255) == 0
         job_start = date_from_timestamp_ms(record['StartedRunningTimeStamp'])
         job_end = date_from_timestamp_ms(record['FinishedTimeStamp'])
 
@@ -197,7 +253,8 @@ class Statistics(object):
                 'job_length_m': delta_m,
                 'users': user_id,
                 'cpu_time': cpu_time,
-                'io_time': io_time
+                'io_time': io_time,
+                'size': np.nan
             }
         )
 
@@ -774,6 +831,7 @@ def make_dataframe_stats(data: list):
             - users
             - cpu_time
             - io_time
+            - size
     """
     df = pd.concat(data)
 
@@ -815,11 +873,11 @@ def make_dataframe_stats(data: list):
 
 
 def make_stats(input_data):
-    num_process, date, out_folder, minio_config = input_data
+    num_process, date, out_folder, minio_config, file_size_db_path = input_data
     year, month, day = date
 
     minio_client, bucket = create_minio_client(minio_config)
-    stats = Statistics()
+    stats = Statistics(file_size_db_path)
 
     try:
         minio_client.fget_object(
@@ -881,7 +939,7 @@ def main():
                         help='The output folder.')
     parser.add_argument('--jobs', '-j', type=int, default=2,
                         help="Num. of concurrent jobs")
-    parser.add_argument('--db-file-size-path', type=str,
+    parser.add_argument('--file-size-db-path', type=str, default=None,
                         help="Path to size database")
 
     args, _ = parser.parse_known_args()
@@ -894,18 +952,19 @@ def main():
                 [(elm % args.jobs) + 1 for elm in range(0, args.window_size)],
                 list(period(args.start_date, args.window_size)),
                 [args.out_folder for _ in range(args.window_size)],
-                [args.minio_config for _ in range(args.window_size)]
+                [args.minio_config for _ in range(args.window_size)],
+                [args.file_size_db_path for _ in range(args.window_size)]
             ))
 
             pool = Pool(processes=args.jobs)
 
             pbar = tqdm(total=len(day_list), desc="Extract stats", position=0)
-            for year, month, day in tqdm(pool.imap(make_stats, day_list)):
+            for year, month, day in pool.imap(make_stats, day_list, chunksize=1):
                 pbar.write(f"==> [DONE] Date {year}-{month}-{day}")
                 pbar.update(1)
             pbar.close()
-
             pool.close()
+
             pool.join()
 
     elif args.command == 'plot':
@@ -915,19 +974,6 @@ def main():
 
         data_frames = []
         windows = []
-
-        conn_mc = sqlite3.connect(os.path.join(
-            args.db_file_size_path, "files_mc.db"))
-        conn_user = sqlite3.connect(os.path.join(
-            args.db_file_size_path, "files_user.db"))
-        conn_data = sqlite3.connect(os.path.join(
-            args.db_file_size_path, "files_data.db"))
-
-        size_db_cursors = {
-            'mc': conn_mc.cursor(),
-            'user': conn_user.cursor(),
-            'data': conn_data.cursor()
-        }
 
         # TO TEST
         # counter = 0
@@ -955,10 +1001,6 @@ def main():
         if len(data_frames) > 0:
             windows.append(make_dataframe_stats(data_frames))
             data_frames = []
-
-        conn_mc.close()
-        conn_user.close()
-        conn_data.close()
 
         print("[Plot window stats...]")
         plot_windows(windows, args.result_folder, args.plot_dpi)
