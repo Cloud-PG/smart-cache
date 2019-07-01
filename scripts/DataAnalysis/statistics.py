@@ -18,6 +18,7 @@ from minio.error import (BucketAlreadyExists, BucketAlreadyOwnedByYou,
                          ResponseError)
 from tqdm import tqdm
 
+import redis
 from DataManager import DataFile, date_from_timestamp_ms
 
 
@@ -63,7 +64,7 @@ def period(start_date, num_days):
 
 class Statistics(object):
 
-    def __init__(self, file_size_db_path: str = None):
+    def __init__(self, file_size_db_path: str = None, file_size_redis_url: str = None):
         self.__columns = [
             'day',
             'filename',
@@ -90,6 +91,7 @@ class Statistics(object):
         self.__conn_mc = None
         self.__conn_data = None
         self.__conn_user = None
+        self.__redis = None
 
         if file_size_db_path:
             self.__conn_mc = sqlite3.connect(os.path.join(
@@ -104,6 +106,13 @@ class Statistics(object):
                 'user': self.__conn_user.cursor(),
                 'data': self.__conn_data.cursor()
             }
+        elif file_size_redis_url:
+            self.__redis = redis.Redis(
+                connection_pool=redis.BlockingConnectionPool(
+                    host=file_size_redis_url,
+                    port=6379, db=0
+                )
+            )
 
     def __del__(self):
         if self.__conn_mc:
@@ -186,6 +195,13 @@ class Statistics(object):
                         ).fetchone()
                         if result:
                             self.__buffer[idx]['size'] = float(result[0])
+            elif self.__redis:
+                results = self.__redis.mget(
+                    [record['filename'] for record in self.__buffer]
+                )
+                for idx, result in enumerate(results):
+                    if result:
+                        self.__buffer[idx]['size'] = float(result)
 
             new_df = pd.DataFrame(
                 self.__buffer,
@@ -873,11 +889,12 @@ def make_dataframe_stats(data: list):
 
 
 def make_stats(input_data):
-    num_process, date, out_folder, minio_config, file_size_db_path = input_data
+    (num_process, date, out_folder, minio_config,
+     file_size_db_path, file_size_redis_url) = input_data
     year, month, day = date
 
     minio_client, bucket = create_minio_client(minio_config)
-    stats = Statistics(file_size_db_path)
+    stats = Statistics(file_size_db_path, file_size_redis_url)
 
     try:
         minio_client.fget_object(
@@ -941,6 +958,8 @@ def main():
                         help="Num. of concurrent jobs")
     parser.add_argument('--file-size-db-path', type=str, default=None,
                         help="Path to size database")
+    parser.add_argument('--file-size-redis-url', type=str, default=None,
+                        help="URL of redis database")
 
     args, _ = parser.parse_known_args()
 
@@ -953,7 +972,8 @@ def main():
                 list(period(args.start_date, args.window_size)),
                 [args.out_folder for _ in range(args.window_size)],
                 [args.minio_config for _ in range(args.window_size)],
-                [args.file_size_db_path for _ in range(args.window_size)]
+                [args.file_size_db_path for _ in range(args.window_size)],
+                [args.file_size_redis_url for _ in range(args.window_size)]
             ))
 
             pool = Pool(processes=args.jobs)
