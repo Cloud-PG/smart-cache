@@ -64,7 +64,7 @@ def period(start_date, num_days):
 
 class Statistics(object):
 
-    def __init__(self, file_size_db_path: str = None, file_size_redis_url: str = None):
+    def __init__(self, file_size_db_path: str = None, file_size_redis_url: str = None, bar_position: int = 0):
         self.__columns = [
             'day',
             'filename',
@@ -76,7 +76,7 @@ class Statistics(object):
             'job_success',
             'job_length_h',
             'job_length_m',
-            'users',
+            'user',
             'cpu_time',
             'io_time',
             'size'
@@ -90,20 +90,20 @@ class Statistics(object):
         self.__cursors = None
         self.__conn_mc = None
         self.__conn_data = None
-        self.__conn_user = None
         self.__redis = None
+        self.__tmp_cache = {}
+        self.__tmp_cache_sets = set()
+        self.__tmp_cache_set_added = set()
+        self.__bar_position = bar_position
 
         if file_size_db_path:
             self.__conn_mc = sqlite3.connect(os.path.join(
                 file_size_db_path, "files_mc.db"))
-            self.__conn_user = sqlite3.connect(os.path.join(
-                file_size_db_path, "files_user.db"))
             self.__conn_data = sqlite3.connect(os.path.join(
                 file_size_db_path, "files_data.db"))
 
             self.__cursors = {
                 'mc': self.__conn_mc.cursor(),
-                'user': self.__conn_user.cursor(),
                 'data': self.__conn_data.cursor()
             }
         elif file_size_redis_url:
@@ -119,8 +119,6 @@ class Statistics(object):
             self.__conn_mc.close()
         if self.__conn_data:
             self.__conn_data.close()
-        if self.__conn_user:
-            self.__conn_user.close()
 
     @property
     def data(self):
@@ -168,33 +166,41 @@ class Statistics(object):
         return bins, xticks
 
     @staticmethod
-    @lru_cache(128)
+    @lru_cache(512)
     def __get_type(string):
         return [elm for elm in string.split("/") if elm][1]
+
+    def __get_file_sizes(self, step: int = 100):
+        set_to_add = self.__tmp_cache_sets - self.__tmp_cache_set_added
+        if set_to_add:
+            # print(set_to_add)
+            if self.__cursors:
+                for db_type in ['mc', 'data']:
+                    cur_cursor = self.__cursors[db_type]
+                    op = cur_cursor.execute("SELECT * FROM 'file_sizes'")
+
+                    result = op.fetchmany(step)
+                    pbar = tqdm(position=self.__bar_position, desc="Get file sizes")
+                    while result:
+                        for record in result:
+                            filename, size = record
+                            for set_ in set_to_add:
+                                if filename.decode("ascii").find(set_) != -1:
+                                    self.__tmp_cache[filename] = float(size)
+                            pbar.update(1)
+                        result = op.fetchmany(step)
+                    pbar.close()
+            # print(self.__tmp_cache_set_added)
+            self.__tmp_cache_set_added |= set_to_add
 
     def __flush_buffer(self):
         if self.__buffer:
             if self.__cursors:
-                tmp_iterators = {
-                    'mc': [],
-                    'user': [],
-                    'data': []
-                }
-                for idx, record in enumerate(self.__buffer):
-                    cur_type = self.__get_type(record['filename'])
-                    if cur_type in tmp_iterators:
-                        tmp_iterators[cur_type].append(
-                            (idx, record['filename']))
-
-                for db_type, values in tmp_iterators.items():
-                    cur_cursor = self.__cursors[db_type]
-                    for idx, value in values:
-                        result = cur_cursor.execute(
-                            f"SELECT f_file_size FROM file_sizes WHERE f_logical_file_name=?",
-                            (value.encode("ascii"), )
-                        ).fetchone()
-                        if result:
-                            self.__buffer[idx]['size'] = float(result[0])
+                self.__get_file_sizes()
+                for record in self.__buffer:
+                    filename = record['filename']
+                    if filename in self.__tmp_cache:
+                        record['size'] = self.__tmp_cache[filename]
             elif self.__redis:
                 results = self.__redis.mget(
                     [record['filename'] for record in self.__buffer]
@@ -267,14 +273,18 @@ class Statistics(object):
                 'job_success': job_success,
                 'job_length_h': delta_h,
                 'job_length_m': delta_m,
-                'users': user_id,
+                'user': user_id,
                 'cpu_time': cpu_time,
                 'io_time': io_time,
                 'size': np.nan
             }
         )
 
-        if len(self.__buffer) == 100:
+        cur_set = "/".join([elm for elm in filename.split("/")][:7])
+        if cur_set not in self.__tmp_cache_sets:
+            self.__tmp_cache_sets |= set((cur_set, ))
+
+        if len(self.__buffer) == 100000:
             self.__flush_buffer()
 
 
@@ -746,10 +756,10 @@ def plot_day_stats(input_data):
 
 def plot_windows(windows, result_folder, dpi):
     plt.clf()
-    fig, _ = plt.subplots(2, 1, figsize=(8, 8))
+    fig, _ = plt.subplots(3, 1, figsize=(8, 8))
     bar_width = 0.4
 
-    axes = plt.subplot(2, 1, 1)
+    axes = plt.subplot(3, 1, 1)
     plt.bar(
         [
             idx - bar_width / 2.
@@ -785,7 +795,7 @@ def plot_windows(windows, result_folder, dpi):
         warnings.simplefilter("ignore")
         plt.tight_layout()
 
-    axes = plt.subplot(2, 1, 2)
+    axes = plt.subplot(3, 1, 2)
     plt.bar(
         [
             idx - bar_width / 2.
@@ -821,6 +831,54 @@ def plot_windows(windows, result_folder, dpi):
         warnings.simplefilter("ignore")
         plt.tight_layout()
 
+    axes = plt.subplot(3, 1, 3)
+    plt.bar(
+        [
+            idx - bar_width / 2.
+            for idx, _ in enumerate(windows)
+        ],
+        [
+            record['mean_num_file_x_job']
+            for record in windows
+        ],
+        width=bar_width,
+        label="Mean Num. File x Job"
+    )
+    plt.bar(
+        [
+            idx + bar_width / 2.
+            for idx, _ in enumerate(windows)
+        ],
+        [
+            record['mean_num_file_x_user']
+            for record in windows
+        ],
+        width=bar_width,
+        label="Mean Num. File x User"
+    )
+    # plt.bar(
+    #     [
+    #         idx + bar_width / 2.
+    #         for idx, _ in enumerate(windows)
+    #     ],
+    #     [
+    #         record['mean_num_job_x_task']
+    #         for record in windows
+    #     ],
+    #     width=bar_width,
+    #     label="Mean Num. Job x Task"
+    # )
+    axes.set_xticks(range(len(windows)))
+    axes.set_xticklabels(
+        [str(idx) for idx in range(len(windows))]
+    )
+    plt.grid()
+    plt.legend()
+    plt.xlabel("Window")
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        plt.tight_layout()
+
     plt.savefig(
         os.path.join(result_folder, "window_stats.png"),
         dpi=dpi
@@ -844,7 +902,7 @@ def make_dataframe_stats(data: list):
             - job_success
             - job_length_h
             - job_length_m
-            - users
+            - user
             - cpu_time
             - io_time
             - size
@@ -854,13 +912,25 @@ def make_dataframe_stats(data: list):
     num_requests = df.shape[0]
 
     num_files = len(df['filename'].unique().tolist())
-    num_users = len(df['users'].unique().tolist())
+    # num_users = len(df['user'].unique().tolist())
     num_sites = len(df['site_name'].unique().tolist())
     num_task_monitors = len(df['task_monitor_id'].unique().tolist())
     num_tasks = len(df['task_id'].unique().tolist())
     num_jobs = len(df['job_id'].unique().tolist())
     num_local = df['protocol'].value_counts().to_dict()
 
+    # mean_num_file_x_job = df['job_id'].value_counts().describe()['mean'] # Alternate method
+    # mean_num_file_x_user1 = df['users'].value_counts().describe()['mean']  # alternative method
+    mean_num_job_x_task = df[['task_id', 'job_id']].groupby(
+        'task_id').size().describe()['mean']  # .apply(lambda x: x.sample(frac=0.3))
+    mean_num_file_x_job = df[['filename', 'job_id']].groupby(
+        'job_id').size().describe()['mean']
+    mean_num_file_x_user = df[['filename', 'users']].groupby(
+        'users').size().describe()['mean']
+
+    # print(mean_num_file_x_user, mean_num_file_x_user1)
+
+    print(mean_num_job_x_task)
     assert num_task_monitors == num_tasks
     # print(json.dumps(num_local, indent=2, sort_keys=True))
 
@@ -874,17 +944,30 @@ def make_dataframe_stats(data: list):
     # print(f"MEAN: '{mean_num_req_x_file}'")
     # print(f"MEAN g1: '{mean_num_req_x_file_g1}'")
 
+    def split_filename(filename):
+        parts = [part for part in filename.split("/") if part]
+        if len(parts) > 1:
+            return parts[1]
+        else:
+            return filename
+
+    print(df['filename'].apply(split_filename).value_counts())
+
     return {
         'num_requests': num_requests,
         'num_files': num_files,
-        'num_users': num_users,
+        'mean_num_req_x_file': mean_num_req_x_file,
+        'mean_num_req_x_file_g1': mean_num_req_x_file_g1,
+        'mean_num_file_x_job': mean_num_file_x_job,
+        'mean_num_file_x_user': mean_num_file_x_user,
+        'mean_num_job_x_task': mean_num_job_x_task,
+        'mean_num_file_x_job': mean_num_file_x_job,
+        # 'num_users': num_users,
         'num_sites': num_sites,
         'num_task_monitors': num_task_monitors,
         'num_tasks': num_tasks,
         'num_jobs': num_jobs,
-        'num_local': num_local,
-        'mean_num_req_x_file': mean_num_req_x_file,
-        'mean_num_req_x_file_g1': mean_num_req_x_file_g1
+        'num_local': num_local
     }
 
 
@@ -894,7 +977,8 @@ def make_stats(input_data):
     year, month, day = date
 
     minio_client, bucket = create_minio_client(minio_config)
-    stats = Statistics(file_size_db_path, file_size_redis_url)
+    stats = Statistics(file_size_db_path, file_size_redis_url,
+                       bar_position=num_process)
 
     try:
         minio_client.fget_object(
