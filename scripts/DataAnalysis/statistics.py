@@ -98,9 +98,9 @@ class Statistics(object):
 
         if file_size_db_path:
             self.__conn_mc = sqlite3.connect(os.path.join(
-                file_size_db_path, "files_mc.db"))
+                file_size_db_path, "mc_file_sizes.db"))
             self.__conn_data = sqlite3.connect(os.path.join(
-                file_size_db_path, "files_data.db"))
+                file_size_db_path, "data_file_sizes.db"))
 
             self.__cursors = {
                 'mc': self.__conn_mc.cursor(),
@@ -173,24 +173,36 @@ class Statistics(object):
     def __get_file_sizes(self, step: int = 100):
         set_to_add = self.__tmp_cache_sets - self.__tmp_cache_set_added
         if set_to_add:
-            # print(set_to_add)
             if self.__cursors:
-                for db_type in ['mc', 'data']:
-                    cur_cursor = self.__cursors[db_type]
-                    op = cur_cursor.execute("SELECT * FROM 'file_sizes'")
+                for set_ in set_to_add:
+                    if set_.find("/store/mc/") != -1:
+                        cur_cursor = self.__cursors['mc']
+                    elif set_.find("/store/data/") != -1:
+                        cur_cursor = self.__cursors['data']
+                    
+                    pbar = tqdm(position=self.__bar_position, desc="Get file sizes")
+                    pbar.write(f"Count {set_} entries...")
+
+                    total = cur_cursor.execute(
+                        "SELECT COUNT(*) FROM file_sizes WHERE f_logical_file_name LIKE ?",
+                        (f'{set_}%', )
+                    ).fetchone()[0]
+
+                    pbar.total = total
+                    op = cur_cursor.execute(
+                        "SELECT * FROM file_sizes WHERE f_logical_file_name LIKE ?",
+                        (f'{set_}%', )
+                    )
 
                     result = op.fetchmany(step)
-                    pbar = tqdm(position=self.__bar_position, desc="Get file sizes")
                     while result:
                         for record in result:
                             filename, size = record
-                            for set_ in set_to_add:
-                                if filename.decode("ascii").find(set_) != -1:
-                                    self.__tmp_cache[filename] = float(size)
+                            self.__tmp_cache[filename] = size
                             pbar.update(1)
                         result = op.fetchmany(step)
                     pbar.close()
-            # print(self.__tmp_cache_set_added)
+
             self.__tmp_cache_set_added |= set_to_add
 
     def __flush_buffer(self):
