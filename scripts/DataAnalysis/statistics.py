@@ -244,7 +244,7 @@ class Statistics(object):
                     if sets:
                         pbar = tqdm(
                             position=self.__bar_position,
-                            desc=f"Get {store_type} file sizes of {len(sets)}",
+                            desc=f"Get {store_type} file sizes of {len(sets)} sets",
                             ascii=True
                         )
 
