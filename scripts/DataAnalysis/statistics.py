@@ -64,7 +64,7 @@ def period(start_date, num_days):
 
 class Statistics(object):
 
-    def __init__(self, file_size_db_path: str = None, file_size_redis_url: str = None, bar_position: int = 0):
+    def __init__(self, file_size_db_path: str = None, redis_url: str = None, bar_position: int = 0):
         self.__columns = [
             'day',
             'filename',
@@ -106,10 +106,10 @@ class Statistics(object):
                 'mc': self.__conn_mc.cursor(),
                 'data': self.__conn_data.cursor()
             }
-        elif file_size_redis_url:
+        if redis_url:
             self.__redis = redis.Redis(
                 connection_pool=redis.BlockingConnectionPool(
-                    host=file_size_redis_url,
+                    host=redis_url,
                     port=6379, db=0
                 )
             )
@@ -170,66 +170,168 @@ class Statistics(object):
     def __get_type(string):
         return [elm for elm in string.split("/") if elm][1]
 
-    def __get_file_sizes(self, step: int = 100):
+    def __get_file_sizes(self, step: int = 1000):
         set_to_add = self.__tmp_cache_sets - self.__tmp_cache_set_added
         if set_to_add:
-            if self.__cursors:
-                for set_ in set_to_add:
-                    if set_.find("/store/mc/") != -1:
-                        cur_cursor = self.__cursors['mc']
-                    elif set_.find("/store/data/") != -1:
-                        cur_cursor = self.__cursors['data']
-                    
-                    pbar = tqdm(position=self.__bar_position, desc="Get file sizes")
-                    pbar.write(f"Count {set_} entries...")
+            query = "SELECT * FROM file_sizes WHERE {}"
 
-                    total = cur_cursor.execute(
-                        "SELECT COUNT(*) FROM file_sizes WHERE f_logical_file_name LIKE ?",
-                        (f'{set_}%', )
-                    ).fetchone()[0]
+            if self.__cursors and not self.__redis:
+                for store_type in ['data', 'mc']:
+                    cur_cursor = self.__cursors[store_type]
+                    sets = [
+                        set_
+                        for set_ in set_to_add
+                        if set_.find(f"/store/{store_type}/") != -1
+                    ]
 
-                    pbar.total = total
-                    op = cur_cursor.execute(
-                        "SELECT * FROM file_sizes WHERE f_logical_file_name LIKE ?",
-                        (f'{set_}%', )
-                    )
+                    if sets:
+                        pbar = tqdm(
+                            position=self.__bar_position,
+                            desc=f"Get {store_type} file sizes of {len(sets)} datasets",
+                            ascii=True
+                        )
 
-                    result = op.fetchmany(step)
-                    while result:
-                        for record in result:
-                            filename, size = record
-                            self.__tmp_cache[filename] = size
-                            pbar.update(1)
+                        total = cur_cursor.execute(
+                            query.format(
+                                " OR ".join(
+                                    ["f_logical_file_name LIKE ?" for _ in range(
+                                        len(sets))]
+                                )
+                            ).replace("*", "Count(*)"),
+                            tuple(f'{cur_set}%' for cur_set in sets)
+                        ).fetchone()[0]
+                        pbar.total = total
+
+                        op = cur_cursor.execute(
+                            query.format(
+                                " OR ".join(
+                                    ["f_logical_file_name LIKE ?" for _ in range(
+                                        len(sets))]
+                                )
+                            ),
+                            tuple(f'{cur_set}%' for cur_set in sets)
+                        )
+
+                        pbar.desc = "Update cache"
                         result = op.fetchmany(step)
-                    pbar.close()
+                        while result:
+                            for record in result:
+                                filename, size = record
+                                self.__tmp_cache[filename] = size
+                                pbar.update(1)
+                            result = op.fetchmany(step)
+                        pbar.close()
 
-            self.__tmp_cache_set_added |= set_to_add
+                self.__tmp_cache_set_added |= set_to_add
+
+            elif self.__cursors and self.__redis:
+                query = "SELECT * FROM file_sizes WHERE {}"
+
+                for store_type in ['data', 'mc']:
+                    cur_cursor = self.__cursors[store_type]
+                    sets = [
+                        set_
+                        for set_ in set_to_add
+                        if set_.find(f"/store/{store_type}/") != -1
+                    ]
+                    for cur_set in sets:
+                        if not self.__redis.exists(cur_set):
+                            self.__redis.set(cur_set, "PENDING")
+                        else:
+                            sets.remove(cur_set)
+                            self.__tmp_cache_set_added |= set((cur_set,))
+
+                    if sets:
+                        pbar = tqdm(
+                            position=self.__bar_position,
+                            desc=f"Get {store_type} file sizes of {len(sets)}",
+                            ascii=True
+                        )
+
+                        total = cur_cursor.execute(
+                            query.format(
+                                " OR ".join(
+                                    ["f_logical_file_name LIKE ?" for _ in range(
+                                        len(sets))]
+                                )
+                            ).replace("*", "Count(*)"),
+                            tuple(f'{cur_set}%' for cur_set in sets)
+                        ).fetchone()[0]
+                        pbar.total = total
+
+                        op = cur_cursor.execute(
+                            query.format(
+                                " OR ".join(
+                                    ["f_logical_file_name LIKE ?" for _ in range(
+                                        len(sets))]
+                                )
+                            ),
+                            tuple(f'{cur_set}%' for cur_set in sets)
+                        )
+
+                        pbar.desc = "Update REDIS cache"
+                        result = op.fetchmany(step)
+                        while result:
+                            self.__redis.mset(dict([
+                                (key, value) for key, value in result
+                            ]))
+                            pbar.update(step)
+                            result = op.fetchmany(step)
+
+                        for cur_set in sets:
+                            self.__redis.set(cur_set, "ADDED")
+                            self.__tmp_cache_set_added |= set((cur_set,))
+
+                        pbar.close()
+
+            return set_to_add
 
     def __flush_buffer(self):
         if self.__buffer:
-            if self.__cursors:
-                self.__get_file_sizes()
+            set_to_add = self.__get_file_sizes()
+            pbar = tqdm(
+                total=len(self.__buffer) + 3,
+                position=self.__bar_position,
+                desc="Inject file sizes",
+                ascii=True
+            )
+            if self.__cursors and not self.__redis:
                 for record in self.__buffer:
-                    filename = record['filename']
-                    if filename in self.__tmp_cache:
-                        record['size'] = self.__tmp_cache[filename]
+                    record['size'] = self.__tmp_cache[record['filename']]
+                    pbar.update(1)
+
             elif self.__redis:
+                if set_to_add:
+                    set_cache = self.__redis.mget(set_to_add)
+                    while not all(
+                        [
+                            set_status.decode("ascii") == "ADDED"
+                            for set_status in set_cache
+                        ]
+                    ):
+                        set_cache = self.__redis.mget(set_to_add)
+
                 results = self.__redis.mget(
                     [record['filename'] for record in self.__buffer]
                 )
                 for idx, result in enumerate(results):
-                    if result:
-                        self.__buffer[idx]['size'] = float(result)
+                    self.__buffer[idx]['size'] = float(result)
 
+            pbar.desc = "Concat dataframe"
             new_df = pd.DataFrame(
                 self.__buffer,
                 columns=self.__columns
             )
+            pbar.update(1)
             self._data = pd.concat([
                 self._data,
                 new_df
             ])
+            pbar.update(1)
             self.__buffer = []
+            pbar.update(1)
+
+            pbar.close()
 
     @staticmethod
     def get_bins(dict_: dict, integer_x: bool = True, to_dict: bool = False):
@@ -1009,7 +1111,7 @@ def make_stats(input_data):
     for record in tqdm(
         collector,
         desc=f"Extract statistics from {year}-{month}-{day}]",
-        position=num_process
+        position=num_process, ascii=True
     ):
         # print(json.dumps(record, indent=2, sort_keys=True))
         # break
@@ -1054,7 +1156,7 @@ def main():
                         help="Num. of concurrent jobs")
     parser.add_argument('--file-size-db-path', type=str, default=None,
                         help="Path to size database")
-    parser.add_argument('--file-size-redis-url', type=str, default=None,
+    parser.add_argument('--redis-url', type=str, default=None,
                         help="URL of redis database")
 
     args, _ = parser.parse_known_args()
@@ -1069,12 +1171,14 @@ def main():
                 [args.out_folder for _ in range(args.window_size)],
                 [args.minio_config for _ in range(args.window_size)],
                 [args.file_size_db_path for _ in range(args.window_size)],
-                [args.file_size_redis_url for _ in range(args.window_size)]
+                [args.redis_url for _ in range(args.window_size)]
             ))
 
             pool = Pool(processes=args.jobs)
 
-            pbar = tqdm(total=len(day_list), desc="Extract stats", position=0)
+            pbar = tqdm(
+                total=len(day_list), desc="Extract stats", position=0, ascii=True
+            )
             for year, month, day in pool.imap(make_stats, day_list, chunksize=1):
                 pbar.write(f"==> [DONE] Date {year}-{month}-{day}")
                 pbar.update(1)
@@ -1093,7 +1197,9 @@ def main():
 
         # TO TEST
         # counter = 0
-        for file_ in tqdm(files, desc="Search stat results", position=0):
+        for file_ in tqdm(
+            files, desc="Search stat results", position=0, ascii=True
+        ):
             head, tail0 = os.path.splitext(file_)
             _, tail1 = os.path.splitext(head)
 
