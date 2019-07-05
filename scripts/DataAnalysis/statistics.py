@@ -191,6 +191,10 @@ class Statistics(object):
                             ascii=True
                         )
 
+                        ##
+                        # NOTE: total check decrease performances
+                        #       used only for test
+                        #
                         # total = cur_cursor.execute(
                         #     query.format(
                         #         " OR ".join(
@@ -255,6 +259,10 @@ class Statistics(object):
                             ascii=True
                         )
 
+                        ##
+                        # NOTE: total check decrease performances
+                        #       used only for test
+                        #
                         # total = cur_cursor.execute(
                         #     query.format(
                         #         " OR ".join(
@@ -279,7 +287,7 @@ class Statistics(object):
                                 sets) > 1 else (f'{sets[0]}%', )
                         )
 
-                        pbar.desc = "Update REDIS cache"
+                        pbar.desc = f"Update {store_type} REDIS cache of {len(sets)} sets"
                         result = op.fetchmany(step)
                         while result:
                             self.__redis.mset(dict([
@@ -301,7 +309,7 @@ class Statistics(object):
         if self.__buffer:
             set_to_add = self.__get_file_sizes()
             pbar = tqdm(
-                total=len(self.__buffer) + 3,
+                total=len(self.__buffer),
                 position=self.__bar_position,
                 desc="Inject file sizes",
                 ascii=True
@@ -312,6 +320,7 @@ class Statistics(object):
                     pbar.update(1)
 
             elif self.__redis:
+                pbar.desc = "Inject file sizes [WAITING]"
                 if set_to_add:
                     set_cache = self.__redis.mget(set_to_add)
                     while not all(
@@ -321,12 +330,18 @@ class Statistics(object):
                         ]
                     ):
                         set_cache = self.__redis.mget(set_to_add)
+                        pbar.desc = "Inject file sizes [WAITING]"
 
+                pbar.desc = "Inject file sizes"
                 results = self.__redis.mget(
                     [record['filename'] for record in self.__buffer]
                 )
                 for idx, result in enumerate(results):
-                    self.__buffer[idx]['size'] = float(result)
+                    try:
+                        self.__buffer[idx]['size'] = float(result)
+                    except TypeError:
+                        pass
+                    pbar.update(1)
 
             pbar.desc = "Concat dataframe"
             new_df = pd.DataFrame(
@@ -409,7 +424,7 @@ class Statistics(object):
         if cur_set not in self.__tmp_cache_sets:
             self.__tmp_cache_sets |= set((cur_set, ))
 
-        if len(self.__buffer) == 10000:
+        if len(self.__buffer) == 42000:
             self.__flush_buffer()
 
 
