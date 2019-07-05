@@ -1219,9 +1219,9 @@ def main():
 
     args, _ = parser.parse_known_args()
 
-    os.makedirs(args.out_folder, exist_ok=True)
-
     if args.command == "extract":
+        os.makedirs(args.out_folder, exist_ok=True)
+
         if args.minio_config:
             day_list = list(zip(
                 [(elm % args.jobs) + 1 for elm in range(0, args.window_size)],
