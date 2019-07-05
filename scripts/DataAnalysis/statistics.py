@@ -896,13 +896,14 @@ def plot_day_stats(input_data):
 
 def plot_windows(windows, result_folder, dpi):
     plt.clf()
-    fig, _ = plt.subplots(3, 1, figsize=(8, 8))
-    bar_width = 0.4
+    grid = plt.GridSpec(10, len(windows), wspace=1.42, hspace=2.33)
 
-    axes = plt.subplot(3, 1, 1)
-    plt.bar(
+    bar_width = 0.2
+
+    axes = plt.subplot(grid[0:3, 0:])
+    axes.bar(
         [
-            idx - bar_width / 2.
+            idx - (bar_width + bar_width / 2.)
             for idx, _ in enumerate(windows)
         ],
         [
@@ -912,9 +913,9 @@ def plot_windows(windows, result_folder, dpi):
         width=bar_width,
         label="Num. Requests"
     )
-    plt.bar(
+    axes.bar(
         [
-            idx + bar_width / 2.
+            idx - (bar_width / 2.)
             for idx, _ in enumerate(windows)
         ],
         [
@@ -924,19 +925,28 @@ def plot_windows(windows, result_folder, dpi):
         width=bar_width,
         label="Num. Files"
     )
+    axes.bar(
+        [
+            idx + (bar_width / 2.)
+            for idx, _ in enumerate(windows)
+        ],
+        [
+            record['size_all_files']
+            for record in windows
+        ],
+        width=bar_width,
+        label="Cache size (GB)"
+    )
     axes.set_xticks(range(len(windows)))
     axes.set_xticklabels(
         [str(idx) for idx in range(len(windows))]
     )
-    plt.grid()
-    plt.legend()
-    plt.xlabel("Window")
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        plt.tight_layout()
+    axes.grid()
+    axes.legend()
+    axes.set_xlabel("Window")
 
-    axes = plt.subplot(3, 1, 2)
-    plt.bar(
+    axes = plt.subplot(grid[3:6, :])
+    axes.bar(
         [
             idx - bar_width / 2.
             for idx, _ in enumerate(windows)
@@ -948,82 +958,93 @@ def plot_windows(windows, result_folder, dpi):
         width=bar_width,
         label="Mean Num. Requests"
     )
-    plt.bar(
+    axes.bar(
         [
             idx + bar_width / 2.
             for idx, _ in enumerate(windows)
         ],
         [
-            record['mean_num_req_x_file_g1']
+            record['mean_num_req_x_file_gmin']
             for record in windows
         ],
         width=bar_width,
-        label="Mean Num. Requests > 1"
+        label="Mean Num. Requests > min"
     )
     axes.set_xticks(range(len(windows)))
     axes.set_xticklabels(
         [str(idx) for idx in range(len(windows))]
     )
-    plt.grid()
-    plt.legend()
-    plt.xlabel("Window")
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        plt.tight_layout()
+    axes.grid()
+    axes.legend()
+    axes.set_xlabel("Window")
 
-    axes = plt.subplot(3, 1, 3)
-    plt.bar(
-        [
-            idx - bar_width / 2.
-            for idx, _ in enumerate(windows)
-        ],
-        [
-            record['mean_num_file_x_job']
-            for record in windows
-        ],
-        width=bar_width,
-        label="Mean Num. File x Job"
-    )
-    plt.bar(
-        [
-            idx + bar_width / 2.
-            for idx, _ in enumerate(windows)
-        ],
-        [
-            record['mean_num_file_x_user']
-            for record in windows
-        ],
-        width=bar_width,
-        label="Mean Num. File x User"
-    )
-    # plt.bar(
+    for idx, window in enumerate(windows):
+        axes = plt.subplot(grid[6:8, idx])
+        labels = sorted(window['num_req_x_file_frequencies'].keys())
+        sizes = [
+            (window['num_req_x_file_frequencies'][label] /
+             window['num_requests']) * 100.
+            for label in labels
+        ]
+        cut_idx = -1
+        for idx, size in enumerate(sizes):
+            if size < 2.:
+                cut_idx = idx
+                break
+        labels = labels[:cut_idx] + ['< 2%']
+        sizes = sizes[:cut_idx] + [sum(sizes[cut_idx:])]
+        axes.pie(sizes, radius=1.5, labels=labels,
+                 autopct='%1.0f%%', startangle=90)
+
+    for idx, window in enumerate(windows):
+        axes = plt.subplot(grid[8:10, idx])
+        labels = sorted(window['num_req_x_file_frequencies'].keys())[1:]
+        sizes = [
+            (window['num_req_x_file_frequencies'][label] /
+             window['num_requests']) * 100.
+            for label in labels
+        ]
+        cut_idx = -1
+        for idx, size in enumerate(sizes):
+            if size < 2.:
+                cut_idx = idx
+                break
+        labels = labels[:cut_idx] + ['< 2%']
+        sizes = sizes[:cut_idx] + [sum(sizes[cut_idx:])]
+        axes.pie(sizes, radius=1.5, labels=labels,
+                 autopct='%1.0f%%', startangle=90)
+
+    # axes[2,0].bar(
     #     [
-    #         idx + bar_width / 2.
+    #         idx - bar_width / 2.
     #         for idx, _ in enumerate(windows)
     #     ],
     #     [
-    #         record['mean_num_job_x_task']
+    #         record['num_req_x_file_frequencies']
     #         for record in windows
     #     ],
     #     width=bar_width,
-    #     label="Mean Num. Job x Task"
+    #     label="Num. Requests x file"
     # )
-    axes.set_xticks(range(len(windows)))
-    axes.set_xticklabels(
-        [str(idx) for idx in range(len(windows))]
-    )
-    plt.grid()
-    plt.legend()
-    plt.xlabel("Window")
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        plt.tight_layout()
+    # axes.set_xticks(range(len(windows)))
+    # axes.set_xticklabels(
+    #     [str(idx) for idx in range(len(windows))]
+    # )
+    # axes[2,0].grid()
+    # axes[2,0].legend()
+    # axes[2,0].xlabel("Window")
+    # with warnings.catch_warnings():
+    #     warnings.simplefilter("ignore")
+    #     axes[2,0].tight_layout()
+
+    # with warnings.catch_warnings():
+    #     warnings.simplefilter("ignore")
+    #     plt.tight_layout()
 
     plt.savefig(
         os.path.join(result_folder, "window_stats.png"),
         dpi=dpi
     )
-    plt.close(fig)
 
 
 def make_dataframe_stats(data: list):
@@ -1049,65 +1070,76 @@ def make_dataframe_stats(data: list):
     """
     df = pd.concat(data)
 
+    # Num requests and num files
     num_requests = df.shape[0]
-
     num_files = len(df['filename'].unique().tolist())
-    # num_users = len(df['user'].unique().tolist())
-    num_sites = len(df['site_name'].unique().tolist())
-    num_task_monitors = len(df['task_monitor_id'].unique().tolist())
-    num_tasks = len(df['task_id'].unique().tolist())
-    num_jobs = len(df['job_id'].unique().tolist())
-    num_local = df['protocol'].value_counts().to_dict()
+    size_all_files = df[['filename', 'size']].dropna().drop_duplicates(
+        subset='filename')['size'].sum() / 1024. ** 3.
 
-    # mean_num_file_x_job = df['job_id'].value_counts().describe()['mean'] # Alternate method
-    # mean_num_file_x_user1 = df['users'].value_counts().describe()['mean']  # alternative method
-    mean_num_job_x_task = df[['task_id', 'job_id']].groupby(
-        'task_id').size().describe()['mean']  # .apply(lambda x: x.sample(frac=0.3))
-    mean_num_file_x_job = df[['filename', 'job_id']].groupby(
-        'job_id').size().describe()['mean']
-    mean_num_file_x_user = df[['filename', 'users']].groupby(
-        'users').size().describe()['mean']
-
-    # print(mean_num_file_x_user, mean_num_file_x_user1)
-
-    print(mean_num_job_x_task)
-    assert num_task_monitors == num_tasks
-    # print(json.dumps(num_local, indent=2, sort_keys=True))
-
+    # Mean num. request x file and
+    # Mean num. request x file with num requests > min
     num_req_x_file = df['filename'].value_counts()
-    # print(num_req_x_file.describe())
-    num_req_x_file_g1 = num_req_x_file[
+    num_req_x_file_gmin = num_req_x_file[
         num_req_x_file > num_req_x_file.describe()['min']]
-    # print(num_req_x_file_g1.describe())
     mean_num_req_x_file = num_req_x_file.describe()['mean']
-    mean_num_req_x_file_g1 = num_req_x_file_g1.describe()['mean']
-    # print(f"MEAN: '{mean_num_req_x_file}'")
-    # print(f"MEAN g1: '{mean_num_req_x_file_g1}'")
+    mean_num_req_x_file_gmin = num_req_x_file_gmin.describe()['mean']
 
-    def split_filename(filename):
-        parts = [part for part in filename.split("/") if part]
-        if len(parts) > 1:
-            return parts[1]
-        else:
-            return filename
+    # Num of requests x file
+    num_req_x_file_frequencies = num_req_x_file.value_counts().to_dict()
+    assert num_requests == sum(
+        [key * value for key, value in num_req_x_file_frequencies.items()])
 
-    print(df['filename'].apply(split_filename).value_counts())
+    # # num_users = len(df['user'].unique().tolist())
+    # num_sites = len(df['site_name'].unique().tolist())
+    # num_task_monitors = len(df['task_monitor_id'].unique().tolist())
+    # num_tasks = len(df['task_id'].unique().tolist())
+    # num_jobs = len(df['job_id'].unique().tolist())
+    # num_local = df['protocol'].value_counts().to_dict()
+
+    # # mean_num_file_x_job = df['job_id'].value_counts().describe()['mean'] # Alternate method
+    # # mean_num_file_x_user1 = df['users'].value_counts().describe()['mean']  # alternative method
+    # mean_num_job_x_task = df[['task_id', 'job_id']].groupby(
+    #     'task_id').size().describe()['mean']  # .apply(lambda x: x.sample(frac=0.3))
+    # mean_num_file_x_job = df[['filename', 'job_id']].groupby(
+    #     'job_id').size().describe()['mean']
+    # mean_num_file_x_user = df[['filename', 'user']].groupby(
+    #     'user').size().describe()['mean']
+
+    # # print(mean_num_file_x_user, mean_num_file_x_user1)
+
+    # print(mean_num_job_x_task)
+    # assert num_task_monitors == num_tasks
+    # # print(json.dumps(num_local, indent=2, sort_keys=True))
+
+    # def split_filename(filename):
+    #     parts = [part for part in filename.split("/") if part]
+    #     if len(parts) > 1:
+    #         return parts[1]
+    #     else:
+    #         return filename
+
+    # print(df['filename'].apply(split_filename).value_counts())
 
     return {
         'num_requests': num_requests,
         'num_files': num_files,
+        'size_all_files': size_all_files,
+
         'mean_num_req_x_file': mean_num_req_x_file,
-        'mean_num_req_x_file_g1': mean_num_req_x_file_g1,
-        'mean_num_file_x_job': mean_num_file_x_job,
-        'mean_num_file_x_user': mean_num_file_x_user,
-        'mean_num_job_x_task': mean_num_job_x_task,
-        'mean_num_file_x_job': mean_num_file_x_job,
-        # 'num_users': num_users,
-        'num_sites': num_sites,
-        'num_task_monitors': num_task_monitors,
-        'num_tasks': num_tasks,
-        'num_jobs': num_jobs,
-        'num_local': num_local
+        'mean_num_req_x_file_gmin': mean_num_req_x_file_gmin,
+
+        'num_req_x_file_frequencies': num_req_x_file_frequencies,
+
+        # 'mean_num_file_x_job': mean_num_file_x_job,
+        # 'mean_num_file_x_user': mean_num_file_x_user,
+        # 'mean_num_job_x_task': mean_num_job_x_task,
+        # 'mean_num_file_x_job': mean_num_file_x_job,
+        # # 'num_users': num_users,
+        # 'num_sites': num_sites,
+        # 'num_task_monitors': num_task_monitors,
+        # 'num_tasks': num_tasks,
+        # 'num_jobs': num_jobs,
+        # 'num_local': num_local
     }
 
 
@@ -1230,7 +1262,7 @@ def main():
             _, tail1 = os.path.splitext(head)
 
             # counter += 1
-            # if counter == 3:
+            # if counter == 4:
             #     break
 
             if tail0 == ".gz" and tail1 == ".feather":
