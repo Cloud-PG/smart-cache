@@ -170,7 +170,7 @@ class Statistics(object):
     def __get_type(string):
         return [elm for elm in string.split("/") if elm][1]
 
-    def __get_file_sizes(self, step: int = 1000):
+    def __get_file_sizes(self, step: int = 100):
         set_to_add = self.__tmp_cache_sets - self.__tmp_cache_set_added
         if set_to_add:
             query = "SELECT * FROM file_sizes WHERE {}"
@@ -191,16 +191,16 @@ class Statistics(object):
                             ascii=True
                         )
 
-                        total = cur_cursor.execute(
-                            query.format(
-                                " OR ".join(
-                                    ["f_logical_file_name LIKE ?" for _ in range(
-                                        len(sets))]
-                                )
-                            ).replace("*", "Count(*)"),
-                            tuple(f'{cur_set}%' for cur_set in sets)
-                        ).fetchone()[0]
-                        pbar.total = total
+                        # total = cur_cursor.execute(
+                        #     query.format(
+                        #         " OR ".join(
+                        #             ["f_logical_file_name LIKE ?" for _ in range(
+                        #                 len(sets))]
+                        #         )
+                        #     ).replace("*", "Count(*)"),
+                        #     tuple(f'{cur_set}%' for cur_set in sets)
+                        # ).fetchone()[0]
+                        # pbar.total = total
 
                         op = cur_cursor.execute(
                             query.format(
@@ -208,8 +208,11 @@ class Statistics(object):
                                     ["f_logical_file_name LIKE ?" for _ in range(
                                         len(sets))]
                                 )
+                            ) if len(sets) > 1 else query.format(
+                                "f_logical_file_name LIKE ?"
                             ),
-                            tuple(f'{cur_set}%' for cur_set in sets)
+                            tuple(f'{cur_set}%' for cur_set in sets)if len(
+                                sets) > 1 else (f'{sets[0]}%', )
                         )
 
                         pbar.desc = "Update cache"
@@ -227,6 +230,7 @@ class Statistics(object):
             elif self.__cursors and self.__redis:
                 query = "SELECT * FROM file_sizes WHERE {}"
 
+                # print(f"{self.__bar_position} -> {set_to_add}")
                 for store_type in ['data', 'mc']:
                     cur_cursor = self.__cursors[store_type]
                     sets = [
@@ -234,13 +238,16 @@ class Statistics(object):
                         for set_ in set_to_add
                         if set_.find(f"/store/{store_type}/") != -1
                     ]
+                    # print(f"{self.__bar_position} -> {sets}")
                     for cur_set in sets:
                         if not self.__redis.exists(cur_set):
                             self.__redis.set(cur_set, "PENDING")
+                            # print(f"{self.__bar_position} -> ADD IN PENDING {cur_set}")
                         else:
                             sets.remove(cur_set)
                             self.__tmp_cache_set_added |= set((cur_set,))
 
+                    # print(f"{self.__bar_position} -> {sets}")
                     if sets:
                         pbar = tqdm(
                             position=self.__bar_position,
@@ -248,16 +255,16 @@ class Statistics(object):
                             ascii=True
                         )
 
-                        total = cur_cursor.execute(
-                            query.format(
-                                " OR ".join(
-                                    ["f_logical_file_name LIKE ?" for _ in range(
-                                        len(sets))]
-                                )
-                            ).replace("*", "Count(*)"),
-                            tuple(f'{cur_set}%' for cur_set in sets)
-                        ).fetchone()[0]
-                        pbar.total = total
+                        # total = cur_cursor.execute(
+                        #     query.format(
+                        #         " OR ".join(
+                        #             ["f_logical_file_name LIKE ?" for _ in range(
+                        #                 len(sets))]
+                        #         )
+                        #     ).replace("*", "Count(*)"),
+                        #     tuple(f'{cur_set}%' for cur_set in sets)
+                        # ).fetchone()[0]
+                        # pbar.total = total
 
                         op = cur_cursor.execute(
                             query.format(
@@ -265,8 +272,11 @@ class Statistics(object):
                                     ["f_logical_file_name LIKE ?" for _ in range(
                                         len(sets))]
                                 )
+                            ) if len(sets) > 1 else query.format(
+                                "f_logical_file_name LIKE ?"
                             ),
-                            tuple(f'{cur_set}%' for cur_set in sets)
+                            tuple(f'{cur_set}%' for cur_set in sets)if len(
+                                sets) > 1 else (f'{sets[0]}%', )
                         )
 
                         pbar.desc = "Update REDIS cache"
@@ -281,6 +291,7 @@ class Statistics(object):
                         for cur_set in sets:
                             self.__redis.set(cur_set, "ADDED")
                             self.__tmp_cache_set_added |= set((cur_set,))
+                            # print(f"{self.__bar_position} -> ADDED {cur_set}")
 
                         pbar.close()
 
@@ -398,7 +409,7 @@ class Statistics(object):
         if cur_set not in self.__tmp_cache_sets:
             self.__tmp_cache_sets |= set((cur_set, ))
 
-        if len(self.__buffer) == 100000:
+        if len(self.__buffer) == 10000:
             self.__flush_buffer()
 
 
