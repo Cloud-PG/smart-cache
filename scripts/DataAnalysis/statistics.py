@@ -895,15 +895,15 @@ def plot_day_stats(input_data):
 
 
 def plot_windows(windows, result_folder, dpi):
-    plt.clf()
-    grid = plt.GridSpec(10, len(windows), wspace=1.42, hspace=2.33)
-
     bar_width = 0.2
 
-    axes = plt.subplot(grid[0:3, 0:])
+    plt.clf()
+    grid = plt.GridSpec(4, len(windows), wspace=1.42, hspace=2.33)
+
+    axes = plt.subplot(grid[0:2, 0:])
     axes.bar(
         [
-            idx - (bar_width + bar_width / 2.)
+            idx - bar_width / 2.
             for idx, _ in enumerate(windows)
         ],
         [
@@ -915,7 +915,7 @@ def plot_windows(windows, result_folder, dpi):
     )
     axes.bar(
         [
-            idx - (bar_width / 2.)
+            idx + bar_width / 2.
             for idx, _ in enumerate(windows)
         ],
         [
@@ -925,18 +925,6 @@ def plot_windows(windows, result_folder, dpi):
         width=bar_width,
         label="Num. Files"
     )
-    axes.bar(
-        [
-            idx + (bar_width / 2.)
-            for idx, _ in enumerate(windows)
-        ],
-        [
-            record['size_all_files']
-            for record in windows
-        ],
-        width=bar_width,
-        label="Cache size (GB)"
-    )
     axes.set_xticks(range(len(windows)))
     axes.set_xticklabels(
         [str(idx) for idx in range(len(windows))]
@@ -945,7 +933,7 @@ def plot_windows(windows, result_folder, dpi):
     axes.legend()
     axes.set_xlabel("Window")
 
-    axes = plt.subplot(grid[3:6, :])
+    axes = plt.subplot(grid[2:4, :])
     axes.bar(
         [
             idx - bar_width / 2.
@@ -978,8 +966,16 @@ def plot_windows(windows, result_folder, dpi):
     axes.legend()
     axes.set_xlabel("Window")
 
+    plt.savefig(
+        os.path.join(result_folder, "window_request_stats.png"),
+        dpi=dpi
+    )
+
+    plt.clf()
+    grid = plt.GridSpec(5, len(windows), wspace=1.42, hspace=2.33)
+
     for idx, window in enumerate(windows):
-        axes = plt.subplot(grid[6:8, idx])
+        axes = plt.subplot(grid[0:2, idx])
         labels = sorted(window['num_req_x_file_frequencies'].keys())
         sizes = [
             (window['num_req_x_file_frequencies'][label] /
@@ -997,7 +993,7 @@ def plot_windows(windows, result_folder, dpi):
                  autopct='%1.0f%%', startangle=90)
 
     for idx, window in enumerate(windows):
-        axes = plt.subplot(grid[8:10, idx])
+        axes = plt.subplot(grid[2:4, idx])
         labels = sorted(window['num_req_x_file_frequencies'].keys())[1:]
         sizes = [
             (window['num_req_x_file_frequencies'][label] /
@@ -1042,9 +1038,107 @@ def plot_windows(windows, result_folder, dpi):
     #     plt.tight_layout()
 
     plt.savefig(
-        os.path.join(result_folder, "window_stats.png"),
+        os.path.join(result_folder, "window_frequency_stats.png"),
         dpi=dpi
     )
+
+    plt.clf()
+    grid = plt.GridSpec(8, len(windows), wspace=1.42, hspace=5.)
+
+    axes = plt.subplot(grid[0:4, 0:])
+    axes.bar(
+        [
+            idx - (bar_width + bar_width / 2.)
+            for idx, _ in enumerate(windows)
+        ],
+        [
+            record['size_all_files']
+            for record in windows
+        ],
+        width=bar_width,
+        label="Size all files (GB)"
+    )
+    axes.bar(
+        [
+            idx - (bar_width / 2.)
+            for idx, _ in enumerate(windows)
+        ],
+        [
+            record['size_file_1req']
+            for record in windows
+        ],
+        width=bar_width,
+        label="Size files with 1 request (GB)"
+    )
+    axes.bar(
+        [
+            idx + (bar_width / 2.)
+            for idx, _ in enumerate(windows)
+        ],
+        [
+            record['size_file_g1req']
+            for record in windows
+        ],
+        width=bar_width,
+        label="Size files with more than 1 req. (GB)"
+    )
+    axes.set_xticks(range(len(windows)))
+    axes.set_xticklabels(
+        [str(idx) for idx in range(len(windows))]
+    )
+    axes.grid()
+    axes.legend()
+    axes.set_xlabel("Window")
+
+    for win_idx, window in enumerate(windows):
+        axes = plt.subplot(grid[4:6, win_idx])
+        labels = sorted(window['desc_file_sizes'].keys())
+        sizes = [
+            float(window['desc_file_sizes'][label] /
+                  sum(window['desc_file_sizes'].values())) * 100.
+            for label in labels
+        ]
+        to_remove = []
+        for idx, size in enumerate(sizes):
+            if size <= 25.:
+                to_remove.append(idx)
+        for idx in reversed(sorted(to_remove)):
+            sizes.pop(idx)
+            labels.pop(idx)
+        axes.pie(sizes, radius=1.5, labels=labels,
+                 autopct='%1.0f%%', startangle=90)
+        axes.set_xlabel(f"Win. {win_idx}\nsize >25%")
+
+    for win_idx, window in enumerate(windows):
+        axes = plt.subplot(grid[6:8, win_idx])
+        labels = sorted(window['desc_file_sizes'].keys())
+        sizes = [
+            float(window['desc_file_sizes'][label] /
+                  sum(window['desc_file_sizes'].values())) * 100.
+            for label in labels
+        ]
+        to_remove = []
+        for idx, size in enumerate(sizes):
+            if size > 25. or size <= 1.:
+                to_remove.append(idx)
+        for idx in reversed(sorted(to_remove)):
+            sizes.pop(idx)
+            labels.pop(idx)
+        axes.pie(sizes, radius=1.5, labels=labels,
+                 autopct='%1.0f%%', startangle=90)
+        axes.set_xlabel(f"Win. {win_idx}\n1% < size <=25%")
+
+    plt.savefig(
+        os.path.join(result_folder, "window_size_stats.png"),
+        dpi=dpi
+    )
+
+
+def transform_sizes(size):
+    GB_size = size // 1024**3
+    if GB_size == 0.0:
+        return size // 1024**2
+    return GB_size * 1000.
 
 
 def make_dataframe_stats(data: list):
@@ -1089,6 +1183,22 @@ def make_dataframe_stats(data: list):
     assert num_requests == sum(
         [key * value for key, value in num_req_x_file_frequencies.items()])
 
+    # Size files with 1 request and greater than 1 request
+    size_by_filename = df[['filename', 'size']].dropna().drop_duplicates(
+        subset='filename')
+    file_1req_list = num_req_x_file[
+        num_req_x_file <= num_req_x_file.describe()['min']
+    ].keys().to_list()
+    file_g1req_list = num_req_x_file[
+        num_req_x_file > num_req_x_file.describe()['min']
+    ].keys().to_list()
+    size_1req_files = size_by_filename[size_by_filename['filename'].isin(
+        file_1req_list)]['size'].sum() / 1024. ** 3
+    size_g1req_files = size_by_filename[size_by_filename['filename'].isin(
+        file_g1req_list)]['size'].sum() / 1024. ** 3
+    desc_file_sizes = size_by_filename['size'].apply(
+        transform_sizes).value_counts().sort_index().to_dict()
+
     # # num_users = len(df['user'].unique().tolist())
     # num_sites = len(df['site_name'].unique().tolist())
     # num_task_monitors = len(df['task_monitor_id'].unique().tolist())
@@ -1123,7 +1233,11 @@ def make_dataframe_stats(data: list):
     return {
         'num_requests': num_requests,
         'num_files': num_files,
+
         'size_all_files': size_all_files,
+        'size_file_1req': size_1req_files,
+        'size_file_g1req': size_g1req_files,
+        'desc_file_sizes': desc_file_sizes,
 
         'mean_num_req_x_file': mean_num_req_x_file,
         'mean_num_req_x_file_gmin': mean_num_req_x_file_gmin,
@@ -1262,7 +1376,7 @@ def main():
             _, tail1 = os.path.splitext(head)
 
             # counter += 1
-            # if counter == 4:
+            # if counter == 5:
             #     break
 
             if tail0 == ".gz" and tail1 == ".feather":
