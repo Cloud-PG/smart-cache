@@ -1166,7 +1166,7 @@ def plot_windows(windows, result_folder, dpi):
     # window_task_stats
     ############################################################################
     plt.clf()
-    grid = plt.GridSpec(29, len(windows)*4,wspace=0.2, hspace=0.8)
+    grid = plt.GridSpec(18, len(windows)*2,wspace=1, hspace=1.)
 
     axes = plt.subplot(grid[0:5, 0:])
     cur_bar_width = bar_width / 3.
@@ -1236,11 +1236,10 @@ def plot_windows(windows, result_folder, dpi):
         [str(idx) for idx in range(len(windows))]
     )
     axes.grid()
-    legend = axes.legend(bbox_to_anchor=(0.4, 1.98))
-    axes.set_xlabel("Window")
+    legend = axes.legend(bbox_to_anchor=(0.42, 2.3))
 
     for win_idx, window in enumerate(windows):
-        axes = plt.subplot(grid[8:11, win_idx*4:win_idx*4+4])
+        axes = plt.subplot(grid[6:8, win_idx*2:win_idx*2+2])
         labels = sorted(window['protocols'].keys())
         sizes = [
             window['protocols'][label]
@@ -1253,33 +1252,41 @@ def plot_windows(windows, result_folder, dpi):
         # for idx in reversed(sorted(to_remove)):
         #     sizes.pop(idx)
         #     labels.pop(idx)
-        axes.pie(sizes, radius=2.4, labels=labels,
+        axes.pie(sizes, radius=1.6, labels=labels,
                  autopct='%1.0f%%', startangle=90)
-        axes.set_xlabel(f"\nWin. {win_idx}\nprotocols")
+        if win_idx == 0:
+            text = axes.text(-14, 0.1, "Protocols %")
+        # axes.set_xlabel(f"\nWin. {win_idx}\nprotocols")
 
     for win_idx, window in enumerate(windows):
-        axes = plt.subplot(grid[14:17, win_idx*4:win_idx*4+4])
+        axes = plt.subplot(grid[9:11, win_idx*2:win_idx*2+2])
         labels = ['CPU', 'I/O']
         sizes = [window['all_cpu_time'], window['all_io_time']]
-        axes.pie(sizes, radius=2.4, labels=labels,
+        axes.pie(sizes, radius=1.6, labels=labels,
                  autopct='%1.0f%%', startangle=90)
-        axes.set_xlabel(f"\nWin. {win_idx}\ntime")
+        if win_idx == 0:
+            text = axes.text(-14, 0.1, "Time %")
+        # axes.set_xlabel(f"\nWin. {win_idx}\ntime")
 
     for win_idx, window in enumerate(windows):
-        axes = plt.subplot(grid[20:23, win_idx*4:win_idx*4+4])
+        axes = plt.subplot(grid[12:14, win_idx*2:win_idx*2+2])
         labels = ['CPU', 'I/O']
         sizes = [window['local_cpu_time'], window['local_io_time']]
-        axes.pie(sizes, radius=2.4, labels=labels,
+        axes.pie(sizes, radius=1.6, labels=labels,
                  autopct='%1.0f%%', startangle=90)
-        axes.set_xlabel(f"\nWin. {win_idx}\ntime (local)")
+        if win_idx == 0:
+            text = axes.text(-14, 0.1, "Local Time %")
+        # axes.set_xlabel(f"\nWin. {win_idx}\ntime (local)")
 
     for win_idx, window in enumerate(windows):
-        axes = plt.subplot(grid[26:29, win_idx*4:win_idx*4+4])
+        axes = plt.subplot(grid[15:17, win_idx*2:win_idx*2+2])
         labels = ['CPU', 'I/O']
         sizes = [window['remote_cpu_time'], window['remote_io_time']]
-        axes.pie(sizes, radius=2.4, labels=labels,
+        axes.pie(sizes, radius=1.6, labels=labels,
                  autopct='%1.0f%%', startangle=90)
-        axes.set_xlabel(f"\nWin. {win_idx}\ntime (remote)")
+        if win_idx == 0:
+            text = axes.text(-14, 0.1, "Remote time %")
+        # axes.set_xlabel(f"\nWin. {win_idx}\ntime (remote)")
 
     # with warnings.catch_warnings():
     #     warnings.simplefilter("ignore")
@@ -1288,7 +1295,7 @@ def plot_windows(windows, result_folder, dpi):
     plt.savefig(
         os.path.join(result_folder, "window_task_stats.png"),
         dpi=dpi,
-        bbox_extra_artists=(legend, ),
+        bbox_extra_artists=(legend, text),
         bbox_inches='tight'
     )
     pbar.update(1)
