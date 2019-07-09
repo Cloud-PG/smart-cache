@@ -896,6 +896,7 @@ def plot_day_stats(input_data):
 
 def plot_windows(windows, result_folder, dpi):
     bar_width = 0.2
+    pbar = tqdm(desc="Plot windows", total=10, position=1, ascii=True)
 
     ############################################################################
     # window_request_stats
@@ -968,12 +969,14 @@ def plot_windows(windows, result_folder, dpi):
     axes.grid()
     axes.legend()
     axes.set_xlabel("Window")
+    pbar.update(1)
 
     plt.savefig(
         os.path.join(result_folder, "window_request_stats.png"),
         dpi=dpi
     )
-    
+    pbar.update(1)
+
     ############################################################################
     # window_frequency_stats
     ############################################################################
@@ -1018,10 +1021,12 @@ def plot_windows(windows, result_folder, dpi):
                  autopct='%1.0f%%', startangle=90)
         axes.set_xlabel(f"\n\nWindow {win_idx}\nWithout 1 request")
 
+    pbar.update(1)
     plt.savefig(
         os.path.join(result_folder, "window_frequency_stats.png"),
         dpi=dpi
     )
+    pbar.update(1)
 
     ############################################################################
     # window_size_stats
@@ -1120,10 +1125,12 @@ def plot_windows(windows, result_folder, dpi):
                  autopct='%1.0f%%', startangle=90)
         axes.set_xlabel(f"\nWin. {win_idx}\n1% < size <=25%")
 
+    pbar.update(1)
     plt.savefig(
         os.path.join(result_folder, "window_size_stats.png"),
         dpi=dpi
     )
+    pbar.update(1)
 
     ############################################################################
     # window_cache_size_stats
@@ -1148,18 +1155,20 @@ def plot_windows(windows, result_folder, dpi):
         axes.legend()
         axes.set_xlabel(f"Window {win_idx}")
 
+    pbar.update(1)
     plt.savefig(
         os.path.join(result_folder, "window_cache_size_stats.png"),
         dpi=dpi
     )
+    pbar.update(1)
 
     ############################################################################
     # window_task_stats
     ############################################################################
     plt.clf()
-    grid = plt.GridSpec(24, len(windows), wspace=2.42, hspace=5.)
+    grid = plt.GridSpec(29, len(windows)*4,wspace=0.2, hspace=0.8)
 
-    axes = plt.subplot(grid[0:9, 0:])
+    axes = plt.subplot(grid[0:5, 0:])
     cur_bar_width = bar_width / 3.
     axes.bar(
         [
@@ -1227,11 +1236,11 @@ def plot_windows(windows, result_folder, dpi):
         [str(idx) for idx in range(len(windows))]
     )
     axes.grid()
-    axes.legend()
+    legend = axes.legend(bbox_to_anchor=(0.4, 1.98))
     axes.set_xlabel("Window")
 
     for win_idx, window in enumerate(windows):
-        axes = plt.subplot(grid[12:16, win_idx])
+        axes = plt.subplot(grid[8:11, win_idx*4:win_idx*4+4])
         labels = sorted(window['protocols'].keys())
         sizes = [
             window['protocols'][label]
@@ -1249,21 +1258,46 @@ def plot_windows(windows, result_folder, dpi):
         axes.set_xlabel(f"\nWin. {win_idx}\nprotocols")
 
     for win_idx, window in enumerate(windows):
-        axes = plt.subplot(grid[20:24, win_idx])
+        axes = plt.subplot(grid[14:17, win_idx*4:win_idx*4+4])
         labels = ['CPU', 'I/O']
         sizes = [window['all_cpu_time'], window['all_io_time']]
         axes.pie(sizes, radius=2.4, labels=labels,
                  autopct='%1.0f%%', startangle=90)
         axes.set_xlabel(f"\nWin. {win_idx}\ntime")
 
+    for win_idx, window in enumerate(windows):
+        axes = plt.subplot(grid[20:23, win_idx*4:win_idx*4+4])
+        labels = ['CPU', 'I/O']
+        sizes = [window['local_cpu_time'], window['local_io_time']]
+        axes.pie(sizes, radius=2.4, labels=labels,
+                 autopct='%1.0f%%', startangle=90)
+        axes.set_xlabel(f"\nWin. {win_idx}\ntime (local)")
+
+    for win_idx, window in enumerate(windows):
+        axes = plt.subplot(grid[26:29, win_idx*4:win_idx*4+4])
+        labels = ['CPU', 'I/O']
+        sizes = [window['remote_cpu_time'], window['remote_io_time']]
+        axes.pie(sizes, radius=2.4, labels=labels,
+                 autopct='%1.0f%%', startangle=90)
+        axes.set_xlabel(f"\nWin. {win_idx}\ntime (remote)")
+
+    # with warnings.catch_warnings():
+    #     warnings.simplefilter("ignore")
+    #     plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
+    pbar.update(1)
     plt.savefig(
         os.path.join(result_folder, "window_task_stats.png"),
-        dpi=dpi
+        dpi=dpi,
+        bbox_extra_artists=(legend, ),
+        bbox_inches='tight'
     )
+    pbar.update(1)
+
+    pbar.close()
 
 
 def transform_sizes(size):
-    GB_size = size // 1024**3
+    GB_size=size // 1024**3
     if GB_size == 0.0:
         return size // 1024**2
     return GB_size * 1000.
@@ -1290,61 +1324,83 @@ def make_dataframe_stats(data: list):
             - io_time
             - size
     """
-    df = pd.concat(data)
+    pbar=tqdm(desc = "Make dataframe stats",
+              total = 7, position = 1, ascii = True)
+
+    df=pd.concat(data)
+    pbar.update(1)
 
     # Num requests and num files
-    num_requests = df.shape[0]
-    num_files = len(df['filename'].unique().tolist())
-    size_all_files = df[['filename', 'size']].dropna().drop_duplicates(
-        subset='filename')['size'].sum() / 1024. ** 3.
+    num_requests=df.shape[0]
+    num_files=len(df['filename'].unique().tolist())
+    size_all_files=df[['filename', 'size']].dropna().drop_duplicates(
+        subset = 'filename')['size'].sum() / 1024. ** 3.
+    pbar.update(1)
 
     # Mean num. request x file and
     # Mean num. request x file with num requests > min
-    num_req_x_file = df['filename'].value_counts()
-    num_req_x_file_gmin = num_req_x_file[
+    num_req_x_file=df['filename'].value_counts()
+    num_req_x_file_gmin=num_req_x_file[
         num_req_x_file > num_req_x_file.describe()['min']]
-    mean_num_req_x_file = num_req_x_file.describe()['mean']
-    mean_num_req_x_file_gmin = num_req_x_file_gmin.describe()['mean']
+    mean_num_req_x_file= num_req_x_file.describe()['mean']
+    mean_num_req_x_file_gmin= num_req_x_file_gmin.describe()['mean']
+    pbar.update(1)
 
     # Num of requests x file
-    num_req_x_file_frequencies = num_req_x_file.value_counts().to_dict()
+    num_req_x_file_frequencies= num_req_x_file.value_counts().to_dict()
     assert num_requests == sum(
         [key * value for key, value in num_req_x_file_frequencies.items()])
+    pbar.update(1)
 
     # Size files with 1 request and greater than 1 request
-    size_by_filename = df[['filename', 'size']].dropna().drop_duplicates(
-        subset='filename')
-    file_1req_list = num_req_x_file[
+    size_by_filename=df[['filename', 'size']].dropna().drop_duplicates(
+        subset = 'filename')
+    file_1req_list=num_req_x_file[
         num_req_x_file <= num_req_x_file.describe()['min']
     ].keys().to_list()
-    file_g1req_list = num_req_x_file[
+    file_g1req_list= num_req_x_file[
         num_req_x_file > num_req_x_file.describe()['min']
     ].keys().to_list()
-    size_1req_files = size_by_filename[size_by_filename['filename'].isin(
+    size_1req_files= size_by_filename[size_by_filename['filename'].isin(
         file_1req_list)]['size'].sum() / 1024. ** 3
-    size_g1req_files = size_by_filename[size_by_filename['filename'].isin(
+    size_g1req_files= size_by_filename[size_by_filename['filename'].isin(
         file_g1req_list)]['size'].sum() / 1024. ** 3
-    desc_file_sizes = size_by_filename['size'].apply(
+    desc_file_sizes= size_by_filename['size'].apply(
         transform_sizes).value_counts().sort_index().to_dict()
+    pbar.update(1)
 
-    sizes_x_min_num_requests = {}
+    sizes_x_min_num_requests={}
     for min_num_request in range(1, 21):
-        num_request_filter = num_req_x_file[
+        num_request_filter=num_req_x_file[
             num_req_x_file >= min_num_request
         ].keys().to_list()
-        sizes_x_min_num_requests[min_num_request] = size_by_filename[
+        sizes_x_min_num_requests[min_num_request]= size_by_filename[
             size_by_filename['filename'].isin(
                 num_request_filter)]['size'].sum() / 1024. ** 3
+    pbar.update(1)
 
     # Task and job stats
-    num_users = df['user'].unique().shape[0]
-    num_sites = df['site_name'].unique().shape[0]
-    num_task_monitors = df['task_monitor_id'].unique().shape[0]
-    num_tasks = df['task_id'].unique().shape[0]
-    num_jobs = df['job_id'].unique().shape[0]
-    protocols = df['protocol'].value_counts().to_dict()
-    all_cpu_time = df['cpu_time'].sum()
-    all_io_time = df['io_time'].sum()
+    num_users= df['user'].unique().shape[0]
+    num_sites= df['site_name'].unique().shape[0]
+    num_task_monitors= df['task_monitor_id'].unique().shape[0]
+    num_tasks= df['task_id'].unique().shape[0]
+    num_jobs= df['job_id'].unique().shape[0]
+    protocols= df['protocol'].value_counts().to_dict()
+    all_cpu_time= df['cpu_time'].sum()
+    all_io_time= df['io_time'].sum()
+    local_cpu_time= df['cpu_time'][
+        df.protocol == 'Local'
+    ].sum()
+    local_io_time= df['io_time'][
+        df.protocol == 'Local'
+    ].sum()
+    remote_cpu_time= df['cpu_time'][
+        df.protocol == 'Remote'
+    ].sum()
+    remote_io_time= df['io_time'][
+        df.protocol == 'Remote'
+    ].sum()
+    pbar.update(1)
 
     # # mean_num_file_x_job = df['job_id'].value_counts().describe()['mean'] # Alternate method
     # # mean_num_file_x_user1 = df['users'].value_counts().describe()['mean']  # alternative method
@@ -1370,6 +1426,7 @@ def make_dataframe_stats(data: list):
 
     # print(df['filename'].apply(split_filename).value_counts())
 
+    pbar.close()
     return {
         'num_requests': num_requests,
         'num_files': num_files,
@@ -1393,17 +1450,21 @@ def make_dataframe_stats(data: list):
         'protocols': protocols,
         'all_cpu_time': all_cpu_time,
         'all_io_time': all_io_time,
+        'local_cpu_time': local_cpu_time,
+        'local_io_time': local_io_time,
+        'remote_cpu_time': remote_cpu_time,
+        'remote_io_time': remote_io_time,
     }
 
 
 def make_stats(input_data):
     (num_process, date, out_folder, minio_config,
-     file_size_db_path, file_size_redis_url) = input_data
-    year, month, day = date
+     file_size_db_path, file_size_redis_url)=input_data
+    year, month, day=date
 
-    minio_client, bucket = create_minio_client(minio_config)
-    stats = Statistics(file_size_db_path, file_size_redis_url,
-                       bar_position=num_process)
+    minio_client, bucket=create_minio_client(minio_config)
+    stats=Statistics(file_size_db_path, file_size_redis_url,
+                       bar_position = num_process)
 
     try:
         minio_client.fget_object(
