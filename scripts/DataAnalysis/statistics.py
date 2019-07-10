@@ -6,7 +6,6 @@ import sqlite3
 import warnings
 from collections import OrderedDict
 from datetime import datetime, timedelta
-from functools import lru_cache
 from multiprocessing import Pool
 
 import matplotlib.pyplot as plt
@@ -23,6 +22,15 @@ from DataManager import DataFile, date_from_timestamp_ms
 
 
 def create_minio_client(minio_config: str):
+    """Prepare a minio client.
+
+    Args:
+        minio_config (str): the minio configuration in the following format:
+                            f"{minio_url} {minio_key} {minio_secret} {bucket}"
+
+    Returns
+        tuple (minio client, bucket name)
+    """
     cert_reqs = "CERT_NONE"
 
     if cert_reqs == "CERT_NONE":
@@ -51,7 +59,16 @@ def create_minio_client(minio_config: str):
     return minioClient, bucket
 
 
-def period(start_date, num_days):
+def period(start_date: str, num_days: int):
+    """Generate a period of time.
+
+    Args:
+        start_date (str): a date string in the format f"{year} {month} {day}"
+        num_days (int): number of the period days
+
+    Returns:
+        generator
+    """
     delta = timedelta(days=1)
 
     year, month, day = [int(elm) for elm in start_date.split()]
@@ -64,7 +81,16 @@ def period(start_date, num_days):
 
 class Statistics(object):
 
+    """Object that make statistics of a day."""
+
     def __init__(self, file_size_db_path: str = None, redis_url: str = None, bar_position: int = 0):
+        """Prepare the environment for statistic extraction.
+
+        Args:
+            file_size_db_path (str): the folder path to file size database in sqlite
+            redis_url (str): the redis cache url (ex: 'localhost')
+            bar_position (int): position for progress bar
+        """
         self.__columns = [
             'day',
             'filename',
@@ -96,6 +122,7 @@ class Statistics(object):
         self.__tmp_cache_set_added = set()
         self.__bar_position = bar_position
 
+        # SQLite databases are used as source for file sizes
         if file_size_db_path:
             self.__conn_mc = sqlite3.connect(os.path.join(
                 file_size_db_path, "mc_file_sizes.db"))
@@ -106,6 +133,7 @@ class Statistics(object):
                 'mc': self.__conn_mc.cursor(),
                 'data': self.__conn_data.cursor()
             }
+        # Redis cache is used to speedup the extraction
         if redis_url:
             self.__redis = redis.Redis(
                 connection_pool=redis.BlockingConnectionPool(
@@ -115,6 +143,7 @@ class Statistics(object):
             )
 
     def __del__(self):
+        """Close SQLite connections."""
         if self.__conn_mc:
             self.__conn_mc.close()
         if self.__conn_data:
@@ -122,59 +151,37 @@ class Statistics(object):
 
     @property
     def data(self):
+        """The statistic data.
+
+        Returns:
+            DataFrame
+        """
         self.__flush_buffer()
         return self._data
 
-    @staticmethod
-    def insert_and_count(dict_: dict, key):
-        if key not in dict_:
-            dict_[key] = 0
-        dict_[key] += 1
-
-    @staticmethod
-    def make_a_list(dict_: dict, key, value):
-        if key not in dict_:
-            dict_[key] = []
-        dict_[key].append(value)
-
-    @staticmethod
-    def make_a_set(dict_: dict, key, value):
-        if key not in dict_:
-            dict_[key] = set()
-        if not isinstance(dict_[key], set):
-            dict_[key] = set(dict_[key])
-        dict_[key] |= set((value, ))
-
-    @staticmethod
-    def gen_bins(dict_: dict, percentage: bool = True):
-        values = dict_.values()
-        elements = list(values)
-        max_ = max(elements)
-        bins = []
-        xticks = []
-        num_requests = sum(values)
-
-        for num in range(max_):
-            counter = elements.count(num)
-            if counter > 0:
-                bins.append(counter)
-                xticks.append(str(num))
-
-        if percentage:
-            bins = [float(elm / num_requests) * 100. for elm in bins]
-
-        return bins, xticks
-
-    @staticmethod
-    @lru_cache(512)
-    def __get_type(string):
-        return [elm for elm in string.split("/") if elm][1]
-
     def __get_file_sizes(self, step: int = 100):
+        """Update a local cache with sizes of all set files.
+
+        Args:
+            step (int): stride of the extraction from SQLite
+
+        Returns:
+            list or None: the list of sets to add or None
+
+        Note:
+            Because extraction is a multiprocessing task, if
+            Redis is not available each process uses a local cache (a
+            Python dictionary), otherwise, Redis will serve as a
+            global cache and each process can access it. This
+            second option is faster because the cache with the file
+            sizes is populated by all the processes.
+        """
         set_to_add = self.__tmp_cache_sets - self.__tmp_cache_set_added
         if set_to_add:
             query = "SELECT * FROM file_sizes WHERE {}"
 
+            # If only SQLite is available it creates a local cache
+            # with a Python dictionary named '__tmp_cache'
             if self.__cursors and not self.__redis:
                 for store_type in ['data', 'mc']:
                     cur_cursor = self.__cursors[store_type]
@@ -231,6 +238,7 @@ class Statistics(object):
 
                 self.__tmp_cache_set_added |= set_to_add
 
+            # If Redis is available it uses Redis as cache system
             elif self.__cursors and self.__redis:
                 query = "SELECT * FROM file_sizes WHERE {}"
 
@@ -306,6 +314,7 @@ class Statistics(object):
             return set_to_add
 
     def __flush_buffer(self):
+        """Update the data frame with the buffered records."""
         if self.__buffer:
             set_to_add = self.__get_file_sizes()
             pbar = tqdm(
@@ -314,13 +323,16 @@ class Statistics(object):
                 desc="Inject file sizes",
                 ascii=True
             )
+            # Update using local cache
             if self.__cursors and not self.__redis:
                 for record in self.__buffer:
-                    record['size'] = self.__tmp_cache[record['filename']]
+                    record['size'] = self.__tmp_cache.get(
+                        record['filename'], np.nan)
                     pbar.update(1)
-
+            # Update using Redis cache
             elif self.__redis:
                 pbar.desc = "Inject file sizes [WAITING]"
+                # Check if all sets are already in cache
                 if set_to_add:
                     set_cache = self.__redis.mget(set_to_add)
                     while not all(
@@ -331,7 +343,7 @@ class Statistics(object):
                     ):
                         set_cache = self.__redis.mget(set_to_add)
                         pbar.desc = "Inject file sizes [WAITING]"
-
+                # Add file sizes
                 pbar.desc = "Inject file sizes"
                 results = self.__redis.mget(
                     [record['filename'] for record in self.__buffer]
@@ -359,22 +371,14 @@ class Statistics(object):
 
             pbar.close()
 
-    @staticmethod
-    def get_bins(dict_: dict, integer_x: bool = True, to_dict: bool = False):
-        if integer_x:
-            xticks = [str(elm) for elm in sorted([int(elm) for elm in dict_])]
-        else:
-            xticks = list(sorted(dict_))
-
-        bins = [dict_[key] for key in xticks]
-
-        if to_dict:
-            return OrderedDict(zip(xticks, bins))
-        else:
-            return bins, xticks
-
     def add(self, date: tuple, record: dict):
-        # print(json.dumps(record, indent=2, sort_keys=True))
+        """Extract and add a record statistics.
+
+        Args:
+            date (tuple): the date of the record
+            record (dict): all record attributes
+
+        """
         filename = record['FileName']
         user_id = record['UserId']
         site_name = record['SiteName']
@@ -420,481 +424,26 @@ class Statistics(object):
             }
         )
 
+        # Check and extract file set. It will be used to add file sizes
+        # Example: /store/type/campain/.../set/filename.root ->
+        #          /store/type/campain/.../set
         cur_set = "/".join([elm for elm in filename.split("/")][:7])
         if cur_set not in self.__tmp_cache_sets:
             self.__tmp_cache_sets |= set((cur_set, ))
 
+        # Flush the current buffer to transform all data in DataFrame
         if len(self.__buffer) == 42000:
             self.__flush_buffer()
 
 
-def sort_bins(bins, xticks):
-    new_bins = []
-    new_xticks = []
-    for idx, value in sorted(enumerate(bins), key=lambda elm: elm[1], reverse=True):
-        new_bins.append(value)
-        new_xticks.append(xticks[idx])
-
-    return new_bins, new_xticks
-
-
-def extract_first(bins, xticks, num):
-    new_bins = []
-    new_xticks = []
-    num_last_bucket = 0
-    sum_val_last_bucket = 0
-    for idx, value in enumerate(bins):
-        if len(new_bins) < num - 1:
-            new_bins.append(value)
-            new_xticks.append(xticks[idx])
-        else:
-            num_last_bucket += 1
-            sum_val_last_bucket += value
-
-    if num_last_bucket != 0 and len(new_bins) == num - 1:
-        new_bins.append(sum_val_last_bucket / num_last_bucket)
-        new_xticks.append("Others AVG.")
-
-    return new_bins, new_xticks
-
-
-def plot_bins(bins, xticks,
-              y_label: str, x_label: str,
-              figure_num: int, label_step: int = 1,
-              y_step: int = -1,
-              calc_perc: bool = True,
-              ignore_x_step: bool = False,
-              ignore_y_step: bool = False,
-              sort: bool = False, extract_first_n: int = 0,
-              n_cols: int = 2, n_rows: int = 5):
-    if sort:
-        bins, xticks = sort_bins(bins, xticks)
-
-    if extract_first_n != 0:
-        bins, xticks = extract_first(bins, xticks, extract_first_n)
-
-    axes = plt.subplot(n_rows, n_cols, figure_num)
-    tot = float(sum(bins))
-    plt.bar(
-        range(len(bins)),
-        [(elm / tot) * 100. for elm in bins] if calc_perc else bins
-    )
-    axes.set_ylabel(y_label)
-    axes.set_xlabel(x_label)
-
-    if y_step == -1:
-        y_step = label_step
-    if not calc_perc:
-        max_bin_perc = int(max(bins)) + y_step + 1
-        if ignore_y_step:
-            y_range = range(0, max_bin_perc)
-        else:
-            y_range = range(0, max_bin_perc, y_step)
-        axes.set_yticks(y_range)
-        axes.set_yticklabels([f"{val}%" for val in y_range])
-    else:
-        max_bin_perc = int((max(bins) / tot * 100.)) + y_step + 1
-        if ignore_y_step:
-            y_range = range(0, max_bin_perc)
-        else:
-            y_range = range(0, max_bin_perc, y_step)
-        axes.set_yticks(y_range)
-        axes.set_yticklabels([f"{val}%" for val in y_range])
-
-    x_range = range(len(xticks)) if ignore_x_step else range(
-        0,
-        len(xticks),
-        label_step
-    )
-    axes.set_xticks(x_range)
-    axes.set_xticklabels(
-        [xticks[idx]for idx in x_range],
-        rotation='vertical'
-    )
-    plt.grid()
-
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        plt.tight_layout()
-
-
-def merge_stats(dict_list: list):
-    tmp = OrderedDict()
-
-    for dict_ in dict_list:
-        for key, value in dict_.items():
-            if key not in tmp:
-                tmp[key] = []
-            tmp[key].append(value)
-
-    return tmp
-
-
-def merge_and_plot_top10(axes, top10_list: list, tot_num_records: int, xlabel: str):
-    top10 = merge_stats(top10_list)
-    top10 = OrderedDict(
-        (key, value)
-        for key, value in sorted(
-            top10.items(), key=lambda elm: sum(elm[1]),
-            reverse=True
-        )
-    )
-    ticks = list(top10.keys())
-    bottom_values = [0 for _ in range(len(top10))]
-    for cur_index in range(max([len(elm) for elm in top10.values()])):
-        values = []
-        for value in top10.values():
-            try:
-                values.append(
-                    float(value[cur_index] / tot_num_records)*100.)
-            except IndexError:
-                values.append(0)
-        plt.bar(
-            range(len(top10)),
-            values,
-            bottom=bottom_values
-        )
-        for idx, value in enumerate(values):
-            bottom_values[idx] += value
-
-    plt.grid()
-    plt.legend()
-    plt.ylabel("%")
-    plt.xlabel(xlabel)
-    axes.set_xticks(range(len(ticks)))
-    axes.set_xticklabels(
-        cut_ticks(ticks),
-        rotation='vertical'
-    )
-
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        plt.tight_layout()
-
-
-def plot_global(stats, result_folder, dpi: int = 300):
-    pbar = tqdm(total=4, desc=f"Plot global stats")
-
-    days_list = range(len(stats))
-    bar_width = 0.1
-
-    plt.clf()
-    fig, _ = plt.subplots(3, 2, figsize=(8, 8))
-
-    axes = plt.subplot(3, 2, 1)
-    plt.bar(
-        [
-            day + (idx * bar_width) - bar_width / 2.
-            for idx, day in enumerate(days_list)
-        ],
-        [
-            record['num_requests']
-            for record in stats.values()
-        ],
-        width=bar_width,
-        label="Num. Requests"
-    )
-    plt.bar(
-        [
-            day + (idx * bar_width) + bar_width / 2.
-            for idx, day in enumerate(days_list)
-        ],
-        [
-            record['len_file_requests']
-            for record in stats.values()
-        ],
-        width=bar_width,
-        label="Num. Files"
-    )
-
-    plt.grid()
-    plt.legend()
-    plt.xlabel("Day")
-    axes.set_xticks(days_list)
-    axes.set_xticklabels(
-        [
-            datetime.fromtimestamp(float(day)).strftime("%Y-%m-%d")
-            for day in stats
-        ],
-        rotation='vertical'
-    )
-
-    pbar.update(1)
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        plt.tight_layout()
-
-    axes = plt.subplot(3, 2, 2)
-    plt.bar(
-        [
-            day + (idx * bar_width) - bar_width
-            for idx, day in enumerate(days_list)
-        ],
-        [record['len_users'] for record in stats.values()],
-        width=bar_width,
-        label="Num. Unique Users"
-    )
-    plt.bar(
-        [
-            day + (idx * bar_width)
-            for idx, day in enumerate(days_list)
-        ],
-        [record['len_sites'] for record in stats.values()],
-        width=bar_width,
-        label="Num. Unique Sites"
-    )
-    plt.bar(
-        [
-            day + (idx * bar_width) + bar_width
-            for idx, day in enumerate(days_list)
-        ],
-        [record['len_tasks'] for record in stats.values()],
-        width=bar_width,
-        label="Num. Unique Tasks"
-    )
-
-    plt.grid()
-    plt.legend()
-    plt.xlabel("Day")
-    axes.set_xticks(days_list)
-    axes.set_xticklabels(
-        [
-            datetime.fromtimestamp(float(day)).strftime("%Y-%m-%d")
-            for day in stats
-        ],
-        rotation='vertical'
-    )
-
-    pbar.update(1)
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        plt.tight_layout()
-
-    axes = plt.subplot(3, 2, 3)
-    plt.bar(
-        [
-            day + (idx * bar_width)
-            for idx, day in enumerate(days_list)
-        ],
-        [
-            (sum(
-                elm.count(True)
-                for elm in record['job_success'].values()
-            ) / record['num_requests']) * 100.
-            for record in stats.values()
-        ],
-        width=bar_width,
-        label="Num. successed jobs"
-    )
-    plt.grid()
-    plt.legend()
-    plt.ylabel("%")
-    plt.xlabel("Day")
-    axes.set_xticks(days_list)
-    axes.set_xticklabels(
-        [
-            datetime.fromtimestamp(float(day)).strftime("%Y-%m-%d")
-            for day in stats
-        ],
-        rotation='vertical'
-    )
-
-    pbar.update(1)
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        plt.tight_layout()
-
-    num_global_requests = sum(
-        [record['num_requests'] for record in stats.values()]
-    )
-
-    axes = plt.subplot(3, 2, 4)
-    merge_and_plot_top10(
-        axes,
-        [record['top_10_users'] for record in stats.values()],
-        num_global_requests,
-        "User ID"
-    )
-
-    pbar.update(1)
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        plt.tight_layout()
-
-    axes = plt.subplot(3, 2, 5)
-    merge_and_plot_top10(
-        axes,
-        [record['top_10_sites'] for record in stats.values()],
-        num_global_requests,
-        "Site Name"
-    )
-
-    pbar.update(1)
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        plt.tight_layout()
-
-    axes = plt.subplot(3, 2, 6)
-    merge_and_plot_top10(
-        axes,
-        [record['top_10_tasks'] for record in stats.values()],
-        num_global_requests,
-        "Task ID"
-    )
-
-    pbar.update(1)
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        plt.tight_layout()
-
-    plt.savefig(
-        os.path.join(result_folder, "global_stats.png"),
-        dpi=dpi
-    )
-    plt.close(fig)
-
-    pbar.update(1)
-    pbar.close()
-
-
-def split_bins(bins, xticks, threshold: float = 0.1):
-    start_from = 0
-    for idx in range(len(bins) - 2):
-        value = bins[idx]
-        if float(value - bins[idx+1]) <= float(value * threshold):
-            start_from = idx + 1
-            break
-
-    return (
-        (bins[:start_from], xticks[:start_from]),  # HEAD
-        (bins[start_from:], xticks[start_from:])  # TAIL
-    )
-
-
-def cut_ticks(ticks):
-    return [
-        tick if len(tick) < 11 else tick[:4] + "..." + tick[-4:]
-        for tick in ticks
-    ]
-
-
-def plot_day_stats(input_data):
-    proc_num, cur_stats = input_data
-    pbar = tqdm(
-        total=11, desc=f"Plot day {cur_stats['day']}", position=proc_num)
-
-    plt.clf()
-    fig, _ = plt.subplots(5, 2, figsize=(8, 12))
-
-    file_request_bins, file_request_ticks = Statistics.gen_bins(
-        cur_stats['file_requests'])
-    plot_bins(
-        file_request_bins, file_request_ticks,
-        "%", "Num. Requests x File", 1, label_step=10, calc_perc=False
-    )
-    pbar.update(1)
-
-    job_length_h_bins, job_length_h_ticks = Statistics.get_bins(
-        cur_stats['job_length_h'])
-    plot_bins(
-        job_length_h_bins, job_length_h_ticks,
-        "%", "Job Length (num. Hours)", 2, label_step=10
-    )
-    pbar.update(1)
-
-    _, (file_request_bins, file_request_ticks) = split_bins(
-        file_request_bins, file_request_ticks)
-    if file_request_bins:
-        plot_bins(
-            file_request_bins, file_request_ticks,
-            "%", "Num. Requests x File [TAIL]", 3, label_step=10,
-            calc_perc=False, y_step=2
-        )
-    pbar.update(1)
-
-    job_length_h_bin_head, (job_length_h_bins, job_length_h_ticks) = split_bins(
-        job_length_h_bins, job_length_h_ticks)
-    plot_bins(
-        job_length_h_bins, job_length_h_ticks,
-        "%", "Job Length (num. Hours) [TAIL]", 4, label_step=10,
-        y_step=5
-    )
-    pbar.update(1)
-
-    job_length_h_head_bins, job_length_h_thead_icks = job_length_h_bin_head
-    plot_bins(
-        job_length_h_head_bins, job_length_h_thead_icks,
-        "%", "Job Length (num. Hours) [HEAD]", 5, label_step=5,
-        y_step=10
-    )
-    pbar.update(1)
-
-    job_length_m_bins, job_length_m_ticks = Statistics.get_bins(
-        cur_stats['job_length_m'])
-    plot_bins(
-        job_length_m_bins, job_length_m_ticks,
-        "%", "Job Length (num. Minutes) (top 100)", 6, label_step=10,
-        y_step=5, extract_first_n=100
-    )
-    pbar.update(1)
-
-    protocol_bins, protocol_ticks = Statistics.get_bins(
-        cur_stats['protocols'], integer_x=False)
-    plot_bins(
-        protocol_bins, protocol_ticks,
-        "% of Requests", "Protocol Type", 7, label_step=20,
-        ignore_x_step=True
-    )
-    pbar.update(1)
-
-    users_bins, users_ticks = Statistics.get_bins(
-        cur_stats['users'], integer_x=False)
-    plot_bins(
-        users_bins, users_ticks,
-        "% of Requests", "User ID (top 10)", 8,
-        label_step=10, ignore_x_step=True,
-        sort=True, extract_first_n=10
-    )
-    pbar.update(1)
-
-    sites_bins, sites_ticks = Statistics.get_bins(
-        cur_stats['sites'], integer_x=False)
-    plot_bins(
-        sites_bins, sites_ticks,
-        "% of Requests", "Site Name (top 10)", 9,
-        label_step=10, ignore_x_step=True,
-        sort=True, extract_first_n=10
-    )
-    pbar.update(1)
-
-    task_bins, task_ticks = Statistics.get_bins(
-        cur_stats['tasks'], integer_x=False)
-    task_ticks = cut_ticks(task_ticks)
-    plot_bins(
-        task_bins, task_ticks,
-        "% of Requests", "Task ID (top 10)", 10,
-        label_step=10, ignore_x_step=True,
-        sort=True, extract_first_n=10
-    )
-    pbar.update(1)
-
-    plt.savefig(
-        os.path.join(
-            cur_stats['result_folder'],
-            f"stats.{cur_stats['day']}.png"
-        ),
-        dpi=cur_stats['plot_dpi'],
-        bbox_inches='tight'
-    )
-    pbar.update(1)
-
-    plt.close(fig)
-    pbar.close()
-
-    return f"stats.{cur_stats['day']}.png"
-
-
-def plot_windows(windows, result_folder, dpi):
+def plot_windows(windows: list, result_folder: str, dpi: int):
+    """Plot and save the extracted windows.
+
+    Args:
+        windows (list): the list of window statistics
+        result_folder (str): destination folder name
+        dpi (int): resolution of the output plot
+    """
     bar_width = 0.2
     pbar = tqdm(desc="Plot windows", total=10, position=1, ascii=True)
 
@@ -902,9 +451,9 @@ def plot_windows(windows, result_folder, dpi):
     # window_request_stats
     ############################################################################
     plt.clf()
-    grid = plt.GridSpec(4, len(windows), wspace=2.42, hspace=4.33)
+    grid = plt.GridSpec(24, len(windows), wspace=2.42, hspace=4.33)
 
-    axes = plt.subplot(grid[0:2, 0:])
+    axes = plt.subplot(grid[0:7, 0:])
     axes.bar(
         [
             idx - bar_width / 2.
@@ -937,7 +486,7 @@ def plot_windows(windows, result_folder, dpi):
     axes.legend()
     axes.set_xlabel("Window")
 
-    axes = plt.subplot(grid[2:4, :])
+    axes = plt.subplot(grid[8:15, :])
     axes.bar(
         [
             idx - bar_width / 2.
@@ -969,11 +518,96 @@ def plot_windows(windows, result_folder, dpi):
     axes.grid()
     axes.legend()
     axes.set_xlabel("Window")
+
+    axes = plt.subplot(grid[16:24, :])
+    cur_bar_width = bar_width / 4.
+    axes.bar(
+        [
+            idx - cur_bar_width * 3
+            for idx, _ in enumerate(windows)
+        ],
+        [
+            record['mean_num_files_x_job']
+            for record in windows
+        ],
+        width=cur_bar_width,
+        label="Mean Num. Files x Job"
+    )
+    axes.bar(
+        [
+            idx - cur_bar_width * 2
+            for idx, _ in enumerate(windows)
+        ],
+        [
+            record['mean_num_files_x_task']
+            for record in windows
+        ],
+        width=cur_bar_width,
+        label="Mean Num. Files x Task"
+    )
+    axes.bar(
+        [
+            idx - cur_bar_width
+            for idx, _ in enumerate(windows)
+        ],
+        [
+            record['mean_num_files_x_user']
+            for record in windows
+        ],
+        width=cur_bar_width,
+        label="Mean Num. Files x User"
+    )
+    axes.bar(
+        [
+            idx
+            for idx, _ in enumerate(windows)
+        ],
+        [
+            record['mean_num_jobs_x_task']
+            for record in windows
+        ],
+        width=cur_bar_width,
+        label="Mean Num. Jobs x Task"
+    )
+    axes.bar(
+        [
+            idx + cur_bar_width
+            for idx, _ in enumerate(windows)
+        ],
+        [
+            record['mean_num_jobs_x_user']
+            for record in windows
+        ],
+        width=cur_bar_width,
+        label="Mean Num. Jobs x User"
+    )
+    axes.bar(
+        [
+            idx + cur_bar_width * 2
+            for idx, _ in enumerate(windows)
+        ],
+        [
+            record['mean_num_tasks_x_user']
+            for record in windows
+        ],
+        width=cur_bar_width,
+        label="Mean Num. Tasks x User"
+    )
+    axes.set_yscale('log')
+    axes.set_xticks(range(len(windows)))
+    axes.set_xticklabels(
+        [str(idx) for idx in range(len(windows))]
+    )
+    axes.grid()
+    legend = axes.legend(bbox_to_anchor=(0.36, -1.8))
+    axes.set_xlabel("Window")
     pbar.update(1)
 
     plt.savefig(
         os.path.join(result_folder, "window_request_stats.png"),
-        dpi=dpi
+        dpi=dpi,
+        bbox_extra_artists=(legend, ),
+        bbox_inches='tight'
     )
     pbar.update(1)
 
@@ -1128,7 +762,8 @@ def plot_windows(windows, result_folder, dpi):
     pbar.update(1)
     plt.savefig(
         os.path.join(result_folder, "window_size_stats.png"),
-        dpi=dpi
+        dpi=dpi,
+        bbox_inches='tight'
     )
     pbar.update(1)
 
@@ -1158,7 +793,8 @@ def plot_windows(windows, result_folder, dpi):
     pbar.update(1)
     plt.savefig(
         os.path.join(result_folder, "window_cache_size_stats.png"),
-        dpi=dpi
+        dpi=dpi,
+        bbox_inches='tight'
     )
     pbar.update(1)
 
@@ -1166,10 +802,10 @@ def plot_windows(windows, result_folder, dpi):
     # window_task_stats
     ############################################################################
     plt.clf()
-    grid = plt.GridSpec(18, len(windows)*2,wspace=1, hspace=1.)
+    grid = plt.GridSpec(18, len(windows)*2, wspace=1, hspace=1.)
 
     axes = plt.subplot(grid[0:5, 0:])
-    cur_bar_width = bar_width / 3.
+    cur_bar_width = bar_width / 2.
     axes.bar(
         [
             idx - cur_bar_width * 2
@@ -1212,18 +848,6 @@ def plot_windows(windows, result_folder, dpi):
             for idx, _ in enumerate(windows)
         ],
         [
-            record['num_task_monitors']
-            for record in windows
-        ],
-        width=cur_bar_width,
-        label="Num. task monitors"
-    )
-    axes.bar(
-        [
-            idx + cur_bar_width * 2
-            for idx, _ in enumerate(windows)
-        ],
-        [
             record['num_jobs']
             for record in windows
         ],
@@ -1236,7 +860,7 @@ def plot_windows(windows, result_folder, dpi):
         [str(idx) for idx in range(len(windows))]
     )
     axes.grid()
-    legend = axes.legend(bbox_to_anchor=(0.42, 2.3))
+    legend = axes.legend(bbox_to_anchor=(0.32, 2.3))
 
     for win_idx, window in enumerate(windows):
         axes = plt.subplot(grid[6:8, win_idx*2:win_idx*2+2])
@@ -1303,18 +927,31 @@ def plot_windows(windows, result_folder, dpi):
     pbar.close()
 
 
-def transform_sizes(size):
-    GB_size=size // 1024**3
+def transform_sizes(size: float):
+    """Convert the size to MB if it is less than 1GB
+
+    Args:
+        size (float): the current size in bytes
+
+    Returns:
+        float: the GB or MB size
+    """
+    GB_size = size // 1024**3
     if GB_size == 0.0:
         return size // 1024**2
     return GB_size * 1000.
 
 
 def make_dataframe_stats(data: list):
-    """Plot window stats.
+    """Create window stats.
 
-    Data: list of dataframes (df)
+    Args:
+        data (list): a list of dataframes (df)
 
+    Returns:
+        dict: extracted statistics from the DataFrame
+
+    Note:
         df columns:
             - day
             - filename
@@ -1331,109 +968,105 @@ def make_dataframe_stats(data: list):
             - io_time
             - size
     """
-    pbar=tqdm(desc = "Make dataframe stats",
-              total = 7, position = 1, ascii = True)
+    pbar = tqdm(desc="Make dataframe stats",
+                total=32, position=1, ascii=True)
 
-    df=pd.concat(data)
+    df = pd.concat(data)
     pbar.update(1)
 
     # Num requests and num files
-    num_requests=df.shape[0]
-    num_files=len(df['filename'].unique().tolist())
-    size_all_files=df[['filename', 'size']].dropna().drop_duplicates(
-        subset = 'filename')['size'].sum() / 1024. ** 3.
+    num_requests = df.shape[0]
+    num_files = len(df['filename'].unique().tolist())
+    size_all_files = df[['filename', 'size']].dropna().drop_duplicates(
+        subset='filename')['size'].sum() / 1024. ** 3.
     pbar.update(1)
 
     # Mean num. request x file and
     # Mean num. request x file with num requests > min
-    num_req_x_file=df['filename'].value_counts()
-    num_req_x_file_gmin=num_req_x_file[
-        num_req_x_file > num_req_x_file.describe()['min']]
-    mean_num_req_x_file= num_req_x_file.describe()['mean']
-    mean_num_req_x_file_gmin= num_req_x_file_gmin.describe()['mean']
+    num_req_x_file = df['filename'].value_counts()
+    num_req_x_file_gmin = num_req_x_file[
+        num_req_x_file > num_req_x_file.min()
+    ]
+    mean_num_req_x_file = num_req_x_file.mean()
+    mean_num_req_x_file_gmin = num_req_x_file_gmin.mean()
     pbar.update(1)
 
     # Num of requests x file
-    num_req_x_file_frequencies= num_req_x_file.value_counts().to_dict()
+    num_req_x_file_frequencies = num_req_x_file.value_counts().to_dict()
     assert num_requests == sum(
         [key * value for key, value in num_req_x_file_frequencies.items()])
     pbar.update(1)
 
     # Size files with 1 request and greater than 1 request
-    size_by_filename=df[['filename', 'size']].dropna().drop_duplicates(
-        subset = 'filename')
-    file_1req_list=num_req_x_file[
-        num_req_x_file <= num_req_x_file.describe()['min']
+    size_by_filename = df[['filename', 'size']].dropna().drop_duplicates(
+        subset='filename')
+    file_1req_list = num_req_x_file[
+        num_req_x_file <= num_req_x_file.min()
     ].keys().to_list()
-    file_g1req_list= num_req_x_file[
-        num_req_x_file > num_req_x_file.describe()['min']
+    file_g1req_list = num_req_x_file[
+        num_req_x_file > num_req_x_file.min()
     ].keys().to_list()
-    size_1req_files= size_by_filename[size_by_filename['filename'].isin(
+    size_1req_files = size_by_filename[size_by_filename['filename'].isin(
         file_1req_list)]['size'].sum() / 1024. ** 3
-    size_g1req_files= size_by_filename[size_by_filename['filename'].isin(
+    size_g1req_files = size_by_filename[size_by_filename['filename'].isin(
         file_g1req_list)]['size'].sum() / 1024. ** 3
-    desc_file_sizes= size_by_filename['size'].apply(
+    desc_file_sizes = size_by_filename['size'].apply(
         transform_sizes).value_counts().sort_index().to_dict()
     pbar.update(1)
 
-    sizes_x_min_num_requests={}
+    sizes_x_min_num_requests = {}
     for min_num_request in range(1, 21):
-        num_request_filter=num_req_x_file[
+        num_request_filter = num_req_x_file[
             num_req_x_file >= min_num_request
         ].keys().to_list()
-        sizes_x_min_num_requests[min_num_request]= size_by_filename[
+        sizes_x_min_num_requests[min_num_request] = size_by_filename[
             size_by_filename['filename'].isin(
                 num_request_filter)]['size'].sum() / 1024. ** 3
-    pbar.update(1)
+        pbar.update(1)
 
     # Task and job stats
-    num_users= df['user'].unique().shape[0]
-    num_sites= df['site_name'].unique().shape[0]
-    num_task_monitors= df['task_monitor_id'].unique().shape[0]
-    num_tasks= df['task_id'].unique().shape[0]
-    num_jobs= df['job_id'].unique().shape[0]
-    protocols= df['protocol'].value_counts().to_dict()
-    all_cpu_time= df['cpu_time'].sum()
-    all_io_time= df['io_time'].sum()
-    local_cpu_time= df['cpu_time'][
+    num_users = df['user'].unique().shape[0]
+    num_sites = df['site_name'].unique().shape[0]
+    num_tasks = df['task_id'].unique().shape[0]
+    num_jobs = df['job_id'].unique().shape[0]
+    protocols = df['protocol'].value_counts().to_dict()
+    all_cpu_time = df['cpu_time'].sum()
+    all_io_time = df['io_time'].sum()
+    local_cpu_time = df['cpu_time'][
         df.protocol == 'Local'
     ].sum()
-    local_io_time= df['io_time'][
+    local_io_time = df['io_time'][
         df.protocol == 'Local'
     ].sum()
-    remote_cpu_time= df['cpu_time'][
+    remote_cpu_time = df['cpu_time'][
         df.protocol == 'Remote'
     ].sum()
-    remote_io_time= df['io_time'][
+    remote_io_time = df['io_time'][
         df.protocol == 'Remote'
     ].sum()
     pbar.update(1)
 
-    # # mean_num_file_x_job = df['job_id'].value_counts().describe()['mean'] # Alternate method
-    # # mean_num_file_x_user1 = df['users'].value_counts().describe()['mean']  # alternative method
-    # mean_num_job_x_task = df[['task_id', 'job_id']].groupby(
-    #     'task_id').size().describe()['mean']  # .apply(lambda x: x.sample(frac=0.3))
-    # mean_num_file_x_job = df[['filename', 'job_id']].groupby(
-    #     'job_id').size().describe()['mean']
-    # mean_num_file_x_user = df[['filename', 'user']].groupby(
-    #     'user').size().describe()['mean']
-
-    # # print(mean_num_file_x_user, mean_num_file_x_user1)
-
-    # print(mean_num_job_x_task)
-    # assert num_task_monitors == num_tasks
-    # # print(json.dumps(num_local, indent=2, sort_keys=True))
-
-    # def split_filename(filename):
-    #     parts = [part for part in filename.split("/") if part]
-    #     if len(parts) > 1:
-    #         return parts[1]
-    #     else:
-    #         return filename
-
-    # print(df['filename'].apply(split_filename).value_counts())
+    mean_num_files_x_job = df[['job_id', 'filename']].groupby(
+        'job_id')['filename'].nunique().mean()
+    pbar.update(1)
+    mean_num_files_x_task = df[['task_id', 'filename']].groupby(
+        'task_id')['filename'].nunique().mean()
+    pbar.update(1)
+    mean_num_files_x_user = df[['user', 'filename']].groupby(
+        'user')['filename'].nunique().mean()
+    pbar.update(1)
+    mean_num_jobs_x_task = df[['job_id', 'task_id']].groupby(
+        'task_id')['job_id'].nunique().mean()
+    pbar.update(1)
+    mean_num_jobs_x_user = df[['job_id', 'user']].groupby(
+        'user')['job_id'].nunique().mean()
+    pbar.update(1)
+    mean_num_tasks_x_user = df[['task_id', 'user']].groupby(
+        'user')['task_id'].nunique().mean()
+    pbar.update(1)
 
     pbar.close()
+
     return {
         'num_requests': num_requests,
         'num_files': num_files,
@@ -1451,7 +1084,6 @@ def make_dataframe_stats(data: list):
 
         'num_users': num_users,
         'num_sites': num_sites,
-        'num_task_monitors': num_task_monitors,
         'num_tasks': num_tasks,
         'num_jobs': num_jobs,
         'protocols': protocols,
@@ -1461,17 +1093,42 @@ def make_dataframe_stats(data: list):
         'local_io_time': local_io_time,
         'remote_cpu_time': remote_cpu_time,
         'remote_io_time': remote_io_time,
+
+        'mean_num_files_x_job': mean_num_files_x_job,
+        'mean_num_files_x_task': mean_num_files_x_task,
+        'mean_num_files_x_user': mean_num_files_x_user,
+        'mean_num_jobs_x_task': mean_num_jobs_x_task,
+        'mean_num_jobs_x_user': mean_num_jobs_x_user,
+        'mean_num_tasks_x_user': mean_num_tasks_x_user,
     }
 
 
-def make_stats(input_data):
-    (num_process, date, out_folder, minio_config,
-     file_size_db_path, file_size_redis_url)=input_data
-    year, month, day=date
+def make_stats(input_data: list):
+    """Start the process to make statistics.
 
-    minio_client, bucket=create_minio_client(minio_config)
-    stats=Statistics(file_size_db_path, file_size_redis_url,
-                       bar_position = num_process)
+    It downloads the source data and extracts the statistics.
+    At the end it stores the resulting DataFrame in a gzipped 
+    file in the feather format
+
+    Args:
+        input_data (list): a list of input which includes:
+                           1. The num. of the current process
+                           2. a tuple of the date, (year, month, day)
+                           3. the output folder string
+                           4. the minio configuration string
+                           5. the path to SQLite db for file sizes
+                           6. the Redis url string
+
+    Returns:
+        tuple: the date tuple -> (year, month, day)
+    """
+    (num_process, date, out_folder, minio_config,
+     file_size_db_path, file_size_redis_url) = input_data
+    year, month, day = date
+
+    minio_client, bucket = create_minio_client(minio_config)
+    stats = Statistics(file_size_db_path, file_size_redis_url,
+                       bar_position=num_process)
 
     try:
         minio_client.fget_object(
@@ -1514,6 +1171,19 @@ def make_stats(input_data):
 
 
 def main():
+    """Program entrypoint.
+
+    You can use this program to extract data from a preprocessed
+    data in the json.gz format.
+
+    Example to extract data:
+        python statistics.py extract --out-folder results_8w --start-date "2018 5 1" \
+           --window-size 56 --minio-config "localhost:9000 minioname miniopassword bucketname" \
+           -j 4 --file-size-db-path /foo/bar/file_sizes_folder --redis-url localhost
+
+    Example to plot data:
+        python statistics.py plot --result-folder results_8w -pws 7
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument('command', choices=['extract', 'plot'],
                         help="A string date: \"2019 5 5\"")
