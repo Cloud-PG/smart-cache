@@ -8,6 +8,8 @@ pylint = "*"
 autopep8 = "*"
 flake8 = "*"
 rope = "*"
+pylama = "*"
+v = {editable = true,version = "*"}
 
 [packages]
 python-snappy = "*"
