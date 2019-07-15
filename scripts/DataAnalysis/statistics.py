@@ -1,10 +1,7 @@
 import argparse
 import gzip
-import json
 import os
 import sqlite3
-import warnings
-from collections import OrderedDict
 from datetime import datetime, timedelta
 from multiprocessing import Pool
 
@@ -13,8 +10,7 @@ import numpy as np
 import pandas as pd
 import urllib3
 from minio import Minio
-from minio.error import (BucketAlreadyExists, BucketAlreadyOwnedByYou,
-                         ResponseError)
+from minio.error import ResponseError
 from tqdm import tqdm
 
 import redis
@@ -83,11 +79,13 @@ class Statistics(object):
 
     """Object that make statistics of a day."""
 
-    def __init__(self, file_size_db_path: str = None, redis_url: str = None, bar_position: int = 0):
+    def __init__(self, file_size_db_path: str = None, redis_url: str = None,
+                 bar_position: int = 0):
         """Prepare the environment for statistic extraction.
 
         Args:
-            file_size_db_path (str): the folder path to file size database in sqlite
+            file_size_db_path (str): the folder path to file size database in 
+                                     sqlite
             redis_url (str): the redis cache url (ex: 'localhost')
             bar_position (int): position for progress bar
         """
@@ -447,9 +445,9 @@ def plot_windows(windows: list, result_folder: str, dpi: int):
     bar_width = 0.2
     pbar = tqdm(desc="Plot windows", total=10, position=1, ascii=True)
 
-    ############################################################################
+    ###########################################################################
     # window_request_stats
-    ############################################################################
+    ###########################################################################
     plt.clf()
     grid = plt.GridSpec(24, len(windows), wspace=2.42, hspace=4.33)
 
@@ -611,9 +609,9 @@ def plot_windows(windows: list, result_folder: str, dpi: int):
     )
     pbar.update(1)
 
-    ############################################################################
+    ###########################################################################
     # window_frequency_stats
-    ############################################################################
+    ###########################################################################
     plt.clf()
     grid = plt.GridSpec(8, len(windows), wspace=2.42, hspace=2.33)
 
@@ -662,9 +660,9 @@ def plot_windows(windows: list, result_folder: str, dpi: int):
     )
     pbar.update(1)
 
-    ############################################################################
+    ###########################################################################
     # window_size_stats
-    ############################################################################
+    ###########################################################################
     plt.clf()
     grid = plt.GridSpec(24, len(windows), wspace=2.42, hspace=5.)
 
@@ -767,9 +765,9 @@ def plot_windows(windows: list, result_folder: str, dpi: int):
     )
     pbar.update(1)
 
-    ############################################################################
+    ###########################################################################
     # window_cache_size_stats
-    ############################################################################
+    ###########################################################################
     plt.clf()
     grid = plt.GridSpec(8*len(windows), len(windows), wspace=1.42, hspace=5.)
 
@@ -798,9 +796,9 @@ def plot_windows(windows: list, result_folder: str, dpi: int):
     )
     pbar.update(1)
 
-    ############################################################################
+    ###########################################################################
     # window_task_stats
-    ############################################################################
+    ###########################################################################
     plt.clf()
     grid = plt.GridSpec(18, len(windows)*2, wspace=1, hspace=1.)
 
@@ -1107,7 +1105,7 @@ def make_stats(input_data: list):
     """Start the process to make statistics.
 
     It downloads the source data and extracts the statistics.
-    At the end it stores the resulting DataFrame in a gzipped 
+    At the end it stores the resulting DataFrame in a gzipped
     file in the feather format
 
     Args:
@@ -1177,9 +1175,12 @@ def main():
     data in the json.gz format.
 
     Example to extract data:
-        python statistics.py extract --out-folder results_8w --start-date "2018 5 1" \
-           --window-size 56 --minio-config "localhost:9000 minioname miniopassword bucketname" \
-           -j 4 --file-size-db-path /foo/bar/file_sizes_folder --redis-url localhost
+        python statistics.py extract --out-folder results_8w \
+          --start-date "2018 5 1" \
+          --window-size 56 \
+          --minio-config "localhost:9000 minioname miniopassword bucketname" \
+          -j 4 --file-size-db-path /foo/bar/file_sizes_folder \
+          --redis-url localhost
 
     Example to plot data:
         python statistics.py plot --result-folder results_8w -pws 7
@@ -1226,9 +1227,12 @@ def main():
             pool = Pool(processes=args.jobs)
 
             pbar = tqdm(
-                total=len(day_list), desc="Extract stats", position=0, ascii=True
+                total=len(day_list), desc="Extract stats",
+                position=0, ascii=True
             )
-            for year, month, day in pool.imap(make_stats, day_list, chunksize=1):
+            for year, month, day in pool.imap(
+                make_stats, day_list, chunksize=1
+            ):
                 pbar.write(f"==> [DONE] Date {year}-{month}-{day}")
                 pbar.update(1)
             pbar.close()
