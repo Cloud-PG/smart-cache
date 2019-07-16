@@ -602,7 +602,7 @@ def plot_windows(windows: list, result_folder: str, dpi: int):
     pbar.update(1)
 
     plt.savefig(
-        os.path.join(result_folder, "window_request_stats.png"),
+        os.path.join(result_folder, "stats_window-requests.png"),
         dpi=dpi,
         bbox_extra_artists=(legend, ),
         bbox_inches='tight'
@@ -655,7 +655,7 @@ def plot_windows(windows: list, result_folder: str, dpi: int):
 
     pbar.update(1)
     plt.savefig(
-        os.path.join(result_folder, "window_frequency_stats.png"),
+        os.path.join(result_folder, "stats_window-frequencies.png"),
         dpi=dpi
     )
     pbar.update(1)
@@ -759,7 +759,7 @@ def plot_windows(windows: list, result_folder: str, dpi: int):
 
     pbar.update(1)
     plt.savefig(
-        os.path.join(result_folder, "window_size_stats.png"),
+        os.path.join(result_folder, "stats_window-sizes.png"),
         dpi=dpi,
         bbox_inches='tight'
     )
@@ -790,7 +790,7 @@ def plot_windows(windows: list, result_folder: str, dpi: int):
 
     pbar.update(1)
     plt.savefig(
-        os.path.join(result_folder, "window_cache_size_stats.png"),
+        os.path.join(result_folder, "stats_window-cache-sizes.png"),
         dpi=dpi,
         bbox_inches='tight'
     )
@@ -915,7 +915,7 @@ def plot_windows(windows: list, result_folder: str, dpi: int):
     #     plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
     pbar.update(1)
     plt.savefig(
-        os.path.join(result_folder, "window_task_stats.png"),
+        os.path.join(result_folder, "stats_window-tasks.png"),
         dpi=dpi,
         bbox_extra_artists=(legend, text),
         bbox_inches='tight'
