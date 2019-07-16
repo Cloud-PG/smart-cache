@@ -3,17 +3,18 @@ import gzip
 import os
 import sqlite3
 from datetime import datetime, timedelta
+from functools import wraps
 from multiprocessing import Pool
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import redis
 import urllib3
 from minio import Minio
 from minio.error import ResponseError
 from tqdm import tqdm
 
-import redis
 from DataManager import DataFile, date_from_timestamp_ms
 
 
@@ -443,7 +444,7 @@ def plot_windows(windows: list, result_folder: str, dpi: int):
         dpi (int): resolution of the output plot
     """
     bar_width = 0.2
-    pbar = tqdm(desc="Plot windows", total=10, position=1, ascii=True)
+    pbar = tqdm(desc="Plot windows", total=10, ascii=True)
 
     ###########################################################################
     # window_request_stats
@@ -940,7 +941,15 @@ def transform_sizes(size: float):
     return GB_size * 1000.
 
 
-def make_dataframe_stats(data: list):
+def star_decorator(func):
+    @wraps(func)
+    def star_wrapper(inputs):
+        return func(*inputs)
+    return star_wrapper
+
+
+@star_decorator
+def make_dataframe_stats(data: list, window_index: int = 0, process_num: int = 0):
     """Create window stats.
 
     Args:
@@ -966,8 +975,9 @@ def make_dataframe_stats(data: list):
             - io_time
             - size
     """
-    pbar = tqdm(desc="Make dataframe stats",
-                total=32, position=1, ascii=True)
+    pbar = tqdm(desc=f"Make dataframe stats of window {window_index}",
+                total=32, position=process_num, ascii=True,
+                leave=False)
 
     df = pd.concat(data)
     pbar.update(1)
@@ -1202,7 +1212,7 @@ def main():
                         help='The folder where the json results are stored.')
     parser.add_argument('--out-folder', type=str, default="./results",
                         help='The output folder.')
-    parser.add_argument('--jobs', '-j', type=int, default=2,
+    parser.add_argument('--jobs', '-j', type=int, default=4,
                         help="Num. of concurrent jobs")
     parser.add_argument('--file-size-db-path', type=str, default=None,
                         help="Path to size database")
@@ -1248,17 +1258,12 @@ def main():
         data_frames = []
         windows = []
 
-        # TO TEST
-        # counter = 0
-        for file_ in tqdm(
+        counter = 0
+        for file_idx, file_ in enumerate(tqdm(
             files, desc="Search stat results", position=0, ascii=True
-        ):
+        )):
             head, tail0 = os.path.splitext(file_)
             head, tail1 = os.path.splitext(head)
-
-            # counter += 1
-            # if counter == 5:
-            #     break
 
             if head.find("results_") == 0 and tail0 == ".gz"\
                     and tail1 == ".feather":
@@ -1270,17 +1275,32 @@ def main():
                     data_frames.append(pd.read_feather(stats_file))
 
             if len(data_frames) == args.plot_window_size:
-                tqdm.write("Build window")
-                windows.append(make_dataframe_stats(data_frames))
+                windows.append((
+                    data_frames,
+                    counter,
+                    counter % args.jobs
+                ))
                 data_frames = []
+                counter += 1
+
+            # TO TEST
+            # if file_idx == 5:
+            #     break
 
         if len(data_frames) > 0:
-            windows.append(make_dataframe_stats(data_frames))
+            windows.append((
+                data_frames,
+                counter,
+                counter % args.jobs
+            ))
             data_frames = []
 
-        print("[Plot window stats...]")
+        for idx, window in enumerate(pool.imap(
+            make_dataframe_stats, windows)
+        ):
+            windows[idx] = window
+
         plot_windows(windows, args.result_folder, args.plot_dpi)
-        print("[DONE!]")
 
     else:
         parser.print_usage()
