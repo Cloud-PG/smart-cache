@@ -1254,13 +1254,14 @@ def main():
             files, desc="Search stat results", position=0, ascii=True
         ):
             head, tail0 = os.path.splitext(file_)
-            _, tail1 = os.path.splitext(head)
+            head, tail1 = os.path.splitext(head)
 
             # counter += 1
             # if counter == 5:
             #     break
 
-            if tail0 == ".gz" and tail1 == ".feather":
+            if head.find("results_") == 0 and tail0 == ".gz"\
+                    and tail1 == ".feather":
                 cur_file = os.path.join(args.result_folder, file_)
                 with gzip.GzipFile(
                     cur_file, mode="rb"
