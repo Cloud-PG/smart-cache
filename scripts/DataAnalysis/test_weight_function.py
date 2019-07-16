@@ -246,9 +246,13 @@ def parse_data_frames(data: list, cost_function: callable,
 
 
 @star_decorator
-def test_function(df: 'pd.DataFrame', cache_size: float,
+def test_function(data_filename: str, cache_size: float,
                   num_window: int = 0, process_num: int = 0
                   ) -> Dict[str, 'Cache']:
+
+    with gzip.GzipFile(data_filename, mode="rb") as stats_file:
+        df = pd.read_feather(stats_file)
+
     lru_cache = CacheLRU(max_size=cache_size)
     lru_mod_cache = CacheLRUMod(max_size=cache_size)
 
@@ -366,13 +370,12 @@ def main():
     for idx, new_df in enumerate(pool.imap(
         parse_data_frames, windows)
     ):
-        with gzip.GzipFile(
-                os.path.join(
-                    args.result_folder, f"window_{idx:02d}.feather.gz"
-                ), mode="wb"
-        ) as output_file:
+        cur_file = os.path.join(
+            args.result_folder, f"window_{idx:02d}.feather.gz"
+        )
+        with gzip.GzipFile(cur_file, mode="wb") as output_file:
             new_df.to_feather(output_file)
-        windows[idx] = (new_df, args.cache_size, idx, idx % args.jobs)
+        windows[idx] = (cur_file, args.cache_size, idx, idx % args.jobs)
 
     for idx, result in enumerate(pool.imap(
         test_function, windows)
