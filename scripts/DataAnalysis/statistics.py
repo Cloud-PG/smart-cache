@@ -949,7 +949,8 @@ def star_decorator(func):
 
 
 @star_decorator
-def make_dataframe_stats(data: list, window_index: int = 0, process_num: int = 0):
+def make_dataframe_stats(data: list, window_index: int = 0,
+                         process_num: int = 0):
     """Create window stats.
 
     Args:
@@ -976,10 +977,18 @@ def make_dataframe_stats(data: list, window_index: int = 0, process_num: int = 0
             - size
     """
     pbar = tqdm(desc=f"Make dataframe stats of window {window_index}",
-                total=32, position=process_num, ascii=True,
+                total=32+len(data), position=process_num, ascii=True,
                 leave=False)
 
-    df = pd.concat(data)
+    df = []
+    for filename in data:
+        with gzip.GzipFile(
+            filename, mode="rb"
+        ) as stats_file:
+            df.append(pd.read_feather(stats_file))
+        pbar.update(1)
+
+    df = pd.concat(df)
     pbar.update(1)
 
     # Num requests and num files
@@ -1268,11 +1277,7 @@ def main():
             if head.find("results_") == 0 and tail0 == ".gz"\
                     and tail1 == ".feather":
                 cur_file = os.path.join(args.result_folder, file_)
-                with gzip.GzipFile(
-                    cur_file, mode="rb"
-                ) as stats_file:
-                    tqdm.write(f"Open file: '{cur_file}'")
-                    data_frames.append(pd.read_feather(stats_file))
+                data_frames.append(cur_file)
 
             if len(data_frames) == args.plot_window_size:
                 windows.append((
