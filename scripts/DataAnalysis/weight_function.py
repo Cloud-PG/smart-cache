@@ -133,8 +133,8 @@ class WeightedCache(object):
             self._group_files[group] = set()
 
         frequency, num_files = self._groups[group]
-        self._groups[group] = (frequency + 1, len(self._group_files[group]))
         self._group_files[group] |= set((filename, ))
+        self._groups[group] = (frequency + 1, len(self._group_files[group]))
 
         self.update_weights(group)
 
@@ -309,8 +309,8 @@ def simulate(cache, windows: list, cache_params: Dict[str, bool]):
             )
 
             # TEST
-            if _ == 10000:
-                break
+            # if _ == 10000:
+            #     break
 
         cur_size_history, cur_hit_rate_history = list(zip(*cache.history))
         size_history.append(cur_size_history)
@@ -429,8 +429,9 @@ def main():
         for clear_cache in [True, False]:
             cache_list.append(LRUCache(size))
             cache_params.append({'clear_cache': clear_cache})
-            break
-        break
+        # TEST
+        #     break
+        # break
 
     for size in args.cache_sizes:
         for exp in args.exp_values:
