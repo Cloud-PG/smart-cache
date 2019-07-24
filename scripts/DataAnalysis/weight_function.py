@@ -401,18 +401,29 @@ def plot_cache_results(caches: dict, out_file: str = "simulation_result.png",
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--result-folder', type=str, default="./results",
-                        help='The folder where the json results are stored.')
+                        help='The folder where the json results are stored')
+    parser.add_argument('--out-file', type=str,
+                        default="simulation_result.png",
+                        help='The output plot name.')
     parser.add_argument('--window-size', '-pws', type=int, default=7,
-                        help="Num. of days to plot")
-    parser.add_argument('--exp-values', type=List[int], default=[2., 3., 4.],
-                        help="Exponential of cost function")
+                        help="Num. of days of a window")
+    parser.add_argument('--max-windows', '-mw', type=int, default=-1,
+                        help="Num. of windows to simulate")
+    parser.add_argument('--exp-values', type=List[int],
+                        default=[
+                            2.,
+                            # 3.,
+                            # 4.
+    ],
+        help="Exponential of cost function"
+    )
     parser.add_argument('--jobs', '-j', type=int, default=4,
                         help="Num. of concurrent jobs")
     parser.add_argument('--cache-sizes', type=list,
                         default=[
                             # 1024.**2,  # 1T
                             10.*1024.**2,  # 10T
-                            100.*1024.**2,  # 10T
+                            # 100.*1024.**2,  # 10T
                         ],
                         help="List of cache sizes in MBytes (10TB default)")
 
@@ -465,6 +476,9 @@ def main():
             windows.append(files)
             files = []
 
+        if len(windows) == args.max_windows:
+            break
+
     if len(files) > 0:
         windows.append(files)
         files = []
@@ -482,8 +496,8 @@ def main():
         if cache_params[idx].get('clear_weights', False):
             cache_name += "_cW"
         historires_to_plot[cache_name] = cache_results
-    
-    plot_cache_results(historires_to_plot)
+
+    plot_cache_results(historires_to_plot, out_file == args.out_file)
 
 
 if __name__ == "__main__":
