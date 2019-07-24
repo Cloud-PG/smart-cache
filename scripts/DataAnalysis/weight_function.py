@@ -2,8 +2,10 @@ import argparse
 import gzip
 import itertools
 import os
+import pickle
 from functools import wraps
 from multiprocessing import Pool, current_process
+from tempfile import NamedTemporaryFile
 from typing import Dict, List, Tuple
 
 import matplotlib.pyplot as plt
@@ -118,7 +120,7 @@ class WeightedCache(object):
 
     def update_weights(self, group: str):
         for filename in self._group_files[group]:
-            if filename in self._cache:
+            if filename in self._cache and filename in self._weights:
                 self._weights[filename] = self.simple_cost_function(
                     self._cache[filename],
                     *self._groups[group],
@@ -149,9 +151,9 @@ class WeightedCache(object):
                                                    key=lambda elm: elm[1],
                                                    reverse=True):
                     if file_weight < weight:
-                        del self._cache[cur_filename]
+                        if cur_filename in self._cache:
+                            del self._cache[cur_filename]
                         del self._weights[cur_filename]
-                        self._group_files[group] -= set((cur_filename, ))
                     else:
                         break
 
@@ -255,10 +257,14 @@ class LRUCache(object):
         if hit:
             self._counters[self._cache.index(filename)] = self.__counter
         elif self.size + size > self._max_size:
-            idx = self._counters.index(min(self._counters))
-            self._cache[idx] = filename
-            self._sizes[idx] = size
-            self._counters[idx] = self.__counter
+            while self.size + size > self._max_size:
+                idx = self._counters.index(min(self._counters))
+                self._cache.pop(idx)
+                self._sizes.pop(idx)
+                self._counters.pop(idx)
+            self._cache.append(filename)
+            self._sizes.append(size)
+            self._counters.append(self.__counter)
         else:
             self._cache.append(filename)
             self._sizes.append(size)
@@ -281,40 +287,43 @@ def simulate(cache, windows: list, cache_params: Dict[str, bool]):
     clear_cache = cache_params.get('clear_cache', False)
     clear_weights = cache_params.get('clear_weights', False)
 
-    size_history = []
-    hit_rate_history = []
+    tmp_size_history = NamedTemporaryFile()
+    tmp_hit_rate_history = NamedTemporaryFile()
 
     for num_window, window in enumerate(windows, 1):
-        df = []
-        for filename in tqdm(window,
-                             desc=f"{str(cache)} - Open data frames window {num_window}/{len(windows)}",
-                             position=process_num, ascii=True):
+        num_file = 1
+        for filename in tqdm(
+            window,
+            desc=f"{str(cache)} - Open data frames {num_file}/{len(window)} of window {num_window}/{len(windows)}",
+            position=process_num, ascii=True
+        ):
             with gzip.GzipFile(
                 filename, mode="rb"
             ) as stats_file:
-                df.append(pd.read_feather(stats_file))
+                df = pd.read_feather(stats_file)[['filename', 'size']].dropna()
+
+            for _, record in tqdm(
+                df.iterrows(), total=df.shape[0], position=process_num,
+                desc=f"{str(cache)} - Simulate file {num_file}/{len(window)} of window {num_window}/{len(windows)}", ascii=True
+            ):
+                cache.get(
+                    record['filename'],
+                    record['size'] / 1024**2  # Convert from Bytes to MegaBytes
+                )
+
+                # TEST
+                # if _ == 10:
+                #     break
+
+            num_file += 1
 
             # TEST
-            # break
-
-        df = pd.concat(df).dropna()
-
-        for _, record in tqdm(
-            df.iterrows(), total=df.shape[0], position=process_num,
-            desc=f"{str(cache)} - Simulate window {num_window}/{len(windows)}", ascii=True
-        ):
-            cache.get(
-                record['filename'],
-                record['size'] / 1024**2  # Convert from Bytes to MegaBytes
-            )
-
-            # TEST
-            # if _ == 10000:
+            # if num_file == 2:
             #     break
 
-        cur_size_history, cur_hit_rate_history = list(zip(*cache.history))
-        size_history.append(cur_size_history)
-        hit_rate_history.append(cur_hit_rate_history)
+        cur_size_history, cur_hit_rate_history = zip(*cache.history)
+        store_results(tmp_size_history.name, [cur_size_history])
+        store_results(tmp_hit_rate_history.name, [cur_hit_rate_history])
 
         cache.reset_history()
 
@@ -324,7 +333,38 @@ def simulate(cache, windows: list, cache_params: Dict[str, bool]):
         if clear_weights:
             cache.reset_weights()
 
+    size_history = load_results(tmp_size_history.name)
+    hit_rate_history = load_results(tmp_hit_rate_history.name)
+
+    tmp_size_history.close()
+    tmp_hit_rate_history.close()
+
     return (size_history, hit_rate_history)
+
+
+def store_results(filename: str, data):
+    cur_file_name = f"{filename}.gz"
+    if not os.path.exists(cur_file_name):
+        with gzip.GzipFile(cur_file_name, "wb") as out_file:
+            pickle.dump(data, out_file, pickle.HIGHEST_PROTOCOL)
+    else:
+        with gzip.GzipFile(cur_file_name, "rb") as input_file:
+            cur_file = pickle.load(input_file)
+        if isinstance(cur_file, (list, tuple)):
+            new_data = cur_file + data
+        elif isinstance(cur_file, dict):
+            cur_file.update(data)
+            new_data = cur_file
+        # import json
+        # print(json.dumps(new_data))
+        with gzip.GzipFile(cur_file_name, "wb") as out_file:
+            pickle.dump(new_data, out_file, pickle.HIGHEST_PROTOCOL)
+
+
+def load_results(filename: str):
+    with gzip.GzipFile(f"{filename}.gz", "rb") as input_file:
+        data = pickle.load(input_file)
+    return data
 
 
 def plot_cache_results(caches: dict, out_file: str = "simulation_result.png",
@@ -483,8 +523,6 @@ def main():
         windows.append(files)
         files = []
 
-    historires_to_plot = {}
-
     for idx, cache_results in enumerate(tqdm(pool.imap(simulate, zip(
         cache_list,
         [windows for _ in range(len(cache_list))],
@@ -495,9 +533,14 @@ def main():
             cache_name += "_cC"
         if cache_params[idx].get('clear_weights', False):
             cache_name += "_cW"
-        historires_to_plot[cache_name] = cache_results
+        store_results('cache_results.pickle', {
+            cache_name: cache_results
+        })
 
-    plot_cache_results(historires_to_plot, out_file == args.out_file)
+    plot_cache_results(
+        load_results('cache_results.pickle'),
+        out_file=args.out_file
+    )
 
 
 if __name__ == "__main__":
