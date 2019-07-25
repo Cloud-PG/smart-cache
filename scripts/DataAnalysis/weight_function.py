@@ -6,26 +6,27 @@ import pickle
 from functools import wraps
 from multiprocessing import Pool, current_process
 from tempfile import NamedTemporaryFile
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Set
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+from bisect import bisect_left
 
 
 class WeightedCache(object):
 
     def __init__(self, max_size: float, exp: float = 2.0,
                  init_state: dict = {}):
-        self._cache: Dict[str, float] = {}
-        self._weights: Dict[str, float] = {}
-        self._groups: Dict[str, Tuple[int]] = {}
-        self._group_files: Dict[str, set] = {}
+        # filename -> (size, weight, group)
+        self._cache: Dict[str, Tuple(float, float, str)] = {}
+        # group -> (frequency, file_set)
+        self._groups: Dict[str, Tuple(float, Set[str])] = {}
+        self.__exp = exp
         self._hit = 0
         self._miss = 0
         self._max_size = max_size
-        self.__exp = exp
         self.size_history: List[float] = []
         self.hit_rate_history: List[float] = []
 
@@ -35,6 +36,9 @@ class WeightedCache(object):
     def __repr__(self):
         return f"WeightedCache_{int(self._max_size / 1024**2)}T_{int(self.__exp)}e"
 
+    def __len__(self):
+        return len(self._cache)
+
     def reset_history(self):
         self.size_history = []
         self.hit_rate_history = []
@@ -42,9 +46,10 @@ class WeightedCache(object):
         self._miss = 0
 
     def reset_weights(self):
-        self._weights = {}
         self._groups = {}
-        self._group_files = {}
+
+        for filename, (size, _, _) in self._cache.items():
+            self.update_policy(filename, size, hit=True)
 
     def clear(self):
         self._cache = {}
@@ -53,13 +58,11 @@ class WeightedCache(object):
     def state(self):
         return {
             'cache': self._cache,
-            'weights': self._weights,
             'groups': self._groups,
-            'group_files': self._group_files,
+            'exp': self.__exp,
             'hit': self._hit,
             'miss': self._miss,
             'max_size': self._max_size,
-            'exp': self.__exp,
             'size_history': self.size_history,
             'hit_rate_history': self.hit_rate_history
         }
@@ -69,13 +72,11 @@ class WeightedCache(object):
 
     def __setstate__(self, state):
         self._cache = state['cache']
-        self._weights = state['weights']
         self._groups = state['groups']
-        self._group_files = state['group_files']
+        self.__exp = state['exp']
         self._hit = state['hit']
         self._miss = state['miss']
         self._max_size = state['max_size']
-        self.__exp = state['exp']
         self.size_history = state['size_history']
         self.hit_rate_history = state['hit_rate_history']
 
@@ -89,7 +90,7 @@ class WeightedCache(object):
 
     @property
     def size(self):
-        return sum(self._cache.values())
+        return sum((elm[0] for elm in self._cache.values()))
 
     def check(self, filename):
         return filename in self._cache
@@ -119,49 +120,58 @@ class WeightedCache(object):
         self.hit_rate_history.append(self.hit_rate)
 
     def update_weights(self, group: str):
-        for filename in self._group_files[group]:
-            if filename in self._cache and filename in self._weights:
-                self._weights[filename] = self.simple_cost_function(
-                    self._cache[filename],
-                    *self._groups[group],
-                    self.__exp
-                )
+        new_group_freq, new_group_num_files = self._groups[group]
+        for filename, (size, weight, group) in (
+            (filename, record) for filename, record in self._cache.items()
+            if record[2] == group
+        ):
+            new_weight = self.simple_cost_function(
+                size,
+                new_group_freq,
+                len(new_group_num_files),
+                self.__exp
+            )
+            self._cache[filename] = (size, new_weight, group)
 
     def update_policy(self, filename: str, size: float, hit: bool):
         group = self.get_group(filename)
 
         if group not in self._groups:
-            self._groups[group] = (0, 0)
-            self._group_files[group] = set()
+            self._groups[group] = (0.0, set())
 
-        frequency, num_files = self._groups[group]
-        self._group_files[group] |= set((filename, ))
-        self._groups[group] = (frequency + 1, len(self._group_files[group]))
+        frequency, group_files = self._groups[group]
+        frequency += 1
+        group_files |= set((filename, ))
+        self._groups[group] = (frequency, group_files)
 
         self.update_weights(group)
 
         if not hit:
             file_weight = self.simple_cost_function(
                 size,
-                *self._groups[group],
+                frequency,
+                len(group_files),
                 self.__exp
             )
             if self.size + size >= self._max_size:
-                for cur_filename, weight in sorted(self._weights.items(),
-                                                   key=lambda elm: elm[1],
-                                                   reverse=True):
-                    if file_weight < weight:
-                        if cur_filename in self._cache:
-                            del self._cache[cur_filename]
-                            del self._weights[cur_filename]
-
-                    if self.size + size < self._max_size:
-                        self._cache[filename] = size
-                        self._weights[filename] = file_weight
-                        break
+                if file_weight < max(
+                    (record[1] for record in self._cache.values())
+                ):
+                    for filename, record in sorted(
+                        self._cache.items(),
+                        key=lambda elm: elm[1],
+                        reverse=True
+                    ):
+                        del self._cache[filename]
+                        if self.size + size < self._max_size:
+                            break
+                    self._cache[filename] = (
+                        size, file_weight, group
+                    )
             else:
-                self._cache[filename] = size
-                self._weights[filename] = file_weight
+                self._cache[filename] = (
+                    size, file_weight, group
+                )
 
 
 class LRUCache(object):
@@ -316,7 +326,7 @@ def simulate(cache, windows: list, cache_params: Dict[str, bool]):
                 record_pbar.desc = f"[Simulation][{str(cache)}][Hit Rate {cache.hit_rate:0.2f}][Window {num_window}/{len(windows)}][File {num_file}/{len(window)}]"
 
                 # TEST
-                # if _ == 1000:
+                # if _ == 10000:
                 #     break
 
             record_pbar.close()
@@ -473,8 +483,8 @@ def main():
                         help="Num. of concurrent jobs")
     parser.add_argument('--cache-sizes', type=list,
                         default=[
-                            1024.**2,  # 1T
-                            # 10.*1024.**2,  # 10T
+                            # 1024.**2,  # 1T
+                            10.*1024.**2,  # 10T
                             # 100.*1024.**2,  # 10T
                         ],
                         help="List of cache sizes in MBytes (10TB default)")
