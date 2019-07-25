@@ -316,8 +316,8 @@ def simulate(cache, windows: list, cache_params: Dict[str, bool]):
                 record_pbar.desc = f"[Simulation][{str(cache)}][Hit Rate {cache.hit_rate:0.2f}][Window {num_window}/{len(windows)}][File {num_file}/{len(window)}]"
 
                 # TEST
-                if _ == 1000:
-                    break
+                # if _ == 1000:
+                #     break
 
             record_pbar.close()
 
