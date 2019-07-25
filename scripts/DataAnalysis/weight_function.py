@@ -141,28 +141,27 @@ class WeightedCache(object):
         self.update_weights(group)
 
         if not hit:
+            file_weight = self.simple_cost_function(
+                size,
+                *self._groups[group],
+                self.__exp
+            )
             if self.size + size >= self._max_size:
-                file_weight = self.simple_cost_function(
-                    size,
-                    *self._groups[group],
-                    self.__exp
-                )
                 for cur_filename, weight in sorted(self._weights.items(),
                                                    key=lambda elm: elm[1],
                                                    reverse=True):
                     if file_weight < weight:
                         if cur_filename in self._cache:
                             del self._cache[cur_filename]
-                        del self._weights[cur_filename]
-                    else:
-                        break
+                            del self._weights[cur_filename]
 
-                    if self.size < self._max_size - size:
+                    if self.size + size < self._max_size:
                         self._cache[filename] = size
                         self._weights[filename] = file_weight
                         break
             else:
                 self._cache[filename] = size
+                self._weights[filename] = file_weight
 
 
 class LRUCache(object):
@@ -292,31 +291,39 @@ def simulate(cache, windows: list, cache_params: Dict[str, bool]):
 
     for num_window, window in enumerate(windows, 1):
         num_file = 1
-        for filename in tqdm(
-            window,
-            desc=f"{str(cache)} - Open data frames {num_file}/{len(window)} of window {num_window}/{len(windows)}",
-            position=process_num, ascii=True
-        ):
+        win_pbar = tqdm(
+            desc=f"[Open Data Frames][{str(cache)}][Window {num_window}/{len(windows)}][File {num_file}/{len(window)}]",
+            position=process_num, ascii=True,
+            total=len(window)
+        )
+        for filename in window:
             with gzip.GzipFile(
                 filename, mode="rb"
             ) as stats_file:
                 df = pd.read_feather(stats_file)[['filename', 'size']].dropna()
 
-            for _, record in tqdm(
-                df.iterrows(), total=df.shape[0], position=process_num,
-                desc=f"{str(cache)} - Simulate file {num_file}/{len(window)} of window {num_window}/{len(windows)}", ascii=True
-            ):
+            record_pbar = tqdm(
+                total=df.shape[0], position=process_num,
+                desc=f"[Simulation][Hit Rate 0.00][{str(cache)}][Window {num_window}/{len(windows)}][File {num_file}/{len(window)}]",
+                ascii=True
+            )
+            for _, record in df.iterrows():
                 cache.get(
                     record['filename'],
                     record['size'] / 1024**2  # Convert from Bytes to MegaBytes
                 )
+                record_pbar.update(1)
+                record_pbar.desc = f"[Simulation][{str(cache)}][Hit Rate {cache.hit_rate:0.2f}][Window {num_window}/{len(windows)}][File {num_file}/{len(window)}]"
 
                 # TEST
-                # if _ == 10:
-                #     break
+                if _ == 1000:
+                    break
+
+            record_pbar.close()
 
             num_file += 1
-
+            win_pbar.update(1)
+            win_pbar.desc = f"[Open Data Frames][{str(cache)}][Window {num_window}/{len(windows)}][File {num_file}/{len(window)}]"
             # TEST
             # if num_file == 2:
             #     break
@@ -332,6 +339,8 @@ def simulate(cache, windows: list, cache_params: Dict[str, bool]):
 
         if clear_weights:
             cache.reset_weights()
+
+        win_pbar.close()
 
     size_history = load_results(tmp_size_history.name)
     hit_rate_history = load_results(tmp_hit_rate_history.name)
@@ -355,8 +364,6 @@ def store_results(filename: str, data):
         elif isinstance(cur_file, dict):
             cur_file.update(data)
             new_data = cur_file
-        # import json
-        # print(json.dumps(new_data))
         with gzip.GzipFile(cur_file_name, "wb") as out_file:
             pickle.dump(new_data, out_file, pickle.HIGHEST_PROTOCOL)
 
@@ -380,6 +387,8 @@ def plot_cache_results(caches: dict, out_file: str = "simulation_result.png",
     linestyle_list = []
     vertical_lines = []
 
+    pbar = tqdm(desc="Plot results", total=len(caches)*2, ascii=True)
+
     axes = plt.subplot(grid[0:31, 0:])
     for cache_name, (size_history, hit_rate_history) in caches.items():
         cur_marker, cur_linestyle = next(styles)
@@ -389,7 +398,7 @@ def plot_cache_results(caches: dict, out_file: str = "simulation_result.png",
         lenght = len(points)
         if not vertical_lines:
             vertical_lines = [
-                len(history) for history in size_history
+                len(sublist) for sublist in size_history
             ]
         axes.plot(
             range(lenght),
@@ -398,13 +407,14 @@ def plot_cache_results(caches: dict, out_file: str = "simulation_result.png",
             marker=cur_marker,
             markevery=next(markevery),
             linestyle=cur_linestyle,
-            # alpha=0.9
+            alpha=0.9
         )
         axes.set_ylabel("Size (MB)")
+        pbar.update(1)
     legend = axes.legend(bbox_to_anchor=(1.0, 1.0))
     axes.grid()
     for vline in vertical_lines:
-        axes.axvline(vline, linewidth=0.1)
+        axes.axvline(vline, linewidth=0.2, color='k')
     axes.set_xlim(0)
     axes.set_yscale('log')
 
@@ -420,12 +430,13 @@ def plot_cache_results(caches: dict, out_file: str = "simulation_result.png",
             marker=marker_list[idx],
             markevery=next(markevery),
             linestyle=linestyle_list[idx],
-            # alpha=0.9
+            alpha=0.9
         )
         axes.set_ylabel("Hit rate %")
+        pbar.update(1)
     axes.grid()
     for vline in vertical_lines:
-        axes.axvline(vline, linewidth=0.1)
+        axes.axvline(vline, linewidth=0.2, color='k')
     axes.set_ylim(0, 100)
     axes.set_xlim(0)
 
@@ -436,6 +447,7 @@ def plot_cache_results(caches: dict, out_file: str = "simulation_result.png",
         bbox_extra_artists=(legend, ),
         bbox_inches='tight'
     )
+    pbar.close()
 
 
 def main():
@@ -445,7 +457,7 @@ def main():
     parser.add_argument('--out-file', type=str,
                         default="simulation_result.png",
                         help='The output plot name.')
-    parser.add_argument('--window-size', '-pws', type=int, default=7,
+    parser.add_argument('--window-size', '-ws', type=int, default=7,
                         help="Num. of days of a window")
     parser.add_argument('--max-windows', '-mw', type=int, default=-1,
                         help="Num. of windows to simulate")
@@ -461,8 +473,8 @@ def main():
                         help="Num. of concurrent jobs")
     parser.add_argument('--cache-sizes', type=list,
                         default=[
-                            # 1024.**2,  # 1T
-                            10.*1024.**2,  # 10T
+                            1024.**2,  # 1T
+                            # 10.*1024.**2,  # 10T
                             # 100.*1024.**2,  # 10T
                         ],
                         help="List of cache sizes in MBytes (10TB default)")
