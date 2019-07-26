@@ -19,8 +19,8 @@ class WeightedCache(object):
 
     def __init__(self, max_size: float, exp: float = 2.0,
                  init_state: dict = {}):
-        # filename -> (size, weight, group)
-        self._cache: Dict[str, Tuple(float, float, str)] = {}
+        # filename -> (size, weight)
+        self._cache: Dict[str, Tuple(float, float)] = {}
         # group -> (frequency, file_set)
         self._groups: Dict[str, Tuple(float, Set[str])] = {}
         self.__exp = exp
@@ -48,7 +48,7 @@ class WeightedCache(object):
     def reset_weights(self):
         self._groups = {}
 
-        for filename, (size, _, _) in self._cache.items():
+        for filename, (size, _) in self._cache.items():
             self.update_policy(filename, size, hit=True)
 
     def clear(self):
@@ -120,18 +120,17 @@ class WeightedCache(object):
         self.hit_rate_history.append(self.hit_rate)
 
     def update_weights(self, group: str):
-        new_group_freq, new_group_num_files = self._groups[group]
-        for filename, (size, weight, group) in (
-            (filename, record) for filename, record in self._cache.items()
-            if record[2] == group
-        ):
-            new_weight = self.simple_cost_function(
-                size,
-                new_group_freq,
-                len(new_group_num_files),
-                self.__exp
-            )
-            self._cache[filename] = (size, new_weight, group)
+        new_group_freq, files_ = self._groups[group]
+        for filename in files_:
+            if filename in self._cache:
+                size = self._cache[filename][0]
+                new_weight = self.simple_cost_function(
+                    size,
+                    new_group_freq,
+                    len(files_),
+                    self.__exp
+                )
+                self._cache[filename] = (size, new_weight)
 
     def update_policy(self, filename: str, size: float, hit: bool):
         group = self.get_group(filename)
@@ -154,24 +153,20 @@ class WeightedCache(object):
                 self.__exp
             )
             if self.size + size >= self._max_size:
-                if file_weight < max(
-                    (record[1] for record in self._cache.values())
+                for filename, (_, weight) in sorted(
+                    self._cache.items(),
+                    key=lambda elm: elm[1],
+                    reverse=True
                 ):
-                    for filename, record in sorted(
-                        self._cache.items(),
-                        key=lambda elm: elm[1],
-                        reverse=True
-                    ):
+                    if file_weight < weight:
                         del self._cache[filename]
-                        if self.size + size < self._max_size:
-                            break
-                    self._cache[filename] = (
-                        size, file_weight, group
-                    )
+                    else:
+                        break
+                    if self.size + size < self._max_size:
+                        self._cache[filename] = (size, file_weight)
+                        break
             else:
-                self._cache[filename] = (
-                    size, file_weight, group
-                )
+                self._cache[filename] = (size, file_weight)
 
 
 class LRUCache(object):
@@ -310,7 +305,11 @@ def simulate(cache, windows: list, cache_params: Dict[str, bool]):
             with gzip.GzipFile(
                 filename, mode="rb"
             ) as stats_file:
-                df = pd.read_feather(stats_file)[['filename', 'size']].dropna()
+                # df = pd.read_feather(stats_file)[['filename', 'size']].dropna()
+                df = pd.read_feather(stats_file)
+                df = df[
+                    df.site_name.str.contains('_it_', case=False)
+                ][['filename', 'size']].dropna()
 
             record_pbar = tqdm(
                 total=df.shape[0], position=process_num,
@@ -484,8 +483,8 @@ def main():
     parser.add_argument('--cache-sizes', type=list,
                         default=[
                             # 1024.**2,  # 1T
-                            10.*1024.**2,  # 10T
-                            # 100.*1024.**2,  # 10T
+                            # 10.*1024.**2,  # 10T
+                            100.*1024.**2,  # 10T
                         ],
                         help="List of cache sizes in MBytes (10TB default)")
 
