@@ -25,6 +25,8 @@ class WeightedCache(object):
         self._groups: Dict[str, Tuple(float, Set[str])] = {}
         # filename -> weight
         self._weights: Dict[str, float] = {}
+        # deferred groups
+        self._group2update: List[str] = []
         self.__exp = exp
         self._hit = 0
         self._miss = 0
@@ -50,6 +52,7 @@ class WeightedCache(object):
     def reset_weights(self):
         self._groups = {}
         self._weights = {}
+        self._group2update = []
 
         for filename, size in self._cache.items():
             self.update_policy(filename, size, hit=True)
@@ -57,12 +60,17 @@ class WeightedCache(object):
     def clear(self):
         self._cache = {}
 
+    def clear_history(self):
+        self.size_history = []
+        self.hit_rate_history = []
+
     @property
     def state(self):
         return {
             'cache': self._cache,
-            'weights': self._weights,
             'groups': self._groups,
+            'weights': self._weights,
+            'group2update': self._group2update,
             'exp': self.__exp,
             'hit': self._hit,
             'miss': self._miss,
@@ -71,13 +79,14 @@ class WeightedCache(object):
             'hit_rate_history': self.hit_rate_history
         }
 
-    def __getstate__(self):
+    def __getstate__(self) -> dict:
         return self.state
 
     def __setstate__(self, state):
         self._cache = state['cache']
-        self._weights = state['weights']
         self._groups = state['groups']
+        self._weights = state['weights']
+        self._group2update = state['group2update']
         self.__exp = state['exp']
         self._hit = state['hit']
         self._miss = state['miss']
@@ -90,18 +99,18 @@ class WeightedCache(object):
         return list(zip(self.size_history, self.hit_rate_history))
 
     @property
-    def hit_rate(self):
+    def hit_rate(self) -> float:
         return float(self._hit / (self._hit + self._miss)) * 100.
 
     @property
-    def size(self):
+    def size(self) -> float:
         return sum(self._cache.values())
 
-    def check(self, filename):
+    def check(self, filename: str) -> bool:
         return filename in self._cache
 
     @staticmethod
-    def get_group(filename: str):
+    def get_group(filename: str) -> str:
         _, store_type, campain, process, file_type, _ = [
             part for part in filename.split("/", 6) if part
         ]
@@ -109,10 +118,10 @@ class WeightedCache(object):
 
     @staticmethod
     def simple_cost_function(size: float, frequency: float, num_files:
-                             float, exp: float = 2.0):
+                             float, exp: float = 2.0) -> float:
         return size / (frequency / num_files) ** exp
 
-    def get(self, filename, size):
+    def get(self, filename: str, size: float) -> bool:
         hit = self.check(filename)
         if hit:
             self._hit += 1
@@ -123,6 +132,8 @@ class WeightedCache(object):
 
         self.size_history.append(self.size)
         self.hit_rate_history.append(self.hit_rate)
+
+        return hit
 
     def update_weights(self, group: str):
         new_group_freq, files_ = self._groups[group]
@@ -150,7 +161,7 @@ class WeightedCache(object):
         group_files |= set((filename, ))
         self._groups[group] = (frequency, group_files)
 
-        self.update_weights(group)
+        self._group2update.append(group)
 
         if not hit:
             file_weight = self.simple_cost_function(
@@ -160,6 +171,9 @@ class WeightedCache(object):
                 self.__exp
             )
             if self.size + size >= self._max_size:
+                for _ in range(len(self._group2update)):
+                    self.update_weights(self._group2update.pop())
+
                 for filename, weight in sorted(
                     self._weights.items(),
                     key=lambda elm: elm[1],
@@ -198,6 +212,9 @@ class LRUCache(object):
     def __repr__(self):
         return f"LRUCache_{int(self._max_size / 1024**2)}T"
 
+    def __len__(self) -> int:
+        return len(self._cache)
+
     def reset_history(self):
         self.size_history = []
         self.hit_rate_history = []
@@ -209,6 +226,10 @@ class LRUCache(object):
         self._counters = []
         self._cache = []
         self._sizes = []
+
+    def clear_history(self):
+        self.size_history = []
+        self.hit_rate_history = []
 
     @property
     def state(self):
@@ -224,7 +245,7 @@ class LRUCache(object):
             'hit_rate_history': self.hit_rate_history
         }
 
-    def __getstate__(self):
+    def __getstate__(self) -> dict:
         return self.state
 
     def __setstate__(self, state):
@@ -243,29 +264,31 @@ class LRUCache(object):
         return list(zip(self.size_history, self.hit_rate_history))
 
     @property
-    def hit_rate(self):
+    def hit_rate(self) -> float:
         return float(self._hit / (self._hit + self._miss)) * 100.
 
     @property
-    def size(self):
+    def size(self) -> float:
         return sum(self._sizes)
 
-    def check(self, filename):
+    def check(self, filename: str) -> bool:
         return filename in self._cache
 
-    def get(self, filename, size, **kwargs):
+    def get(self, filename: str, size: float) -> bool:
         hit = self.check(filename)
         if hit:
             self._hit += 1
         else:
             self._miss += 1
 
-        self.update_policy(filename, size, hit, **kwargs)
+        self.update_policy(filename, size, hit)
 
         self.size_history.append(self.size)
         self.hit_rate_history.append(self.hit_rate)
 
-    def update_policy(self, filename: str, size: float, hit: bool, **kwargs):
+        return hit
+
+    def update_policy(self, filename: str, size: float, hit: bool):
         self.__counter += 1
 
         if hit:
@@ -319,7 +342,7 @@ def simulate(cache, windows: list, cache_params: Dict[str, bool]):
                 df = pd.read_feather(stats_file)
                 df = df[
                     df.site_name.str.contains('_it_', case=False)
-                ][['filename', 'size']].dropna()
+                ][['filename', 'size']].dropna().reset_index()
 
             record_pbar = tqdm(
                 total=df.shape[0], position=process_num,
@@ -335,7 +358,7 @@ def simulate(cache, windows: list, cache_params: Dict[str, bool]):
                 record_pbar.desc = f"[Simulation][{str(cache)}][Hit Rate {cache.hit_rate:0.2f}][Window {num_window}/{len(windows)}][File {num_file}/{len(window)}]"
 
                 # TEST
-                # if _ == 10000:
+                # if _ == 1000:
                 #     break
 
             record_pbar.close()
@@ -351,7 +374,7 @@ def simulate(cache, windows: list, cache_params: Dict[str, bool]):
         store_results(tmp_size_history.name, [cur_size_history])
         store_results(tmp_hit_rate_history.name, [cur_hit_rate_history])
 
-        cache.reset_history()
+        cache.clear_history()
 
         if clear_cache:
             cache.clear()
@@ -419,6 +442,9 @@ def plot_cache_results(caches: dict, out_file: str = "simulation_result.png",
             vertical_lines = [
                 len(sublist) for sublist in size_history
             ]
+            for v_idx in range(1, len(vertical_lines) - 1):
+                vertical_lines[v_idx] = vertical_lines[v_idx] + \
+                    vertical_lines[v_idx-1]
         axes.plot(
             range(lenght),
             points,
@@ -426,14 +452,14 @@ def plot_cache_results(caches: dict, out_file: str = "simulation_result.png",
             marker=cur_marker,
             markevery=next(markevery),
             linestyle=cur_linestyle,
-            alpha=0.9
+            # alpha=0.9
         )
         axes.set_ylabel("Size (MB)")
         pbar.update(1)
     legend = axes.legend(bbox_to_anchor=(1.0, 1.0))
     axes.grid()
     for vline in vertical_lines:
-        axes.axvline(vline, linewidth=0.2, color='k')
+        axes.axvline(vline, linewidth=0.9, color='k')
     axes.set_xlim(0)
     axes.set_yscale('log')
 
@@ -449,13 +475,13 @@ def plot_cache_results(caches: dict, out_file: str = "simulation_result.png",
             marker=marker_list[idx],
             markevery=next(markevery),
             linestyle=linestyle_list[idx],
-            alpha=0.9
+            # alpha=0.9
         )
         axes.set_ylabel("Hit rate %")
         pbar.update(1)
     axes.grid()
     for vline in vertical_lines:
-        axes.axvline(vline, linewidth=0.2, color='k')
+        axes.axvline(vline, linewidth=0.9, color='k')
     axes.set_ylim(0, 100)
     axes.set_xlim(0)
 
@@ -484,7 +510,7 @@ def main():
                         default=[
                             2.,
                             # 3.,
-                            # 4.
+                            4.
     ],
         help="Exponential of cost function"
     )
@@ -492,8 +518,7 @@ def main():
                         help="Num. of concurrent jobs")
     parser.add_argument('--cache-sizes', type=list,
                         default=[
-                            # 1024.**2,  # 1T
-                            # 10.*1024.**2,  # 10T
+                            10.*1024.**2,  # 10T
                             100.*1024.**2,  # 10T
                         ],
                         help="List of cache sizes in MBytes (10TB default)")
@@ -564,14 +589,17 @@ def main():
             cache_name += "_cC"
         if cache_params[idx].get('clear_weights', False):
             cache_name += "_cW"
-        store_results('cache_results.pickle', {
+        store_results(f'cache_results_{id(pool)}.pickle', {
             cache_name: cache_results
         })
 
     plot_cache_results(
-        load_results('cache_results.pickle'),
+        load_results(f'cache_results_{id(pool)}.pickle'),
         out_file=args.out_file
     )
+
+    pool.close()
+    pool.join()
 
 
 if __name__ == "__main__":
