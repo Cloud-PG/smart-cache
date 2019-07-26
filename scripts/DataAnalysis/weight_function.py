@@ -19,10 +19,12 @@ class WeightedCache(object):
 
     def __init__(self, max_size: float, exp: float = 2.0,
                  init_state: dict = {}):
-        # filename -> (size, weight)
-        self._cache: Dict[str, Tuple(float, float)] = {}
+        # filename -> size
+        self._cache: Dict[str, float] = {}
         # group -> (frequency, file_set)
         self._groups: Dict[str, Tuple(float, Set[str])] = {}
+        # filename -> weight
+        self._weights: Dict[str, float] = {}
         self.__exp = exp
         self._hit = 0
         self._miss = 0
@@ -47,8 +49,9 @@ class WeightedCache(object):
 
     def reset_weights(self):
         self._groups = {}
+        self._weights = {}
 
-        for filename, (size, _) in self._cache.items():
+        for filename, size in self._cache.items():
             self.update_policy(filename, size, hit=True)
 
     def clear(self):
@@ -58,6 +61,7 @@ class WeightedCache(object):
     def state(self):
         return {
             'cache': self._cache,
+            'weights': self._weights,
             'groups': self._groups,
             'exp': self.__exp,
             'hit': self._hit,
@@ -72,6 +76,7 @@ class WeightedCache(object):
 
     def __setstate__(self, state):
         self._cache = state['cache']
+        self._weights = state['weights']
         self._groups = state['groups']
         self.__exp = state['exp']
         self._hit = state['hit']
@@ -90,7 +95,7 @@ class WeightedCache(object):
 
     @property
     def size(self):
-        return sum((elm[0] for elm in self._cache.values()))
+        return sum(self._cache.values())
 
     def check(self, filename):
         return filename in self._cache
@@ -121,16 +126,18 @@ class WeightedCache(object):
 
     def update_weights(self, group: str):
         new_group_freq, files_ = self._groups[group]
+        num_files = len(files_)
         for filename in files_:
             if filename in self._cache:
-                size = self._cache[filename][0]
+                size = self._cache[filename]
                 new_weight = self.simple_cost_function(
                     size,
                     new_group_freq,
-                    len(files_),
+                    num_files,
                     self.__exp
                 )
-                self._cache[filename] = (size, new_weight)
+                self._cache[filename] = size
+                self._weights[filename] = new_weight
 
     def update_policy(self, filename: str, size: float, hit: bool):
         group = self.get_group(filename)
@@ -153,20 +160,23 @@ class WeightedCache(object):
                 self.__exp
             )
             if self.size + size >= self._max_size:
-                for filename, (_, weight) in sorted(
-                    self._cache.items(),
+                for filename, weight in sorted(
+                    self._weights.items(),
                     key=lambda elm: elm[1],
                     reverse=True
                 ):
                     if file_weight < weight:
                         del self._cache[filename]
+                        del self._weights[filename]
                     else:
                         break
                     if self.size + size < self._max_size:
-                        self._cache[filename] = (size, file_weight)
+                        self._cache[filename] = size
+                        self._weights[filename] = file_weight
                         break
             else:
-                self._cache[filename] = (size, file_weight)
+                self._cache[filename] = size
+                self._weights[filename] = file_weight
 
 
 class LRUCache(object):
