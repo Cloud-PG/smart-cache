@@ -15,10 +15,26 @@ from tqdm import tqdm
 from bisect import bisect_left
 
 
+def simple_cost_function(size: float, frequency: float, num_files:
+                         float, exp: float = 2.0) -> float:
+    return size / (frequency / num_files) ** exp
+
+
+def simple_cost_function_only_freq(size: float, frequency: float, num_files:
+                                   float, exp: float = 2.0) -> float:
+    return size / frequency ** exp
+
+
+def simple_cost_function_no_size(size: float, frequency: float, num_files:
+                                 float, exp: float = 2.0) -> float:
+    return (frequency / num_files) ** exp
+
+
 class WeightedCache(object):
 
-    def __init__(self, max_size: float, exp: float = 2.0,
-                 init_state: dict = {}):
+    def __init__(self, max_size: float, cost_function: callable,
+                 cost_function_args: list = [], init_state: dict = {},
+                 cache_options: dict = {}):
         # filename -> size
         self._cache: Dict[str, float] = {}
         # group -> (frequency, file_set)
@@ -27,21 +43,52 @@ class WeightedCache(object):
         self._weights: Dict[str, float] = {}
         # deferred groups
         self._group2update: List[str] = []
-        self.__exp = exp
         self._hit = 0
         self._miss = 0
         self._max_size = max_size
         self.size_history: List[float] = []
         self.hit_rate_history: List[float] = []
+        self.cost_function = cost_function
+        self.cost_function_args = cost_function_args
+        self.__cache_options = cache_options
 
         if init_state:
             self.__setstate__(init_state)
 
     def __repr__(self):
-        return f"WeightedCache_{int(self._max_size / 1024**2)}T_{int(self.__exp)}e"
+        options = "_".join(
+            [
+                elm for elm in
+                [
+                    'cC' if self.__cache_options.get(
+                        'clear_cache', False) else '',
+                    'cW' if self.__cache_options.get(
+                        'clear_weights', False) else ''
+                ]
+                if elm
+            ]
+        )
+        return "WeightedCache_{}T_{}_f_{}e{}".format(
+            int(self._max_size / 1024**2),
+            self.__cache_options.get('fun_name', str(
+                self.cost_function).split()[1]),
+            int(self.__cache_options.get('exp', 2)),
+            "_{}".format(
+                options
+            )
+            if options else ''
+        )
 
     def __len__(self):
         return len(self._cache)
+
+    @property
+    def clear_me(self):
+        return self.__cache_options.get('clear_cache', False)
+
+    @property
+    def clear_my_weights(self):
+        return self.__cache_options.get('clear_weights', False)
 
     def reset_history(self):
         self.size_history = []
@@ -71,12 +118,14 @@ class WeightedCache(object):
             'groups': self._groups,
             'weights': self._weights,
             'group2update': self._group2update,
-            'exp': self.__exp,
             'hit': self._hit,
             'miss': self._miss,
             'max_size': self._max_size,
             'size_history': self.size_history,
-            'hit_rate_history': self.hit_rate_history
+            'hit_rate_history': self.hit_rate_history,
+            'cost_function': self.cost_function,
+            'cost_function_args': self.cost_function_args,
+            'cache_options': self.__cache_options
         }
 
     def __getstate__(self) -> dict:
@@ -87,12 +136,14 @@ class WeightedCache(object):
         self._groups = state['groups']
         self._weights = state['weights']
         self._group2update = state['group2update']
-        self.__exp = state['exp']
         self._hit = state['hit']
         self._miss = state['miss']
         self._max_size = state['max_size']
         self.size_history = state['size_history']
         self.hit_rate_history = state['hit_rate_history']
+        self.cost_function = state['cost_function']
+        self.cost_function_args = state['cost_function_args']
+        self.__cache_options = state['cache_options']
 
     @property
     def history(self):
@@ -116,11 +167,6 @@ class WeightedCache(object):
         ]
         return f"/{store_type}/{campain}/{process}/{file_type}/"
 
-    @staticmethod
-    def simple_cost_function(size: float, frequency: float, num_files:
-                             float, exp: float = 2.0) -> float:
-        return size / (frequency / num_files) ** exp
-
     def get(self, filename: str, size: float) -> bool:
         hit = self.check(filename)
         if hit:
@@ -141,14 +187,16 @@ class WeightedCache(object):
         for filename in files_:
             if filename in self._cache:
                 size = self._cache[filename]
-                new_weight = self.simple_cost_function(
+                new_weight = self.cost_function(
                     size,
                     new_group_freq,
                     num_files,
-                    self.__exp
+                    *self.cost_function_args
                 )
                 self._cache[filename] = size
                 self._weights[filename] = new_weight
+            elif filename in self._weights:
+                del self._weights[filename]
 
     def update_policy(self, filename: str, size: float, hit: bool):
         group = self.get_group(filename)
@@ -164,11 +212,11 @@ class WeightedCache(object):
         self._group2update.append(group)
 
         if not hit:
-            file_weight = self.simple_cost_function(
+            file_weight = self.cost_function(
                 size,
                 frequency,
                 len(group_files),
-                self.__exp
+                *self.cost_function_args
             )
             if self.size + size >= self._max_size:
                 for _ in range(len(self._group2update)):
@@ -180,7 +228,8 @@ class WeightedCache(object):
                     reverse=True
                 ):
                     if file_weight < weight:
-                        del self._cache[filename]
+                        if filename in self._cache:
+                            del self._cache[filename]
                         del self._weights[filename]
                     else:
                         break
@@ -195,7 +244,8 @@ class WeightedCache(object):
 
 class LRUCache(object):
 
-    def __init__(self, max_size: float, init_state: dict = {}):
+    def __init__(self, max_size: float, cache_options: dict = {},
+                 init_state: dict = {}):
         self._cache: List[str] = []
         self._sizes: List[float] = []
         self._hit = 0
@@ -205,15 +255,27 @@ class LRUCache(object):
         self.__counter = 0
         self.size_history: List[float] = []
         self.hit_rate_history: List[float] = []
+        self.__cache_options = cache_options
 
         if init_state:
             self.__setstate__(init_state)
 
     def __repr__(self):
-        return f"LRUCache_{int(self._max_size / 1024**2)}T"
+        return "LRUCache_{}T{}".format(
+            int(self._max_size / 1024**2),
+            "_cC" if self.__cache_options.get('clear_cache', False) else ''
+        )
 
     def __len__(self) -> int:
         return len(self._cache)
+
+    @property
+    def clear_me(self):
+        return self.__cache_options.get('clear_cache', False)
+
+    @property
+    def clear_my_weights(self):
+        return False
 
     def reset_history(self):
         self.size_history = []
@@ -242,7 +304,8 @@ class LRUCache(object):
             'counters': self._counters,
             'counter': self.__counter,
             'size_history': self.size_history,
-            'hit_rate_history': self.hit_rate_history
+            'hit_rate_history': self.hit_rate_history,
+            'cache_options': self.__cache_options
         }
 
     def __getstate__(self) -> dict:
@@ -258,6 +321,7 @@ class LRUCache(object):
         self.__counter = state['counter']
         self.size_history = state['size_history']
         self.hit_rate_history = state['hit_rate_history']
+        self.__cache_options = state['cache_options']
 
     @property
     def history(self):
@@ -316,13 +380,10 @@ def star_decorator(func):
 
 
 @star_decorator
-def simulate(cache, windows: list, cache_params: Dict[str, bool]):
+def simulate(cache, windows: list):
     process_num = int(
         str(current_process()).split("Worker-")[1].split(",")[0]
     )
-
-    clear_cache = cache_params.get('clear_cache', False)
-    clear_weights = cache_params.get('clear_weights', False)
 
     tmp_size_history = NamedTemporaryFile()
     tmp_hit_rate_history = NamedTemporaryFile()
@@ -376,10 +437,10 @@ def simulate(cache, windows: list, cache_params: Dict[str, bool]):
 
         cache.clear_history()
 
-        if clear_cache:
+        if cache.clear_me:
             cache.clear()
 
-        if clear_weights:
+        if cache.clear_my_weights:
             cache.reset_weights()
 
         win_pbar.close()
@@ -516,12 +577,23 @@ def main():
     )
     parser.add_argument('--jobs', '-j', type=int, default=4,
                         help="Num. of concurrent jobs")
+    parser.add_argument('--functions', type=List[str],
+                        default=[
+                            'simple',
+                            'only_freq',
+                            'no_size'
+    ],
+        help="List of functions to test")
     parser.add_argument('--cache-sizes', type=list,
                         default=[
-                            10.*1024.**2,  # 10T
+                            # 10.*1024.**2,  # 10T
                             100.*1024.**2,  # 10T
                         ],
                         help="List of cache sizes in MBytes (10TB default)")
+    parser.add_argument('--clear-cache', '-cC', action='store_true',
+                        help="Clear the cache on next window")
+    parser.add_argument('--clear-weights', '-cW', action='store_true',
+                        help="Clear the weights on next window")
 
     args, _ = parser.parse_known_args()
 
@@ -530,25 +602,48 @@ def main():
     files = []
     windows = []
     cache_list = []
-    cache_params = []
+    clear_cache_list = [False] if not args.clear_cache else [False, True]
+    clear_weights_list = [False] if not args.clear_weights else [False, True]
+    cost_functions = {
+        'simple': simple_cost_function,
+        'only_freq': simple_cost_function_only_freq,
+        'no_size': simple_cost_function_no_size
+    }
 
     for size in args.cache_sizes:
-        for clear_cache in [True, False]:
-            cache_list.append(LRUCache(size))
-            cache_params.append({'clear_cache': clear_cache})
+        for clear_cache in clear_cache_list:
+            cache_list.append(
+                LRUCache(
+                    size,
+                    cache_options={
+                        'clear_cache': clear_cache,
+                    }
+                )
+            )
         # TEST
         #     break
         # break
 
-    for size in args.cache_sizes:
-        for exp in args.exp_values:
-            for clear_cache in [True, False]:
-                for clear_weights in [True, False]:
-                    cache_list.append(WeightedCache(size, exp))
-                    cache_params.append({
-                        'clear_cache': clear_cache,
-                        'clear_weights': clear_weights
-                    })
+    for fun_name, function in [(fun_name, function)
+                               for fun_name, function in cost_functions.items()
+                               if fun_name in args.functions]:
+        for size in args.cache_sizes:
+            for exp in args.exp_values:
+                for clear_cache in clear_cache_list:
+                    for clear_weights in clear_weights_list:
+                        cache_list.append(
+                            WeightedCache(
+                                size,
+                                function,
+                                [exp],
+                                cache_options={
+                                    'fun_name': fun_name,
+                                    'exp': exp,
+                                    'clear_cache': clear_cache,
+                                    'clear_weights': clear_weights
+                                }
+                            )
+                        )
         # TEST
         #             break
         #         break
@@ -573,6 +668,7 @@ def main():
             files = []
 
         if len(windows) == args.max_windows:
+            files = []
             break
 
     if len(files) > 0:
@@ -581,14 +677,9 @@ def main():
 
     for idx, cache_results in enumerate(tqdm(pool.imap(simulate, zip(
         cache_list,
-        [windows for _ in range(len(cache_list))],
-        cache_params
+        [windows for _ in range(len(cache_list))]
     )), position=0, total=len(cache_list), desc="Cache simulated", ascii=True)):
         cache_name = f"{str(cache_list[idx])}"
-        if cache_params[idx].get('clear_cache', False):
-            cache_name += "_cC"
-        if cache_params[idx].get('clear_weights', False):
-            cache_name += "_cW"
         store_results(f'cache_results_{id(pool)}.pickle', {
             cache_name: cache_results
         })
