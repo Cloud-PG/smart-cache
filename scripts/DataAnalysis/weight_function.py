@@ -48,6 +48,7 @@ class WeightedCache(object):
         self._max_size = max_size
         self.size_history: List[float] = []
         self.hit_rate_history: List[float] = []
+        self.write_history: List[float] = []
         self.cost_function = cost_function
         self.cost_function_args = cost_function_args
         self.__cache_options = cache_options
@@ -90,12 +91,6 @@ class WeightedCache(object):
     def clear_my_weights(self):
         return self.__cache_options.get('clear_weights', False)
 
-    def reset_history(self):
-        self.size_history = []
-        self.hit_rate_history = []
-        self._hit = 0
-        self._miss = 0
-
     def reset_weights(self):
         self._groups = {}
         self._weights = {}
@@ -110,6 +105,9 @@ class WeightedCache(object):
     def clear_history(self):
         self.size_history = []
         self.hit_rate_history = []
+        self.write_history = []
+        self._hit = 0
+        self._miss = 0
 
     @property
     def state(self):
@@ -123,6 +121,7 @@ class WeightedCache(object):
             'max_size': self._max_size,
             'size_history': self.size_history,
             'hit_rate_history': self.hit_rate_history,
+            'write_history': self.write_history,
             'cost_function': self.cost_function,
             'cost_function_args': self.cost_function_args,
             'cache_options': self.__cache_options
@@ -141,13 +140,14 @@ class WeightedCache(object):
         self._max_size = state['max_size']
         self.size_history = state['size_history']
         self.hit_rate_history = state['hit_rate_history']
+        self.write_history = state['write_history']
         self.cost_function = state['cost_function']
         self.cost_function_args = state['cost_function_args']
         self.__cache_options = state['cache_options']
 
     @property
-    def history(self):
-        return list(zip(self.size_history, self.hit_rate_history))
+    def history(self) -> Tuple[List[float]]:
+        return (self.size_history, self.hit_rate_history, self.write_history)
 
     @property
     def hit_rate(self) -> float:
@@ -156,6 +156,16 @@ class WeightedCache(object):
     @property
     def size(self) -> float:
         return sum(self._cache.values())
+
+    def update_write_history(self, size: float, hit: bool):
+        try:
+            last = self.write_history[-1]
+        except IndexError:
+            last = 0.0
+        if hit:
+            self.write_history.append(last)
+        else:
+            self.write_history.append(last + size)
 
     def check(self, filename: str) -> bool:
         return filename in self._cache
@@ -178,6 +188,7 @@ class WeightedCache(object):
 
         self.size_history.append(self.size)
         self.hit_rate_history.append(self.hit_rate)
+        self.update_write_history(size, hit)
 
         return hit
 
@@ -255,6 +266,7 @@ class LRUCache(object):
         self.__counter = 0
         self.size_history: List[float] = []
         self.hit_rate_history: List[float] = []
+        self.write_history: List[float] = []
         self.__cache_options = cache_options
 
         if init_state:
@@ -277,12 +289,6 @@ class LRUCache(object):
     def clear_my_weights(self):
         return False
 
-    def reset_history(self):
-        self.size_history = []
-        self.hit_rate_history = []
-        self._hit = 0
-        self._miss = 0
-
     def clear(self):
         self.__counter = 0
         self._counters = []
@@ -292,6 +298,19 @@ class LRUCache(object):
     def clear_history(self):
         self.size_history = []
         self.hit_rate_history = []
+        self.write_history = []
+        self._hit = 0
+        self._miss = 0
+
+    def update_write_history(self, size: float, hit: bool):
+        try:
+            last = self.write_history[-1]
+        except IndexError:
+            last = 0.0
+        if hit:
+            self.write_history.append(last)
+        else:
+            self.write_history.append(last + size)
 
     @property
     def state(self):
@@ -305,6 +324,7 @@ class LRUCache(object):
             'counter': self.__counter,
             'size_history': self.size_history,
             'hit_rate_history': self.hit_rate_history,
+            'write_history': self.write_history,
             'cache_options': self.__cache_options
         }
 
@@ -321,11 +341,12 @@ class LRUCache(object):
         self.__counter = state['counter']
         self.size_history = state['size_history']
         self.hit_rate_history = state['hit_rate_history']
+        self.write_history = state['write_history']
         self.__cache_options = state['cache_options']
 
     @property
-    def history(self):
-        return list(zip(self.size_history, self.hit_rate_history))
+    def history(self) -> Tuple[List[float]]:
+        return (self.size_history, self.hit_rate_history, self.write_history)
 
     @property
     def hit_rate(self) -> float:
@@ -349,6 +370,7 @@ class LRUCache(object):
 
         self.size_history.append(self.size)
         self.hit_rate_history.append(self.hit_rate)
+        self.update_write_history(size, hit)
 
         return hit
 
@@ -387,6 +409,7 @@ def simulate(cache, windows: list):
 
     tmp_size_history = NamedTemporaryFile()
     tmp_hit_rate_history = NamedTemporaryFile()
+    tmp_write_history = NamedTemporaryFile()
 
     for num_window, window in enumerate(windows, 1):
         num_file = 1
@@ -431,9 +454,10 @@ def simulate(cache, windows: list):
             # if num_file == 2:
             #     break
 
-        cur_size_history, cur_hit_rate_history = zip(*cache.history)
+        cur_size_history, cur_hit_rate_history, cur_write_history = cache.history
         store_results(tmp_size_history.name, [cur_size_history])
         store_results(tmp_hit_rate_history.name, [cur_hit_rate_history])
+        store_results(tmp_write_history.name, [cur_write_history])
 
         cache.clear_history()
 
@@ -447,11 +471,13 @@ def simulate(cache, windows: list):
 
     size_history = load_results(tmp_size_history.name)
     hit_rate_history = load_results(tmp_hit_rate_history.name)
+    write_history = load_results(tmp_write_history.name)
 
     tmp_size_history.close()
     tmp_hit_rate_history.close()
+    tmp_write_history.close()
 
-    return (size_history, hit_rate_history)
+    return (size_history, hit_rate_history, write_history)
 
 
 def store_results(filename: str, data):
@@ -479,24 +505,22 @@ def load_results(filename: str):
 
 def plot_cache_results(caches: dict, out_file: str = "simulation_result.png",
                        dpi: int = 300):
-    grid = plt.GridSpec(64, 32, wspace=1.42, hspace=1.42)
+    grid = plt.GridSpec(96, 32, wspace=1.42, hspace=1.42)
     styles = itertools.cycle(
         itertools.product(
             (',', '+', '.', 'o', '*'), ('-', '--', '-.', ':')
         )
     )
     markevery = itertools.cycle([50000, 100000, 150000, 200000])
-    marker_list = []
-    linestyle_list = []
+    cache_styles = {}
     vertical_lines = []
 
     pbar = tqdm(desc="Plot results", total=len(caches)*2, ascii=True)
 
     axes = plt.subplot(grid[0:31, 0:])
-    for cache_name, (size_history, hit_rate_history) in caches.items():
+    for cache_name, (size_history, hit_rate_history, write_history) in caches.items():
         cur_marker, cur_linestyle = next(styles)
-        marker_list.append(cur_marker)
-        linestyle_list.append(cur_linestyle)
+        cache_styles[cache_name] = (cur_marker, cur_linestyle)
         points = [elm for sublist in size_history for elm in sublist]
         lenght = len(points)
         if not vertical_lines:
@@ -524,18 +548,40 @@ def plot_cache_results(caches: dict, out_file: str = "simulation_result.png",
     axes.set_xlim(0)
     axes.set_yscale('log')
 
-    axes = plt.subplot(grid[32:, 0:])
-    for idx, (cache_name, (size_history, hit_rate_history)
-              ) in enumerate(caches.items()):
+    axes = plt.subplot(grid[32:63, 0:])
+    for cache_name, (size_history, hit_rate_history, write_history) in caches.items():
+        cur_marker, cur_linestyle = cache_styles[cache_name]
+        points = [elm for sublist in write_history for elm in sublist]
+        lenght = len(points)
+        axes.plot(
+            range(lenght),
+            points,
+            label=f"{cache_name}",
+            marker=cur_marker,
+            markevery=next(markevery),
+            linestyle=cur_linestyle,
+            # alpha=0.9
+        )
+        axes.set_ylabel("MB Written")
+        pbar.update(1)
+    axes.grid()
+    for vline in vertical_lines:
+        axes.axvline(vline, linewidth=0.9, color='k')
+    axes.set_xlim(0)
+    axes.set_yscale('log')
+
+    axes = plt.subplot(grid[64:, 0:])
+    for cache_name, (size_history, hit_rate_history, write_history) in caches.items():
+        cur_marker, cur_linestyle = cache_styles[cache_name]
         points = [elm for sublist in hit_rate_history for elm in sublist]
         lenght = len(points)
         axes.plot(
             range(lenght),
             points,
             label=f"{cache_name}",
-            marker=marker_list[idx],
+            marker=cur_marker,
             markevery=next(markevery),
-            linestyle=linestyle_list[idx],
+            linestyle=cur_linestyle,
             # alpha=0.9
         )
         axes.set_ylabel("Hit rate %")
@@ -567,35 +613,27 @@ def main():
                         help="Num. of days of a window")
     parser.add_argument('--max-windows', '-mw', type=int, default=-1,
                         help="Num. of windows to simulate")
-    parser.add_argument('--exp-values', type=List[int],
-                        default=[
-                            2.,
-                            # 3.,
-                            4.
-    ],
-        help="Exponential of cost function"
-    )
+    parser.add_argument('--exp-values', type=str,
+                        default="2,4",
+                        help="Exponential of cost function. List divided by ','."
+                        )
     parser.add_argument('--jobs', '-j', type=int, default=4,
                         help="Num. of concurrent jobs")
-    parser.add_argument('--functions', type=List[str],
-                        default=[
-                            'simple',
-                            'only_freq',
-                            'no_size'
-    ],
-        help="List of functions to test")
-    parser.add_argument('--cache-sizes', type=list,
-                        default=[
-                            # 10.*1024.**2,  # 10T
-                            100.*1024.**2,  # 10T
-                        ],
-                        help="List of cache sizes in MBytes (10TB default)")
+    parser.add_argument('--functions', type=str,
+                        default="simple,only_freq,no_size",
+                        help="List of functions to test. List divided by ','.")
+    parser.add_argument('--cache-sizes', type=str,
+                        default="10485760,104857600",  # 10T and 100T
+                        help="List of cache sizes in MBytes (10TB default). List divided by ','.")
     parser.add_argument('--clear-cache', '-cC', action='store_true',
                         help="Clear the cache on next window")
     parser.add_argument('--clear-weights', '-cW', action='store_true',
                         help="Clear the weights on next window")
 
     args, _ = parser.parse_known_args()
+    args.exp_values = [float(elm) for elm in args.exp_values.split(",")]
+    args.functions = [elm for elm in args.functions.split(",")]
+    args.cache_sizes = [float(elm) for elm in args.cache_sizes.split(",")]
 
     result_files = list(sorted(os.listdir(args.result_folder)))
 
