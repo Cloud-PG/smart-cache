@@ -21,14 +21,6 @@ def simple_cost_function(**kwargs) -> float:
     ) ** kwargs['exp']
 
 
-def simple_cost_function_only_freq(**kwargs) -> float:
-    return kwargs['size'] / kwargs['frequency'] ** kwargs['exp']
-
-
-def simple_cost_function_no_size(**kwargs) -> float:
-    return (kwargs['frequency'] / kwargs['num_files']) ** kwargs['exp']
-
-
 def cost_function_with_time(**kwargs) -> float:
     return (kwargs['size'] / (
         kwargs['frequency'] / kwargs['num_files']
@@ -43,8 +35,9 @@ class WeightedCache(object):
                  init_state: dict = {}, cache_options: dict = {}):
         # filename -> size
         self._cache: Dict[str, float] = {}
-        # group -> (frequency, file_set, last_time)
-        self._groups: Dict[str, Tuple(float, Set[str]), float] = {}
+        # group -> (frequency, last_time)
+        self._groups: Dict[str, Tuple(float, float)] = {}
+        self._groups_files: Dict[str, Set[str]] = {}
         # filename -> weight
         self._weights: Dict[str, float] = {}
         # deferred groups
@@ -55,6 +48,7 @@ class WeightedCache(object):
         self.size_history: List[float] = []
         self.hit_rate_history: List[float] = []
         self.write_history: List[float] = []
+        self.__info = []
         self.cost_function = cost_function
         self.__cache_options = cache_options
 
@@ -120,10 +114,15 @@ class WeightedCache(object):
         self._miss = 0
 
     @property
+    def info(self):
+        return self._weights
+
+    @property
     def state(self):
         return {
             'cache': self._cache,
             'groups': self._groups,
+            'groups_files': self._groups_files,
             'weights': self._weights,
             'group2update': self._group2update,
             'hit': self._hit,
@@ -133,7 +132,8 @@ class WeightedCache(object):
             'hit_rate_history': self.hit_rate_history,
             'write_history': self.write_history,
             'cost_function': self.cost_function,
-            'cache_options': self.__cache_options
+            'cache_options': self.__cache_options,
+            'info': self.__info
         }
 
     def __getstate__(self) -> dict:
@@ -142,6 +142,7 @@ class WeightedCache(object):
     def __setstate__(self, state):
         self._cache = state['cache']
         self._groups = state['groups']
+        self._groups_files = state['groups_files']
         self._weights = state['weights']
         self._group2update = state['group2update']
         self._hit = state['hit']
@@ -152,6 +153,7 @@ class WeightedCache(object):
         self.write_history = state['write_history']
         self.cost_function = state['cost_function']
         self.__cache_options = state['cache_options']
+        self.__info = state['info']
 
     @property
     def history(self) -> Tuple[List[float]]:
@@ -201,9 +203,10 @@ class WeightedCache(object):
         return hit
 
     def update_weights(self, group: str):
-        new_group_freq, files_, last_time = self._groups[group]
-        num_files = len(files_)
-        for filename in files_:
+        new_group_freq, last_time = self._groups[group]
+        files = self._groups_files[group]
+        num_files = len(files)
+        for filename in files:
             if filename in self._cache:
                 size = self._cache[filename]
                 new_weight = self.cost_function(
@@ -221,13 +224,14 @@ class WeightedCache(object):
         group = self.get_group(filename)
 
         if group not in self._groups:
-            self._groups[group] = (0.0, set(), 0.0)
+            self._groups[group] = (0.0, 0.0)
+            self._groups_files[group] = set()
 
-        frequency, group_files, _ = self._groups[group]
+        frequency, _ = self._groups[group]
         frequency += 1
-        group_files |= set((filename, ))
         last_time = time()
-        self._groups[group] = (frequency, group_files, last_time)
+        self._groups[group] = (frequency, last_time)
+        self._groups_files[group] |= set((filename, ))
 
         self._group2update.append(group)
 
@@ -235,7 +239,7 @@ class WeightedCache(object):
             file_weight = self.cost_function(
                 size=size,
                 frequency=frequency,
-                num_files=len(group_files),
+                num_files=len(self._groups_files[group]),
                 last_time=last_time
             )
             if self.size + size >= self._max_size:
@@ -280,6 +284,7 @@ class LRUCache(object):
         self.hit_rate_history: List[float] = []
         self.write_history: List[float] = []
         self.__cache_options = cache_options
+        self.__info = []
 
         if init_state:
             self.__setstate__(init_state)
@@ -300,6 +305,10 @@ class LRUCache(object):
     @property
     def clear_my_weights(self):
         return False
+
+    @property
+    def info(self):
+        return dict(zip(self._cache, self._counters))
 
     def clear(self):
         self.__counter = 0
@@ -342,7 +351,8 @@ class LRUCache(object):
             'size_history': self.size_history,
             'hit_rate_history': self.hit_rate_history,
             'write_history': self.write_history,
-            'cache_options': self.__cache_options
+            'cache_options': self.__cache_options,
+            'info': self.__info
         }
 
     def __getstate__(self) -> dict:
@@ -360,6 +370,7 @@ class LRUCache(object):
         self.hit_rate_history = state['hit_rate_history']
         self.write_history = state['write_history']
         self.__cache_options = state['cache_options']
+        self.__info = state['info']
 
     @property
     def history(self) -> Tuple[List[float]]:
@@ -431,6 +442,7 @@ def simulate(cache, windows: list, region: str = "_all_"):
     tmp_size_history = NamedTemporaryFile()
     tmp_hit_rate_history = NamedTemporaryFile()
     tmp_write_history = NamedTemporaryFile()
+    tmp_info = NamedTemporaryFile()
 
     for num_window, window in enumerate(windows, 1):
         num_file = 1
@@ -465,7 +477,7 @@ def simulate(cache, windows: list, region: str = "_all_"):
                 record_pbar.desc = f"[Simulation][{str(cache)}][Hit Rate {cache.hit_rate:0.2f}][Window {num_window}/{len(windows)}][File {num_file}/{len(window)}]"
 
                 # TEST
-                # if _ == 1000:
+                # if _ == 10000:
                 #     break
 
             record_pbar.close()
@@ -481,6 +493,7 @@ def simulate(cache, windows: list, region: str = "_all_"):
         store_results(tmp_size_history.name, [cur_size_history])
         store_results(tmp_hit_rate_history.name, [cur_hit_rate_history])
         store_results(tmp_write_history.name, [cur_write_history])
+        store_results(tmp_info.name, [cache.info])
 
         cache.clear_history()
 
@@ -495,12 +508,14 @@ def simulate(cache, windows: list, region: str = "_all_"):
     size_history = load_results(tmp_size_history.name)
     hit_rate_history = load_results(tmp_hit_rate_history.name)
     write_history = load_results(tmp_write_history.name)
+    cache_info = load_results(tmp_info.name)
 
     tmp_size_history.close()
     tmp_hit_rate_history.close()
     tmp_write_history.close()
+    tmp_info.close()
 
-    return (size_history, hit_rate_history, write_history)
+    return (size_history, hit_rate_history, write_history, cache_info)
 
 
 def store_results(filename: str, data):
@@ -531,9 +546,8 @@ def load_results(filename: str):
     return data
 
 
-def plot_cache_results(caches: dict, out_file: str = "simulation_result.png",
-                       dpi: int = 300):
-    grid = plt.GridSpec(96, 32, wspace=1.42, hspace=1.42)
+def plot_cache_results(caches: dict, out_folder: str, dpi: int = 300):
+    grid = plt.GridSpec(96, 32, wspace=2.42, hspace=1.42)
     styles_list = list(itertools.product(
         ('+', '*', '.', 'o', ','), ('-', '--', '-.', ':')
     ))
@@ -544,10 +558,10 @@ def plot_cache_results(caches: dict, out_file: str = "simulation_result.png",
     cache_styles = {}
     vertical_lines = []
 
-    pbar = tqdm(desc="Plot results", total=len(caches)*2, ascii=True)
+    pbar = tqdm(desc="Plot results", total=len(caches)*3, ascii=True)
 
     axes = plt.subplot(grid[0:31, 0:])
-    for cache_name, (size_history, hit_rate_history, write_history) in caches.items():
+    for cache_name, (size_history, hit_rate_history, write_history, _) in caches.items():
         cur_marker, cur_linestyle = next(styles)
         cache_styles[cache_name] = (cur_marker, cur_linestyle)
         points = [elm for sublist in size_history for elm in sublist]
@@ -579,7 +593,7 @@ def plot_cache_results(caches: dict, out_file: str = "simulation_result.png",
     axes.set_xticklabels([])
 
     axes = plt.subplot(grid[32:63, 0:])
-    for cache_name, (size_history, hit_rate_history, write_history) in caches.items():
+    for cache_name, (size_history, hit_rate_history, write_history, _) in caches.items():
         cur_marker, cur_linestyle = cache_styles[cache_name]
         points = [elm for sublist in write_history for elm in sublist]
         lenght = len(points)
@@ -602,7 +616,7 @@ def plot_cache_results(caches: dict, out_file: str = "simulation_result.png",
     axes.set_xticklabels([])
 
     axes = plt.subplot(grid[64:, 0:])
-    for cache_name, (size_history, hit_rate_history, write_history) in caches.items():
+    for cache_name, (size_history, hit_rate_history, write_history, _) in caches.items():
         cur_marker, cur_linestyle = cache_styles[cache_name]
         points = [elm for sublist in hit_rate_history for elm in sublist]
         lenght = len(points)
@@ -625,11 +639,57 @@ def plot_cache_results(caches: dict, out_file: str = "simulation_result.png",
     axes.set_xlabel("Requests")
 
     plt.savefig(
-        out_file,
+        os.path.join(out_folder, "simulation_result.png"),
         dpi=dpi,
         bbox_extra_artists=(legend, ),
         bbox_inches='tight'
     )
+
+    plt.cla()
+
+    no_LRU_info = [(name, info) for name, info in caches.items()
+                   if name.find("LRU") == -1]
+    grid = plt.GridSpec(16*len(no_LRU_info), 16 *
+                        len(vertical_lines), wspace=1.42, hspace=1.42)
+
+    all_texts = []
+    for lru_name, (_, _, _, lru_info) in [
+        (name, data) for name, data in caches.items()
+            if name.find("LRU") != -1]:
+        for cache_idx, (cur_name, (_, _, _, cur_info)) in enumerate(no_LRU_info):
+            for window_idx, cur_results in enumerate(cur_info):
+                axes = plt.subplot(
+                    grid[
+                        16*cache_idx:16*cache_idx+15,
+                        16*window_idx:16*window_idx+15
+                    ]
+                )
+                # if window_idx == 0:
+                #     all_texts.append(axes.text(0.0, 0.1, f"{cur_name}"))
+                files = [(filename, weight) for filename, weight in sorted(
+                    cur_results.items(),
+                    key=lambda elm: elm[1],
+                    reverse=True
+                )]
+                for file_idx, (filename, weight) in enumerate(files):
+                    axes.bar(
+                        file_idx,
+                        weight,
+                        color='b' if filename in lru_info[window_idx] else 'r',
+                        width=1.0,
+                        label="Weight"
+                    )
+                axes.set_ylim(0)
+                axes.set_xlim(0)
+                axes.set_xticklabels([])
+                axes.grid()
+
+        plt.savefig(
+            os.path.join(out_folder, f"simulation_result_info_{lru_name}.png"),
+            dpi=dpi,
+            bbox_extra_artists=all_texts,
+            bbox_inches='tight'
+        )
 
     pbar.close()
 
@@ -656,7 +716,7 @@ def main():
     parser.add_argument('--jobs', '-j', type=int, default=4,
                         help="Num. of concurrent jobs")
     parser.add_argument('--functions', type=str,
-                        default="simple,only_freq,no_size,with_time",
+                        default="simple,with_time",
                         help="List of functions to test. List divided by ','.")
     parser.add_argument('--cache-sizes', type=str,
                         default="10485760,104857600",  # 10T and 100T
@@ -682,8 +742,6 @@ def main():
             False] if not args.clear_weights else [False, True]
         cost_functions = {
             'simple': simple_cost_function,
-            'only_freq': simple_cost_function_only_freq,
-            'no_size': simple_cost_function_no_size,
             'with_time': cost_function_with_time
         }
 
@@ -765,20 +823,17 @@ def main():
         os.makedirs(args.out_folder, exist_ok=True)
         plot_cache_results(
             load_results(f'cache_results_{id(pool)}.pickle'),
-            out_file=os.path.join(
-                args.out_folder, 'simulation_result.png'
-            )
+            out_folder=args.out_folder
         )
 
         pool.close()
         pool.join()
+
     else:
         os.makedirs(args.out_folder, exist_ok=True)
         plot_cache_results(
             load_results(args.plot_results),
-            out_file=os.path.join(
-                args.out_folder, 'simulation_result.png'
-            )
+            out_folder=args.out_folder
         )
 
 
