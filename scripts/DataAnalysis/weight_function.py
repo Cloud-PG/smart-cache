@@ -5,6 +5,7 @@ import os
 import pickle
 from functools import partial, wraps
 from multiprocessing import Pool, current_process
+from random import seed, shuffle
 from tempfile import NamedTemporaryFile
 from time import time
 from typing import Dict, List, Set, Tuple
@@ -533,11 +534,12 @@ def load_results(filename: str):
 def plot_cache_results(caches: dict, out_file: str = "simulation_result.png",
                        dpi: int = 300):
     grid = plt.GridSpec(96, 32, wspace=1.42, hspace=1.42)
-    styles = itertools.cycle(
-        itertools.product(
-            (',', '+', '.', 'o', '*'), ('-', '--', '-.', ':')
-        )
-    )
+    styles_list = list(itertools.product(
+        ('+', '*', '.', 'o', ','), ('-', '--', '-.', ':')
+    ))
+    seed(42)
+    shuffle(styles_list)
+    styles = itertools.cycle(styles_list)
     markevery = itertools.cycle([50000, 100000, 150000, 200000])
     cache_styles = {}
     vertical_lines = []
@@ -636,8 +638,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--result-folder', type=str, default="./results",
                         help='The folder where the json results are stored')
-    parser.add_argument('--out-file', type=str,
-                        default="simulation_result.png",
+    parser.add_argument('--out-folder', type=str,
+                        default="./sim_res",
                         help='The output plot name.')
     parser.add_argument('--region', type=str, default="it",
                         help='Region to filter.')
@@ -695,9 +697,9 @@ def main():
                         }
                     )
                 )
-            # TEST
-            #     break
-            # break
+        # TEST
+        #     break
+        # break
 
         for fun_name, function in [(fun_name, function)
                                    for fun_name, function in cost_functions.items()
@@ -753,24 +755,30 @@ def main():
         for idx, cache_results in enumerate(tqdm(pool.imap(simulate, zip(
             cache_list,
             [windows for _ in range(len(cache_list))],
-            f"_{args.region}_"
+            [f"_{args.region}_" for _ in range(len(cache_list))]
         )), position=0, total=len(cache_list), desc="Cache simulated", ascii=True)):
             cache_name = f"{str(cache_list[idx])}"
             store_results(f'cache_results_{id(pool)}.pickle', {
                 cache_name: cache_results
             })
 
+        os.makedirs(args.out_folder, exist_ok=True)
         plot_cache_results(
             load_results(f'cache_results_{id(pool)}.pickle'),
-            out_file=args.out_file
+            out_file=os.path.join(
+                args.out_folder, 'simulation_result.png'
+            )
         )
 
         pool.close()
         pool.join()
     else:
+        os.makedirs(args.out_folder, exist_ok=True)
         plot_cache_results(
             load_results(args.plot_results),
-            out_file=args.out_file
+            out_file=os.path.join(
+                args.out_folder, 'simulation_result.png'
+            )
         )
 
 
