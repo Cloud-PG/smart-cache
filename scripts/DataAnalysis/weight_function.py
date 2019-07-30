@@ -3,42 +3,47 @@ import gzip
 import itertools
 import os
 import pickle
-from functools import wraps
+from functools import partial, wraps
 from multiprocessing import Pool, current_process
 from tempfile import NamedTemporaryFile
-from typing import Dict, List, Tuple, Set
+from time import time
+from typing import Dict, List, Set, Tuple
 
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 from tqdm import tqdm
-from bisect import bisect_left
 
 
-def simple_cost_function(size: float, frequency: float, num_files:
-                         float, exp: float = 2.0) -> float:
-    return size / (frequency / num_files) ** exp
+def simple_cost_function(**kwargs) -> float:
+    return kwargs['size'] / (
+        kwargs['frequency'] / kwargs['num_files']
+    ) ** kwargs['exp']
 
 
-def simple_cost_function_only_freq(size: float, frequency: float, num_files:
-                                   float, exp: float = 2.0) -> float:
-    return size / frequency ** exp
+def simple_cost_function_only_freq(**kwargs) -> float:
+    return kwargs['size'] / kwargs['frequency'] ** kwargs['exp']
 
 
-def simple_cost_function_no_size(size: float, frequency: float, num_files:
-                                 float, exp: float = 2.0) -> float:
-    return (frequency / num_files) ** exp
+def simple_cost_function_no_size(**kwargs) -> float:
+    return (kwargs['frequency'] / kwargs['num_files']) ** kwargs['exp']
+
+
+def cost_function_with_time(**kwargs) -> float:
+    return (kwargs['size'] / (
+        kwargs['frequency'] / kwargs['num_files']
+    ) ** kwargs['exp']) * (
+        time() - kwargs['last_time']
+    ) ** kwargs['exp']
 
 
 class WeightedCache(object):
 
     def __init__(self, max_size: float, cost_function: callable,
-                 cost_function_args: list = [], init_state: dict = {},
-                 cache_options: dict = {}):
+                 init_state: dict = {}, cache_options: dict = {}):
         # filename -> size
         self._cache: Dict[str, float] = {}
-        # group -> (frequency, file_set)
-        self._groups: Dict[str, Tuple(float, Set[str])] = {}
+        # group -> (frequency, file_set, last_time)
+        self._groups: Dict[str, Tuple(float, Set[str]), float] = {}
         # filename -> weight
         self._weights: Dict[str, float] = {}
         # deferred groups
@@ -50,7 +55,6 @@ class WeightedCache(object):
         self.hit_rate_history: List[float] = []
         self.write_history: List[float] = []
         self.cost_function = cost_function
-        self.cost_function_args = cost_function_args
         self.__cache_options = cache_options
 
         if init_state:
@@ -103,6 +107,11 @@ class WeightedCache(object):
         self._cache = {}
 
     def clear_history(self):
+        self.size_history = [self.size_history[-1]]
+        self.hit_rate_history = [self.hit_rate_history[-1]]
+        self.write_history = [self.write_history[-1]]
+
+    def reset_history(self):
         self.size_history = []
         self.hit_rate_history = []
         self.write_history = []
@@ -123,7 +132,6 @@ class WeightedCache(object):
             'hit_rate_history': self.hit_rate_history,
             'write_history': self.write_history,
             'cost_function': self.cost_function,
-            'cost_function_args': self.cost_function_args,
             'cache_options': self.__cache_options
         }
 
@@ -142,7 +150,6 @@ class WeightedCache(object):
         self.hit_rate_history = state['hit_rate_history']
         self.write_history = state['write_history']
         self.cost_function = state['cost_function']
-        self.cost_function_args = state['cost_function_args']
         self.__cache_options = state['cache_options']
 
     @property
@@ -157,12 +164,12 @@ class WeightedCache(object):
     def size(self) -> float:
         return sum(self._cache.values())
 
-    def update_write_history(self, size: float, hit: bool):
+    def update_write_history(self, size: float, added: bool):
         try:
             last = self.write_history[-1]
         except IndexError:
             last = 0.0
-        if hit:
+        if not added:
             self.write_history.append(last)
         else:
             self.write_history.append(last + size)
@@ -184,50 +191,51 @@ class WeightedCache(object):
         else:
             self._miss += 1
 
-        self.update_policy(filename, size, hit)
+        added = self.update_policy(filename, size, hit)
 
         self.size_history.append(self.size)
         self.hit_rate_history.append(self.hit_rate)
-        self.update_write_history(size, hit)
+        self.update_write_history(size, added)
 
         return hit
 
     def update_weights(self, group: str):
-        new_group_freq, files_ = self._groups[group]
+        new_group_freq, files_, last_time = self._groups[group]
         num_files = len(files_)
         for filename in files_:
             if filename in self._cache:
                 size = self._cache[filename]
                 new_weight = self.cost_function(
-                    size,
-                    new_group_freq,
-                    num_files,
-                    *self.cost_function_args
+                    size=size,
+                    frequency=new_group_freq,
+                    num_files=num_files,
+                    last_time=last_time
                 )
                 self._cache[filename] = size
                 self._weights[filename] = new_weight
             elif filename in self._weights:
                 del self._weights[filename]
 
-    def update_policy(self, filename: str, size: float, hit: bool):
+    def update_policy(self, filename: str, size: float, hit: bool) -> bool:
         group = self.get_group(filename)
 
         if group not in self._groups:
-            self._groups[group] = (0.0, set())
+            self._groups[group] = (0.0, set(), 0.0)
 
-        frequency, group_files = self._groups[group]
+        frequency, group_files, _ = self._groups[group]
         frequency += 1
         group_files |= set((filename, ))
-        self._groups[group] = (frequency, group_files)
+        last_time = time()
+        self._groups[group] = (frequency, group_files, last_time)
 
         self._group2update.append(group)
 
         if not hit:
             file_weight = self.cost_function(
-                size,
-                frequency,
-                len(group_files),
-                *self.cost_function_args
+                size=size,
+                frequency=frequency,
+                num_files=len(group_files),
+                last_time=last_time
             )
             if self.size + size >= self._max_size:
                 for _ in range(len(self._group2update)):
@@ -247,10 +255,13 @@ class WeightedCache(object):
                     if self.size + size < self._max_size:
                         self._cache[filename] = size
                         self._weights[filename] = file_weight
-                        break
+                        return True
             else:
                 self._cache[filename] = size
                 self._weights[filename] = file_weight
+                return True
+
+        return False
 
 
 class LRUCache(object):
@@ -296,18 +307,23 @@ class LRUCache(object):
         self._sizes = []
 
     def clear_history(self):
+        self.size_history = [self.size_history[-1]]
+        self.hit_rate_history = [self.hit_rate_history[-1]]
+        self.write_history = [self.write_history[-1]]
+
+    def reset_history(self):
         self.size_history = []
         self.hit_rate_history = []
         self.write_history = []
         self._hit = 0
         self._miss = 0
 
-    def update_write_history(self, size: float, hit: bool):
+    def update_write_history(self, size: float, added: bool):
         try:
             last = self.write_history[-1]
         except IndexError:
             last = 0.0
-        if hit:
+        if not added:
             self.write_history.append(last)
         else:
             self.write_history.append(last + size)
@@ -366,15 +382,15 @@ class LRUCache(object):
         else:
             self._miss += 1
 
-        self.update_policy(filename, size, hit)
+        added = self.update_policy(filename, size, hit)
 
         self.size_history.append(self.size)
         self.hit_rate_history.append(self.hit_rate)
-        self.update_write_history(size, hit)
+        self.update_write_history(size, added)
 
         return hit
 
-    def update_policy(self, filename: str, size: float, hit: bool):
+    def update_policy(self, filename: str, size: float, hit: bool) -> bool:
         self.__counter += 1
 
         if hit:
@@ -388,10 +404,14 @@ class LRUCache(object):
             self._cache.append(filename)
             self._sizes.append(size)
             self._counters.append(self.__counter)
+            return True
         else:
             self._cache.append(filename)
             self._sizes.append(size)
             self._counters.append(self.__counter)
+            return True
+
+        return False
 
 
 def star_decorator(func):
@@ -402,7 +422,7 @@ def star_decorator(func):
 
 
 @star_decorator
-def simulate(cache, windows: list):
+def simulate(cache, windows: list, region: str = "_all_"):
     process_num = int(
         str(current_process()).split("Worker-")[1].split(",")[0]
     )
@@ -422,11 +442,13 @@ def simulate(cache, windows: list):
             with gzip.GzipFile(
                 filename, mode="rb"
             ) as stats_file:
-                # df = pd.read_feather(stats_file)[['filename', 'size']].dropna()
                 df = pd.read_feather(stats_file)
-                df = df[
-                    df.site_name.str.contains('_it_', case=False)
-                ][['filename', 'size']].dropna().reset_index()
+                if region != "_all_":
+                    df = df[
+                        df.site_name.str.contains(region, case=False)
+                    ][['filename', 'size']].dropna().reset_index()
+                else:
+                    df = df[['filename', 'size']].dropna().reset_index()
 
             record_pbar = tqdm(
                 total=df.shape[0], position=process_num,
@@ -498,7 +520,12 @@ def store_results(filename: str, data):
 
 
 def load_results(filename: str):
-    with gzip.GzipFile(f"{filename}.gz", "rb") as input_file:
+    _, ext = os.path.splitext(filename)
+    if ext == ".gz":
+        target = filename
+    else:
+        target = f"{filename}.gz"
+    with gzip.GzipFile(target, "rb") as input_file:
         data = pickle.load(input_file)
     return data
 
@@ -547,6 +574,7 @@ def plot_cache_results(caches: dict, out_file: str = "simulation_result.png",
         axes.axvline(vline, linewidth=0.9, color='k')
     axes.set_xlim(0)
     axes.set_yscale('log')
+    axes.set_xticklabels([])
 
     axes = plt.subplot(grid[32:63, 0:])
     for cache_name, (size_history, hit_rate_history, write_history) in caches.items():
@@ -569,6 +597,7 @@ def plot_cache_results(caches: dict, out_file: str = "simulation_result.png",
         axes.axvline(vline, linewidth=0.9, color='k')
     axes.set_xlim(0)
     axes.set_yscale('log')
+    axes.set_xticklabels([])
 
     axes = plt.subplot(grid[64:, 0:])
     for cache_name, (size_history, hit_rate_history, write_history) in caches.items():
@@ -591,14 +620,15 @@ def plot_cache_results(caches: dict, out_file: str = "simulation_result.png",
         axes.axvline(vline, linewidth=0.9, color='k')
     axes.set_ylim(0, 100)
     axes.set_xlim(0)
-
     axes.set_xlabel("Requests")
+
     plt.savefig(
         out_file,
         dpi=dpi,
         bbox_extra_artists=(legend, ),
         bbox_inches='tight'
     )
+
     pbar.close()
 
 
@@ -609,6 +639,10 @@ def main():
     parser.add_argument('--out-file', type=str,
                         default="simulation_result.png",
                         help='The output plot name.')
+    parser.add_argument('--region', type=str, default="it",
+                        help='Region to filter.')
+    parser.add_argument('--plot-results', action='store_true',
+                        help='File with results to plot.')
     parser.add_argument('--window-size', '-ws', type=int, default=7,
                         help="Num. of days of a window")
     parser.add_argument('--max-windows', '-mw', type=int, default=-1,
@@ -620,7 +654,7 @@ def main():
     parser.add_argument('--jobs', '-j', type=int, default=4,
                         help="Num. of concurrent jobs")
     parser.add_argument('--functions', type=str,
-                        default="simple,only_freq,no_size",
+                        default="simple,only_freq,no_size,with_time",
                         help="List of functions to test. List divided by ','.")
     parser.add_argument('--cache-sizes', type=str,
                         default="10485760,104857600",  # 10T and 100T
@@ -635,100 +669,109 @@ def main():
     args.functions = [elm for elm in args.functions.split(",")]
     args.cache_sizes = [float(elm) for elm in args.cache_sizes.split(",")]
 
-    result_files = list(sorted(os.listdir(args.result_folder)))
+    if not args.plot_results:
+        result_files = list(sorted(os.listdir(args.result_folder)))
 
-    files = []
-    windows = []
-    cache_list = []
-    clear_cache_list = [False] if not args.clear_cache else [False, True]
-    clear_weights_list = [False] if not args.clear_weights else [False, True]
-    cost_functions = {
-        'simple': simple_cost_function,
-        'only_freq': simple_cost_function_only_freq,
-        'no_size': simple_cost_function_no_size
-    }
+        files = []
+        windows = []
+        cache_list = []
+        clear_cache_list = [False] if not args.clear_cache else [False, True]
+        clear_weights_list = [
+            False] if not args.clear_weights else [False, True]
+        cost_functions = {
+            'simple': simple_cost_function,
+            'only_freq': simple_cost_function_only_freq,
+            'no_size': simple_cost_function_no_size,
+            'with_time': cost_function_with_time
+        }
 
-    for size in args.cache_sizes:
-        for clear_cache in clear_cache_list:
-            cache_list.append(
-                LRUCache(
-                    size,
-                    cache_options={
-                        'clear_cache': clear_cache,
-                    }
-                )
-            )
-        # TEST
-        #     break
-        # break
-
-    for fun_name, function in [(fun_name, function)
-                               for fun_name, function in cost_functions.items()
-                               if fun_name in args.functions]:
         for size in args.cache_sizes:
-            for exp in args.exp_values:
-                for clear_cache in clear_cache_list:
-                    for clear_weights in clear_weights_list:
-                        cache_list.append(
-                            WeightedCache(
-                                size,
-                                function,
-                                [exp],
-                                cache_options={
-                                    'fun_name': fun_name,
-                                    'exp': exp,
-                                    'clear_cache': clear_cache,
-                                    'clear_weights': clear_weights
-                                }
+            for clear_cache in clear_cache_list:
+                cache_list.append(
+                    LRUCache(
+                        size,
+                        cache_options={
+                            'clear_cache': clear_cache,
+                        }
+                    )
+                )
+            # TEST
+            #     break
+            # break
+
+        for fun_name, function in [(fun_name, function)
+                                   for fun_name, function in cost_functions.items()
+                                   if fun_name in args.functions]:
+            for size in args.cache_sizes:
+                for exp in args.exp_values:
+                    for clear_cache in clear_cache_list:
+                        for clear_weights in clear_weights_list:
+                            cache_list.append(
+                                WeightedCache(
+                                    size,
+                                    partial(function,
+                                            exp=exp),
+                                    cache_options={
+                                        'fun_name': fun_name,
+                                        'exp': exp,
+                                        'clear_cache': clear_cache,
+                                        'clear_weights': clear_weights
+                                    }
+                                )
                             )
-                        )
-        # TEST
-        #             break
-        #         break
-        #     break
-        # break
+            # TEST
+            #             break
+            #         break
+            #     break
+            # break
 
-    pool = Pool(processes=args.jobs)
+        pool = Pool(processes=args.jobs)
 
-    for file_idx, file_ in enumerate(tqdm(
-        result_files, desc="Search stat results", ascii=True
-    )):
-        head, tail0 = os.path.splitext(file_)
-        head, tail1 = os.path.splitext(head)
+        for file_idx, file_ in enumerate(tqdm(
+            result_files, desc="Search stat results", ascii=True
+        )):
+            head, tail0 = os.path.splitext(file_)
+            head, tail1 = os.path.splitext(head)
 
-        if tail0 == ".gz" and tail1 == ".feather"\
-                and head.find("results_") == 0:
-            cur_file = os.path.join(args.result_folder, file_)
-            files.append(cur_file)
+            if tail0 == ".gz" and tail1 == ".feather"\
+                    and head.find("results_") == 0:
+                cur_file = os.path.join(args.result_folder, file_)
+                files.append(cur_file)
 
-        if len(files) == args.window_size:
+            if len(files) == args.window_size:
+                windows.append(files)
+                files = []
+
+            if len(windows) == args.max_windows:
+                files = []
+                break
+
+        if len(files) > 0:
             windows.append(files)
             files = []
 
-        if len(windows) == args.max_windows:
-            files = []
-            break
+        for idx, cache_results in enumerate(tqdm(pool.imap(simulate, zip(
+            cache_list,
+            [windows for _ in range(len(cache_list))],
+            f"_{args.region}_"
+        )), position=0, total=len(cache_list), desc="Cache simulated", ascii=True)):
+            cache_name = f"{str(cache_list[idx])}"
+            store_results(f'cache_results_{id(pool)}.pickle', {
+                cache_name: cache_results
+            })
 
-    if len(files) > 0:
-        windows.append(files)
-        files = []
+        plot_cache_results(
+            load_results(f'cache_results_{id(pool)}.pickle'),
+            out_file=args.out_file
+        )
 
-    for idx, cache_results in enumerate(tqdm(pool.imap(simulate, zip(
-        cache_list,
-        [windows for _ in range(len(cache_list))]
-    )), position=0, total=len(cache_list), desc="Cache simulated", ascii=True)):
-        cache_name = f"{str(cache_list[idx])}"
-        store_results(f'cache_results_{id(pool)}.pickle', {
-            cache_name: cache_results
-        })
-
-    plot_cache_results(
-        load_results(f'cache_results_{id(pool)}.pickle'),
-        out_file=args.out_file
-    )
-
-    pool.close()
-    pool.join()
+        pool.close()
+        pool.join()
+    else:
+        plot_cache_results(
+            load_results(args.plot_results),
+            out_file=args.out_file
+        )
 
 
 if __name__ == "__main__":
