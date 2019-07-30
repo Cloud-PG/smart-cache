@@ -554,7 +554,7 @@ def plot_cache_results(caches: dict, out_file: str = "simulation_result.png",
             vertical_lines = [
                 len(sublist) for sublist in size_history
             ]
-            for v_idx in range(1, len(vertical_lines) - 1):
+            for v_idx in range(1, len(vertical_lines)):
                 vertical_lines[v_idx] = vertical_lines[v_idx] + \
                     vertical_lines[v_idx-1]
         axes.plot(
@@ -641,7 +641,7 @@ def main():
                         help='The output plot name.')
     parser.add_argument('--region', type=str, default="it",
                         help='Region to filter.')
-    parser.add_argument('--plot-results', action='store_true',
+    parser.add_argument('--plot-results', type=str, default="",
                         help='File with results to plot.')
     parser.add_argument('--window-size', '-ws', type=int, default=7,
                         help="Num. of days of a window")
@@ -669,7 +669,7 @@ def main():
     args.functions = [elm for elm in args.functions.split(",")]
     args.cache_sizes = [float(elm) for elm in args.cache_sizes.split(",")]
 
-    if not args.plot_results:
+    if args.plot_results == "":
         result_files = list(sorted(os.listdir(args.result_folder)))
 
         files = []
