@@ -17,16 +17,121 @@ from tqdm import tqdm
 
 def simple_cost_function(**kwargs) -> float:
     return kwargs['size'] / (
-        kwargs['frequency'] / kwargs['num_files']
-    ) ** kwargs['exp']
+        (
+            kwargs['frequency'] / kwargs['num_files']
+        ) ** kwargs['exp']
+    )
 
 
 def cost_function_with_time(**kwargs) -> float:
-    return (kwargs['size'] / (
-        kwargs['frequency'] / kwargs['num_files']
-    ) ** kwargs['exp']) * (
+    return (
+        kwargs['size'] / (
+            (
+                kwargs['frequency'] / kwargs['num_files']
+            ) ** kwargs['exp']
+        )
+    ) * (
         time() - kwargs['last_time']
-    ) ** kwargs['exp']
+    )
+
+
+class GroupManager(object):
+
+    def __init__(self, name: str, cost_function: callable):
+        self.name: str = name
+        self.frequency: float = 1.0
+        self.num_files: float = 1.0
+        self.last_time: float = 0.0
+        self.__cost_function: callable = cost_function
+        # filename -> size
+        self.__sizes: Dict[str, float] = {}
+        # filename -> weight
+        self.__weights: Dict[str, float] = {}
+        self.__dirty = False
+
+    @property
+    def state(self) -> dict:
+        return {
+            'name': self.name,
+            'frequency': self.frequency,
+            'num_files': self.num_files,
+            'last_time': self.last_time,
+            'ost_function': self.__cost_function,
+            'sizes': self.__sizes,
+            'weights': self.__weights,
+        }
+
+    def __getstate__(self) -> dict:
+        return self.state
+
+    def __setstate__(self, state):
+        self.name = state['name']
+        self.frequency = state['frequency']
+        self.num_files = state['num_files']
+        self.last_time = state['last_time']
+        self.__cost_function = state['ost_function']
+        self.__sizes = state['sizes']
+        self.__weights = state['weights']
+
+    def add(self, filename: str, size: float):
+        if filename not in self.__sizes:
+            self.__sizes[filename] = size
+
+        self.num_files = len(self.__sizes)
+        self.last_time = time()
+        self.frequency += 1
+
+        self.__weights[filename] = self.file_weight(size)
+        self.__dirty = True
+
+    def claim_space(self, target_size: float) -> list:
+        self.update()
+        size_files2remove = 0.0
+        files2remove = []
+        for filename, _ in sorted(
+            self.__weights.items(),
+            key=lambda elm: elm[1],
+            reverse=True
+        ):
+            files2remove.append(filename)
+            size_files2remove += self.__sizes[filename]
+
+            if size_files2remove >= target_size:
+                break
+
+        for filename in files2remove:
+            del self.__sizes[filename]
+            del self.__weights[filename]
+
+        return files2remove
+
+    def update(self):
+        if self.__dirty:
+            for filename in self.__weights:
+                self.__weights[filename] = self.file_weight(
+                    self.__sizes[filename])
+        self.__dirty = False
+
+    def file_weight(self, size: float) -> float:
+        return self.__cost_function(
+            size=size,
+            frequency=self.frequency,
+            num_files=self.num_files,
+            last_time=self.last_time
+        )
+
+    @property
+    def weight(self):
+        return float(sum(self.__weights.values()) / self.num_files)
+
+    @property
+    def weights(self):
+        self.update()
+        return self.__weights
+
+    @property
+    def size(self):
+        return sum(self.__sizes.values())
 
 
 class WeightedCache(object):
@@ -35,13 +140,8 @@ class WeightedCache(object):
                  init_state: dict = {}, cache_options: dict = {}):
         # filename -> size
         self._cache: Dict[str, float] = {}
-        # group -> (frequency, last_time)
-        self._groups: Dict[str, Tuple(float, float)] = {}
-        self._groups_files: Dict[str, Set[str]] = {}
-        # filename -> weight
-        self._weights: Dict[str, float] = {}
-        # deferred groups
-        self._group2update: List[str] = []
+        # group_name -> GroupManager
+        self._groups: Dict[str, 'GroupManager'] = {}
         self._hit = 0
         self._miss = 0
         self._max_size = max_size
@@ -90,6 +190,10 @@ class WeightedCache(object):
     def clear_my_weights(self):
         return self.__cache_options.get('clear_weights', False)
 
+    @property
+    def capacity(self):
+        return (self.size / self._max_size) * 100.
+
     def reset_weights(self):
         self._groups = {}
         self._weights = {}
@@ -115,16 +219,16 @@ class WeightedCache(object):
 
     @property
     def info(self):
-        return self._weights
+        weights = {}
+        for manager in self._groups.values():
+            weights.update(manager.weights)
+        return weights
 
     @property
-    def state(self):
+    def state(self) -> dict:
         return {
             'cache': self._cache,
             'groups': self._groups,
-            'groups_files': self._groups_files,
-            'weights': self._weights,
-            'group2update': self._group2update,
             'hit': self._hit,
             'miss': self._miss,
             'max_size': self._max_size,
@@ -142,9 +246,6 @@ class WeightedCache(object):
     def __setstate__(self, state):
         self._cache = state['cache']
         self._groups = state['groups']
-        self._groups_files = state['groups_files']
-        self._weights = state['weights']
-        self._group2update = state['group2update']
         self._hit = state['hit']
         self._miss = state['miss']
         self._max_size = state['max_size']
@@ -224,49 +325,30 @@ class WeightedCache(object):
         group = self.get_group(filename)
 
         if group not in self._groups:
-            self._groups[group] = (0.0, 0.0)
-            self._groups_files[group] = set()
+            self._groups[group] = GroupManager(group, self.cost_function)
 
-        frequency, _ = self._groups[group]
-        frequency += 1
-        last_time = time()
-        self._groups[group] = (frequency, last_time)
-        self._groups_files[group] |= set((filename, ))
-
-        self._group2update.append(group)
+        cur_group = self._groups[group]
+        added = False
 
         if not hit:
-            file_weight = self.cost_function(
-                size=size,
-                frequency=frequency,
-                num_files=len(self._groups_files[group]),
-                last_time=last_time
-            )
-            if self.size + size >= self._max_size:
-                for _ in range(len(self._group2update)):
-                    self.update_weights(self._group2update.pop())
+            cur_group.add(filename, size)
+            self._cache[filename] = size
+            added = True
 
-                for filename, weight in sorted(
-                    self._weights.items(),
-                    key=lambda elm: elm[1],
-                    reverse=True
-                ):
-                    if file_weight < weight:
-                        if filename in self._cache:
-                            del self._cache[filename]
-                        del self._weights[filename]
-                    else:
-                        break
-                    if self.size + size < self._max_size:
-                        self._cache[filename] = size
-                        self._weights[filename] = file_weight
-                        return True
-            else:
-                self._cache[filename] = size
-                self._weights[filename] = file_weight
-                return True
+        if self.size > self._max_size:
+            for _, manager in sorted(
+                self._groups.items(),
+                key=lambda elm: elm[1].weight,
+                reverse=True
+            ):
+                file2remove = manager.claim_space(self.size - self._max_size)
+                for filename in file2remove:
+                    if filename in self._cache:
+                        del self._cache[filename]
+                if self.size <= self._max_size:
+                    break
 
-        return False
+        return added
 
 
 class LRUCache(object):
@@ -310,6 +392,10 @@ class LRUCache(object):
     def info(self):
         return dict(zip(self._cache, self._counters))
 
+    @property
+    def capacity(self):
+        return (self.size / self._max_size) * 100.
+
     def clear(self):
         self.__counter = 0
         self._counters = []
@@ -339,7 +425,7 @@ class LRUCache(object):
             self.write_history.append(last + size)
 
     @property
-    def state(self):
+    def state(self) -> dict:
         return {
             'cache': self._cache,
             'sizes': self._sizes,
@@ -447,7 +533,7 @@ def simulate(cache, windows: list, region: str = "_all_"):
     for num_window, window in enumerate(windows, 1):
         num_file = 1
         win_pbar = tqdm(
-            desc=f"[Open Data Frames][{str(cache)}][Window {num_window}/{len(windows)}][File {num_file}/{len(window)}]",
+            desc=f"[{str(cache)[:4]+str(cache)[-12:]}][Open Data Frames][Window {num_window}/{len(windows)}][File {num_file}/{len(window)}]",
             position=process_num, ascii=True,
             total=len(window)
         )
@@ -465,7 +551,7 @@ def simulate(cache, windows: list, region: str = "_all_"):
 
             record_pbar = tqdm(
                 total=df.shape[0], position=process_num,
-                desc=f"[Simulation][Hit Rate 0.00][{str(cache)}][Window {num_window}/{len(windows)}][File {num_file}/{len(window)}]",
+                desc=f"[{str(cache)[:4]+str(cache)[-12:]}][Simulation][Window {num_window}/{len(windows)}][File {num_file}/{len(window)}]",
                 ascii=True
             )
             for _, record in df.iterrows():
@@ -473,18 +559,19 @@ def simulate(cache, windows: list, region: str = "_all_"):
                     record['filename'],
                     record['size'] / 1024**2  # Convert from Bytes to MegaBytes
                 )
+                record_pbar.desc = f"[{str(cache)[:4]+str(cache)[-12:]}][Simulation][Window {num_window}/{len(windows)}][File {num_file}/{len(window)}][Hit Rate {cache.hit_rate:06.2f}][Capacity {cache.capacity:06.2f}]"
                 record_pbar.update(1)
-                record_pbar.desc = f"[Simulation][{str(cache)}][Hit Rate {cache.hit_rate:0.2f}][Window {num_window}/{len(windows)}][File {num_file}/{len(window)}]"
 
                 # TEST
-                # if _ == 10000:
+                # if _ == 1000:
                 #     break
 
             record_pbar.close()
 
-            num_file += 1
             win_pbar.update(1)
-            win_pbar.desc = f"[Open Data Frames][{str(cache)}][Window {num_window}/{len(windows)}][File {num_file}/{len(window)}]"
+            num_file += 1
+            win_pbar.desc = f"[{str(cache)[:4]+str(cache)[-12:]}][Open Data Frames][Window {num_window}/{len(windows)}][File {num_file}/{len(window)}]"
+            win_pbar.update()
             # TEST
             # if num_file == 2:
             #     break
@@ -645,27 +732,36 @@ def plot_cache_results(caches: dict, out_folder: str, dpi: int = 300):
         bbox_inches='tight'
     )
 
+    pbar.close()
+
     plt.cla()
 
     no_LRU_info = [(name, info) for name, info in caches.items()
                    if name.find("LRU") == -1]
     grid = plt.GridSpec(16*len(no_LRU_info), 16 *
                         len(vertical_lines), wspace=1.42, hspace=1.42)
-
     all_texts = []
+
     for lru_name, (_, _, _, lru_info) in [
         (name, data) for name, data in caches.items()
             if name.find("LRU") != -1]:
+
+        pbar = tqdm(
+            desc=f"Plot weight info compared to {lru_name}",
+            total=len(no_LRU_info)*len(vertical_lines), ascii=True
+        )
         for cache_idx, (cur_name, (_, _, _, cur_info)) in enumerate(no_LRU_info):
             for window_idx, cur_results in enumerate(cur_info):
                 axes = plt.subplot(
                     grid[
-                        16*cache_idx:16*cache_idx+15,
-                        16*window_idx:16*window_idx+15
+                        16*cache_idx:16*cache_idx+14,
+                        16*window_idx:16*window_idx+14
                     ]
                 )
-                # if window_idx == 0:
-                #     all_texts.append(axes.text(0.0, 0.1, f"{cur_name}"))
+                axes.set_title(
+                    f"{cur_name}\nwindow {window_idx} file weights",
+                    {'fontsize': 6}
+                )
                 files = [(filename, weight) for filename, weight in sorted(
                     cur_results.items(),
                     key=lambda elm: elm[1],
@@ -679,10 +775,12 @@ def plot_cache_results(caches: dict, out_folder: str, dpi: int = 300):
                         width=1.0,
                         label="Weight"
                     )
+                axes.set_yscale('log')
                 axes.set_ylim(0)
                 axes.set_xlim(0)
                 axes.set_xticklabels([])
                 axes.grid()
+                pbar.update(1)
 
         plt.savefig(
             os.path.join(out_folder, f"simulation_result_info_{lru_name}.png"),
@@ -690,8 +788,7 @@ def plot_cache_results(caches: dict, out_folder: str, dpi: int = 300):
             bbox_extra_artists=all_texts,
             bbox_inches='tight'
         )
-
-    pbar.close()
+        pbar.close()
 
 
 def main():
