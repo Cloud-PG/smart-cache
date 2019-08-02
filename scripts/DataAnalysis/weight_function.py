@@ -16,35 +16,19 @@ from tqdm import tqdm
 
 
 def simple_cost_function(**kwargs) -> float:
-    return kwargs['size'] / (
-        (
-            kwargs['frequency'] / kwargs['num_files']
-        ) ** kwargs['exp']
-    )
+    return ((kwargs['size'] * kwargs['num_files']) / kwargs['frequency']) ** kwargs['exp']
 
 
 def cost_function_with_time(**kwargs) -> float:
-    return (
-        kwargs['size'] / (
-            (
-                kwargs['frequency'] / kwargs['num_files']
-            ) ** kwargs['exp']
-        )
-    ) * (
+    return (((kwargs['size'] * kwargs['num_files']) / kwargs['frequency']) ** kwargs['exp']
+            ) * (
         (
             time() - kwargs['last_time']
         ) ** kwargs['exp']
     )
-
 
 def cost_function_no_size(**kwargs) -> float:
-    return (
-        kwargs['frequency'] / kwargs['num_files']
-    ) * (
-        (
-            time() - kwargs['last_time']
-        ) ** kwargs['exp']
-    )
+    return kwargs['num_files'] / kwargs['frequency']
 
 
 class WeightedCache(object):
