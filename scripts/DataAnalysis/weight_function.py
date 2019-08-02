@@ -31,117 +31,37 @@ def cost_function_with_time(**kwargs) -> float:
             ) ** kwargs['exp']
         )
     ) * (
-        time() - kwargs['last_time']
+        (
+            time() - kwargs['last_time']
+        ) ** kwargs['exp']
     )
 
 
-class GroupManager(object):
-
-    def __init__(self, name: str, cost_function: callable):
-        self.name: str = name
-        self.frequency: float = 1.0
-        self.num_files: float = 1.0
-        self.last_time: float = 0.0
-        self.__cost_function: callable = cost_function
-        # filename -> size
-        self.__sizes: Dict[str, float] = {}
-        # filename -> weight
-        self.__weights: Dict[str, float] = {}
-        self.__dirty = False
-
-    @property
-    def state(self) -> dict:
-        return {
-            'name': self.name,
-            'frequency': self.frequency,
-            'num_files': self.num_files,
-            'last_time': self.last_time,
-            'ost_function': self.__cost_function,
-            'sizes': self.__sizes,
-            'weights': self.__weights,
-        }
-
-    def __getstate__(self) -> dict:
-        return self.state
-
-    def __setstate__(self, state):
-        self.name = state['name']
-        self.frequency = state['frequency']
-        self.num_files = state['num_files']
-        self.last_time = state['last_time']
-        self.__cost_function = state['ost_function']
-        self.__sizes = state['sizes']
-        self.__weights = state['weights']
-
-    def add(self, filename: str, size: float):
-        if filename not in self.__sizes:
-            self.__sizes[filename] = size
-
-        self.num_files = len(self.__sizes)
-        self.last_time = time()
-        self.frequency += 1
-
-        self.__weights[filename] = self.file_weight(size)
-        self.__dirty = True
-
-    def claim_space(self, target_size: float) -> list:
-        self.update()
-        size_files2remove = 0.0
-        files2remove = []
-        for filename, _ in sorted(
-            self.__weights.items(),
-            key=lambda elm: elm[1],
-            reverse=True
-        ):
-            files2remove.append(filename)
-            size_files2remove += self.__sizes[filename]
-
-            if size_files2remove >= target_size:
-                break
-
-        for filename in files2remove:
-            del self.__sizes[filename]
-            del self.__weights[filename]
-
-        return files2remove
-
-    def update(self):
-        if self.__dirty:
-            for filename in self.__weights:
-                self.__weights[filename] = self.file_weight(
-                    self.__sizes[filename])
-        self.__dirty = False
-
-    def file_weight(self, size: float) -> float:
-        return self.__cost_function(
-            size=size,
-            frequency=self.frequency,
-            num_files=self.num_files,
-            last_time=self.last_time
-        )
-
-    @property
-    def weight(self):
-        return float(sum(self.__weights.values()) / self.num_files)
-
-    @property
-    def weights(self):
-        self.update()
-        return self.__weights
-
-    @property
-    def size(self):
-        return sum(self.__sizes.values())
+def cost_function_no_size(**kwargs) -> float:
+    return (
+        kwargs['frequency'] / kwargs['num_files']
+    ) * (
+        (
+            time() - kwargs['last_time']
+        ) ** kwargs['exp']
+    )
 
 
 class WeightedCache(object):
 
     def __init__(self, max_size: float, cost_function: callable,
                  init_state: dict = {}, cache_options: dict = {}):
-        # filename -> size
+        # Cache
         self._cache: Dict[str, float] = {}
-        # group_name -> GroupManager
-        self._groups: Dict[str, 'GroupManager'] = {}
+        self._cache_weights: Dict[str, float] = {}
+        self._cache_groups: Dict[str, str] = {}
+        # Groups
+        self._group_frequencies: Dict[str, float] = {}
+        self._group_num_files: Dict[str, float] = {}
+        self._group_last_time: Dict[str, float] = {}
+        self._group_files: Dict[str, Set[str]] = {}
+        self._group_dirty: Set[str] = set()
+        # Stats
         self._hit = 0
         self._miss = 0
         self._max_size = max_size
@@ -195,15 +115,16 @@ class WeightedCache(object):
         return (self.size / self._max_size) * 100.
 
     def reset_weights(self):
-        self._groups = {}
-        self._weights = {}
-        self._group2update = []
-
-        for filename, size in self._cache.items():
-            self.update_policy(filename, size, hit=True)
+        self._group_frequencies = {}
+        self._group_num_files = {}
+        self._group_last_time = {}
+        self._group_files = {}
+        self._group_dirty = set()
 
     def clear(self):
         self._cache = {}
+        self._cache_weights = {}
+        self._cache_groups = {}
 
     def clear_history(self):
         self.size_history = [self.size_history[-1]]
@@ -219,16 +140,35 @@ class WeightedCache(object):
 
     @property
     def info(self):
-        weights = {}
-        for manager in self._groups.values():
-            weights.update(manager.weights)
-        return weights
+        info = {
+            'weights': {},
+            'cache': self._cache
+        }
+        for group, files in self._group_files.items():
+            group_frequency = self._group_frequencies[group]
+            group_num_files = self._group_num_files[group]
+            group_last_time = self._group_last_time[group]
+            for cur_str in files:
+                file_, size = cur_str.split("->")
+                info['weights'][file_] = self.cost_function(
+                    size=float(size),
+                    frequency=group_frequency,
+                    num_files=group_num_files,
+                    last_time=group_last_time
+                )
+        return info
 
     @property
     def state(self) -> dict:
         return {
             'cache': self._cache,
-            'groups': self._groups,
+            'cache_weights': self._cache_weights,
+            'cache_groups': self._cache_groups,
+            'group_frequencies': self._group_frequencies,
+            'group_num_files': self._group_num_files,
+            'group_last_time': self._group_last_time,
+            'group_files': self._group_files,
+            'group_dirty': self._group_dirty,
             'hit': self._hit,
             'miss': self._miss,
             'max_size': self._max_size,
@@ -245,7 +185,13 @@ class WeightedCache(object):
 
     def __setstate__(self, state):
         self._cache = state['cache']
-        self._groups = state['groups']
+        self._cache_weights = state['cache_weights']
+        self._cache_groups = state['cache_groups']
+        self._group_frequencies = state['group_frequencies']
+        self._group_num_files = state['group_num_files']
+        self._group_last_time = state['group_last_time']
+        self._group_files = state['group_files']
+        self._group_dirty = state['group_dirty']
         self._hit = state['hit']
         self._miss = state['miss']
         self._max_size = state['max_size']
@@ -267,6 +213,10 @@ class WeightedCache(object):
     @property
     def size(self) -> float:
         return sum(self._cache.values())
+
+    @property
+    def written_data(self):
+        return self.write_history[-1]
 
     def update_write_history(self, size: float, added: bool):
         try:
@@ -303,52 +253,66 @@ class WeightedCache(object):
 
         return hit
 
-    def update_weights(self, group: str):
-        new_group_freq, last_time = self._groups[group]
-        files = self._groups_files[group]
-        num_files = len(files)
-        for filename in files:
-            if filename in self._cache:
-                size = self._cache[filename]
-                new_weight = self.cost_function(
-                    size=size,
-                    frequency=new_group_freq,
-                    num_files=num_files,
-                    last_time=last_time
-                )
-                self._cache[filename] = size
-                self._weights[filename] = new_weight
-            elif filename in self._weights:
-                del self._weights[filename]
-
     def update_policy(self, filename: str, size: float, hit: bool) -> bool:
         group = self.get_group(filename)
 
-        if group not in self._groups:
-            self._groups[group] = GroupManager(group, self.cost_function)
+        if group not in self._group_frequencies:
+            self._group_frequencies[group] = 0.
+            self._group_num_files[group] = 0.
+            self._group_files[group] = set()
+            self._group_last_time[group] = time()
 
-        cur_group = self._groups[group]
-        added = False
+        self._group_frequencies[group] += 1.
+        self._group_num_files[group] += 1.
+        self._group_files[group] |= set((f"{filename}->{size}", ))
+
+        self._group_dirty = set((group,))
 
         if not hit:
-            cur_group.add(filename, size)
-            self._cache[filename] = size
-            added = True
+            file_weight = self.cost_function(
+                size=size,
+                frequency=self._group_frequencies[group],
+                num_files=self._group_num_files[group],
+                last_time=self._group_last_time[group]
+            )
+            if self.size + size <= self._max_size:
+                self._cache[filename] = size
+                self._cache_groups[filename] = group
+                self._cache_weights[filename] = file_weight
+                return True
+            else:
+                # Update weights
+                if len(self._group_dirty) > 0:
+                    for cur_filename, file_group in self._cache_groups.items():
+                        if file_group in self._group_dirty:
+                            self._cache_weights[cur_filename] = self.cost_function(
+                                size=self._cache[cur_filename],
+                                frequency=self._group_frequencies[file_group],
+                                num_files=self._group_num_files[file_group],
+                                last_time=self._group_last_time[file_group]
+                            )
+                    else:
+                        self._group_dirty = set()
+                # try to insert
+                for cur_filename, weight in sorted(
+                        self._cache_weights.items(),
+                        key=lambda elm: elm[1],
+                        reverse=True
+                ):
+                    if weight > file_weight:
+                        del self._cache[cur_filename]
+                        del self._cache_groups[cur_filename]
+                        del self._cache_weights[cur_filename]
+                    else:
+                        return False
 
-        if self.size > self._max_size:
-            for _, manager in sorted(
-                self._groups.items(),
-                key=lambda elm: elm[1].weight,
-                reverse=True
-            ):
-                file2remove = manager.claim_space(self.size - self._max_size)
-                for filename in file2remove:
-                    if filename in self._cache:
-                        del self._cache[filename]
-                if self.size <= self._max_size:
-                    break
+                    if self.size + size <= self._max_size:
+                        self._cache[filename] = size
+                        self._cache_groups[filename] = group
+                        self._cache_weights[filename] = file_weight
+                        return True
 
-        return added
+        return False
 
 
 class LRUCache(object):
@@ -390,11 +354,19 @@ class LRUCache(object):
 
     @property
     def info(self):
-        return dict(zip(self._cache, self._counters))
+        info = {
+            'weights': {},
+            'cache': dict(zip(self._cache, self._counters))
+        }
+        return info
 
     @property
     def capacity(self):
         return (self.size / self._max_size) * 100.
+
+    @property
+    def written_data(self):
+        return self.write_history[-1]
 
     def clear(self):
         self.__counter = 0
@@ -559,19 +531,19 @@ def simulate(cache, windows: list, region: str = "_all_"):
                     record['filename'],
                     record['size'] / 1024**2  # Convert from Bytes to MegaBytes
                 )
-                record_pbar.desc = f"[{str(cache)[:4]+str(cache)[-12:]}][Simulation][Window {num_window}/{len(windows)}][File {num_file}/{len(window)}][Hit Rate {cache.hit_rate:06.2f}][Capacity {cache.capacity:06.2f}]"
+                record_pbar.desc = f"[{str(cache)[:4]+str(cache)[-12:]}][Simulation][Window {num_window}/{len(windows)}][File {num_file}/{len(window)}][Hit Rate {cache.hit_rate:06.2f}][Capacity {cache.capacity:06.2f}][Written {cache.written_data:0.2f}]"
                 record_pbar.update(1)
 
                 # TEST
-                # if _ == 1000:
+                # if _ == 10000:
                 #     break
 
             record_pbar.close()
 
             win_pbar.update(1)
-            num_file += 1
             win_pbar.desc = f"[{str(cache)[:4]+str(cache)[-12:]}][Open Data Frames][Window {num_window}/{len(windows)}][File {num_file}/{len(window)}]"
-            win_pbar.update()
+            num_file += 1
+
             # TEST
             # if num_file == 2:
             #     break
@@ -754,8 +726,8 @@ def plot_cache_results(caches: dict, out_folder: str, dpi: int = 300):
             for window_idx, cur_results in enumerate(cur_info):
                 axes = plt.subplot(
                     grid[
-                        16*cache_idx:16*cache_idx+14,
-                        16*window_idx:16*window_idx+14
+                        16*cache_idx:16*cache_idx+11,
+                        16*window_idx:16*window_idx+10
                     ]
                 )
                 axes.set_title(
@@ -763,18 +735,52 @@ def plot_cache_results(caches: dict, out_folder: str, dpi: int = 300):
                     {'fontsize': 6}
                 )
                 files = [(filename, weight) for filename, weight in sorted(
-                    cur_results.items(),
+                    cur_results['weights'].items(),
                     key=lambda elm: elm[1],
                     reverse=True
                 )]
-                for file_idx, (filename, weight) in enumerate(files):
+                black_files = [
+                    (file_idx, weight)
+                    for file_idx, (filename, weight) in enumerate(files)
+                ]
+                red_files = [
+                    (file_idx, weight)
+                    for file_idx, (filename, weight) in enumerate(files)
+                    if filename in lru_info[window_idx]['cache']
+                ]
+                blue_files = [
+                    (file_idx, weight)
+                    for file_idx, (filename, weight) in enumerate(files)
+                    if filename in cur_results['cache']
+                ]
+                if black_files:
+                    black_indexes, black_file_weights = zip(*black_files)
                     axes.bar(
-                        file_idx,
-                        weight,
-                        color='b' if filename in lru_info[window_idx] else 'r',
+                        black_indexes,
+                        black_file_weights,
+                        color='k',
                         width=1.0,
-                        label="Weight"
+                        alpha=0.42
                     )
+                if red_files:
+                    red_indexes, red_file_weights = zip(*red_files)
+                    axes.bar(
+                        red_indexes,
+                        red_file_weights,
+                        color='r',
+                        width=1.0,
+                        alpha=0.9
+                    )
+                if blue_files:
+                    red_indexes, red_file_weights = zip(*blue_files)
+                    axes.bar(
+                        red_indexes,
+                        red_file_weights,
+                        color='b',
+                        width=1.0,
+                        alpha=0.9
+                    )
+
                 axes.set_yscale('log')
                 axes.set_ylim(0)
                 axes.set_xlim(0)
@@ -783,7 +789,8 @@ def plot_cache_results(caches: dict, out_folder: str, dpi: int = 300):
                 pbar.update(1)
 
         plt.savefig(
-            os.path.join(out_folder, f"simulation_result_info_{lru_name}.png"),
+            os.path.join(
+                out_folder, f"simulation_result_info_compare_{lru_name}.png"),
             dpi=dpi,
             bbox_extra_artists=all_texts,
             bbox_inches='tight'
@@ -813,7 +820,7 @@ def main():
     parser.add_argument('--jobs', '-j', type=int, default=4,
                         help="Num. of concurrent jobs")
     parser.add_argument('--functions', type=str,
-                        default="simple,with_time",
+                        default="simple,with_time,no_size",
                         help="List of functions to test. List divided by ','.")
     parser.add_argument('--cache-sizes', type=str,
                         default="10485760,104857600",  # 10T and 100T
@@ -839,7 +846,8 @@ def main():
             False] if not args.clear_weights else [False, True]
         cost_functions = {
             'simple': simple_cost_function,
-            'with_time': cost_function_with_time
+            'with_time': cost_function_with_time,
+            'no_size': cost_function_no_size
         }
 
         for size in args.cache_sizes:
