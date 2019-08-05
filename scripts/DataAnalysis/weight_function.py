@@ -11,24 +11,33 @@ from time import time
 from typing import Dict, List, Set, Tuple
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
+import seaborn as sns
+
 
 def simple_cost_function(**kwargs) -> float:
-    return ((kwargs['size'] * kwargs['num_files']) / kwargs['frequency']) ** kwargs['exp']
+    return(
+        (
+            kwargs['size'] * kwargs['num_files']
+        ) / kwargs['frequency']
+    ) ** kwargs['exp']
 
 
 def cost_function_with_time(**kwargs) -> float:
-    return (((kwargs['size'] * kwargs['num_files']) / kwargs['frequency']) ** kwargs['exp']
-            ) * (
+    return (
         (
-            time() - kwargs['last_time']
+            (
+                kwargs['size'] * kwargs['num_files']
+            ) / kwargs['frequency']
+        ) ** kwargs['exp']
+    ) + (
+        (
+            (time() - kwargs['last_time']) * kwargs['num_files']
         ) ** kwargs['exp']
     )
-
-def cost_function_no_size(**kwargs) -> float:
-    return kwargs['num_files'] / kwargs['frequency']
 
 
 class WeightedCache(object):
@@ -126,7 +135,15 @@ class WeightedCache(object):
     def info(self):
         info = {
             'weights': {},
-            'cache': self._cache
+            'cache': self._cache,
+            'df': None
+        }
+        dataframe = {
+            'size': [],
+            'frequency': [],
+            'num_files': [],
+            'last_time': [],
+            'weight': []
         }
         for group, files in self._group_files.items():
             group_frequency = self._group_frequencies[group]
@@ -134,12 +151,21 @@ class WeightedCache(object):
             group_last_time = self._group_last_time[group]
             for cur_str in files:
                 file_, size = cur_str.split("->")
-                info['weights'][file_] = self.cost_function(
+                weight = self.cost_function(
                     size=float(size),
                     frequency=group_frequency,
                     num_files=group_num_files,
                     last_time=group_last_time
                 )
+                info['weights'][file_] = weight
+
+                dataframe['size'].append(float(size))
+                dataframe['frequency'].append(group_frequency)
+                dataframe['num_files'].append(group_num_files)
+                dataframe['last_time'].append(group_last_time)
+                dataframe['weight'].append(weight)
+
+        info['df'] = pd.DataFrame(dataframe)
         return info
 
     @property
@@ -340,7 +366,8 @@ class LRUCache(object):
     def info(self):
         info = {
             'weights': {},
-            'cache': dict(zip(self._cache, self._counters))
+            'cache': dict(zip(self._cache, self._counters)),
+            'df': {}
         }
         return info
 
@@ -519,7 +546,7 @@ def simulate(cache, windows: list, region: str = "_all_"):
                 record_pbar.update(1)
 
                 # TEST
-                # if _ == 10000:
+                # if _ == 1000:
                 #     break
 
             record_pbar.close()
@@ -781,6 +808,59 @@ def plot_cache_results(caches: dict, out_folder: str, dpi: int = 300):
         )
         pbar.close()
 
+    plt.cla()
+
+    pbar = tqdm(
+        desc=f"Plot correlation matrices",
+        total=len(no_LRU_info)*len(vertical_lines), ascii=True
+    )
+    grid = plt.GridSpec(16*len(no_LRU_info), 16 *
+                        len(vertical_lines), wspace=1.42, hspace=1.42)
+    sns.set(font_scale=0.5)
+    for cache_idx, (cur_name, (_, _, _, cur_info)) in enumerate(no_LRU_info):
+        for window_idx, cur_results in enumerate(cur_info):
+            axes = plt.subplot(
+                grid[
+                    16*cache_idx:16*cache_idx+11,
+                    16*window_idx:16*window_idx+10
+                ]
+            )
+            axes.set_title(
+                f"{cur_name}\nwindow {window_idx}",
+                {'fontsize': 6}
+            )
+
+            corr = cur_results['df'].corr()
+            # Exclude duplicate correlations by masking uper right values
+            mask = np.zeros_like(corr, dtype=np.bool)
+            mask[np.triu_indices_from(mask)] = True
+
+            # Set background color / chart style
+            sns.set_style(style='white')
+
+            # Add diverging colormap
+            cmap = sns.diverging_palette(10, 250, as_cmap=True)
+
+            # Draw correlation plot
+            sns.heatmap(
+                corr,
+                mask=mask,
+                cmap=cmap,
+                square=True,
+                linewidths=.5,
+                ax=axes
+            )
+
+            pbar.update(1)
+
+    plt.savefig(
+        os.path.join(
+            out_folder, f"simulation_result_info_correlations.png"),
+        dpi=dpi,
+        bbox_inches='tight'
+    )
+    pbar.close()
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -804,7 +884,7 @@ def main():
     parser.add_argument('--jobs', '-j', type=int, default=4,
                         help="Num. of concurrent jobs")
     parser.add_argument('--functions', type=str,
-                        default="simple,with_time,no_size",
+                        default="simple,with_time",
                         help="List of functions to test. List divided by ','.")
     parser.add_argument('--cache-sizes', type=str,
                         default="10485760,104857600",  # 10T and 100T
@@ -831,7 +911,6 @@ def main():
         cost_functions = {
             'simple': simple_cost_function,
             'with_time': cost_function_with_time,
-            'no_size': cost_function_no_size
         }
 
         for size in args.cache_sizes:

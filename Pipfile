@@ -29,6 +29,7 @@ jupyterlab = "*"
 pandas = "*"
 pyarrow = "*"
 redis = "*"
+seaborn = "*"
 
 [requires]
 python_version = "3"
