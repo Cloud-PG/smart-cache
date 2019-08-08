@@ -13,9 +13,9 @@ from typing import Dict, List, Set, Tuple
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
-
+import requests
 import seaborn as sns
+from tqdm import tqdm
 
 
 def simple_cost_function(**kwargs) -> float:
@@ -503,20 +503,21 @@ def star_decorator(func):
 
 
 @star_decorator
-def simulate(cache, windows: list, region: str = "_all_"):
+def simulate(cache, windows: list, region: str = "_all_", plot_server: str = None):
     process_num = int(
         str(current_process()).split("Worker-")[1].split(",")[0]
     )
 
-    tmp_size_history = NamedTemporaryFile()
-    tmp_hit_rate_history = NamedTemporaryFile()
-    tmp_write_history = NamedTemporaryFile()
-    tmp_info = NamedTemporaryFile()
+    if not plot_server:
+        tmp_size_history = NamedTemporaryFile()
+        tmp_hit_rate_history = NamedTemporaryFile()
+        tmp_write_history = NamedTemporaryFile()
+        tmp_info = NamedTemporaryFile()
 
-    for num_window, window in enumerate(windows, 1):
+    for num_window, window in enumerate(windows):
         num_file = 1
         win_pbar = tqdm(
-            desc=f"[{str(cache)[:4]+str(cache)[-12:]}][Open Data Frames][Window {num_window}/{len(windows)}][File {num_file}/{len(window)}]",
+            desc=f"[{str(cache)[:4]+str(cache)[-12:]}][Open Data Frames][Window {num_window+1}/{len(windows)}][File {num_file}/{len(window)}]",
             position=process_num, ascii=True,
             total=len(window)
         )
@@ -534,36 +535,72 @@ def simulate(cache, windows: list, region: str = "_all_"):
 
             record_pbar = tqdm(
                 total=df.shape[0], position=process_num,
-                desc=f"[{str(cache)[:4]+str(cache)[-12:]}][Simulation][Window {num_window}/{len(windows)}][File {num_file}/{len(window)}]",
+                desc=f"[{str(cache)[:4]+str(cache)[-12:]}][Simulation][Window {num_window+1}/{len(windows)}][File {num_file}/{len(window)}]",
                 ascii=True
             )
-            for _, record in df.iterrows():
+            for row_idx, record in df.iterrows():
                 cache.get(
                     record['filename'],
                     record['size'] / 1024**2  # Convert from Bytes to MegaBytes
                 )
-                record_pbar.desc = f"[{str(cache)[:4]+str(cache)[-12:]}][Simulation][Window {num_window}/{len(windows)}][File {num_file}/{len(window)}][Hit Rate {cache.hit_rate:06.2f}][Capacity {cache.capacity:06.2f}][Written {cache.written_data:0.2f}]"
+                if plot_server:
+                    requests.put(
+                        "/".join([
+                            plot_server,
+                            "cache",
+                            "hit_rate",
+                            str(cache),
+                            f"{num_window}",
+                            f"{row_idx}",
+                            f"{cache.hit_rate:0.5f}"
+                        ])
+                    )
+                    requests.put(
+                        "/".join([
+                            plot_server,
+                            "cache",
+                            "size",
+                            str(cache),
+                            f"{num_window}",
+                            f"{row_idx}",
+                            f"{cache.size:0.6f}"
+                        ])
+                    )
+                    requests.put(
+                        "/".join([
+                            plot_server,
+                            "cache",
+                            "written_data",
+                            str(cache),
+                            f"{num_window}",
+                            f"{row_idx}",
+                            f"{cache.written_data:0.6f}"
+                        ])
+                    )
+
+                record_pbar.desc = f"[{str(cache)[:4]+str(cache)[-12:]}][Simulation][Window {num_window+1}/{len(windows)}][File {num_file}/{len(window)}][Hit Rate {cache.hit_rate:06.2f}][Capacity {cache.capacity:06.2f}][Written {cache.written_data:0.2f}]"
                 record_pbar.update(1)
 
                 # TEST
-                # if _ == 1000:
+                # if row_idx == 2000:
                 #     break
 
             record_pbar.close()
 
             win_pbar.update(1)
-            win_pbar.desc = f"[{str(cache)[:4]+str(cache)[-12:]}][Open Data Frames][Window {num_window}/{len(windows)}][File {num_file}/{len(window)}]"
+            win_pbar.desc = f"[{str(cache)[:4]+str(cache)[-12:]}][Open Data Frames][Window {num_window+1}/{len(windows)}][File {num_file}/{len(window)}]"
             num_file += 1
 
             # TEST
             # if num_file == 2:
             #     break
 
-        cur_size_history, cur_hit_rate_history, cur_write_history = cache.history
-        store_results(tmp_size_history.name, [cur_size_history])
-        store_results(tmp_hit_rate_history.name, [cur_hit_rate_history])
-        store_results(tmp_write_history.name, [cur_write_history])
-        store_results(tmp_info.name, [cache.info])
+        if not plot_server:
+            cur_size_history, cur_hit_rate_history, cur_write_history = cache.history
+            store_results(tmp_size_history.name, [cur_size_history])
+            store_results(tmp_hit_rate_history.name, [cur_hit_rate_history])
+            store_results(tmp_write_history.name, [cur_write_history])
+            store_results(tmp_info.name, [cache.info])
 
         cache.clear_history()
 
@@ -575,17 +612,18 @@ def simulate(cache, windows: list, region: str = "_all_"):
 
         win_pbar.close()
 
-    size_history = load_results(tmp_size_history.name)
-    hit_rate_history = load_results(tmp_hit_rate_history.name)
-    write_history = load_results(tmp_write_history.name)
-    cache_info = load_results(tmp_info.name)
+    if not plot_server:
+        size_history = load_results(tmp_size_history.name)
+        hit_rate_history = load_results(tmp_hit_rate_history.name)
+        write_history = load_results(tmp_write_history.name)
+        cache_info = load_results(tmp_info.name)
 
-    tmp_size_history.close()
-    tmp_hit_rate_history.close()
-    tmp_write_history.close()
-    tmp_info.close()
+        tmp_size_history.close()
+        tmp_hit_rate_history.close()
+        tmp_write_history.close()
+        tmp_info.close()
 
-    return (size_history, hit_rate_history, write_history, cache_info)
+        return (size_history, hit_rate_history, write_history, cache_info)
 
 
 def store_results(filename: str, data):
@@ -869,6 +907,9 @@ def main():
     parser.add_argument('--out-folder', type=str,
                         default="./sim_res",
                         help='The output plot name.')
+    parser.add_argument('--plot-server', type=str,
+                        default=None,
+                        help='The plotting server url.')
     parser.add_argument('--region', type=str, default="it",
                         help='Region to filter.')
     parser.add_argument('--plot-results', type=str, default="",
@@ -884,7 +925,7 @@ def main():
     parser.add_argument('--jobs', '-j', type=int, default=4,
                         help="Num. of concurrent jobs")
     parser.add_argument('--functions', type=str,
-                        default="simple,with_time",
+                        default="lru,simple,with_time",
                         help="List of functions to test. List divided by ','.")
     parser.add_argument('--cache-sizes', type=str,
                         default="10485760,104857600",  # 10T and 100T
@@ -913,19 +954,20 @@ def main():
             'with_time': cost_function_with_time,
         }
 
-        for size in args.cache_sizes:
-            for clear_cache in clear_cache_list:
-                cache_list.append(
-                    LRUCache(
-                        size,
-                        cache_options={
-                            'clear_cache': clear_cache,
-                        }
+        if 'lru' in args.functions:
+            for size in args.cache_sizes:
+                for clear_cache in clear_cache_list:
+                    cache_list.append(
+                        LRUCache(
+                            size,
+                            cache_options={
+                                'clear_cache': clear_cache,
+                            }
+                        )
                     )
-                )
-        # TEST
-        #     break
-        # break
+            # TEST
+            #     break
+            # break
 
         for fun_name, function in [(fun_name, function)
                                    for fun_name, function in cost_functions.items()
@@ -981,18 +1023,21 @@ def main():
         for idx, cache_results in enumerate(tqdm(pool.imap(simulate, zip(
             cache_list,
             [windows for _ in range(len(cache_list))],
-            [f"_{args.region}_" for _ in range(len(cache_list))]
+            [f"_{args.region}_" for _ in range(len(cache_list))],
+            [args.plot_server for _ in range(len(cache_list))]
         )), position=0, total=len(cache_list), desc="Cache simulated", ascii=True)):
             cache_name = f"{str(cache_list[idx])}"
-            store_results(f'cache_results_{id(pool)}.pickle', {
-                cache_name: cache_results
-            })
+            if not args.plot_server:
+                store_results(f'cache_results_{id(pool)}.pickle', {
+                    cache_name: cache_results
+                })
 
         os.makedirs(args.out_folder, exist_ok=True)
-        plot_cache_results(
-            load_results(f'cache_results_{id(pool)}.pickle'),
-            out_folder=args.out_folder
-        )
+        if not args.plot_server:
+            plot_cache_results(
+                load_results(f'cache_results_{id(pool)}.pickle'),
+                out_folder=args.out_folder
+            )
 
         pool.close()
         pool.join()
