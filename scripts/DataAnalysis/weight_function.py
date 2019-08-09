@@ -1,6 +1,7 @@
 import argparse
 import gzip
 import itertools
+import json
 import os
 import pickle
 from functools import partial, wraps
@@ -30,13 +31,12 @@ def cost_function_with_time(**kwargs) -> float:
     return (
         (
             (
-                kwargs['size'] * kwargs['num_files']
+                kwargs['size'] * kwargs['num_files'] *
+                (time() - kwargs['first_time'])
             ) / kwargs['frequency']
         ) ** kwargs['exp']
-    ) + (
-        (
-            (time() - kwargs['last_time']) * kwargs['num_files']
-        ) ** kwargs['exp']
+    ) * (
+        time() - kwargs['last_time']
     )
 
 
@@ -52,6 +52,7 @@ class WeightedCache(object):
         self._group_frequencies: Dict[str, float] = {}
         self._group_num_files: Dict[str, float] = {}
         self._group_last_time: Dict[str, float] = {}
+        self._group_first_time: Dict[str, float] = {}
         self._group_files: Dict[str, Set[str]] = {}
         self._group_dirty: Set[str] = set()
         # Stats
@@ -111,6 +112,7 @@ class WeightedCache(object):
         self._group_frequencies = {}
         self._group_num_files = {}
         self._group_last_time = {}
+        self._group_first_time = {}
         self._group_files = {}
         self._group_dirty = set()
 
@@ -138,34 +140,37 @@ class WeightedCache(object):
             'cache': self._cache,
             'df': None
         }
-        dataframe = {
-            'size': [],
-            'frequency': [],
-            'num_files': [],
-            'last_time': [],
-            'weight': []
-        }
+        # dataframe = {
+        #     'size': [],
+        #     'frequency': [],
+        #     'num_files': [],
+        #     'last_time': [],
+        #     'weight': []
+        # }
         for group, files in self._group_files.items():
             group_frequency = self._group_frequencies[group]
             group_num_files = self._group_num_files[group]
             group_last_time = self._group_last_time[group]
+            group_first_time = self._group_first_time[group]
             for cur_str in files:
                 file_, size = cur_str.split("->")
                 weight = self.cost_function(
                     size=float(size),
                     frequency=group_frequency,
                     num_files=group_num_files,
-                    last_time=group_last_time
+                    last_time=group_last_time,
+                    first_time=group_first_time,
                 )
                 info['weights'][file_] = weight
 
-                dataframe['size'].append(float(size))
-                dataframe['frequency'].append(group_frequency)
-                dataframe['num_files'].append(group_num_files)
-                dataframe['last_time'].append(group_last_time)
-                dataframe['weight'].append(weight)
+        #         dataframe['size'].append(float(size))
+        #         dataframe['frequency'].append(group_frequency)
+        #         dataframe['num_files'].append(group_num_files)
+        #         dataframe['last_time'].append(group_last_time)
+        #         dataframe['first_time'].append(group_first_time)
+        #         dataframe['weight'].append(weight)
 
-        info['df'] = pd.DataFrame(dataframe)
+        # info['df'] = pd.DataFrame(dataframe)
         return info
 
     @property
@@ -177,6 +182,7 @@ class WeightedCache(object):
             'group_frequencies': self._group_frequencies,
             'group_num_files': self._group_num_files,
             'group_last_time': self._group_last_time,
+            'group_first_time': self._group_first_time,
             'group_files': self._group_files,
             'group_dirty': self._group_dirty,
             'hit': self._hit,
@@ -200,6 +206,7 @@ class WeightedCache(object):
         self._group_frequencies = state['group_frequencies']
         self._group_num_files = state['group_num_files']
         self._group_last_time = state['group_last_time']
+        self._group_first_time = state['group_first_time']
         self._group_files = state['group_files']
         self._group_dirty = state['group_dirty']
         self._hit = state['hit']
@@ -271,6 +278,7 @@ class WeightedCache(object):
             self._group_num_files[group] = 0.
             self._group_files[group] = set()
             self._group_last_time[group] = time()
+            self._group_first_time[group] = time()
 
         self._group_frequencies[group] += 1.
         self._group_num_files[group] += 1.
@@ -283,7 +291,8 @@ class WeightedCache(object):
                 size=size,
                 frequency=self._group_frequencies[group],
                 num_files=self._group_num_files[group],
-                last_time=self._group_last_time[group]
+                last_time=self._group_last_time[group],
+                first_time=self._group_first_time[group]
             )
             if self.size + size <= self._max_size:
                 self._cache[filename] = size
@@ -299,7 +308,8 @@ class WeightedCache(object):
                                 size=self._cache[cur_filename],
                                 frequency=self._group_frequencies[file_group],
                                 num_files=self._group_num_files[file_group],
-                                last_time=self._group_last_time[file_group]
+                                last_time=self._group_last_time[file_group],
+                                first_time=self._group_first_time[file_group]
                             )
                     else:
                         self._group_dirty = set()
@@ -513,6 +523,12 @@ def simulate(cache, windows: list, region: str = "_all_", plot_server: str = Non
         tmp_hit_rate_history = NamedTemporaryFile()
         tmp_write_history = NamedTemporaryFile()
         tmp_info = NamedTemporaryFile()
+    else:
+        buffer = {
+            'hit_rate': [],
+            'size': [],
+            'written_data': [],
+        }
 
     for num_window, window in enumerate(windows):
         num_file = 1
@@ -544,39 +560,31 @@ def simulate(cache, windows: list, region: str = "_all_", plot_server: str = Non
                     record['size'] / 1024**2  # Convert from Bytes to MegaBytes
                 )
                 if plot_server:
-                    requests.put(
-                        "/".join([
-                            plot_server,
-                            "cache",
-                            "hit_rate",
-                            str(cache),
-                            f"{num_window}",
-                            f"{row_idx}",
-                            f"{cache.hit_rate:0.5f}"
-                        ])
-                    )
-                    requests.put(
-                        "/".join([
-                            plot_server,
-                            "cache",
-                            "size",
-                            str(cache),
-                            f"{num_window}",
-                            f"{row_idx}",
-                            f"{cache.size:0.6f}"
-                        ])
-                    )
-                    requests.put(
-                        "/".join([
-                            plot_server,
-                            "cache",
-                            "written_data",
-                            str(cache),
-                            f"{num_window}",
-                            f"{row_idx}",
-                            f"{cache.written_data:0.6f}"
-                        ])
-                    )
+                    buffer["hit_rate"].append((row_idx, cache.hit_rate))
+                    buffer["size"].append((row_idx, cache.size))
+                    buffer["written_data"].append(
+                        (row_idx, cache.written_data))
+
+                    if len(buffer['hit_rate']) == 10000:
+                        requests.put(
+                            "/".join([
+                                plot_server,
+                                "cache",
+                                "update",
+                                str(cache),
+                                f"{num_window}"
+                            ]),
+                            headers={
+                                'Content-Type': 'application/octet-stream'},
+                            data=gzip.compress(
+                                json.dumps(buffer).encode('utf-8')
+                            )
+                        )
+                        buffer = {
+                            'hit_rate': [],
+                            'size': [],
+                            'written_data': [],
+                        }
 
                 record_pbar.desc = f"[{str(cache)[:4]+str(cache)[-12:]}][Simulation][Window {num_window+1}/{len(windows)}][File {num_file}/{len(window)}][Hit Rate {cache.hit_rate:06.2f}][Capacity {cache.capacity:06.2f}][Written {cache.written_data:0.2f}]"
                 record_pbar.update(1)
@@ -585,7 +593,44 @@ def simulate(cache, windows: list, region: str = "_all_", plot_server: str = Non
                 # if row_idx == 2000:
                 #     break
 
+            if len(buffer['hit_rate']) > 0:
+                requests.put(
+                    "/".join([
+                        plot_server,
+                        "cache",
+                        "update",
+                        str(cache),
+                        f"{num_window}"
+                    ]),
+                    headers={
+                        'Content-Type': 'application/octet-stream'},
+                    data=gzip.compress(
+                        json.dumps(buffer).encode('utf-8')
+                    )
+                )
+                buffer = {
+                    'hit_rate': [],
+                    'size': [],
+                    'written_data': [],
+                }
+
             record_pbar.close()
+
+            if plot_server:
+                requests.put(
+                    "/".join([
+                        plot_server,
+                        "cache",
+                        "info",
+                        str(cache),
+                        f"{num_window}"
+                    ]),
+                    headers={
+                        'Content-Type': 'application/octet-stream'},
+                    data=gzip.compress(
+                        json.dumps(cache.info).encode('utf-8')
+                    )
+                )
 
             win_pbar.update(1)
             win_pbar.desc = f"[{str(cache)[:4]+str(cache)[-12:]}][Open Data Frames][Window {num_window+1}/{len(windows)}][File {num_file}/{len(window)}]"

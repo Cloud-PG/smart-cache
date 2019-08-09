@@ -30,6 +30,8 @@ pandas = "*"
 pyarrow = "*"
 redis = "*"
 seaborn = "*"
+flask = "*"
+bokeh = "*"
 
 [requires]
 python_version = "3"
