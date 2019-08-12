@@ -43,7 +43,8 @@ def plot_info_window(window: int, filename: str, **kwargs):
             BASE_PATH,
             filename
         ),
-        kwargs.get('title', "Chart")
+        kwargs.get('title', "Chart"),
+        mode="inline"
     )
 
     figures = []
@@ -57,10 +58,9 @@ def plot_info_window(window: int, filename: str, **kwargs):
         ]
         plot_figure = figure(
             title=f"{cache_name} window {window}",
-            toolbar_location=None,
-            tools="",
-            plot_width=kwargs.get('plot_width', 800),
-            plot_height=kwargs.get('plot_height', 600),
+            tools="box_zoom,pan,reset,save",
+            plot_width=kwargs.get('plot_width', 1280),
+            plot_height=kwargs.get('plot_height', 800),
             x_range=filenames,
             x_axis_type=None
         )
@@ -72,7 +72,7 @@ def plot_info_window(window: int, filename: str, **kwargs):
                 for filename in filenames
             ],
             color="gray",
-            width=0.2
+            width=1.0
         )
 
         plot_figure.vbar(
@@ -82,8 +82,8 @@ def plot_info_window(window: int, filename: str, **kwargs):
                 if filename in cur_data['cache'] else 0
                 for filename in filenames
             ],
-            color="red",
-            width=0.2
+            color="blue",
+            width=1.0
         )
 
         plot_figure.vbar(
@@ -93,8 +93,8 @@ def plot_info_window(window: int, filename: str, **kwargs):
                 if filename in lru else 0
                 for filename in filenames
             ],
-            color="blue",
-            width=0.2
+            color="red",
+            width=1.0
         )
 
         figures.append(plot_figure)
@@ -109,19 +109,20 @@ def plot_line(table_name: str, filename: str, **kwargs):
             BASE_PATH,
             filename
         ),
-        kwargs.get('title', "Line plot")
+        kwargs.get('title', "Line plot"),
+        mode="inline"
     )
 
     # create a new plot
     plot_figure = figure(
-        tools="box_zoom,reset,save",
+        tools="box_zoom,pan,reset,save",
         y_axis_type=kwargs.get('y_axis_type', 'auto'),
         title=kwargs.get('title', ''),
         x_axis_label=kwargs.get('x_axis_label', ''),
         y_axis_label=kwargs.get('y_axis_label', ''),
         y_range=kwargs.get('y_range', None),
-        plot_width=kwargs.get('plot_width', 800),
-        plot_height=kwargs.get('plot_height', 600)
+        plot_width=kwargs.get('plot_width', 1280),
+        plot_height=kwargs.get('plot_height', 800)
     )
 
     v_lines = []
@@ -149,7 +150,8 @@ def plot_line(table_name: str, filename: str, **kwargs):
             range(len(points)),
             points,
             legend=name,
-            color=TABLE_COLORS[name]
+            color=TABLE_COLORS[name],
+            line_width=2.
         )
 
     if v_lines:
