@@ -35,8 +35,10 @@ def cost_function_with_time(**kwargs) -> float:
                 (time() - kwargs['first_time'])
             ) / kwargs['frequency']
         ) ** kwargs['exp']
-    ) * (
-        time() - kwargs['last_time']
+    ) + (
+        (
+            time() - kwargs['last_time']
+        ) ** kwargs['exp']
     )
 
 
@@ -62,7 +64,6 @@ class WeightedCache(object):
         self.size_history: List[float] = []
         self.hit_rate_history: List[float] = []
         self.write_history: List[float] = []
-        self.__info = []
         self.cost_function = cost_function
         self.__cache_options = cache_options
 
@@ -138,15 +139,17 @@ class WeightedCache(object):
         info = {
             'weights': {},
             'cache': self._cache,
-            'df': None
+            'df': None,
+            'correlation_matrix': None
         }
-        # dataframe = {
-        #     'size': [],
-        #     'frequency': [],
-        #     'num_files': [],
-        #     'last_time': [],
-        #     'weight': []
-        # }
+        dataframe = {
+            'size': [],
+            'frequency': [],
+            'num_files': [],
+            'last_time': [],
+            'first_time': [],
+            'weight': []
+        }
         for group, files in self._group_files.items():
             group_frequency = self._group_frequencies[group]
             group_num_files = self._group_num_files[group]
@@ -163,14 +166,15 @@ class WeightedCache(object):
                 )
                 info['weights'][file_] = weight
 
-        #         dataframe['size'].append(float(size))
-        #         dataframe['frequency'].append(group_frequency)
-        #         dataframe['num_files'].append(group_num_files)
-        #         dataframe['last_time'].append(group_last_time)
-        #         dataframe['first_time'].append(group_first_time)
-        #         dataframe['weight'].append(weight)
+                dataframe['size'].append(float(size))
+                dataframe['frequency'].append(group_frequency)
+                dataframe['num_files'].append(group_num_files)
+                dataframe['last_time'].append(group_last_time)
+                dataframe['first_time'].append(group_first_time)
+                dataframe['weight'].append(weight)
 
         # info['df'] = pd.DataFrame(dataframe)
+        info['correlation_matrix'] = pd.DataFrame(dataframe).corr().to_csv(None, header=True, index=True)
         return info
 
     @property
@@ -193,7 +197,6 @@ class WeightedCache(object):
             'write_history': self.write_history,
             'cost_function': self.cost_function,
             'cache_options': self.__cache_options,
-            'info': self.__info
         }
 
     def __getstate__(self) -> dict:
@@ -217,7 +220,6 @@ class WeightedCache(object):
         self.write_history = state['write_history']
         self.cost_function = state['cost_function']
         self.__cache_options = state['cache_options']
-        self.__info = state['info']
 
     @property
     def history(self) -> Tuple[List[float]]:
@@ -350,7 +352,6 @@ class LRUCache(object):
         self.hit_rate_history: List[float] = []
         self.write_history: List[float] = []
         self.__cache_options = cache_options
-        self.__info = []
 
         if init_state:
             self.__setstate__(init_state)
@@ -377,7 +378,8 @@ class LRUCache(object):
         info = {
             'weights': {},
             'cache': dict(zip(self._cache, self._counters)),
-            'df': {}
+            'df': None,
+            'correlation_matrix': None
         }
         return info
 
@@ -431,7 +433,6 @@ class LRUCache(object):
             'hit_rate_history': self.hit_rate_history,
             'write_history': self.write_history,
             'cache_options': self.__cache_options,
-            'info': self.__info
         }
 
     def __getstate__(self) -> dict:
@@ -449,7 +450,6 @@ class LRUCache(object):
         self.hit_rate_history = state['hit_rate_history']
         self.write_history = state['write_history']
         self.__cache_options = state['cache_options']
-        self.__info = state['info']
 
     @property
     def history(self) -> Tuple[List[float]]:
@@ -578,7 +578,8 @@ def simulate(cache, windows: list, region: str = "_all_", plot_server: str = Non
                                 'Content-Type': 'application/octet-stream'},
                             data=gzip.compress(
                                 json.dumps(buffer).encode('utf-8')
-                            )
+                            ),
+                            timeout=None
                         )
                         buffer = {
                             'hit_rate': [],
@@ -606,7 +607,8 @@ def simulate(cache, windows: list, region: str = "_all_", plot_server: str = Non
                         'Content-Type': 'application/octet-stream'},
                     data=gzip.compress(
                         json.dumps(buffer).encode('utf-8')
-                    )
+                    ),
+                    timeout=None
                 )
                 buffer = {
                     'hit_rate': [],
@@ -629,7 +631,8 @@ def simulate(cache, windows: list, region: str = "_all_", plot_server: str = Non
                         'Content-Type': 'application/octet-stream'},
                     data=gzip.compress(
                         json.dumps(cache.info).encode('utf-8')
-                    )
+                    ),
+                    timeout=None
                 )
 
             win_pbar.update(1)
@@ -964,7 +967,8 @@ def main():
     parser.add_argument('--max-windows', '-mw', type=int, default=-1,
                         help="Num. of windows to simulate")
     parser.add_argument('--exp-values', type=str,
-                        default="2,4",
+                        # default="2,4",
+                        default="2",
                         help="Exponential of cost function. List divided by ','."
                         )
     parser.add_argument('--jobs', '-j', type=int, default=4,
@@ -1070,15 +1074,19 @@ def main():
             [windows for _ in range(len(cache_list))],
             [f"_{args.region}_" for _ in range(len(cache_list))],
             [args.plot_server for _ in range(len(cache_list))]
-        )), position=0, total=len(cache_list), desc="Cache simulated", ascii=True)):
-            cache_name = f"{str(cache_list[idx])}"
+        )), position=0,
+                total=len(cache_list),
+                desc="Cache simulated",
+                ascii=True)
+        ):
             if not args.plot_server:
+                cache_name = f"{str(cache_list[idx])}"
                 store_results(f'cache_results_{id(pool)}.pickle', {
                     cache_name: cache_results
                 })
 
-        os.makedirs(args.out_folder, exist_ok=True)
         if not args.plot_server:
+            os.makedirs(args.out_folder, exist_ok=True)
             plot_cache_results(
                 load_results(f'cache_results_{id(pool)}.pickle'),
                 out_folder=args.out_folder
