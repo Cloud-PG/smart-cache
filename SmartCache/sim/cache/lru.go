@@ -1,13 +1,36 @@
 package cache
 
-// LRU: the LRU cache
+// LRU cache
 type LRU struct {
-	hit, miss, MaxSize float32
+	cache                           map[string]float32
+	hit, miss, writtenData, MaxSize float32
 }
 
-func (cache LRU) hitRate() float32 {
+// HitRate of the cache
+func (cache LRU) HitRate() float32 {
 	return cache.hit / (cache.hit + cache.miss)
 }
-func (cache LRU) capacity() float32 {
-	return 0.0
+
+// Size of the cache
+func (cache LRU) Size() float32 {
+	var totalSize float32
+	for _, value := range cache.cache {
+		totalSize += value
+	}
+	return totalSize
+}
+
+// Capacity of the cache
+func (cache LRU) Capacity() float32 {
+	return cache.Size() / cache.MaxSize
+}
+
+// WrittenData of the cache
+func (cache LRU) WrittenData() float32 {
+	return cache.writtenData
+}
+
+func (cache LRU) check(key string) bool {
+	_, ok := cache.cache[key]
+	return ok
 }

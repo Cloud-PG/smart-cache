@@ -1,8 +1,11 @@
 package cache
 
-// Cache: the base cache object interface
+// Cache is the base interface for the cache object
 type Cache interface {
-	hitRate() float32
-	capacity() float32
-	// writtenData() float32
+	check(string) bool
+
+	HitRate() float32
+	Size() float32
+	Capacity() float32
+	WrittenData() float32
 }

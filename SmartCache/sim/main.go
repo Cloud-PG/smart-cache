@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"./cache"
 
 	"github.com/spf13/cobra"
@@ -30,14 +32,15 @@ func commandRun() *cobra.Command {
 
 			switch cacheType {
 			case "lru":
-				println("RUN LRU with size =", CACHE_SIZE)
+				fmt.Println("RUN LRU with size =", CACHE_SIZE)
 				CACHE = &cache.LRU{
 					MaxSize: CACHE_SIZE,
 				}
+				fmt.Println(CACHE.HitRate(), CACHE.Size(), CACHE.Capacity())
 			case "weight":
-				println("ERR: To be implemented...")
+				fmt.Println("ERR: To be implemented...")
 			default:
-				println("ERR: You need to specify a cache type.")
+				fmt.Println("ERR: You need to specify a cache type.")
 			}
 		},
 		Use:   `run cacheType`,
