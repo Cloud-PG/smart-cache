@@ -1,8 +1,8 @@
 package cache
 
 import (
-	"testing"
 	"math/rand"
+	"testing"
 	// "fmt"
 )
 
@@ -12,12 +12,12 @@ func TestLRUCacheBaseMultipleInsert(t *testing.T) {
 	}
 	testCache.Init()
 
-	res := testCache.Update("/a/b/c/d/file0", 1.0)
-	testCache.Update("/a/b/c/d/file0", 1.0)
-	testCache.Update("/a/b/c/d/file0", 1.0)
-	testCache.Update("/a/b/c/d/file0", 1.0)
+	res := testCache.Get("/a/b/c/d/file0", 1.0)
+	testCache.Get("/a/b/c/d/file0", 1.0)
+	testCache.Get("/a/b/c/d/file0", 1.0)
+	testCache.Get("/a/b/c/d/file0", 1.0)
 
-	if !res{
+	if !res {
 		t.Fatalf("First insert error -> Expected %t but got %t", true, res)
 	} else if testCache.HitRate() != 0.75 {
 		t.Fatalf("Hit rate error -> Expected %f but got %f", 0.75, testCache.HitRate())
@@ -34,14 +34,14 @@ func TestLRUCacheInsert(t *testing.T) {
 	}
 	testCache.Init()
 
-	testCache.Update("/a/b/c/d/file0", 1.0)
-	testCache.Update("/a/b/c/d/file1", 1.0)
-	testCache.Update("/a/b/c/d/file2", 1.0)
-	testCache.Update("/a/b/c/d/file3", 1.0)
-	testCache.Update("/a/b/c/d/file1", 1.0)
-	testCache.Update("/a/b/c/d/file4", 1.0)
-	testCache.Update("/a/b/c/d/file3", 1.0)
-	testCache.Update("/a/b/c/d/file4", 1.0)
+	testCache.Get("/a/b/c/d/file0", 1.0)
+	testCache.Get("/a/b/c/d/file1", 1.0)
+	testCache.Get("/a/b/c/d/file2", 1.0)
+	testCache.Get("/a/b/c/d/file3", 1.0)
+	testCache.Get("/a/b/c/d/file1", 1.0)
+	testCache.Get("/a/b/c/d/file4", 1.0)
+	testCache.Get("/a/b/c/d/file3", 1.0)
+	testCache.Get("/a/b/c/d/file4", 1.0)
 
 	// for tmpVal := testCache.queue.Front(); tmpVal != nil; tmpVal = tmpVal.Next() {
 	// 	println(tmpVal.Value.(string))
@@ -61,13 +61,11 @@ func TestLRUCacheInsert(t *testing.T) {
 	}
 }
 
-
-
 func BenchmarkLRUCache(b *testing.B) {
-	var maxSize float32 = 1024. * 1024. * 10. 
+	var maxSize float32 = 1024. * 1024. * 10.
 	var LetterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 
-	genRandomFilePath := func (num int32) string {
+	genRandomFilePath := func(num int32) string {
 		filepath := make([]rune, num)
 		for idx := range filepath {
 			filepath[idx] = LetterRunes[rand.Intn(len(LetterRunes))]
@@ -81,6 +79,6 @@ func BenchmarkLRUCache(b *testing.B) {
 	testCache.Init()
 
 	for n := 0; n < b.N; n++ {
-		testCache.Update(genRandomFilePath(5), rand.Float32() * maxSize)
+		testCache.Get(genRandomFilePath(5), rand.Float32()*maxSize)
 	}
 }

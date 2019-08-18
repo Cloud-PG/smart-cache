@@ -1,5 +1,11 @@
 package cache
 
+import (
+	"context"
+
+	pb "./simService"
+)
+
 // Cache is the base interface for the cache object
 type Cache interface {
 	check(string) bool
@@ -10,5 +16,7 @@ type Cache interface {
 	Capacity() float32
 	WrittenData() float32
 
-	Update(filename string, size float32) bool
+	Get(filename string, size float32) bool
+
+	SimServiceGet(context.Context, *pb.SimCommonFile) (*pb.SimCacheStatus, error)
 }

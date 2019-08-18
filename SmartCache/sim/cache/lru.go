@@ -2,29 +2,44 @@ package cache
 
 import (
 	"container/list"
+	"context"
+
+	pb "./simService"
 )
 
 // LRU cache
 type LRU struct {
-	files                           map[string]float32
-	queue                           *list.List
+	files                                 map[string]float32
+	queue                                 *list.List
 	hit, miss, writtenData, size, MaxSize float32
 }
 
+// Init the LRU struct
 func (cache *LRU) Init() {
 	cache.files = make(map[string]float32, 0)
-    cache.queue = list.New()
+	cache.queue = list.New()
+}
+
+// SimServiceUpdate updates the cache from a protobuf message
+func (cache *LRU) SimServiceGet(ctx context.Context, commonFile *pb.SimCommonFile) (*pb.SimCacheStatus, error) {
+	cache.Get(commonFile.Filename, commonFile.Size)
+	// No feature was found, return an unnamed feature
+	return &pb.SimCacheStatus{
+		HitRate:     cache.HitRate(),
+		Size:        cache.Size(),
+		WrittenData: cache.HitRate(),
+	}, nil
 }
 
 func (cache *LRU) updatePolicy(filename string, size float32, hit bool) bool {
 	var res bool
 	if !hit {
-		if cache.Size() + size > cache.MaxSize {
+		if cache.Size()+size > cache.MaxSize {
 			for tmpVal := cache.queue.Front(); tmpVal != nil; tmpVal = tmpVal.Next() {
 				cache.size -= cache.files[tmpVal.Value.(string)]
 				delete(cache.files, tmpVal.Value.(string))
 				cache.queue.Remove(tmpVal)
-				if cache.Size() + size <= cache.MaxSize {
+				if cache.Size()+size <= cache.MaxSize {
 					break
 				}
 			}
@@ -49,7 +64,7 @@ func (cache *LRU) updatePolicy(filename string, size float32, hit bool) bool {
 	return res
 }
 
-func (cache *LRU) Update(filename string, size float32) bool {
+func (cache *LRU) Get(filename string, size float32) bool {
 	hit := cache.check(filename)
 	res := cache.updatePolicy(filename, size, hit)
 

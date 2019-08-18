@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "io.grpc.cache.sim.service";
+option java_outer_classname = "CacheSimService";
+
+package simservice;
+
+service SimService {
+
+  rpc SimServiceGet(SimCommonFile) returns (SimCacheStatus) {}
+
+}
+
+message SimCommonFile {
+  string filename = 1;
+  float size = 2;
+}
+
+message SimCacheStatus {
+  float hitRate = 1;
+  float size = 2;
+  float writtenData = 3;
+}
