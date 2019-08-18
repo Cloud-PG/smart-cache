@@ -2,6 +2,7 @@ package cache
 
 import (
 	"testing"
+	"math/rand"
 	// "fmt"
 )
 
@@ -57,5 +58,29 @@ func TestLRUCacheInsert(t *testing.T) {
 		t.Fatalf("Written data error -> Expected %s but got %s", "/a/b/c/d/file1", testCache.queue.Front().Value.(string))
 	} else if testCache.queue.Back().Value.(string) != "/a/b/c/d/file4" {
 		t.Fatalf("Written data error -> Expected %s but got %s", "/a/b/c/d/file4", testCache.queue.Back().Value.(string))
+	}
+}
+
+
+
+func BenchmarkLRUCache(b *testing.B) {
+	var maxSize float32 = 1024. * 1024. * 10. 
+	var LetterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+
+	genRandomFilePath := func (num int32) string {
+		filepath := make([]rune, num)
+		for idx := range filepath {
+			filepath[idx] = LetterRunes[rand.Intn(len(LetterRunes))]
+		}
+		return string(filepath)
+	}
+
+	testCache := LRU{
+		MaxSize: maxSize,
+	}
+	testCache.Init()
+
+	for n := 0; n < b.N; n++ {
+		testCache.Update(genRandomFilePath(5), rand.Float32() * maxSize)
 	}
 }
