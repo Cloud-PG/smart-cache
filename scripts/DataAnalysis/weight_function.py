@@ -686,16 +686,17 @@ def simulate(cache, windows: list, region: str = "_all_",
             store_results(tmp_write_history.name, [cur_write_history])
             store_results(tmp_info.name, [cache.info])
 
-        cache.clear_history()
+        if not remote:
+            cache.clear_history()
 
-        if cache.clear_me:
-            cache.clear()
+            if cache.clear_me:
+                cache.clear()
 
-        if cache.clear_my_weights:
-            cache.reset_weights()
+            if cache.clear_my_weights:
+                cache.reset_weights()
 
         win_pbar.close()
-    
+
     if remote:
         channel.close()
 

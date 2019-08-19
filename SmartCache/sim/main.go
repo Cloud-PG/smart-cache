@@ -40,7 +40,7 @@ func commandRun() *cobra.Command {
 
 			switch cacheType {
 			case "lru":
-				fmt.Printf("[Create Cache][%f]\n", cacheSize)
+				fmt.Printf("[Create Cache][Size: %f]\n", cacheSize)
 				cacheInstance = &cache.LRU{
 					MaxSize: cacheSize,
 				}

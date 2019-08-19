@@ -16,7 +16,7 @@ type LRU struct {
 
 // Init the LRU struct
 func (cache *LRU) Init() {
-	cache.files = make(map[string]float32, 0)
+	cache.files = make(map[string]float32)
 	cache.queue = list.New()
 }
 
@@ -26,20 +26,30 @@ func (cache *LRU) SimServiceGet(ctx context.Context, commonFile *pb.SimCommonFil
 	return &pb.SimCacheStatus{
 		HitRate:     cache.HitRate(),
 		Size:        cache.Size(),
-		WrittenData: cache.HitRate(),
+		WrittenData: cache.WrittenData(),
 		Capacity:    cache.Capacity(),
 	}, nil
 }
 
 func (cache *LRU) updatePolicy(filename string, size float32, hit bool) bool {
-	var res bool
+	var added bool = false
 	if !hit {
 		if cache.Size()+size > cache.MaxSize {
-			for tmpVal := cache.queue.Front(); tmpVal != nil; tmpVal = tmpVal.Next() {
-				cache.size -= cache.files[tmpVal.Value.(string)]
+			var totalDeleted float32
+			tmpVal := cache.queue.Front()
+			for {
+				if tmpVal == nil {
+					break
+				}
+				fileSize := cache.files[tmpVal.Value.(string)]
+				cache.size -= fileSize
+				totalDeleted += fileSize
 				delete(cache.files, tmpVal.Value.(string))
-				cache.queue.Remove(tmpVal)
-				if cache.Size()+size <= cache.MaxSize {
+
+				tmpVal = tmpVal.Next()
+				cache.queue.Remove(tmpVal.Prev())
+
+				if totalDeleted >= size {
 					break
 				}
 			}
@@ -47,9 +57,8 @@ func (cache *LRU) updatePolicy(filename string, size float32, hit bool) bool {
 		cache.files[filename] = size
 		cache.queue.PushBack(filename)
 		cache.size += size
-		res = true
+		added = true
 	} else {
-		res = false
 		var elm2move *list.Element
 		for tmpVal := cache.queue.Front(); tmpVal != nil; tmpVal = tmpVal.Next() {
 			if tmpVal.Value.(string) == filename {
@@ -61,13 +70,13 @@ func (cache *LRU) updatePolicy(filename string, size float32, hit bool) bool {
 			cache.queue.MoveToBack(elm2move)
 		}
 	}
-	return res
+	return added
 }
 
 // Get a file from the cache updating the statistics
 func (cache *LRU) Get(filename string, size float32) bool {
 	hit := cache.check(filename)
-	res := cache.updatePolicy(filename, size, hit)
+	added := cache.updatePolicy(filename, size, hit)
 
 	if hit {
 		cache.hit += 1.
@@ -75,16 +84,16 @@ func (cache *LRU) Get(filename string, size float32) bool {
 		cache.miss += 1.
 	}
 
-	if res {
+	if added {
 		cache.writtenData += size
 	}
 
-	return res
+	return added
 }
 
 // HitRate of the cache
 func (cache LRU) HitRate() float32 {
-	return cache.hit / (cache.hit + cache.miss)
+	return (cache.hit / (cache.hit + cache.miss)) * 100.
 }
 
 // Size of the cache
@@ -94,7 +103,7 @@ func (cache LRU) Size() float32 {
 
 // Capacity of the cache
 func (cache LRU) Capacity() float32 {
-	return cache.Size() / cache.MaxSize
+	return (cache.Size() / cache.MaxSize) * 100.
 }
 
 // WrittenData of the cache
