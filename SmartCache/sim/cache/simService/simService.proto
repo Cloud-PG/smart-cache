@@ -21,4 +21,5 @@ message SimCacheStatus {
   float hitRate = 1;
   float size = 2;
   float writtenData = 3;
+  float capacity = 4;
 }

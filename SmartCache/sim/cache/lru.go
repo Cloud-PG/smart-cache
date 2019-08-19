@@ -27,6 +27,7 @@ func (cache *LRU) SimServiceGet(ctx context.Context, commonFile *pb.SimCommonFil
 		HitRate:     cache.HitRate(),
 		Size:        cache.Size(),
 		WrittenData: cache.HitRate(),
+		Capacity:    cache.Capacity()
 	}, nil
 }
 
