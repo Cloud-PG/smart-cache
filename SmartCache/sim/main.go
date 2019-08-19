@@ -44,6 +44,7 @@ func commandRun() *cobra.Command {
 				cacheInstance = &cache.LRU{
 					MaxSize: cacheSize,
 				}
+				cacheInstance.Init()
 				fmt.Printf("[Register Cache]\n")
 				pb.RegisterSimServiceServer(grpcServer, cacheInstance)
 			case "weight":

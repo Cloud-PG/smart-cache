@@ -11,6 +11,8 @@ type Cache interface {
 	check(string) bool
 	updatePolicy(filename string, size float32, hit bool) bool
 
+	Init()
+
 	HitRate() float32
 	Size() float32
 	Capacity() float32

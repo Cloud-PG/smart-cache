@@ -20,10 +20,9 @@ func (cache *LRU) Init() {
 	cache.queue = list.New()
 }
 
-// SimServiceUpdate updates the cache from a protobuf message
+// SimServiceGet updates the cache from a protobuf message
 func (cache *LRU) SimServiceGet(ctx context.Context, commonFile *pb.SimCommonFile) (*pb.SimCacheStatus, error) {
 	cache.Get(commonFile.Filename, commonFile.Size)
-	// No feature was found, return an unnamed feature
 	return &pb.SimCacheStatus{
 		HitRate:     cache.HitRate(),
 		Size:        cache.Size(),
@@ -64,6 +63,7 @@ func (cache *LRU) updatePolicy(filename string, size float32, hit bool) bool {
 	return res
 }
 
+// Get a file from the cache updating the statistics
 func (cache *LRU) Get(filename string, size float32) bool {
 	hit := cache.check(filename)
 	res := cache.updatePolicy(filename, size, hit)
