@@ -22,7 +22,8 @@ from tqdm import tqdm
 def simple_cost_function(**kwargs) -> float:
     return(
         (
-            kwargs['size'] * kwargs['num_files']
+            kwargs['size']
+            * kwargs['num_files']
         ) / kwargs['frequency']
     ) ** kwargs['exp']
 
@@ -31,13 +32,12 @@ def cost_function_with_time(**kwargs) -> float:
     return (
         (
             (
-                kwargs['size'] * kwargs['num_files'] *
-                (time() - kwargs['first_time'])
+                kwargs['size']
+                * kwargs['num_files'] * (
+                    (time() - kwargs['first_time']) *
+                    (time() - kwargs['last_time'])
+                )
             ) / kwargs['frequency']
-        ) ** kwargs['exp']
-    ) + (
-        (
-            time() - kwargs['last_time']
         ) ** kwargs['exp']
     )
 
@@ -52,6 +52,7 @@ class WeightedCache(object):
         self._cache_groups: Dict[str, str] = {}
         # Groups
         self._group_frequencies: Dict[str, float] = {}
+        self._group_file_frequencies: Dict[str, Dict[str, float]] = {}
         self._group_num_files: Dict[str, float] = {}
         self._group_last_time: Dict[str, float] = {}
         self._group_first_time: Dict[str, float] = {}
@@ -174,7 +175,8 @@ class WeightedCache(object):
                 dataframe['weight'].append(weight)
 
         # info['df'] = pd.DataFrame(dataframe)
-        info['correlation_matrix'] = pd.DataFrame(dataframe).corr().to_csv(None, header=True, index=True)
+        info['correlation_matrix'] = pd.DataFrame(
+            dataframe).corr().to_csv(None, header=True, index=True)
         return info
 
     @property
@@ -184,6 +186,7 @@ class WeightedCache(object):
             'cache_weights': self._cache_weights,
             'cache_groups': self._cache_groups,
             'group_frequencies': self._group_frequencies,
+            'group_file_frequencies': self._group_file_frequencies,
             'group_num_files': self._group_num_files,
             'group_last_time': self._group_last_time,
             'group_first_time': self._group_first_time,
@@ -207,6 +210,7 @@ class WeightedCache(object):
         self._cache_weights = state['cache_weights']
         self._cache_groups = state['cache_groups']
         self._group_frequencies = state['group_frequencies']
+        self._group_file_frequencies = state['group_file_frequencies']
         self._group_num_files = state['group_num_files']
         self._group_last_time = state['group_last_time']
         self._group_first_time = state['group_first_time']
@@ -277,21 +281,26 @@ class WeightedCache(object):
 
         if group not in self._group_frequencies:
             self._group_frequencies[group] = 0.
+            self._group_file_frequencies[group] = {}
             self._group_num_files[group] = 0.
             self._group_files[group] = set()
             self._group_last_time[group] = time()
             self._group_first_time[group] = time()
 
+        if filename not in self._group_file_frequencies[group]:
+            self._group_file_frequencies[group][filename] = 0.
+
         self._group_frequencies[group] += 1.
         self._group_num_files[group] += 1.
         self._group_files[group] |= set((f"{filename}->{size}", ))
+        self._group_file_frequencies[group][filename] += 1.
 
         self._group_dirty = set((group,))
 
         if not hit:
             file_weight = self.cost_function(
                 size=size,
-                frequency=self._group_frequencies[group],
+                frequency=self._group_file_frequencies[group][filename],
                 num_files=self._group_num_files[group],
                 last_time=self._group_last_time[group],
                 first_time=self._group_first_time[group]
@@ -308,7 +317,7 @@ class WeightedCache(object):
                         if file_group in self._group_dirty:
                             self._cache_weights[cur_filename] = self.cost_function(
                                 size=self._cache[cur_filename],
-                                frequency=self._group_frequencies[file_group],
+                                frequency=self._group_file_frequencies[file_group][cur_filename],
                                 num_files=self._group_num_files[file_group],
                                 last_time=self._group_last_time[file_group],
                                 first_time=self._group_first_time[file_group]
