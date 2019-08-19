@@ -11,12 +11,15 @@ from tempfile import NamedTemporaryFile
 from time import time
 from typing import Dict, List, Set, Tuple
 
+import grpc
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import requests
 import seaborn as sns
 from tqdm import tqdm
+
+from SmartCache.sim.pySimService import simService_pb2, simService_pb2_grpc
 
 
 def simple_cost_function(**kwargs) -> float:
@@ -522,10 +525,16 @@ def star_decorator(func):
 
 
 @star_decorator
-def simulate(cache, windows: list, region: str = "_all_", plot_server: str = None):
+def simulate(cache, windows: list, region: str = "_all_",
+             plot_server: str = None,
+             remote: bool = False):
     process_num = int(
         str(current_process()).split("Worker-")[1].split(",")[0]
     )
+
+    if remote:
+        channel = grpc.insecure_channel(cache)
+        stub = simService_pb2_grpc.SimServiceStub(channel)
 
     if not plot_server:
         tmp_size_history = NamedTemporaryFile()
@@ -564,10 +573,19 @@ def simulate(cache, windows: list, region: str = "_all_", plot_server: str = Non
                 ascii=True
             )
             for row_idx, record in df.iterrows():
-                cache.get(
-                    record['filename'],
-                    record['size'] / 1024**2  # Convert from Bytes to MegaBytes
-                )
+                if remote:
+                    stub_result = stub.SimServiceGet(
+                        simService_pb2.SimCommonFile(
+                            filename=record['filename'],
+                            size=record['size'] / 1024**2
+                        )
+                    )
+                else:
+                    cache.get(
+                        record['filename'],
+                        # Convert from Bytes to MegaBytes
+                        record['size'] / 1024**2
+                    )
                 if plot_server:
                     buffer["hit_rate"].append((row_idx, cache.hit_rate))
                     buffer["size"].append((row_idx, cache.size))
@@ -596,14 +614,23 @@ def simulate(cache, windows: list, region: str = "_all_", plot_server: str = Non
                             'written_data': [],
                         }
 
-                record_pbar.desc = f"[{str(cache)[:4]+str(cache)[-12:]}][Simulation][Window {num_window+1}/{len(windows)}][File {num_file}/{len(window)}][Hit Rate {cache.hit_rate:06.2f}][Capacity {cache.capacity:06.2f}][Written {cache.written_data:0.2f}]"
+                if remote:
+                    cur_hit_rate = stub_result.hitRate
+                    cur_capacity = stub_result.capacity
+                    cur_written_data = stub_result.writtenData
+                else:
+                    cur_hit_rate = cache.hit_rate
+                    cur_capacity = cache.capacity
+                    cur_written_data = cache.written_data
+
+                record_pbar.desc = f"[{str(cache)[:4]+str(cache)[-12:]}][Simulation][Window {num_window+1}/{len(windows)}][File {num_file}/{len(window)}][Hit Rate {cur_hit_rate:06.2f}][Capacity {cur_capacity:06.2f}][Written {cur_written_data:0.2f}]"
                 record_pbar.update(1)
 
                 # TEST
                 # if row_idx == 2000:
                 #     break
 
-            if len(buffer['hit_rate']) > 0:
+            if plot_server and len(buffer['hit_rate']) > 0:
                 requests.put(
                     "/".join([
                         plot_server,
@@ -652,7 +679,7 @@ def simulate(cache, windows: list, region: str = "_all_", plot_server: str = Non
             # if num_file == 2:
             #     break
 
-        if not plot_server:
+        if not plot_server and not remote:
             cur_size_history, cur_hit_rate_history, cur_write_history = cache.history
             store_results(tmp_size_history.name, [cur_size_history])
             store_results(tmp_hit_rate_history.name, [cur_hit_rate_history])
@@ -668,6 +695,9 @@ def simulate(cache, windows: list, region: str = "_all_", plot_server: str = Non
             cache.reset_weights()
 
         win_pbar.close()
+    
+    if remote:
+        channel.close()
 
     if not plot_server:
         size_history = load_results(tmp_size_history.name)
@@ -1004,6 +1034,7 @@ def main():
         files = []
         windows = []
         cache_list = []
+        cache_remote_list = []
         clear_cache_list = [False] if not args.clear_cache else [False, True]
         clear_weights_list = [
             False] if not args.clear_weights else [False, True]
@@ -1012,20 +1043,25 @@ def main():
             'with_time': cost_function_with_time,
         }
 
-        if 'lru' in args.functions:
-            for size in args.cache_sizes:
-                for clear_cache in clear_cache_list:
-                    cache_list.append(
-                        LRUCache(
-                            size,
-                            cache_options={
-                                'clear_cache': clear_cache,
-                            }
-                        )
-                    )
-            # TEST
-            #     break
-            # break
+        for function in args.functions:
+            if function.find('lru') != -1:
+                if function.find(":") != -1:
+                    cache_list.append(function.split(":", 1)[1])
+                    cache_remote_list.append(True)
+                    for size in args.cache_sizes:
+                        for clear_cache in clear_cache_list:
+                            cache_list.append(
+                                LRUCache(
+                                    size,
+                                    cache_options={
+                                        'clear_cache': clear_cache,
+                                    }
+                                )
+                            )
+                            cache_remote_list.append(False)
+                    # TEST
+                    #     break
+                    # break
 
         for fun_name, function in [(fun_name, function)
                                    for fun_name, function in cost_functions.items()
@@ -1047,6 +1083,7 @@ def main():
                                     }
                                 )
                             )
+                            cache_remote_list.append(False)
             # TEST
             #             break
             #         break
@@ -1082,7 +1119,8 @@ def main():
             cache_list,
             [windows for _ in range(len(cache_list))],
             [f"_{args.region}_" for _ in range(len(cache_list))],
-            [args.plot_server for _ in range(len(cache_list))]
+            [args.plot_server for _ in range(len(cache_list))],
+            cache_remote_list
         )), position=0,
                 total=len(cache_list),
                 desc="Cache simulated",
