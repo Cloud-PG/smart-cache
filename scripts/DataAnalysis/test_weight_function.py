@@ -9,13 +9,130 @@ from typing import Dict, List
 
 import matplotlib.pyplot as plt
 import pandas as pd
+from numba import float32, int32, char, jitclass
+from numba.types import string, ListType, DictType
+from numba.typed import List as numba_list
+from numba.typed import Dict as numba_dict
 from tqdm import tqdm
+import numpy as np
 
 
 def simple_cost_function(size: float, frequency: float, num_files:
                          float, exp: float = 2.0):
     return size / (frequency / num_files) ** exp
 
+
+spec = [
+    ('_cache', DictType(string, float32)),
+    ('_hit', int32),
+    ('_miss', int32),
+    ('size_history', ListType(float32)),
+    ('hit_rate_history', ListType(float32)),
+    ('_max_size', float32),
+    ('_counters_list', ListType(int32)),
+    ('_counters', DictType(int32, string)),
+    ('_rev_counters', DictType(string, int32)),
+    ('__counter', int32),
+]
+
+
+@jitclass(spec)
+class LRUCache(object):
+
+    def __init__(self, max_size: float):
+        self._cache: Dict[str, float] = numba_dict.empty(string, float32)
+        self._hit = 0
+        self._miss = 0
+        self.size_history: List[float] = numba_list.empty_list(float32)
+        self.hit_rate_history: List[float] = numba_list.empty_list(float32)
+        self._max_size = max_size
+        self._counters: Dict[int, str] = numba_dict.empty(int32, string)
+        self._rev_counters: Dict[str, int] = numba_dict.empty(string, int32)
+        self.__counter = 0
+
+    # @property
+    # def state(self):
+    #     return {
+    #         'cache': self._cache,
+    #         'sizes': self._sizes,
+    #         'hit': self._hit,
+    #         'miss': self._miss,
+    #         'size_history': self.size_history,
+    #         'hit_rate_history': self.hit_rate_history,
+    #         'max_size': self._max_size,
+    #         'counters': self._counters,
+    #         'counter': self.__counter
+    #     }
+
+    # def __getstate__(self):
+    #     return self.state
+
+    # def __setstate__(self, state):
+    #     self._cache = state['cache']
+    #     self._sizes = state['sizes']
+    #     self._hit = state['hit']
+    #     self._miss = state['miss']
+    #     self.size_history = state['size_history']
+    #     self.hit_rate_history = state['hit_rate_history']
+    #     self._max_size = state['max_size']
+    #     self._counters = state['counters']
+    #     self.__counter = state['counter']
+
+    def reset_history(self):
+        self.size_history.clear()
+        self.hit_rate_history.clear()
+        self._hit = 0
+        self._miss = 0
+
+    @property
+    def history(self):
+        return list(zip(self.size_history, self.hit_rate_history))
+
+    @property
+    def hit_rate(self):
+        return float(self._hit / (self._hit + self._miss)) * 100.
+
+    @property
+    def size(self):
+        tmp = 0.0
+        for elm in self._cache.values():
+            tmp += elm
+        return tmp
+
+    def check(self, filename: str):
+        return filename in self._cache
+
+    def get(self, filename: str, size: float):
+        hit = self.check(filename)
+        if hit:
+            self._hit += 1
+        else:
+            self._miss += 1
+
+        self.update_policy(filename, size, hit)
+
+        self.size_history.append(self.size)
+        self.hit_rate_history.append(self.hit_rate)
+
+    def update_policy(self, filename: str, size: float, hit: bool):
+        self.__counter += 1
+
+        if hit:
+            del self._counters[self._rev_counters[filename]]
+            self._counters[self.__counter] = filename
+            self._rev_counters[filename] = self.__counter
+        elif self.size + size > self._max_size:
+            cur_min = min(self._counters)
+            del self._cache[self._counters[cur_min]]
+            del self._rev_counters[self._counters[cur_min]]
+            del self._counters[cur_min]
+            self._cache[filename] = size
+            self._counters[self.__counter] = filename
+            self._rev_counters[filename] = self.__counter
+        else:
+            self._cache[filename] = size
+            self._counters[self.__counter] = filename
+            self._rev_counters[filename] = self.__counter
 
 class Cache(object):
 
@@ -138,13 +255,9 @@ class CacheLRU(Cache):
             self._counters[self._cache.index(filename)] = self.__counter
         elif self.size + size > self._max_size:
             idx = self._counters.index(min(self._counters))
-            self._cache.pop(idx)
-            self._sizes.pop(idx)
-            self._counters.pop(idx)
-
-            self._cache.append(filename)
-            self._sizes.append(size)
-            self._counters.append(self.__counter)
+            self._cache[idx] = filename
+            self._sizes[idx] = size
+            self._counters[idx] = self.__counter
         else:
             self._cache.append(filename)
             self._sizes.append(size)
@@ -197,13 +310,9 @@ class CacheLRUMod(Cache):
         elif kwargs['weight'] > kwargs['threshold']:
             if self.size + size > self._max_size:
                 idx = self._counters.index(min(self._counters))
-                self._cache.pop(idx)
-                self._sizes.pop(idx)
-                self._counters.pop(idx)
-
-                self._cache.append(filename)
-                self._sizes.append(size)
-                self._counters.append(self.__counter)
+                self._cache[idx] = filename
+                self._sizes[idx] = size
+                self._counters[idx] = self.__counter
             else:
                 self._cache.append(filename)
                 self._sizes.append(size)
@@ -323,7 +432,7 @@ def parse_data_frames(source, target: str,
 def test_function(data_filename: str, cache_sizes: List[float],
                   num_window: int = 0,
                   prev_cache_state: tuple = None,
-                  quantile_list: List[float] = [0.25, 0.5, 0.75]
+                  quantile_list: List[float] = [0.25, 0.5]
                   ) -> tuple:
     process_num = int(str(current_process()).split("Worker-")[1].split(",")[0])
     with gzip.GzipFile(data_filename, mode="rb") as stats_file:
@@ -356,12 +465,13 @@ def test_function(data_filename: str, cache_sizes: List[float],
         for cache_size in cache_sizes:
             for weight in available_weights:
                 weight_type = weight.split("_")[1]
-                current_cache_name = f'lru_mod_{int(cache_size / 1024**2)}T_{weight_type}'
-                for quantile in quantile_list:
-                    full_name = f'{current_cache_name}_q{int(quantile*100.)}'
-                    lru_mod[full_name] = (
-                        weight, CacheLRUMod(max_size=cache_size))
-                    weight_table[full_name] = df[weight].quantile(quantile)
+                if weight_type == "sE2":
+                    current_cache_name = f'lru_mod_{int(cache_size / 1024**2)}T_{weight_type}'
+                    for quantile in quantile_list:
+                        full_name = f'{current_cache_name}_q{int(quantile*100.)}'
+                        lru_mod[full_name] = (
+                            weight, CacheLRUMod(max_size=cache_size))
+                        weight_table[full_name] = df[weight].quantile(quantile)
 
     for _, record in tqdm(
         df.iterrows(), total=df.shape[0], position=process_num,
@@ -395,7 +505,7 @@ def plot_cache_results(caches: Dict[str, 'Cache'], out_file: str,
             (',', '+', '.', 'o', '*'), ('-', '--', '-.', ':')
         )
     )
-    markevery = itertools.cycle([500, 1000, 1500, 2000])
+    markevery = itertools.cycle([50000, 100000, 150000, 200000])
     marker_list = []
     linestyle_list = []
 
@@ -447,141 +557,188 @@ def plot_cache_results(caches: Dict[str, 'Cache'], out_file: str,
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--result-folder', type=str, default="./results",
-                        help='The folder where the json results are stored.')
-    parser.add_argument('--window-size', '-pws', type=int, default=7,
-                        help="Num. of days to plot")
-    parser.add_argument('--exp-values', type=list, default=[2, 3, 4],
-                        help="Exponential of cost function")
-    parser.add_argument('--jobs', '-j', type=int, default=4,
-                        help="Num. of concurrent jobs")
-    parser.add_argument('--cache-sizes', type=list,
-                        default=[1024.**2, 10.*1024.**2],
-                        help="List of cache sizes in MBytes (10TB default)")
+    from time import time
+    from random import choice, random
+    from string import ascii_lowercase
 
-    args, _ = parser.parse_known_args()
+    letters = ascii_lowercase
 
-    files = list(sorted(os.listdir(args.result_folder)))
+    def randomString(stringLength=4):
+        """Generate a random string of fixed length """
+        return ''.join(choice(letters) for i in range(stringLength))
 
-    data_frames = []
-    windows = []
-    updated_windows = []
+    cache_normal = CacheLRU(1024**2)
+    cache_numba = LRUCache(1024**2)
 
-    pool = Pool(processes=args.jobs)
+    data = [(randomString(), random() * 4096)
+            for _ in tqdm(range(1000000), desc="Gen data")]
 
-    counter = 0
-    for file_idx, file_ in enumerate(tqdm(
-        files, desc="Search stat results", position=0, ascii=True
-    )):
-        head, tail0 = os.path.splitext(file_)
-        head, tail1 = os.path.splitext(head)
+    start = time()
+    for file_, size in tqdm(data, desc="Test Python"):
+        cache_normal.get(file_, size)
+    print(f"Result in {time() - start}s")
 
-        if tail0 == ".gz" and tail1 == ".feather"\
-                and head.find("results_") == 0:
-            cur_file = os.path.join(args.result_folder, file_)
-            data_frames.append(cur_file)
+    start = time()
+    for file_, size in tqdm(data, desc="Test Numba"):
+        cache_numba.get(file_, size)
+    print(f"Result in {time() - start}s")
 
-        if len(data_frames) == args.window_size:
-            windows.append((
-                data_frames,
-                None,
-                simple_cost_function,
-                args.exp_values,
-                counter
-            ))
-            data_frames = []
-            counter += 1
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument('--result-folder', type=str, default="./results",
+    #                     help='The folder where the json results are stored.')
+    # parser.add_argument('--window-size', '-pws', type=int, default=7,
+    #                     help="Num. of days to plot")
+    # parser.add_argument('--exp-values', type=list, default=[2, 3, 4],
+    #                     help="Exponential of cost function")
+    # parser.add_argument('--jobs', '-j', type=int, default=4,
+    #                     help="Num. of concurrent jobs")
+    # parser.add_argument('--update-plots', '-U', action='store_true',
+    #                     help="Just update plots without weight calculation")
+    # parser.add_argument('--cache-sizes', type=list,
+    #                     default=[
+    #                         # 1024.**2,  # 1T
+    #                         10.*1024.**2  # 10T
+    #                     ],
+    #                     help="List of cache sizes in MBytes (10TB default)")
 
-        # TO TEST
-        # if file_idx == 7:
-        #     break
+    # args, _ = parser.parse_known_args()
 
-    if len(data_frames) > 0:
-        windows.append((
-            data_frames,
-            None,
-            simple_cost_function,
-            counter
-        ))
-        data_frames = []
+    # files = list(sorted(os.listdir(args.result_folder)))
 
-    for idx, new_df in enumerate(pool.imap(
-        parse_data_frames, windows)
-    ):
-        cur_file = os.path.join(
-            args.result_folder, f"window_{idx:02d}.feather.gz"
-        )
-        with gzip.GzipFile(cur_file, mode="wb") as output_file:
-            new_df.to_feather(output_file)
-        windows[idx] = (cur_file, args.cache_sizes, idx)
+    # data_frames = []
+    # windows = []
+    # updated_windows = []
 
-    for idx in range(len(windows) - 1):
-        source = windows[idx][0]
-        target = windows[idx+1][0]
-        updated_windows.append(
-            (
-                source,
-                target,
-                simple_cost_function,
-                args.exp_values,
-                idx + 1
-            )
-        )
+    # pool = Pool(processes=args.jobs)
 
-    for idx, new_df in enumerate(pool.imap(
-        parse_data_frames, updated_windows)
-    ):
-        cur_file = os.path.join(
-            args.result_folder, f"window_{idx+1:02d}_updated.feather.gz"
-        )
-        with gzip.GzipFile(cur_file, mode="wb") as output_file:
-            new_df.to_feather(output_file)
-        updated_windows[idx] = (
-            cur_file, args.cache_sizes, idx + 1
-        )
+    # counter = 0
+    # for file_idx, file_ in enumerate(tqdm(
+    #     files, desc="Search stat results", position=0, ascii=True
+    # )):
+    #     head, tail0 = os.path.splitext(file_)
+    #     head, tail1 = os.path.splitext(head)
 
-    cache_results = []
-    for idx, results in enumerate(pool.imap(
-        test_function, windows)
-    ):
-        cache_results.append(results)
-        plot_cache_results(results[0], os.path.join(
-            args.result_folder, f"window_{idx:02d}.png"
-        ))
+    #     if tail0 == ".gz" and tail1 == ".feather"\
+    #             and head.find("results_") == 0:
+    #         cur_file = os.path.join(args.result_folder, file_)
+    #         data_frames.append(cur_file)
 
-    updated_cache_results = []
-    for idx, results in enumerate(pool.imap(
-        test_function, updated_windows)
-    ):
-        updated_cache_results.append(results)
-        plot_cache_results(results[0], os.path.join(
-            args.result_folder, f"window_{idx:02d}_updated.png"
-        ))
+    #     if len(data_frames) == args.window_size:
+    #         windows.append((
+    #             data_frames,
+    #             None,
+    #             simple_cost_function,
+    #             args.exp_values,
+    #             counter
+    #         ))
+    #         data_frames = []
+    #         counter += 1
 
-    for idx in range(1, len(windows)):
-        windows[idx] = windows[idx] + (cache_results[idx],)
+    #     # TO TEST
+    #     # if file_idx == 7:
+    #     #     break
 
-    for idx in range(1, len(updated_windows)):
-        updated_windows[idx] = updated_windows[idx] + (cache_results[idx],)
+    # if len(data_frames) > 0:
+    #     windows.append((
+    #         data_frames,
+    #         None,
+    #         simple_cost_function,
+    #         counter
+    #     ))
+    #     data_frames = []
 
-    cache_results = []
-    for idx, results in enumerate(pool.imap(
-        test_function, windows[1:]), 1
-    ):
-        cache_results.append(results)
-        plot_cache_results(results[0], os.path.join(
-            args.result_folder, f"window_{idx:02d}_hot_cache.png"
-        ))
+    # if not args.update_plots:
+    #     for idx, new_df in enumerate(pool.imap(
+    #         parse_data_frames, windows)
+    #     ):
+    #         cur_file = os.path.join(
+    #             args.result_folder, f"window_{idx:02d}.feather.gz"
+    #         )
+    #         with gzip.GzipFile(cur_file, mode="wb") as output_file:
+    #             new_df.to_feather(output_file)
+    #         windows[idx] = (cur_file, args.cache_sizes, idx)
+    # else:
+    #     for idx, _ in enumerate(windows):
+    #         cur_file = os.path.join(
+    #             args.result_folder, f"window_{idx:02d}.feather.gz"
+    #         )
+    #         windows[idx] = (cur_file, args.cache_sizes, idx)
 
-    updated_cache_results = []
-    for idx, results in enumerate(pool.imap(
-        test_function, updated_windows[1:]), 1
-    ):
-        updated_cache_results.append(results)
-        plot_cache_results(results[0], os.path.join(
-            args.result_folder, f"window_{idx:02d}_hot_cache_updated.png"
-        ))
+    # for idx in range(len(windows) - 1):
+    #     source = windows[idx][0]
+    #     target = windows[idx+1][0]
+    #     updated_windows.append(
+    #         (
+    #             source,
+    #             target,
+    #             simple_cost_function,
+    #             args.exp_values,
+    #             idx + 1
+    #         )
+    #     )
+
+    # if not args.update_plots:
+    #     for idx, new_df in enumerate(pool.imap(
+    #         parse_data_frames, updated_windows)
+    #     ):
+    #         cur_file = os.path.join(
+    #             args.result_folder, f"window_{idx+1:02d}_updated.feather.gz"
+    #         )
+    #         with gzip.GzipFile(cur_file, mode="wb") as output_file:
+    #             new_df.to_feather(output_file)
+    #         updated_windows[idx] = (
+    #             cur_file, args.cache_sizes, idx + 1
+    #         )
+    # else:
+    #     for idx, _ in enumerate(updated_windows):
+    #         cur_file = os.path.join(
+    #             args.result_folder, f"window_{idx+1:02d}_updated.feather.gz"
+    #         )
+    #         updated_windows[idx] = (
+    #             cur_file, args.cache_sizes, idx + 1
+    #         )
+
+    # cache_results = []
+    # for idx, results in enumerate(pool.imap(
+    #     test_function, windows)
+    # ):
+    #     cache_results.append(results)
+    #     plot_cache_results(results[0], os.path.join(
+    #         args.result_folder, f"window_{idx:02d}.png"
+    #     ))
+
+    # updated_cache_results = []
+    # for idx, results in enumerate(pool.imap(
+    #     test_function, updated_windows)
+    # ):
+    #     updated_cache_results.append(results)
+    #     plot_cache_results(results[0], os.path.join(
+    #         args.result_folder, f"window_{idx:02d}_updated.png"
+    #     ))
+
+    # for idx in range(1, len(windows)):
+    #     windows[idx] = windows[idx] + (cache_results[idx],)
+
+    # for idx in range(1, len(updated_windows)):
+    #     updated_windows[idx] = updated_windows[idx] + (cache_results[idx],)
+
+    # cache_results = []
+    # for idx, results in enumerate(pool.imap(
+    #     test_function, windows[1:]), 1
+    # ):
+    #     cache_results.append(results)
+    #     plot_cache_results(results[0], os.path.join(
+    #         args.result_folder, f"window_{idx:02d}_hot_cache.png"
+    #     ))
+
+    # updated_cache_results = []
+    # for idx, results in enumerate(pool.imap(
+    #     test_function, updated_windows[1:]), 1
+    # ):
+    #     updated_cache_results.append(results)
+    #     plot_cache_results(results[0], os.path.join(
+    #         args.result_folder, f"window_{idx:02d}_hot_cache_updated.png"
+    #     ))
 
 
 if __name__ == "__main__":
