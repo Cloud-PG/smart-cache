@@ -54,7 +54,7 @@ def plot_info_window(window: int, filename: str, **kwargs):
             cur_data['weights'].items(),
             key=lambda elm: elm[1],
             reverse=True
-            )
+        )
         ]
         plot_figure = figure(
             title=f"{cache_name} window {window}",
@@ -62,8 +62,13 @@ def plot_info_window(window: int, filename: str, **kwargs):
             plot_width=kwargs.get('plot_width', 1280),
             plot_height=kwargs.get('plot_height', 800),
             x_range=filenames,
-            x_axis_type=None
+            y_range=(1, int(max(cur_data['weights'].values())) + 10),
+            x_axis_type=None,
+            y_axis_type=kwargs.get('y_axis_type', 'auto'),
         )
+
+        # Empty plot with log scale:
+        # - https://github.com/bokeh/bokeh/issues/6671
 
         plot_figure.vbar(
             filenames,
@@ -72,7 +77,8 @@ def plot_info_window(window: int, filename: str, **kwargs):
                 for filename in filenames
             ],
             color="gray",
-            width=1.0
+            width=1.0,
+            bottom=0.01 if kwargs.get('y_axis_type', False) == 'log' else 0.0  # To avoid empty plot
         )
 
         plot_figure.vbar(
@@ -83,7 +89,8 @@ def plot_info_window(window: int, filename: str, **kwargs):
                 for filename in filenames
             ],
             color="blue",
-            width=1.0
+            width=1.0,
+            bottom=0.01 if kwargs.get('y_axis_type', False) == 'log' else 0.0  # To avoid empty plot
         )
 
         plot_figure.vbar(
@@ -94,7 +101,8 @@ def plot_info_window(window: int, filename: str, **kwargs):
                 for filename in filenames
             ],
             color="red",
-            width=1.0
+            width=1.0,
+            bottom=0.01 if kwargs.get('y_axis_type', False) == 'log' else 0.0  # To avoid empty plot
         )
 
         figures.append(plot_figure)
@@ -221,7 +229,8 @@ def cache_info_plot(window: int):
     plot_info_window(
         window,
         f'plot_info_w{window}.html',
-        title=f"Info window {window}"
+        title=f"Info window {window}",
+        y_axis_type="log"
     )
     return app.send_static_file(f'plot_info_w{window}.html')
 
