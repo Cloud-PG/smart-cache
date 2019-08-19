@@ -32,6 +32,8 @@ redis = "*"
 seaborn = "*"
 flask = "*"
 bokeh = "*"
+grpcio-tools = "*"
+grpcio = "*"
 
 [requires]
 python_version = "3"
