@@ -563,6 +563,8 @@ def simulate(cache, windows: list, region: str = "_all_",
             position=process_num, ascii=True,
             total=len(window)
         )
+        row_index = 0
+
         for filename in window:
             with gzip.GzipFile(
                 filename, mode="rb"
@@ -608,10 +610,11 @@ def simulate(cache, windows: list, region: str = "_all_",
                     cur_size = cache.size
 
                 if plot_server:
-                    buffer["hit_rate"].append((row_idx, cur_hit_rate))
-                    buffer["size"].append((row_idx, cur_size))
+                    buffer["hit_rate"].append((row_index, cur_hit_rate))
+                    buffer["size"].append((row_index, cur_size))
                     buffer["written_data"].append(
-                        (row_idx, cur_written_data))
+                        (row_index, cur_written_data))
+                    row_index += 1
 
                     if len(buffer['hit_rate']) == 10000:
                         requests.put(
@@ -1116,7 +1119,7 @@ def main():
 
         pool = Pool(processes=args.jobs)
 
-        for file_idx, file_ in enumerate(tqdm(
+        for _, file_ in enumerate(tqdm(
             result_files, desc="Search stat results", ascii=True
         )):
             head, tail0 = os.path.splitext(file_)
