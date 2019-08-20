@@ -1,4 +1,4 @@
-#!/urs/bin/env bash
+#!/usr/bin/env bash
 
 protoc -I cache cache/simService/simService.proto --go_out=plugins=grpc:cache/
 
@@ -7,5 +7,3 @@ touch simService/__init__.py
 rm -rf pySimService
 mv -f simService pySimService
 sed -i -e 's/from\ simService/from\ \./g' ./pySimService/simService_pb2_grpc.py
-rm ./pySimService/simService_pb2_grpc.py-e
-

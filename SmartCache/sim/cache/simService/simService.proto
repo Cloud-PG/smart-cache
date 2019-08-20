@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+import "google/protobuf/empty.proto";
+
 option java_multiple_files = true;
 option java_package = "io.grpc.cache.sim.service";
 option java_outer_classname = "CacheSimService";
@@ -9,6 +11,8 @@ package simservice;
 service SimService {
 
   rpc SimServiceGet(SimCommonFile) returns (SimCacheStatus) {}
+  rpc SimServiceClear(google.protobuf.Empty) returns (SimCacheStatus) {}
+  rpc SimServiceInfo(google.protobuf.Empty) returns (SimCacheInfo) {}
 
 }
 
@@ -22,4 +26,9 @@ message SimCacheStatus {
   float size = 2;
   float writtenData = 3;
   float capacity = 4;
+}
+
+message SimCacheInfo {
+  map<string, float> cacheFiles = 1;
+  map<string, float> fileWeights = 2;
 }

@@ -5,6 +5,7 @@ import (
 	"context"
 
 	pb "./simService"
+	google_protobuf "github.com/golang/protobuf/ptypes/empty"
 )
 
 // LRU cache
@@ -20,6 +21,27 @@ func (cache *LRU) Init() {
 	cache.queue = list.New()
 }
 
+// Clear the LRU struct
+func (cache *LRU) Clear() {
+	cache.files = make(map[string]float32)
+	tmpVal := cache.queue.Front()
+	for {
+		if tmpVal == nil {
+			break
+		} else if tmpVal.Next() == nil {
+			cache.queue.Remove(tmpVal)
+			break
+		}
+		tmpVal = tmpVal.Next()
+		cache.queue.Remove(tmpVal.Prev())
+	}
+	cache.queue = list.New()
+	cache.hit = 0.
+	cache.miss = 0.
+	cache.writtenData = 0.
+	cache.size = 0.
+}
+
 // SimServiceGet updates the cache from a protobuf message
 func (cache *LRU) SimServiceGet(ctx context.Context, commonFile *pb.SimCommonFile) (*pb.SimCacheStatus, error) {
 	cache.Get(commonFile.Filename, commonFile.Size)
@@ -31,12 +53,26 @@ func (cache *LRU) SimServiceGet(ctx context.Context, commonFile *pb.SimCommonFil
 	}, nil
 }
 
-/*
-  list -> Front [filename, filename, filname ... filename] Back
-                  LRU                              new
-*/
+// SimServiceClear deletes all cache content
+func (cache *LRU) SimServiceClear(ctx context.Context, in *google_protobuf.Empty) (*pb.SimCacheStatus, error) {
+	cache.Clear()
+	return &pb.SimCacheStatus{
+		HitRate:     cache.HitRate(),
+		Size:        cache.Size(),
+		WrittenData: cache.WrittenData(),
+		Capacity:    cache.Capacity(),
+	}, nil
+}
+
+// SimServiceInfo returns the current cache context
+func (cache *LRU) SimServiceInfo(ctx context.Context, in *google_protobuf.Empty) (*pb.SimCacheInfo, error) {
+	return &pb.SimCacheInfo{
+		CacheFiles: cache.files,
+	}, nil
+}
+
 func (cache *LRU) updatePolicy(filename string, size float32, hit bool) bool {
-	var added = false
+	var added bool = false
 	if !hit {
 		if cache.Size()+size > cache.MaxSize {
 			var totalDeleted float32
@@ -97,7 +133,11 @@ func (cache *LRU) Get(filename string, size float32) bool {
 
 // HitRate of the cache
 func (cache LRU) HitRate() float32 {
-	return (cache.hit / (cache.hit + cache.miss)) * 100.
+	if cache.hit == 0. {
+		return 0.
+	} else {
+		return (cache.hit / (cache.hit + cache.miss)) * 100.
+	}
 }
 
 // Size of the cache

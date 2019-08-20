@@ -19,12 +19,38 @@ func TestLRUCacheBaseMultipleInsert(t *testing.T) {
 
 	if !res {
 		t.Fatalf("First insert error -> Expected %t but got %t", true, res)
-	} else if testCache.HitRate() != 0.75 {
-		t.Fatalf("Hit rate error -> Expected %f but got %f", 0.75, testCache.HitRate())
+	} else if testCache.HitRate() != 75. {
+		t.Fatalf("Hit rate error -> Expected %f but got %f", 75., testCache.HitRate())
 	} else if testCache.Size() != 1.0 {
 		t.Fatalf("Size error -> Expected %f but got %f", 1.0, testCache.Size())
 	} else if testCache.WrittenData() != 1.0 {
 		t.Fatalf("Written data error -> Expected %f but got %f", 1.0, testCache.WrittenData())
+	}
+}
+
+func TestLRUCacheClear(t *testing.T) {
+	testCache := LRU{
+		MaxSize: 3.0,
+	}
+	testCache.Init()
+
+	testCache.Get("/a/b/c/d/file0", 1.0)
+	testCache.Get("/a/b/c/d/file0", 1.0)
+	testCache.Get("/a/b/c/d/file0", 1.0)
+	testCache.Get("/a/b/c/d/file0", 1.0)
+
+	testCache.Clear()
+
+	if testCache.HitRate() != 0. {
+		t.Fatalf("Hit rate error -> Expected %f but got %f", 0., testCache.HitRate())
+	} else if testCache.Size() != 0. {
+		t.Fatalf("Size error -> Expected %f but got %f", 0., testCache.Size())
+	} else if testCache.WrittenData() != 0. {
+		t.Fatalf("Written data error -> Expected %f but got %f", 0., testCache.WrittenData())
+	} else if testCache.queue.Len() != 0 {
+		t.Fatalf("Queue error -> Expected %d but got %d", 0, testCache.queue.Len())
+	} else if len(testCache.files) != 0 {
+		t.Fatalf("Cache error -> Expected %d but got %d", 0, len(testCache.files))
 	}
 }
 
@@ -48,8 +74,8 @@ func TestLRUCacheInsert(t *testing.T) {
 	// }
 	// println()
 
-	if testCache.HitRate() != 0.375 {
-		t.Fatalf("Hit rate error -> Expected %f but got %f", 0.375, testCache.HitRate())
+	if testCache.HitRate() != 37.5 {
+		t.Fatalf("Hit rate error -> Expected %f but got %f", 37.5, testCache.HitRate())
 	} else if testCache.Size() != 3.0 {
 		t.Fatalf("Size error -> Expected %f but got %f", 3.0, testCache.Size())
 	} else if testCache.WrittenData() != 5.0 {

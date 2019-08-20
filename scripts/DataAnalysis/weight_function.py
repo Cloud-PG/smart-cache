@@ -17,6 +17,7 @@ import numpy as np
 import pandas as pd
 import requests
 import seaborn as sns
+from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 from tqdm import tqdm
 
 from SmartCache.sim.pySimService import simService_pb2, simService_pb2_grpc
@@ -388,7 +389,7 @@ class LRUCache(object):
     @property
     def info(self):
         info = {
-            'weights': {},
+            'weights': None,
             'cache': dict(zip(self._cache, self._counters)),
             'df': None,
             'correlation_matrix': None
@@ -535,6 +536,9 @@ def simulate(cache, windows: list, region: str = "_all_",
     if remote:
         channel = grpc.insecure_channel(cache)
         stub = simService_pb2_grpc.SimServiceStub(channel)
+        stub.SimServiceClear(
+            google_dot_protobuf_dot_empty__pb2.Empty()
+        )
 
     if not plot_server:
         tmp_size_history = NamedTemporaryFile()
@@ -586,11 +590,23 @@ def simulate(cache, windows: list, region: str = "_all_",
                         # Convert from Bytes to MegaBytes
                         record['size'] / 1024**2
                     )
+
+                if remote:
+                    cur_hit_rate = stub_result.hitRate
+                    cur_capacity = stub_result.capacity
+                    cur_written_data = stub_result.writtenData
+                    cur_size = stub_result.size
+                else:
+                    cur_hit_rate = cache.hit_rate
+                    cur_capacity = cache.capacity
+                    cur_written_data = cache.written_data
+                    cur_size = cache.size
+
                 if plot_server:
-                    buffer["hit_rate"].append((row_idx, cache.hit_rate))
-                    buffer["size"].append((row_idx, cache.size))
+                    buffer["hit_rate"].append((row_idx, cur_hit_rate))
+                    buffer["size"].append((row_idx, cur_size))
                     buffer["written_data"].append(
-                        (row_idx, cache.written_data))
+                        (row_idx, cur_written_data))
 
                     if len(buffer['hit_rate']) == 10000:
                         requests.put(
@@ -613,15 +629,6 @@ def simulate(cache, windows: list, region: str = "_all_",
                             'size': [],
                             'written_data': [],
                         }
-
-                if remote:
-                    cur_hit_rate = stub_result.hitRate
-                    cur_capacity = stub_result.capacity
-                    cur_written_data = stub_result.writtenData
-                else:
-                    cur_hit_rate = cache.hit_rate
-                    cur_capacity = cache.capacity
-                    cur_written_data = cache.written_data
 
                 record_pbar.desc = f"[{str(cache)[:4]+str(cache)[-12:]}][Simulation][Window {num_window+1}/{len(windows)}][File {num_file}/{len(window)}][Hit Rate {cur_hit_rate:06.2f}][Capacity {cur_capacity:06.2f}][Written {cur_written_data:0.2f}]"
                 record_pbar.update(1)
@@ -655,6 +662,17 @@ def simulate(cache, windows: list, region: str = "_all_",
             record_pbar.close()
 
             if plot_server:
+                if remote:
+                    remote_res = stub.SimServiceInfo(
+                        google_dot_protobuf_dot_empty__pb2.Empty()
+                    )
+                    cur_cache_info = {
+                        'cache': dict(remote_res.cacheFiles),
+                        'weights': {}
+                    }
+                else:
+                    cur_cache_info = cache.info
+
                 requests.put(
                     "/".join([
                         plot_server,
@@ -666,7 +684,7 @@ def simulate(cache, windows: list, region: str = "_all_",
                     headers={
                         'Content-Type': 'application/octet-stream'},
                     data=gzip.compress(
-                        json.dumps(cache.info).encode('utf-8')
+                        json.dumps(cur_cache_info).encode('utf-8')
                     ),
                     timeout=None
                 )
@@ -699,6 +717,8 @@ def simulate(cache, windows: list, region: str = "_all_",
 
     if remote:
         channel.close()
+        del stub
+        del channel
 
     if not plot_server:
         size_history = load_results(tmp_size_history.name)
@@ -997,7 +1017,7 @@ def main():
                         help='The output plot name.')
     parser.add_argument('--plot-server', type=str,
                         default=None,
-                        help='The plotting server url.')
+                        help='The plotting server url. It needs the protocol, e.g. "http://localhost:4321"')
     parser.add_argument('--region', type=str, default="it",
                         help='Region to filter.')
     parser.add_argument('--plot-results', type=str, default="",
@@ -1049,6 +1069,8 @@ def main():
                 if function.find(":") != -1:
                     cache_list.append(function.split(":", 1)[1])
                     cache_remote_list.append(True)
+                else:
+                    cache_remote_list.append(False)
                     for size in args.cache_sizes:
                         for clear_cache in clear_cache_list:
                             cache_list.append(
@@ -1059,7 +1081,6 @@ def main():
                                     }
                                 )
                             )
-                            cache_remote_list.append(False)
                     # TEST
                     #     break
                     # break
@@ -1125,8 +1146,9 @@ def main():
         )), position=0,
                 total=len(cache_list),
                 desc="Cache simulated",
-                ascii=True)
-        ):
+                ascii=True
+        )):
+            print(cache_results)
             if not args.plot_server:
                 cache_name = f"{str(cache_list[idx])}"
                 store_results(f'cache_results_{id(pool)}.pickle', {
