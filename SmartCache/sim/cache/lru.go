@@ -31,8 +31,12 @@ func (cache *LRU) SimServiceGet(ctx context.Context, commonFile *pb.SimCommonFil
 	}, nil
 }
 
+/*
+  list -> Front [filename, filename, filname ... filename] Back
+                  LRU                              new
+*/
 func (cache *LRU) updatePolicy(filename string, size float32, hit bool) bool {
-	var added bool = false
+	var added = false
 	if !hit {
 		if cache.Size()+size > cache.MaxSize {
 			var totalDeleted float32
