@@ -107,6 +107,9 @@ def plot_info_window(window: int, filename: str, **kwargs):
 
         figures.append(plot_figure)
 
+        plot_figure.legend.location = "top_left"
+        plot_figure.legend.click_policy="hide"
+
     save(column(*figures))
 
 
@@ -164,6 +167,9 @@ def plot_line(table_name: str, filename: str, **kwargs):
 
     if v_lines:
         plot_figure.renderers.extend(v_lines)
+
+    plot_figure.legend.location = "top_left"
+    plot_figure.legend.click_policy="hide"
 
     save(plot_figure)
 
