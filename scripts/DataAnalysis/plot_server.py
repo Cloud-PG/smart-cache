@@ -78,7 +78,8 @@ def plot_info_window(window: int, filename: str, **kwargs):
             ],
             color="gray",
             width=1.0,
-            bottom=0.01 if kwargs.get('y_axis_type', False) == 'log' else 0.0  # To avoid empty plot
+            bottom=0.01 if kwargs.get(
+                'y_axis_type', False) == 'log' else 0.0  # To avoid empty plot
         )
 
         plot_figure.vbar(
@@ -90,7 +91,8 @@ def plot_info_window(window: int, filename: str, **kwargs):
             ],
             color="blue",
             width=1.0,
-            bottom=0.01 if kwargs.get('y_axis_type', False) == 'log' else 0.0  # To avoid empty plot
+            bottom=0.01 if kwargs.get(
+                'y_axis_type', False) == 'log' else 0.0  # To avoid empty plot
         )
 
         plot_figure.vbar(
@@ -102,13 +104,14 @@ def plot_info_window(window: int, filename: str, **kwargs):
             ],
             color="red",
             width=1.0,
-            bottom=0.01 if kwargs.get('y_axis_type', False) == 'log' else 0.0  # To avoid empty plot
+            bottom=0.01 if kwargs.get(
+                'y_axis_type', False) == 'log' else 0.0  # To avoid empty plot
         )
 
         figures.append(plot_figure)
 
         plot_figure.legend.location = "top_left"
-        plot_figure.legend.click_policy="hide"
+        plot_figure.legend.click_policy = "hide"
 
     save(column(*figures))
 
@@ -169,7 +172,7 @@ def plot_line(table_name: str, filename: str, **kwargs):
         plot_figure.renderers.extend(v_lines)
 
     plot_figure.legend.location = "top_left"
-    plot_figure.legend.click_policy="hide"
+    plot_figure.legend.click_policy = "hide"
 
     save(plot_figure)
 
@@ -239,6 +242,20 @@ def cache_info_plot(window: int):
         y_axis_type="log"
     )
     return app.send_static_file(f'plot_info_w{window}.html')
+
+
+@app.route('/cache/plot', methods=['DELETE'])
+def delete_plots(window: int):
+    TABLES = {
+        'hit_rate': {},
+        'size': {},
+        'written_data': {}
+    }
+
+    WINDOW_INFO = {}
+
+    TABLE_COLORS = {}
+    return f'Deleted all data'
 
 
 @app.route('/cache/info/<string:cache_name>/<int:window>', methods=['POST', 'PUT'])
