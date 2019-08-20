@@ -534,11 +534,15 @@ def simulate(cache, windows: list, region: str = "_all_",
     )
 
     if remote:
-        channel = grpc.insecure_channel(cache)
+        _, cache_name, cache_rpc_url = cache.split(':', 2)
+        print(cache_name, cache_rpc_url)
+        channel = grpc.insecure_channel(cache_rpc_url)
         stub = simService_pb2_grpc.SimServiceStub(channel)
         stub.SimServiceClear(
             google_dot_protobuf_dot_empty__pb2.Empty()
         )
+    else:
+        cache_name = str(cache)
 
     if not plot_server:
         tmp_size_history = NamedTemporaryFile()
@@ -576,6 +580,7 @@ def simulate(cache, windows: list, region: str = "_all_",
                 desc=f"[{str(cache)[:4]+str(cache)[-12:]}][Simulation][Window {num_window+1}/{len(windows)}][File {num_file}/{len(window)}]",
                 ascii=True
             )
+
             for row_idx, record in df.iterrows():
                 if remote:
                     stub_result = stub.SimServiceGet(
@@ -614,7 +619,7 @@ def simulate(cache, windows: list, region: str = "_all_",
                                 plot_server,
                                 "cache",
                                 "update",
-                                str(cache),
+                                cache_name,
                                 f"{num_window}"
                             ]),
                             headers={
@@ -630,72 +635,69 @@ def simulate(cache, windows: list, region: str = "_all_",
                             'written_data': [],
                         }
 
-                record_pbar.desc = f"[{str(cache)[:4]+str(cache)[-12:]}][Simulation][Window {num_window+1}/{len(windows)}][File {num_file}/{len(window)}][Hit Rate {cur_hit_rate:06.2f}][Capacity {cur_capacity:06.2f}][Written {cur_written_data:0.2f}]"
+                record_pbar.desc = f"[{cache_name[:4]+cache_name[-12:]}][Simulation][Window {num_window+1}/{len(windows)}][File {num_file}/{len(window)}][Hit Rate {cur_hit_rate:06.2f}][Capacity {cur_capacity:06.2f}][Written {cur_written_data:0.2f}]"
                 record_pbar.update(1)
 
                 # TEST
                 # if row_idx == 2000:
                 #     break
 
-            if plot_server and len(buffer['hit_rate']) > 0:
-                requests.put(
-                    "/".join([
-                        plot_server,
-                        "cache",
-                        "update",
-                        str(cache),
-                        f"{num_window}"
-                    ]),
-                    headers={
-                        'Content-Type': 'application/octet-stream'},
-                    data=gzip.compress(
-                        json.dumps(buffer).encode('utf-8')
-                    ),
-                    timeout=None
-                )
-                buffer = {
-                    'hit_rate': [],
-                    'size': [],
-                    'written_data': [],
-                }
+            else:
+                if plot_server and len(buffer['hit_rate']) > 0:
+                    requests.put(
+                        "/".join([
+                            plot_server,
+                            "cache",
+                            "update",
+                            cache_name,
+                            f"{num_window}"
+                        ]),
+                        headers={
+                            'Content-Type': 'application/octet-stream'},
+                        data=gzip.compress(
+                            json.dumps(buffer).encode('utf-8')
+                        ),
+                        timeout=None
+                    )
+                    buffer = {
+                        'hit_rate': [],
+                        'size': [],
+                        'written_data': [],
+                    }
 
+            num_file += 1
             record_pbar.close()
 
-            if plot_server:
-                if remote:
-                    remote_res = stub.SimServiceInfo(
-                        google_dot_protobuf_dot_empty__pb2.Empty()
-                    )
-                    cur_cache_info = {
-                        'cache': dict(remote_res.cacheFiles),
-                        'weights': {}
-                    }
-                else:
-                    cur_cache_info = cache.info
-
-                requests.put(
-                    "/".join([
-                        plot_server,
-                        "cache",
-                        "info",
-                        str(cache),
-                        f"{num_window}"
-                    ]),
-                    headers={
-                        'Content-Type': 'application/octet-stream'},
-                    data=gzip.compress(
-                        json.dumps(cur_cache_info).encode('utf-8')
-                    ),
-                    timeout=None
+        if plot_server:
+            if remote:
+                remote_res = stub.SimServiceInfo(
+                    google_dot_protobuf_dot_empty__pb2.Empty()
                 )
+                cur_cache_info = {
+                    'cache': dict(remote_res.cacheFiles),
+                    'weights': {}
+                }
+            else:
+                cur_cache_info = cache.info
 
-            win_pbar.update(1)
-            win_pbar.desc = f"[{str(cache)[:4]+str(cache)[-12:]}][Open Data Frames][Window {num_window+1}/{len(windows)}][File {num_file}/{len(window)}]"
-            num_file += 1
+            requests.put(
+                "/".join([
+                    plot_server,
+                    "cache",
+                    "info",
+                    cache_name,
+                    f"{num_window}"
+                ]),
+                headers={
+                    'Content-Type': 'application/octet-stream'},
+                data=gzip.compress(
+                    json.dumps(cur_cache_info).encode('utf-8')
+                ),
+                timeout=None
+            )
 
-            # TEST
-            # if num_file == 2:
-            #     break
+        win_pbar.update(1)
+        win_pbar.desc = f"[{cache_name[:4]+cache_name[-12:]}][Open Data Frames][Window {num_window+1}/{len(windows)}][File {num_file}/{len(window)}]"
 
         if not plot_server and not remote:
             cur_size_history, cur_hit_rate_history, cur_write_history = cache.history
@@ -1067,7 +1069,7 @@ def main():
         for function in args.functions:
             if function.find('lru') != -1:
                 if function.find(":") != -1:
-                    cache_list.append(function.split(":", 1)[1])
+                    cache_list.append(function)
                     cache_remote_list.append(True)
                 else:
                     cache_remote_list.append(False)
