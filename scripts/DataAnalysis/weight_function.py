@@ -674,10 +674,15 @@ def simulate(cache, windows: list, region: str = "_all_",
         if plot_server:
             if remote:
                 remote_res = stub.SimServiceInfo(
-                    google_dot_protobuf_dot_empty__pb2.Empty()
+                    
                 )
                 cur_cache_info = {
-                    'cache': dict(remote_res.cacheFiles),
+                    'cache': dict(
+                        (cache_file.filename, cache_file.size)
+                        for cache_file in stub.ListFeatures(
+                            google_dot_protobuf_dot_empty__pb2.Empty()
+                        )
+                    ),
                     'weights': {}
                 }
             else:
