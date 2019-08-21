@@ -4,7 +4,7 @@ import (
 	"context"
 
 	pb "./simService"
-	google_protobuf "github.com/golang/protobuf/ptypes/empty"
+	empty "github.com/golang/protobuf/ptypes/empty"
 )
 
 // Cache is the base interface for the cache object
@@ -23,6 +23,7 @@ type Cache interface {
 	Get(filename string, size float32) bool
 
 	SimServiceGet(context.Context, *pb.SimCommonFile) (*pb.SimCacheStatus, error)
-	SimServiceClear(ctx context.Context, in *google_protobuf.Empty) (*pb.SimCacheStatus, error)
-	SimServiceInfo(ctx context.Context, in *google_protobuf.Empty) (*pb.SimCacheInfo, error)
+	SimServiceClear(context.Context, *empty.Empty) (*pb.SimCacheStatus, error)
+	SimServiceGetInfoCacheFiles(*empty.Empty, pb.SimService_SimServiceGetInfoCacheFilesServer) (error)
+	SimServiceGetInfoFilesWeights(*empty.Empty, pb.SimService_SimServiceGetInfoFilesWeightsServer) (error)
 }

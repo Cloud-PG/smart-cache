@@ -60,8 +60,7 @@ func commandRun() *cobra.Command {
 			}
 			fmt.Printf("[Start server on port %d]\n", servicePort)
 
-			err = grpcServer.Serve(lis)
-			if err != nil {
+			if err := grpcServer.Serve(lis); err != nil {
 				log.Fatalf("ERR: grpc serve error '%s'", err)
 			}
 		},

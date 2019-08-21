@@ -12,7 +12,8 @@ service SimService {
 
   rpc SimServiceGet(SimCommonFile) returns (SimCacheStatus) {}
   rpc SimServiceClear(google.protobuf.Empty) returns (SimCacheStatus) {}
-  rpc SimServiceInfo(google.protobuf.Empty) returns (SimCacheInfo) {}
+  rpc SimServiceGetInfoCacheFiles(google.protobuf.Empty) returns (stream SimCommonFile) {}
+  rpc SimServiceGetInfoFilesWeights(google.protobuf.Empty) returns (stream SimFileWeight) {}
 
 }
 
@@ -28,7 +29,7 @@ message SimCacheStatus {
   float capacity = 4;
 }
 
-message SimCacheInfo {
-  map<string, float> cacheFiles = 1;
-  map<string, float> fileWeights = 2;
+message SimFileWeight {
+  string filename = 1;
+  float weight = 2;
 }

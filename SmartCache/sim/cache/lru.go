@@ -5,7 +5,7 @@ import (
 	"context"
 
 	pb "./simService"
-	google_protobuf "github.com/golang/protobuf/ptypes/empty"
+	empty "github.com/golang/protobuf/ptypes/empty"
 )
 
 // LRU cache
@@ -54,7 +54,7 @@ func (cache *LRU) SimServiceGet(ctx context.Context, commonFile *pb.SimCommonFil
 }
 
 // SimServiceClear deletes all cache content
-func (cache *LRU) SimServiceClear(ctx context.Context, in *google_protobuf.Empty) (*pb.SimCacheStatus, error) {
+func (cache *LRU) SimServiceClear(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
 	cache.Clear()
 	return &pb.SimCacheStatus{
 		HitRate:     cache.HitRate(),
@@ -64,11 +64,22 @@ func (cache *LRU) SimServiceClear(ctx context.Context, in *google_protobuf.Empty
 	}, nil
 }
 
-// SimServiceInfo returns the current cache context
-func (cache *LRU) SimServiceInfo(ctx context.Context, in *google_protobuf.Empty) (*pb.SimCacheInfo, error) {
-	return &pb.SimCacheInfo{
-		CacheFiles: cache.files,
-	}, nil
+// SimServiceGetInfoCacheFiles returns the content of the cache: filenames and sizes
+func (cache *LRU) SimServiceGetInfoCacheFiles(_ *empty.Empty, stream pb.SimService_SimServiceGetInfoCacheFilesServer) error {
+	for key, value := range cache.files {
+		curFile := &pb.SimCommonFile{
+			Filename: key,
+			Size: value,
+		}
+		if err := stream.Send(curFile); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (cache *LRU) SimServiceGetInfoFilesWeights(_ *empty.Empty, stream pb.SimService_SimServiceGetInfoFilesWeightsServer) error {
+	return nil
 }
 
 func (cache *LRU) updatePolicy(filename string, size float32, hit bool) bool {
