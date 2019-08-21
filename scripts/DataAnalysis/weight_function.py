@@ -558,7 +558,7 @@ def simulate(cache, windows: list, region: str = "_all_",
     for num_window, window in enumerate(windows):
         num_file = 1
         win_pbar = tqdm(
-            desc=f"[{str(cache)[:4]+str(cache)[-12:]}][Open Data Frames][Window {num_window+1}/{len(windows)}][File {num_file}/{len(window)}]",
+            desc=f"[{str(cache_name)[:4]+str(cache_name)[-12:]}][Open Data Frames][Window {num_window+1}/{len(windows)}][File {num_file}/{len(window)}]",
             position=process_num, ascii=True,
             total=len(window)
         )
@@ -578,7 +578,7 @@ def simulate(cache, windows: list, region: str = "_all_",
 
             record_pbar = tqdm(
                 total=df.shape[0], position=process_num,
-                desc=f"[{str(cache)[:4]+str(cache)[-12:]}][Simulation][Window {num_window+1}/{len(windows)}][File {num_file}/{len(window)}]",
+                desc=f"[{str(cache_name)[:4]+str(cache_name)[-12:]}][Simulation][Window {num_window+1}/{len(windows)}][File {num_file}/{len(window)}]",
                 ascii=True
             )
 
