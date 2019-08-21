@@ -535,7 +535,6 @@ def simulate(cache, windows: list, region: str = "_all_",
 
     if remote:
         _, cache_name, cache_rpc_url = cache.split(':', 2)
-        print(cache_name, cache_rpc_url)
         channel = grpc.insecure_channel(cache_rpc_url)
         stub = simService_pb2_grpc.SimServiceStub(channel)
         stub.SimServiceClear(
@@ -563,7 +562,7 @@ def simulate(cache, windows: list, region: str = "_all_",
             position=process_num, ascii=True,
             total=len(window)
         )
-        row_index = 0
+        request_idx = 0
 
         for filename in window:
             with gzip.GzipFile(
@@ -588,6 +587,7 @@ def simulate(cache, windows: list, region: str = "_all_",
                     stub_result = stub.SimServiceGet(
                         simService_pb2.SimCommonFile(
                             filename=record['filename'],
+                            # Convert from Bytes to MegaBytes
                             size=record['size'] / 1024**2
                         )
                     )
@@ -610,11 +610,11 @@ def simulate(cache, windows: list, region: str = "_all_",
                     cur_size = cache.size
 
                 if plot_server:
-                    buffer["hit_rate"].append((row_index, cur_hit_rate))
-                    buffer["size"].append((row_index, cur_size))
+                    buffer["hit_rate"].append((request_idx, cur_hit_rate))
+                    buffer["size"].append((request_idx, cur_size))
                     buffer["written_data"].append(
-                        (row_index, cur_written_data))
-                    row_index += 1
+                        (request_idx, cur_written_data))
+                    request_idx += 1
 
                     if len(buffer['hit_rate']) == 10000:
                         requests.put(
