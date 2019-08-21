@@ -680,7 +680,12 @@ def simulate(cache, windows: list, region: str = "_all_",
                             google_dot_protobuf_dot_empty__pb2.Empty()
                         )
                     ),
-                    'weights': {}
+                    'weights':  dict(
+                        (cache_file.filename, cache_file.weight)
+                        for cache_file in stub.SimServiceGetInfoFilesWeights(
+                            google_dot_protobuf_dot_empty__pb2.Empty()
+                        )
+                    ) if cache_name.lower.find("lru") else {}
                 }
             else:
                 cur_cache_info = cache.info
