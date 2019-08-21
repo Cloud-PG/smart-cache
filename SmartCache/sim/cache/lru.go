@@ -72,7 +72,7 @@ func (cache *LRU) SimServiceInfo(ctx context.Context, in *google_protobuf.Empty)
 }
 
 func (cache *LRU) updatePolicy(filename string, size float32, hit bool) bool {
-	var added bool = false
+	var added = false
 	if !hit {
 		if cache.Size()+size > cache.MaxSize {
 			var totalDeleted float32
