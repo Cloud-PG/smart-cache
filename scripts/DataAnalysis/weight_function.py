@@ -673,13 +673,10 @@ def simulate(cache, windows: list, region: str = "_all_",
 
         if plot_server:
             if remote:
-                remote_res = stub.SimServiceInfo(
-                    
-                )
                 cur_cache_info = {
                     'cache': dict(
                         (cache_file.filename, cache_file.size)
-                        for cache_file in stub.ListFeatures(
+                        for cache_file in stub.SimServiceGetInfoCacheFiles(
                             google_dot_protobuf_dot_empty__pb2.Empty()
                         )
                     ),
