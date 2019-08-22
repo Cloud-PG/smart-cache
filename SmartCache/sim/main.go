@@ -40,15 +40,21 @@ func commandRun() *cobra.Command {
 
 			switch cacheType {
 			case "lru":
-				fmt.Printf("[Create Cache][Size: %f]\n", cacheSize)
+				fmt.Printf("[Create LRU Cache][Size: %f]\n", cacheSize)
 				cacheInstance = &cache.LRU{
 					MaxSize: cacheSize,
 				}
 				cacheInstance.Init()
-				fmt.Printf("[Register Cache]\n")
+				fmt.Printf("[Register LRU Cache]\n")
 				pb.RegisterSimServiceServer(grpcServer, cacheInstance)
 			case "weight":
-				fmt.Println("ERR: To be implemented...")
+				fmt.Printf("[Create Weighted Cache][Size: %f]\n", cacheSize)
+				cacheInstance = &cache.Weighted{
+					MaxSize: cacheSize,
+				}
+				cacheInstance.Init(cache.FuncFileGroupWeight)
+				fmt.Printf("[Register Weighted Cache]\n")
+				pb.RegisterSimServiceServer(grpcServer, cacheInstance)
 			default:
 				fmt.Println("ERR: You need to specify a cache type.")
 			}

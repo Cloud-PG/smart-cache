@@ -69,7 +69,7 @@ func (cache *LRU) SimServiceGetInfoCacheFiles(_ *empty.Empty, stream pb.SimServi
 	for key, value := range cache.files {
 		curFile := &pb.SimCommonFile{
 			Filename: key,
-			Size: value,
+			Size:     value,
 		}
 		if err := stream.Send(curFile); err != nil {
 			return err
@@ -78,6 +78,7 @@ func (cache *LRU) SimServiceGetInfoCacheFiles(_ *empty.Empty, stream pb.SimServi
 	return nil
 }
 
+// SimServiceGetInfoFilesWeights returns the file weights
 func (cache *LRU) SimServiceGetInfoFilesWeights(_ *empty.Empty, stream pb.SimService_SimServiceGetInfoFilesWeightsServer) error {
 	return nil
 }
@@ -146,9 +147,8 @@ func (cache *LRU) Get(filename string, size float32) bool {
 func (cache LRU) HitRate() float32 {
 	if cache.hit == 0. {
 		return 0.
-	} else {
-		return (cache.hit / (cache.hit + cache.miss)) * 100.
 	}
+	return (cache.hit / (cache.hit + cache.miss)) * 100.
 }
 
 // Size of the cache
