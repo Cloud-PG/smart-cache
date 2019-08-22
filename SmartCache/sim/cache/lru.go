@@ -16,7 +16,7 @@ type LRU struct {
 }
 
 // Init the LRU struct
-func (cache *LRU) Init() {
+func (cache *LRU) Init(vars ...interface{}) {
 	cache.files = make(map[string]float32)
 	cache.queue = list.New()
 }

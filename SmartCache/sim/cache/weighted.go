@@ -10,6 +10,7 @@ import (
 	empty "github.com/golang/protobuf/ptypes/empty"
 )
 
+// FunctionType is used to select the weight function
 type FunctionType int
 
 const (
@@ -44,11 +45,11 @@ type Weighted struct {
 }
 
 // Init the LRU struct
-func (cache *Weighted) Init(functionType FunctionType) {
+func (cache *Weighted) Init(vars ...interface{}) {
 	cache.files = make(map[string]float32)
 	cache.groups = make(map[string]*groupFiles)
 	cache.queue = make([]*weightedFile, 0)
-	cache.functionType = functionType
+	cache.functionType = vars[0].(FunctionType)
 }
 
 // Clear the LRU struct
