@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 
 	"./cache"
 	pb "./cache/simService"
@@ -47,7 +48,7 @@ func commandRun() *cobra.Command {
 				cacheInstance.Init()
 				fmt.Printf("[Register LRU Cache]\n")
 				pb.RegisterSimServiceServer(grpcServer, cacheInstance)
-			case "weight":
+			case "weighted":
 				fmt.Printf("[Create Weighted Cache][Size: %f]\n", cacheSize)
 				cacheInstance = &cache.Weighted{
 					MaxSize: cacheSize,
@@ -57,6 +58,7 @@ func commandRun() *cobra.Command {
 				pb.RegisterSimServiceServer(grpcServer, cacheInstance)
 			default:
 				fmt.Println("ERR: You need to specify a cache type.")
+				os.Exit(-1)
 			}
 
 			fmt.Printf("[Try to liste to port %d]\n", servicePort)
