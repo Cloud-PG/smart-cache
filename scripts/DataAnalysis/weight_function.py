@@ -1097,6 +1097,12 @@ def main():
                     #     break
                     # break
 
+        for function in args.functions:
+            if function.find('lru') == -1:
+                if function.find(":") != -1:
+                    cache_list.append(function)
+                    cache_remote_list.append(True)
+
         for fun_name, function in [(fun_name, function)
                                    for fun_name, function in cost_functions.items()
                                    if fun_name in args.functions]:
