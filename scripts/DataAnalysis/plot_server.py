@@ -26,14 +26,25 @@ TABLE_COLORS = {}
 COLORS = cycle(["red", "mediumblue", "green", "purple", "black", "yellow"])
 
 
+def get_size_from_name(name: str) -> str:
+    string = name.split("_")
+    for part in string:
+        if part.find("T") != -1:
+            return part
+    return 'unknown'
+
+
 def plot_info_window(window: int, filename: str, **kwargs):
     data = {}
-    lru = {}
     for cache_name, info in WINDOW_INFO.items():
+        size = get_size_from_name(cache_name)
+        if size not in data:
+            data[size] = {}
         if cache_name.lower().find('lru') != -1:
             lru = info[window]['cache']
+            data[size]['lru'] = lru
         else:
-            data[cache_name] = {
+            data[size][cache_name] = {
                 'weights': info[window]['weights'],
                 'cache': info[window]['cache']
             }
@@ -49,69 +60,71 @@ def plot_info_window(window: int, filename: str, **kwargs):
 
     figures = []
 
-    for cache_name, cur_data in data.items():
-        filenames = [key for key, _ in sorted(
-            cur_data['weights'].items(),
-            key=lambda elm: elm[1],
-            reverse=True
-        )
-        ]
-        plot_figure = figure(
-            title=f"{cache_name} window {window}",
-            tools="box_zoom,pan,reset,save",
-            plot_width=kwargs.get('plot_width', 1280),
-            plot_height=kwargs.get('plot_height', 800),
-            x_range=filenames,
-            y_range=(1, int(max(cur_data['weights'].values())) + 10),
-            x_axis_type=None,
-            y_axis_type=kwargs.get('y_axis_type', 'auto'),
-        )
+    for size, caches in data.items():
+        for cache_name, cur_data in [
+            (cache_name, cur_data)
+            for cache_name, cur_data in caches.items()
+            if cache_name != 'lru'
+        ]:
+            filenames = [key for key, _ in sorted(
+                cur_data['weights'].items(),
+                key=lambda elm: elm[1],
+                reverse=True
+            )
+            ]
+            plot_figure = figure(
+                title=f"{cache_name} window {window}",
+                tools="box_zoom,pan,reset,save",
+                plot_width=kwargs.get('plot_width', 1280),
+                plot_height=kwargs.get('plot_height', 800),
+                x_range=filenames,
+                y_range=(1, int(max(cur_data['weights'].values())) + 10),
+                x_axis_type=None,
+                y_axis_type=kwargs.get('y_axis_type', 'auto'),
+            )
 
-        # Empty plot with log scale:
-        # - https://github.com/bokeh/bokeh/issues/6671
+            # Empty plot with log scale:
+            # - https://github.com/bokeh/bokeh/issues/6671
 
-        plot_figure.vbar(
-            filenames,
-            top=[
-                cur_data['weights'][filename]
-                for filename in filenames
-            ],
-            color="gray",
-            width=1.0,
-            bottom=0.01 if kwargs.get(
-                'y_axis_type', False) == 'log' else 0.0  # To avoid empty plot
-        )
+            plot_figure.vbar(
+                filenames,
+                top=[
+                    cur_data['weights'][filename]
+                    for filename in filenames
+                ],
+                color="gray",
+                width=1.0,
+                bottom=0.01 if kwargs.get(
+                    'y_axis_type', False) == 'log' else 0.0  # To avoid empty plot
+            )
 
-        plot_figure.vbar(
-            filenames,
-            top=[
-                cur_data['weights'][filename] * 0.75
-                if filename in cur_data['cache'] else 0
-                for filename in filenames
-            ],
-            color="blue",
-            width=1.0,
-            bottom=0.01 if kwargs.get(
-                'y_axis_type', False) == 'log' else 0.0  # To avoid empty plot
-        )
+            plot_figure.vbar(
+                filenames,
+                top=[
+                    cur_data['weights'][filename] * 0.75
+                    if filename in cur_data['cache'] else 0
+                    for filename in filenames
+                ],
+                color="blue",
+                width=1.0,
+                bottom=0.01 if kwargs.get(
+                    'y_axis_type', False) == 'log' else 0.0  # To avoid empty plot
+            )
 
-        plot_figure.vbar(
-            filenames,
-            top=[
-                cur_data['weights'][filename] * 0.5
-                if filename in lru else 0
-                for filename in filenames
-            ],
-            color="red",
-            width=1.0,
-            bottom=0.01 if kwargs.get(
-                'y_axis_type', False) == 'log' else 0.0  # To avoid empty plot
-        )
+            plot_figure.vbar(
+                filenames,
+                top=[
+                    cur_data['weights'][filename] * 0.5
+                    if filename in caches['lru'] else 0
+                    for filename in filenames
+                ],
+                color="red",
+                width=1.0,
+                bottom=0.01 if kwargs.get(
+                    'y_axis_type', False) == 'log' else 0.0  # To avoid empty plot
+            )
 
-        figures.append(plot_figure)
-
-        plot_figure.legend.location = "top_left"
-        plot_figure.legend.click_policy = "hide"
+            figures.append(plot_figure)
 
     save(column(*figures))
 
