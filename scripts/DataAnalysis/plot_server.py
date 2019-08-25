@@ -8,7 +8,7 @@ from typing import Dict, List
 from bokeh.models import Span
 from bokeh.layouts import column
 from bokeh.plotting import figure, output_file, save
-from flask import Flask, escape, request
+from flask import Flask, escape, request, jsonify
 from tqdm import tqdm
 
 BASE_PATH = "plot_server_app"
@@ -181,6 +181,21 @@ app = Flask(
     __name__,
     static_folder=os.path.abspath(BASE_PATH)
 )
+
+
+@app.route('/cache/service/status', methods=['GET'])
+def service_status():
+    return jsonify({
+        'status': "online",
+        'num_cache_hit_rates': len(TABLES['hit_rate']),
+        'num_cache_sizes': len(TABLES['size']),
+        'num_cache_written_data': len(TABLES['written_data']),
+        'num_cache_window_info': len(WINDOW_INFO),
+        'len_window_cache_hit_rate': [(f'[{cache_name}][window {win_idx}][len {len(window)}]')for cache_name, cache in TABLES['hit_rate'].items() for win_idx, window in enumerate(cache)],
+        'len_window_cache_size': [(f'[{cache_name}][window {win_idx}][len {len(window)}]')for cache_name, cache in TABLES['size'].items() for win_idx, window in enumerate(cache)],
+        'len_window_cache_written_data': [(f'[{cache_name}][window {win_idx}][len {len(window)}]')for cache_name, cache in TABLES['written_data'].items() for win_idx, window in enumerate(cache)],
+        'len_window_cache_info': [(f'[{cache_name}][window {win_idx}][len {len(window)}]')for cache_name, cache in WINDOW_INFO.items() for win_idx, window in enumerate(cache)],
+    })
 
 
 @app.route('/cache/plot/<string:table_name>', methods=['GET'])
