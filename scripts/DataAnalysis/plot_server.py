@@ -36,8 +36,13 @@ def get_size_from_name(name: str) -> str:
 
 def plot_info_window(window: int, filename: str, **kwargs):
     data = {}
+    filters = kwargs.get('filters', [])
+
     for cache_name, info in WINDOW_INFO.items():
         size = get_size_from_name(cache_name)
+        if len(filters) > 0:
+            if size not in filters:
+                continue
         if size not in data:
             data[size] = {}
         if cache_name.lower().find('lru') != -1:
@@ -263,11 +268,15 @@ def cache_update(cache_name: str, window: int):
 
 @app.route('/cache/plot/info/<int:window>', methods=['GET'])
 def cache_info_plot(window: int):
+    filters = request.args.get('filter')
+    if filters:
+        filters = filters.split(',')
     plot_info_window(
         window,
         f'plot_info_w{window}.html',
         title=f"Info window {window}",
-        y_axis_type="log"
+        y_axis_type="log",
+        filters=filters
     )
     return app.send_static_file(f'plot_info_w{window}.html')
 
