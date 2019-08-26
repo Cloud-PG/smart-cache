@@ -58,10 +58,12 @@ func commandRun() *cobra.Command {
 					MaxSize: cacheSize,
 				}
 				switch weightedFunc {
-				case "FuncFileGroupWeight":
-					cacheInstance.Init(cache.FuncFileGroupWeight, weightExp)
-				case "FuncFileGroupWeightAndTime":
-					cacheInstance.Init(cache.FuncFileGroupWeightAndTime, weightExp)
+				case "FuncFileWeight":
+					cacheInstance.Init(cache.FuncFileWeight, weightExp)
+				case "FuncFileWeightAndTime":
+					cacheInstance.Init(cache.FuncFileWeightAndTime, weightExp)
+				case "FuncFileWeightOnlyTime":
+					cacheInstance.Init(cache.FuncFileWeightOnlyTime, weightExp)
 				default:
 					fmt.Println("ERR: You need to specify a weight function.")
 					os.Exit(-1)

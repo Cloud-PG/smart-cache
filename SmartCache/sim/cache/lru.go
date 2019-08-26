@@ -48,8 +48,9 @@ func (cache *LRU) SimServiceGet(ctx context.Context, commonFile *pb.SimCommonFil
 	return &pb.SimCacheStatus{
 		HitRate:     cache.HitRate(),
 		Size:        cache.Size(),
-		WrittenData: cache.WrittenData(),
 		Capacity:    cache.Capacity(),
+		WrittenData: cache.WrittenData(),
+		ReadOnHit:   cache.ReadOnHit(),
 	}, nil
 }
 
@@ -59,8 +60,9 @@ func (cache *LRU) SimServiceClear(ctx context.Context, _ *empty.Empty) (*pb.SimC
 	return &pb.SimCacheStatus{
 		HitRate:     cache.HitRate(),
 		Size:        cache.Size(),
-		WrittenData: cache.WrittenData(),
 		Capacity:    cache.Capacity(),
+		WrittenData: cache.WrittenData(),
+		ReadOnHit:   cache.ReadOnHit(),
 	}, nil
 }
 

@@ -16,14 +16,16 @@ BASE_PATH = "plot_server_app"
 TABLES = {
     'hit_rate': {},
     'size': {},
-    'written_data': {}
+    'written_data': {},
+    'read_on_hit': {},
 }
 
 WINDOW_INFO = {}
 
 TABLE_COLORS = {}
 
-COLORS = cycle(["red", "mediumblue", "green", "purple", "black", "yellow"])
+COLORS = cycle(["red", "mediumblue", "green", "purple",
+                "black", "gold", "darkorange", "plum"])
 
 
 def get_size_from_name(name: str) -> str:
@@ -35,6 +37,7 @@ def get_size_from_name(name: str) -> str:
 
 
 def plot_info_window(window: int, filename: str, **kwargs):
+    global TABLES, WINDOW_INFO, TABLE_COLORS
     data = {}
     filters = kwargs.get('filters', [])
 
@@ -135,6 +138,7 @@ def plot_info_window(window: int, filename: str, **kwargs):
 
 
 def plot_line(table_name: str, filename: str, **kwargs):
+    global TABLES, WINDOW_INFO, TABLE_COLORS
     # output to static HTML file
     output_file(
         os.path.join(
@@ -159,28 +163,63 @@ def plot_line(table_name: str, filename: str, **kwargs):
 
     v_lines = []
 
-    for name, values in TABLES[table_name].items():
-        if not v_lines:
-            v_lines = [len(elm) for elm in values]
-            for idx in range(1, len(v_lines)):
-                v_lines[idx] += v_lines[idx-1]
-            if len(v_lines) > 1:
-                v_lines = [
-                    Span(
-                        location=vl_index, dimension='height',
-                        line_color='black', line_width=1.2
-                    )
-                    for vl_index in v_lines
-                ]
-            else:
-                v_lines = []
+    if table_name != 'ratio':
+        for name, values in TABLES[table_name].items():
+            if not v_lines:
+                v_lines = [len(elm) for elm in values]
+                for idx in range(1, len(v_lines)):
+                    v_lines[idx] += v_lines[idx-1]
+                if len(v_lines) > 1:
+                    v_lines = [
+                        Span(
+                            location=vl_index, dimension='height',
+                            line_color='black', line_width=1.2
+                        )
+                        for vl_index in v_lines
+                    ]
+                else:
+                    v_lines = []
 
-        points = [value for bucket in values for value in bucket]
-        if name not in TABLE_COLORS:
-            TABLE_COLORS[name] = next(COLORS)
+            points = [value for bucket in values for value in bucket]
+            if name not in TABLE_COLORS:
+                TABLE_COLORS[name] = next(COLORS)
+            plot_figure.line(
+                range(len(points)),
+                points,
+                legend=name,
+                color=TABLE_COLORS[name],
+                line_width=2.
+            )
+
+    elif table_name == 'ratio':
+        points = {
+            'written_data': [],
+            'read_on_hit': []
+        }
+        for cur_table_name in points:
+            for name, values in TABLES[cur_table_name].items():
+                if not v_lines:
+                    v_lines = [len(elm) for elm in values]
+                    for idx in range(1, len(v_lines)):
+                        v_lines[idx] += v_lines[idx-1]
+                    if len(v_lines) > 1:
+                        v_lines = [
+                            Span(
+                                location=vl_index, dimension='height',
+                                line_color='black', line_width=1.2
+                            )
+                            for vl_index in v_lines
+                        ]
+                    else:
+                        v_lines = []
+                points[cur_table_name] = [value for bucket in values for value in bucket]
+                if name not in TABLE_COLORS:
+                    TABLE_COLORS[name] = next(COLORS)
+
         plot_figure.line(
             range(len(points)),
-            points,
+            [value / points['written_data'][idx]
+                for idx, value in enumerate(points['read_on_hit'])],
             legend=name,
             color=TABLE_COLORS[name],
             line_width=2.
@@ -203,6 +242,7 @@ app = Flask(
 
 @app.route('/cache/service/status', methods=['GET'])
 def service_status():
+    global TABLES, WINDOW_INFO, TABLE_COLORS
     return jsonify({
         'status': "online",
         'num_cache_hit_rates': len(TABLES['hit_rate']),
@@ -230,6 +270,9 @@ def table_plot(table_name: str):
     elif table_name == "written_data":
         kwargs['y_axis_label'] = "Written data (MB)"
         kwargs['y_axis_type'] = "log"
+    elif table_name == "read_on_hit":
+        kwargs['y_axis_label'] = "Data read on hit (MB)"
+        kwargs['y_axis_type'] = "log"
 
     plot_line(
         table_name,
@@ -251,6 +294,7 @@ def table_insert(table_name: str, cache_name: str,
 
 @app.route('/cache/update/<string:cache_name>/<int:window>', methods=['POST', 'PUT'])
 def cache_update(cache_name: str, window: int):
+    global TABLES
     data = request.data
     obj = json.loads(gzip.decompress(data))
     for table_name, list_ in obj.items():
@@ -283,10 +327,12 @@ def cache_info_plot(window: int):
 
 @app.route('/cache/plot', methods=['DELETE'])
 def delete_plots(window: int):
+    global TABLES, WINDOW_INFO, TABLE_COLORS
     TABLES = {
         'hit_rate': {},
         'size': {},
-        'written_data': {}
+        'written_data': {},
+        'read_on_hit': {},
     }
 
     WINDOW_INFO = {}
@@ -297,6 +343,7 @@ def delete_plots(window: int):
 
 @app.route('/cache/info/<string:cache_name>/<int:window>', methods=['POST', 'PUT'])
 def cache_info(cache_name: str, window: int):
+    global WINDOW_INFO
     data = request.data
     obj = json.loads(gzip.decompress(data))
 
@@ -315,6 +362,7 @@ def cache_info(cache_name: str, window: int):
 
 def insert_line_in_table(table_name: str, cache_name: str,
                          window: int, req_idx: int, value: float, force_save: bool = False):
+    global TABLES
     cur_table = TABLES[table_name]
 
     if cache_name not in cur_table:

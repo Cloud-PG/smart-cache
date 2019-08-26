@@ -25,8 +25,8 @@ message SimCommonFile {
 message SimCacheStatus {
   float hitRate = 1;
   float size = 2;
-  float writtenData = 3;
-  float capacity = 4;
+  float capacity = 3;
+  float writtenData = 4;
   float readOnHit = 5;
 }
 

@@ -553,6 +553,7 @@ def simulate(cache, windows: list, region: str = "_all_",
             'hit_rate': [],
             'size': [],
             'written_data': [],
+            'read_on_hit': [],
         }
 
     for num_window, window in enumerate(windows):
@@ -602,6 +603,7 @@ def simulate(cache, windows: list, region: str = "_all_",
                     cur_hit_rate = stub_result.hitRate
                     cur_capacity = stub_result.capacity
                     cur_written_data = stub_result.writtenData
+                    cur_read_on_hit = stub_result.readOnHit
                     cur_size = stub_result.size
                 else:
                     cur_hit_rate = cache.hit_rate
@@ -614,31 +616,11 @@ def simulate(cache, windows: list, region: str = "_all_",
                     buffer["size"].append((request_idx, cur_size))
                     buffer["written_data"].append(
                         (request_idx, cur_written_data))
+                    buffer["read_on_hit"].append(
+                        (request_idx, cur_read_on_hit))
                     request_idx += 1
 
-                    if len(buffer['hit_rate']) == 10000:
-                        requests.put(
-                            "/".join([
-                                plot_server,
-                                "cache",
-                                "update",
-                                cache_name,
-                                f"{num_window}"
-                            ]),
-                            headers={
-                                'Content-Type': 'application/octet-stream'},
-                            data=gzip.compress(
-                                json.dumps(buffer).encode('utf-8')
-                            ),
-                            timeout=None
-                        )
-                        buffer = {
-                            'hit_rate': [],
-                            'size': [],
-                            'written_data': [],
-                        }
-
-                record_pbar.desc = f"[{cache_name[:4]+cache_name[-12:]}][Simulation][Window {num_window+1}/{len(windows)}][File {num_file}/{len(window)}][Hit Rate {cur_hit_rate:06.2f}][Capacity {cur_capacity:06.2f}][Written {cur_written_data:0.2f}]"
+                record_pbar.desc = f"[{cache_name[:4]+cache_name[-12:]}][Simulation][Window {num_window+1}/{len(windows)}][File {num_file}/{len(window)}][Hit Rate {cur_hit_rate:06.2f}][Capacity {cur_capacity:06.2f}]"
                 record_pbar.update(1)
 
                 # TEST
@@ -662,11 +644,6 @@ def simulate(cache, windows: list, region: str = "_all_",
                         ),
                         timeout=None
                     )
-                    buffer = {
-                        'hit_rate': [],
-                        'size': [],
-                        'written_data': [],
-                    }
 
             num_file += 1
             record_pbar.close()

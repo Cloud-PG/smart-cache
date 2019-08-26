@@ -14,10 +14,12 @@ import (
 type FunctionType int
 
 const (
-	// FuncFileGroupWeight indicates the simple function for weighted cache
-	FuncFileGroupWeight FunctionType = iota
-	// FuncFileGroupWeightAndTime indicates the function that uses time
-	FuncFileGroupWeightAndTime
+	// FuncFileWeight indicates the simple function for weighted cache
+	FuncFileWeight FunctionType = iota
+	// FuncFileWeightAndTime indicates the function that uses time
+	FuncFileWeightAndTime
+	// FuncFileWeightAndTime indicates the function that uses time
+	FuncFileWeightOnlyTime
 )
 
 type weightedFile struct {
@@ -60,13 +62,18 @@ func (cache *Weighted) Clear() {
 	cache.size = 0.
 }
 
-func fileGroupWeight(size float32, numRequests float32, exp float32) float32 {
+func fileWeight(size float32, numRequests float32, exp float32) float32 {
 	return float32(math.Pow(float64(size/numRequests), float64(exp)))
 }
 
-func fileGroupWeightAndTime(size float32, numRequests float32, exp float32, lastTimeRequested time.Time) float32 {
+func fileWeightAndTime(size float32, numRequests float32, exp float32, lastTimeRequested time.Time) float32 {
 	deltaLastTimeRequested := float64(time.Now().Sub(lastTimeRequested) / time.Second)
 	return (size / float32(math.Pow(float64(numRequests), float64(exp)))) * float32(math.Pow(deltaLastTimeRequested, float64(exp)))
+}
+
+func fileWeightOnlyTime(numRequests float32, exp float32, lastTimeRequested time.Time) float32 {
+	deltaLastTimeRequested := float64(time.Now().Sub(lastTimeRequested) / time.Second)
+	return (1. / float32(math.Pow(float64(numRequests), float64(exp)))) * float32(math.Pow(deltaLastTimeRequested, float64(exp)))
 }
 
 // SimServiceGet updates the cache from a protobuf message
@@ -75,8 +82,9 @@ func (cache *Weighted) SimServiceGet(ctx context.Context, commonFile *pb.SimComm
 	return &pb.SimCacheStatus{
 		HitRate:     cache.HitRate(),
 		Size:        cache.Size(),
-		WrittenData: cache.WrittenData(),
 		Capacity:    cache.Capacity(),
+		WrittenData: cache.WrittenData(),
+		ReadOnHit: cache.ReadOnHit(),
 	}, nil
 }
 
@@ -86,8 +94,9 @@ func (cache *Weighted) SimServiceClear(ctx context.Context, _ *empty.Empty) (*pb
 	return &pb.SimCacheStatus{
 		HitRate:     cache.HitRate(),
 		Size:        cache.Size(),
-		WrittenData: cache.WrittenData(),
 		Capacity:    cache.Capacity(),
+		WrittenData: cache.WrittenData(),
+		ReadOnHit: cache.ReadOnHit(),
 	}, nil
 }
 
@@ -111,15 +120,21 @@ func (cache *Weighted) SimServiceGetInfoFilesWeights(_ *empty.Empty, stream pb.S
 		var weight float32
 
 		switch cache.functionType {
-		case FuncFileGroupWeight:
-			weight = fileGroupWeight(
+		case FuncFileWeight:
+			weight = fileWeight(
 				stats.size,
 				stats.numRequests,
 				cache.exp,
 			)
-		case FuncFileGroupWeightAndTime:
-			weight = fileGroupWeightAndTime(
+		case FuncFileWeightAndTime:
+			weight = fileWeightAndTime(
 				stats.size,
+				stats.numRequests,
+				cache.exp,
+				stats.lastTimeRequested,
+			)
+		case FuncFileWeightOnlyTime:
+			weight = fileWeightOnlyTime(
 				stats.numRequests,
 				cache.exp,
 				stats.lastTimeRequested,
@@ -177,15 +192,21 @@ func (cache *Weighted) updatePolicy(filename string, size float32, hit bool) boo
 		// Update weights
 		for _, curFile := range cache.queue {
 			switch cache.functionType {
-			case FuncFileGroupWeight:
-				curFile.weight = fileGroupWeight(
+			case FuncFileWeight:
+				curFile.weight = fileWeight(
 					cache.stats[curFile.filename].size,
 					cache.stats[curFile.filename].numRequests,
 					cache.exp,
 				)
-			case FuncFileGroupWeightAndTime:
-				curFile.weight = fileGroupWeightAndTime(
+			case FuncFileWeightAndTime:
+				curFile.weight = fileWeightAndTime(
 					cache.stats[curFile.filename].size,
+					cache.stats[curFile.filename].numRequests,
+					cache.exp,
+					cache.stats[curFile.filename].lastTimeRequested,
+				)
+			case FuncFileWeightOnlyTime:
+				curFile.weight = fileWeightOnlyTime(
 					cache.stats[curFile.filename].numRequests,
 					cache.exp,
 					cache.stats[curFile.filename].lastTimeRequested,
