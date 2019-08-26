@@ -5,6 +5,7 @@ import (
 	"math"
 	"sort"
 	"strings"
+	"time"
 
 	pb "./simService"
 	empty "github.com/golang/protobuf/ptypes/empty"
@@ -27,8 +28,9 @@ type weightedFile struct {
 }
 
 type fileStats struct {
-	size      float32
-	frequency float32
+	size              float32
+	numRequests       float32
+	lastTimeRequested time.Time
 }
 
 type groupFiles struct {
@@ -37,11 +39,11 @@ type groupFiles struct {
 
 // Weighted cache
 type Weighted struct {
-	files                                 map[string]float32
-	groups                                map[string]*groupFiles
-	queue                                 []*weightedFile
-	hit, miss, writtenData, size, MaxSize float32
-	functionType                          FunctionType
+	files                                            map[string]float32
+	groups                                           map[string]*groupFiles
+	queue                                            []*weightedFile
+	hit, miss, writtenData, readOnHit, size, MaxSize float32
+	functionType                                     FunctionType
 }
 
 // Init the LRU struct
@@ -66,8 +68,14 @@ func (cache *Weighted) Clear() {
 	cache.size = 0.
 }
 
-func fileGroupWeight(size float32, numFiles float32, frequency float32, exp float32) float32 {
-	return float32(math.Pow(float64((size*numFiles)/frequency), float64(exp)))
+func fileGroupWeight(size float32, numFiles float32, numRequests float32, exp float32) float32 {
+	return float32(math.Pow(float64((size*numFiles)/numRequests), float64(exp)))
+}
+
+func fileGroupWeightAndTime(size float32, numFiles float32, numRequests float32, exp float32, lastTimeRequested time.Time) float32 {
+	currentTime := time.Now()
+	deltaLastTimeRequested := float32(currentTime.Sub(lastTimeRequested) / time.Second)
+	return float32(math.Pow(float64((size*numFiles)/numRequests), float64(exp))) + deltaLastTimeRequested
 }
 
 // SimServiceGet updates the cache from a protobuf message
@@ -118,8 +126,16 @@ func (cache *Weighted) SimServiceGetInfoFilesWeights(_ *empty.Empty, stream pb.S
 				weight = fileGroupWeight(
 					stats.size,
 					numFiles,
-					stats.frequency,
+					stats.numRequests,
 					2.0,
+				)
+			case FuncFileGroupWeightAndTime:
+				weight = fileGroupWeightAndTime(
+					stats.size,
+					numFiles,
+					stats.numRequests,
+					2.0,
+					stats.lastTimeRequested,
 				)
 			}
 
@@ -156,6 +172,7 @@ func (cache *Weighted) getQueueSize() float32 {
 
 func (cache *Weighted) updatePolicy(filename string, size float32, hit bool) bool {
 	var added = false
+	var currentTime = time.Now()
 
 	group := getGroup(filename)
 
@@ -169,10 +186,12 @@ func (cache *Weighted) updatePolicy(filename string, size float32, hit bool) boo
 		cache.groups[group].files[filename] = &fileStats{
 			size,
 			0.,
+			currentTime,
 		}
 	}
 
-	cache.groups[group].files[filename].frequency += 1.
+	cache.groups[group].files[filename].numRequests += 1.
+	cache.groups[group].files[filename].lastTimeRequested = currentTime
 
 	groupNumFiles := float32(len(cache.groups[group].files))
 
@@ -193,10 +212,18 @@ func (cache *Weighted) updatePolicy(filename string, size float32, hit bool) boo
 			switch cache.functionType {
 			case FuncFileGroupWeight:
 				curFile.weight = fileGroupWeight(
-					cache.groups[group].files[filename].size,
+					cache.groups[group].files[curFile.filename].size,
 					groupNumFiles,
-					cache.groups[group].files[filename].frequency,
+					cache.groups[group].files[curFile.filename].numRequests,
 					2.0,
+				)
+			case FuncFileGroupWeightAndTime:
+				curFile.weight = fileGroupWeightAndTime(
+					cache.groups[group].files[curFile.filename].size,
+					groupNumFiles,
+					cache.groups[group].files[curFile.filename].numRequests,
+					2.0,
+					cache.groups[group].files[curFile.filename].lastTimeRequested,
 				)
 			}
 		}
@@ -241,6 +268,7 @@ func (cache *Weighted) Get(filename string, size float32) bool {
 
 	if hit {
 		cache.hit += 1.
+		cache.readOnHit += size
 	} else {
 		cache.miss += 1.
 	}
@@ -273,6 +301,11 @@ func (cache Weighted) Capacity() float32 {
 // WrittenData of the cache
 func (cache Weighted) WrittenData() float32 {
 	return cache.writtenData
+}
+
+// ReadOnHit of the cache
+func (cache Weighted) ReadOnHit() float32 {
+	return cache.readOnHit
 }
 
 func (cache Weighted) check(key string) bool {

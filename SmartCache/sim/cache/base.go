@@ -19,6 +19,7 @@ type Cache interface {
 	Size() float32
 	Capacity() float32
 	WrittenData() float32
+	ReadOnHit() float32
 
 	Get(filename string, size float32) bool
 

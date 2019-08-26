@@ -47,6 +47,8 @@ func TestWeightedCacheClear(t *testing.T) {
 		t.Fatalf("Size error -> Expected %f but got %f", 0., testCache.Size())
 	} else if testCache.WrittenData() != 0. {
 		t.Fatalf("Written data error -> Expected %f but got %f", 0., testCache.WrittenData())
+	} else if testCache.ReadOnHit() != 3. {
+		t.Fatalf("Read on hit error -> Expected %f but got %f", 0., testCache.ReadOnHit())
 	} else if len(testCache.queue) != 0 {
 		t.Fatalf("Queue error -> Expected %d but got %d", 0, len(testCache.queue))
 	} else if len(testCache.files) != 0 {
@@ -69,23 +71,15 @@ func TestWeightedCacheInsert(t *testing.T) {
 	testCache.Get("/a/b/c/d/file3", 1.0)
 	testCache.Get("/a/b/c/d/file4", 1.0)
 
-	// for tmpVal := testCache.queue.Front(); tmpVal != nil; tmpVal = tmpVal.Next() {
-	// 	println(tmpVal.Value.(string))
-	// }
-	// println()
-
 	if testCache.HitRate() != 12.5 {
 		t.Fatalf("Hit rate error -> Expected %f but got %f", 12.5, testCache.HitRate())
 	} else if testCache.Size() != 3.0 {
 		t.Fatalf("Size error -> Expected %f but got %f", 3.0, testCache.Size())
 	} else if testCache.WrittenData() != 6.0 {
 		t.Fatalf("Written data error -> Expected %f but got %f", 6.0, testCache.WrittenData())
+	} else if testCache.ReadOnHit() != 1. {
+		t.Fatalf("Read on hit error -> Expected %f but got %f", 1., testCache.ReadOnHit())
 	}
-	// else if testCache.queue.Front().Value.(string) != "/a/b/c/d/file1" {
-	// 	t.Fatalf("Written data error -> Expected %s but got %s", "/a/b/c/d/file1", testCache.queue.Front().Value.(string))
-	// } else if testCache.queue.Back().Value.(string) != "/a/b/c/d/file4" {
-	// 	t.Fatalf("Written data error -> Expected %s but got %s", "/a/b/c/d/file4", testCache.queue.Back().Value.(string))
-	// }
 }
 
 func BenchmarkWeightedCache(b *testing.B) {

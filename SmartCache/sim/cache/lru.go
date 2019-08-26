@@ -10,9 +10,9 @@ import (
 
 // LRU cache
 type LRU struct {
-	files                                 map[string]float32
-	queue                                 *list.List
-	hit, miss, writtenData, size, MaxSize float32
+	files                                            map[string]float32
+	queue                                            *list.List
+	hit, miss, writtenData, readOnHit, size, MaxSize float32
 }
 
 // Init the LRU struct
@@ -132,6 +132,7 @@ func (cache *LRU) Get(filename string, size float32) bool {
 
 	if hit {
 		cache.hit += 1.
+		cache.readOnHit += size
 	} else {
 		cache.miss += 1.
 	}
@@ -164,6 +165,11 @@ func (cache LRU) Capacity() float32 {
 // WrittenData of the cache
 func (cache LRU) WrittenData() float32 {
 	return cache.writtenData
+}
+
+// ReadOnHit of the cache
+func (cache LRU) ReadOnHit() float32 {
+	return cache.readOnHit
 }
 
 func (cache LRU) check(key string) bool {

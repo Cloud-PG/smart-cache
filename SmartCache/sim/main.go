@@ -16,6 +16,7 @@ import (
 var cacheInstance cache.Cache
 var cacheSize float32
 var servicePort int32
+var weightedFunc string
 
 func main() {
 	rootCmd := &cobra.Command{}
@@ -23,6 +24,7 @@ func main() {
 
 	rootCmd.PersistentFlags().Float32Var(&cacheSize, "size", 0.0, "cache size")
 	rootCmd.PersistentFlags().Int32Var(&servicePort, "port", 5432, "cache sim service port")
+	rootCmd.PersistentFlags().StringVar(&weightedFunc, "weightFunction", "FuncFileGroupWeight", "function to use with weighted caceh")
 
 	if err := rootCmd.Execute(); err != nil {
 		println(err.Error())
@@ -53,12 +55,20 @@ func commandRun() *cobra.Command {
 				cacheInstance = &cache.Weighted{
 					MaxSize: cacheSize,
 				}
-				cacheInstance.Init(cache.FuncFileGroupWeight)
+				switch weightedFunc {
+				case "FuncFileGroupWeight":
+					cacheInstance.Init(cache.FuncFileGroupWeight)
+				case "FuncFileGroupWeightAndTime":
+					cacheInstance.Init(cache.FuncFileGroupWeightAndTime)
+				default:
+					fmt.Println("ERR: You need to specify a weight function.")
+					os.Exit(-1)
+				}
 				fmt.Printf("[Register Weighted Cache]\n")
 				pb.RegisterSimServiceServer(grpcServer, cacheInstance)
 			default:
 				fmt.Println("ERR: You need to specify a cache type.")
-				os.Exit(-1)
+				os.Exit(-2)
 			}
 
 			fmt.Printf("[Try to liste to port %d]\n", servicePort)
