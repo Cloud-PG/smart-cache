@@ -4,7 +4,6 @@ import (
 	"context"
 	"math"
 	"sort"
-	"strings"
 	"time"
 
 	pb "./simService"
@@ -23,7 +22,6 @@ const (
 
 type weightedFile struct {
 	filename string
-	group    string
 	weight   float32
 }
 
@@ -33,34 +31,28 @@ type fileStats struct {
 	lastTimeRequested time.Time
 }
 
-type groupFiles struct {
-	files map[string]*fileStats
-}
-
 // Weighted cache
 type Weighted struct {
-	files                                            map[string]float32
-	groups                                           map[string]*groupFiles
-	queue                                            []*weightedFile
-	hit, miss, writtenData, readOnHit, size, MaxSize float32
-	functionType                                     FunctionType
+	files                                                 map[string]float32
+	stats                                                 map[string]*fileStats
+	queue                                                 []*weightedFile
+	hit, miss, writtenData, readOnHit, size, MaxSize, exp float32
+	functionType                                          FunctionType
 }
 
 // Init the LRU struct
 func (cache *Weighted) Init(vars ...interface{}) {
 	cache.files = make(map[string]float32)
-	cache.groups = make(map[string]*groupFiles)
+	cache.stats = make(map[string]*fileStats)
 	cache.queue = make([]*weightedFile, 0)
 	cache.functionType = vars[0].(FunctionType)
+	cache.exp = vars[1].(float32)
 }
 
 // Clear the LRU struct
 func (cache *Weighted) Clear() {
 	cache.files = make(map[string]float32)
-	for _, value := range cache.groups {
-		value.files = make(map[string]*fileStats)
-	}
-	cache.groups = make(map[string]*groupFiles)
+	cache.stats = make(map[string]*fileStats)
 	cache.queue = make([]*weightedFile, 0)
 	cache.hit = 0.
 	cache.miss = 0.
@@ -68,14 +60,13 @@ func (cache *Weighted) Clear() {
 	cache.size = 0.
 }
 
-func fileGroupWeight(size float32, numFiles float32, numRequests float32, exp float32) float32 {
-	return float32(math.Pow(float64((size*numFiles)/numRequests), float64(exp)))
+func fileGroupWeight(size float32, numRequests float32, exp float32) float32 {
+	return float32(math.Pow(float64(size/numRequests), float64(exp)))
 }
 
-func fileGroupWeightAndTime(size float32, numFiles float32, numRequests float32, exp float32, lastTimeRequested time.Time) float32 {
-	currentTime := time.Now()
-	deltaLastTimeRequested := float32(currentTime.Sub(lastTimeRequested) / time.Second)
-	return float32(math.Pow(float64((size*numFiles)/numRequests), float64(exp))) + deltaLastTimeRequested
+func fileGroupWeightAndTime(size float32, numRequests float32, exp float32, lastTimeRequested time.Time) float32 {
+	deltaLastTimeRequested := float64(time.Now().Sub(lastTimeRequested) / time.Second)
+	return (size / float32(math.Pow(float64(numRequests), float64(exp)))) * float32(math.Pow(deltaLastTimeRequested, float64(exp)))
 }
 
 // SimServiceGet updates the cache from a protobuf message
@@ -116,56 +107,41 @@ func (cache *Weighted) SimServiceGetInfoCacheFiles(_ *empty.Empty, stream pb.Sim
 
 // SimServiceGetInfoFilesWeights returns the file weights
 func (cache *Weighted) SimServiceGetInfoFilesWeights(_ *empty.Empty, stream pb.SimService_SimServiceGetInfoFilesWeightsServer) error {
-	for _, group := range cache.groups {
-		numFiles := float32(len(group.files))
-		for filename, stats := range group.files {
-			var weight float32
+	for filename, stats := range cache.stats {
+		var weight float32
 
-			switch cache.functionType {
-			case FuncFileGroupWeight:
-				weight = fileGroupWeight(
-					stats.size,
-					numFiles,
-					stats.numRequests,
-					2.0,
-				)
-			case FuncFileGroupWeightAndTime:
-				weight = fileGroupWeightAndTime(
-					stats.size,
-					numFiles,
-					stats.numRequests,
-					2.0,
-					stats.lastTimeRequested,
-				)
-			}
+		switch cache.functionType {
+		case FuncFileGroupWeight:
+			weight = fileGroupWeight(
+				stats.size,
+				stats.numRequests,
+				cache.exp,
+			)
+		case FuncFileGroupWeightAndTime:
+			weight = fileGroupWeightAndTime(
+				stats.size,
+				stats.numRequests,
+				cache.exp,
+				stats.lastTimeRequested,
+			)
+		}
 
-			curFile := &pb.SimFileWeight{
-				Filename: filename,
-				Weight:   weight,
-			}
-			if err := stream.Send(curFile); err != nil {
-				return err
-			}
+		curFile := &pb.SimFileWeight{
+			Filename: filename,
+			Weight:   weight,
+		}
+		if err := stream.Send(curFile); err != nil {
+			return err
 		}
 	}
+
 	return nil
-}
-
-func getGroup(filename string) string {
-	components := strings.Split(filename, "/")
-	var group = "/"
-	for _, value := range components {
-		if value != "" {
-			group += value + "/"
-		}
-	}
-	return group
 }
 
 func (cache *Weighted) getQueueSize() float32 {
 	var size float32
 	for _, curFile := range cache.queue {
-		size += cache.groups[curFile.group].files[curFile.filename].size
+		size += cache.stats[curFile.filename].size
 	}
 	return size
 }
@@ -174,68 +150,54 @@ func (cache *Weighted) updatePolicy(filename string, size float32, hit bool) boo
 	var added = false
 	var currentTime = time.Now()
 
-	group := getGroup(filename)
-
-	if _, inMap := cache.groups[group]; !inMap {
-		cache.groups[group] = &groupFiles{
-			make(map[string]*fileStats, 0),
-		}
-	}
-
-	if _, inMap := cache.groups[group].files[filename]; !inMap {
-		cache.groups[group].files[filename] = &fileStats{
+	if _, inMap := cache.stats[filename]; !inMap {
+		cache.stats[filename] = &fileStats{
 			size,
 			0.,
 			currentTime,
 		}
 	}
 
-	cache.groups[group].files[filename].numRequests += 1.
-	cache.groups[group].files[filename].lastTimeRequested = currentTime
-
-	groupNumFiles := float32(len(cache.groups[group].files))
+	cache.stats[filename].numRequests += 1.
+	cache.stats[filename].lastTimeRequested = currentTime
 
 	if !hit {
 		cache.queue = append(
 			cache.queue,
 			&weightedFile{
 				filename,
-				group,
 				-1.,
 			},
 		)
 		added = true
 	}
 
-	for _, curFile := range cache.queue {
-		if curFile.group == group {
+	queueSize := cache.getQueueSize()
+	if queueSize > cache.MaxSize {
+		// Update weights
+		for _, curFile := range cache.queue {
 			switch cache.functionType {
 			case FuncFileGroupWeight:
 				curFile.weight = fileGroupWeight(
-					cache.groups[group].files[curFile.filename].size,
-					groupNumFiles,
-					cache.groups[group].files[curFile.filename].numRequests,
-					2.0,
+					cache.stats[curFile.filename].size,
+					cache.stats[curFile.filename].numRequests,
+					cache.exp,
 				)
 			case FuncFileGroupWeightAndTime:
 				curFile.weight = fileGroupWeightAndTime(
-					cache.groups[group].files[curFile.filename].size,
-					groupNumFiles,
-					cache.groups[group].files[curFile.filename].numRequests,
-					2.0,
-					cache.groups[group].files[curFile.filename].lastTimeRequested,
+					cache.stats[curFile.filename].size,
+					cache.stats[curFile.filename].numRequests,
+					cache.exp,
+					cache.stats[curFile.filename].lastTimeRequested,
 				)
 			}
 		}
-	}
-
-	sort.Slice(
-		cache.queue,
-		func(i, j int) bool { return cache.queue[i].weight < cache.queue[j].weight },
-	)
-
-	queueSize := cache.getQueueSize()
-	if queueSize > cache.MaxSize {
+		// Sort queue
+		sort.Slice(
+			cache.queue,
+			func(i, j int) bool { return cache.queue[i].weight < cache.queue[j].weight },
+		)
+		// Remove files if possible
 		for {
 			if queueSize <= cache.MaxSize {
 				break
@@ -244,7 +206,7 @@ func (cache *Weighted) updatePolicy(filename string, size float32, hit bool) boo
 			if lastElm.filename == filename {
 				added = false
 			}
-			queueSize -= cache.groups[lastElm.group].files[lastElm.filename].size
+			queueSize -= cache.stats[lastElm.filename].size
 			if _, inCache := cache.files[lastElm.filename]; inCache == true {
 				cache.size -= cache.files[lastElm.filename]
 				delete(cache.files, lastElm.filename)
