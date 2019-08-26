@@ -16,6 +16,7 @@ import (
 var cacheInstance cache.Cache
 var cacheSize float32
 var servicePort int32
+var weightExp float32
 var weightedFunc string
 
 func main() {
@@ -24,7 +25,8 @@ func main() {
 
 	rootCmd.PersistentFlags().Float32Var(&cacheSize, "size", 0.0, "cache size")
 	rootCmd.PersistentFlags().Int32Var(&servicePort, "port", 5432, "cache sim service port")
-	rootCmd.PersistentFlags().StringVar(&weightedFunc, "weightFunction", "FuncFileGroupWeight", "function to use with weighted caceh")
+	rootCmd.PersistentFlags().StringVar(&weightedFunc, "weightFunction", "FuncFileGroupWeight", "function to use with weighted cache")
+	rootCmd.PersistentFlags().Float32Var(&weightExp, "weightExp", 2.0, "Exponential to use with weighted cache function")
 
 	if err := rootCmd.Execute(); err != nil {
 		println(err.Error())
@@ -57,9 +59,9 @@ func commandRun() *cobra.Command {
 				}
 				switch weightedFunc {
 				case "FuncFileGroupWeight":
-					cacheInstance.Init(cache.FuncFileGroupWeight)
+					cacheInstance.Init(cache.FuncFileGroupWeight, weightExp)
 				case "FuncFileGroupWeightAndTime":
-					cacheInstance.Init(cache.FuncFileGroupWeightAndTime)
+					cacheInstance.Init(cache.FuncFileGroupWeightAndTime, weightExp)
 				default:
 					fmt.Println("ERR: You need to specify a weight function.")
 					os.Exit(-1)
