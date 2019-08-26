@@ -27,6 +27,7 @@ message SimCacheStatus {
   float size = 2;
   float writtenData = 3;
   float capacity = 4;
+  float readOnHit = 5;
 }
 
 message SimFileWeight {
