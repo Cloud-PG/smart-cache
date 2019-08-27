@@ -575,7 +575,7 @@ def simulate(cache, windows: list, region: str = "_all_",
     )
 
     for num_window, window in enumerate(windows):
-        win_pbar.total = len(window)
+        win_pbar.reset(total=len(window))
 
         num_file = 1
 
@@ -594,7 +594,7 @@ def simulate(cache, windows: list, region: str = "_all_",
                 else:
                     df = df[['filename', 'size']].dropna().reset_index()
 
-                record_pbar.total = df.shape[0]
+                record_pbar.reaset(total=df.shape[0])
 
             for row_idx, record in df.iterrows():
                 if remote:
