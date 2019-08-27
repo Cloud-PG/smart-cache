@@ -594,7 +594,7 @@ def simulate(cache, windows: list, region: str = "_all_",
                 else:
                     df = df[['filename', 'size']].dropna().reset_index()
 
-                record_pbar.reaset(total=df.shape[0])
+                record_pbar.reset(total=df.shape[0])
 
             for row_idx, record in df.iterrows():
                 if remote:
