@@ -629,7 +629,7 @@ def simulate(cache, windows: list, region: str = "_all_",
                         (request_idx, cur_read_on_hit))
                     request_idx += 1
 
-                    if len(buffer) == 5000:
+                    if len(buffer['hit_rate']) == 5000:
                         requests.put(
                             "/".join([
                                 plot_server,
