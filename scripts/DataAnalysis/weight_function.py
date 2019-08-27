@@ -402,7 +402,7 @@ class LRUCache(object):
     @property
     def written_data(self):
         return self.write_history[-1]
-    
+
     @property
     def read_on_hit(self):
         return self.read_on_hit_history[-1]
@@ -435,7 +435,7 @@ class LRUCache(object):
             self.write_history.append(last)
         else:
             self.write_history.append(last + size)
-    
+
     def update_read_history(self, size: float, hit: bool):
         try:
             last = self.read_on_hit_history[-1]
@@ -628,6 +628,29 @@ def simulate(cache, windows: list, region: str = "_all_",
                     buffer["read_on_hit"].append(
                         (request_idx, cur_read_on_hit))
                     request_idx += 1
+
+                    if len(buffer) == 5000:
+                        requests.put(
+                            "/".join([
+                                plot_server,
+                                "cache",
+                                "update",
+                                cache_name,
+                                f"{num_window}"
+                            ]),
+                            headers={
+                                'Content-Type': 'application/octet-stream'},
+                            data=gzip.compress(
+                                json.dumps(buffer).encode('utf-8')
+                            ),
+                            timeout=None
+                        )
+                        buffer = {
+                            'hit_rate': [],
+                            'size': [],
+                            'written_data': [],
+                            'read_on_hit': [],
+                        }
 
                 record_pbar.desc = f"[{cache_name[:4]+cache_name[-12:]}][Simulation][Window {num_window+1}/{len(windows)}][File {num_file}/{len(window)}][Hit Rate {cur_hit_rate:06.2f}][Capacity {cur_capacity:06.2f}]"
                 record_pbar.update(1)
