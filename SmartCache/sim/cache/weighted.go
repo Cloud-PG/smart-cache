@@ -20,6 +20,8 @@ const (
 	FuncFileWeightAndTime
 	// FuncFileWeightAndTime indicates the function that uses time
 	FuncFileWeightOnlyTime
+	// FuncWeightedRequests has a small memory for request time
+	FuncWeightedRequests
 )
 
 type weightedFile struct {
@@ -31,6 +33,24 @@ type fileStats struct {
 	size              float32
 	numRequests       float32
 	lastTimeRequested time.Time
+	requests          [2]time.Time
+	requestWeights    [2]float32
+}
+
+func (stats *fileStats) updateRequestFileStats() {
+	stats.requests[1] = stats.requests[0]
+	stats.requestWeights[1] = stats.requestWeights[0]
+
+	stats.requests[0] = time.Now()
+	stats.requestWeights[0] = stats.size / float32(stats.requests[0].Sub(stats.lastTimeRequested))
+}
+
+func (stats fileStats) getRequestWeightFileStats() float32 {
+	var sum float32
+	for idx := 0; idx < len(stats.requestWeights); idx++ {
+		sum += stats.requestWeights[idx]
+	}
+	return sum
 }
 
 // Weighted cache
@@ -68,12 +88,17 @@ func fileWeight(size float32, numRequests float32, exp float32) float32 {
 
 func fileWeightAndTime(size float32, numRequests float32, exp float32, lastTimeRequested time.Time) float32 {
 	deltaLastTimeRequested := float64(time.Now().Sub(lastTimeRequested) / time.Second)
-	return (size / float32(math.Pow(float64(numRequests), float64(exp)))) * float32(math.Pow(deltaLastTimeRequested, float64(exp)))
+	return (size / float32(math.Pow(float64(numRequests), float64(exp)))) + float32(math.Pow(deltaLastTimeRequested, float64(exp)))
 }
 
 func fileWeightOnlyTime(numRequests float32, exp float32, lastTimeRequested time.Time) float32 {
 	deltaLastTimeRequested := float64(time.Now().Sub(lastTimeRequested) / time.Second)
-	return (1. / float32(math.Pow(float64(numRequests), float64(exp)))) * float32(math.Pow(deltaLastTimeRequested, float64(exp)))
+	return (1. / float32(math.Pow(float64(numRequests), float64(exp)))) + float32(math.Pow(deltaLastTimeRequested, float64(exp)))
+}
+
+func fileWeightedRequests(weight float32, exp float32, lastTimeRequested time.Time) float32 {
+	deltaLastTimeRequested := float64(time.Now().Sub(lastTimeRequested) / time.Second)
+	return float32(math.Pow(float64(weight), float64(exp))) + float32(math.Pow(deltaLastTimeRequested, float64(exp)))
 }
 
 // SimServiceGet updates the cache from a protobuf message
@@ -84,7 +109,7 @@ func (cache *Weighted) SimServiceGet(ctx context.Context, commonFile *pb.SimComm
 		Size:        cache.Size(),
 		Capacity:    cache.Capacity(),
 		WrittenData: cache.WrittenData(),
-		ReadOnHit: cache.ReadOnHit(),
+		ReadOnHit:   cache.ReadOnHit(),
 	}, nil
 }
 
@@ -96,7 +121,7 @@ func (cache *Weighted) SimServiceClear(ctx context.Context, _ *empty.Empty) (*pb
 		Size:        cache.Size(),
 		Capacity:    cache.Capacity(),
 		WrittenData: cache.WrittenData(),
-		ReadOnHit: cache.ReadOnHit(),
+		ReadOnHit:   cache.ReadOnHit(),
 	}, nil
 }
 
@@ -139,6 +164,12 @@ func (cache *Weighted) SimServiceGetInfoFilesWeights(_ *empty.Empty, stream pb.S
 				cache.exp,
 				stats.lastTimeRequested,
 			)
+		case FuncWeightedRequests:
+			weight = fileWeightedRequests(
+				stats.getRequestWeightFileStats(),
+				cache.exp,
+				stats.lastTimeRequested,
+			)
 		}
 
 		curFile := &pb.SimFileWeight{
@@ -170,11 +201,14 @@ func (cache *Weighted) updatePolicy(filename string, size float32, hit bool) boo
 			size,
 			0.,
 			currentTime,
+			[2]time.Time{currentTime, currentTime},
+			[2]float32{0., 0.},
 		}
 	}
 
 	cache.stats[filename].numRequests += 1.
 	cache.stats[filename].lastTimeRequested = currentTime
+	cache.stats[filename].updateRequestFileStats()
 
 	if !hit {
 		cache.queue = append(
@@ -208,6 +242,12 @@ func (cache *Weighted) updatePolicy(filename string, size float32, hit bool) boo
 			case FuncFileWeightOnlyTime:
 				curFile.weight = fileWeightOnlyTime(
 					cache.stats[curFile.filename].numRequests,
+					cache.exp,
+					cache.stats[curFile.filename].lastTimeRequested,
+				)
+			case FuncWeightedRequests:
+				curFile.weight = fileWeightOnlyTime(
+					cache.stats[curFile.filename].getRequestWeightFileStats(),
 					cache.exp,
 					cache.stats[curFile.filename].lastTimeRequested,
 				)
