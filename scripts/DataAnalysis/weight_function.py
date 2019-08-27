@@ -566,21 +566,23 @@ def simulate(cache, windows: list, region: str = "_all_",
 
     win_pbar = tqdm(
         desc=f"[{str(cache_name)[:4]+str(cache_name)[-12:]}][Open Data Frames]",
-        position=process_num, ascii=True,
-        total=len(window)
+        position=process_num, ascii=True
     )
     record_pbar = tqdm(
-        total=df.shape[0], position=process_num,
+        position=process_num,
         desc=f"[{str(cache_name)[:4]+str(cache_name)[-12:]}][Simulation]",
         ascii=True
     )
 
     for num_window, window in enumerate(windows):
+        win_pbar.total = len(window)
+
         num_file = 1
 
         request_idx = 0
 
         for filename in window:
+
             with gzip.GzipFile(
                 filename, mode="rb"
             ) as stats_file:
@@ -591,6 +593,8 @@ def simulate(cache, windows: list, region: str = "_all_",
                     ][['filename', 'size']].dropna().reset_index()
                 else:
                     df = df[['filename', 'size']].dropna().reset_index()
+
+                record_pbar.total = df.shape[0]
 
             for row_idx, record in df.iterrows():
                 if remote:
