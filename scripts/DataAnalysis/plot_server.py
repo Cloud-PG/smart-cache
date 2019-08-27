@@ -167,7 +167,7 @@ def plot_line(table_name: str, filename: str, **kwargs):
     if table_name != 'ratio':
         for name, values in TABLES[table_name].items():
             if filters:
-                size = get_size_from_name(cache_name)
+                size = get_size_from_name(name)
                 if size not in filters:
                     continue
             if not v_lines:
