@@ -364,7 +364,7 @@ class LRUCache(object):
         self.size_history: List[float] = []
         self.hit_rate_history: List[float] = []
         self.write_history: List[float] = []
-        self.read_on_hit: List[float] = []
+        self.read_on_hit_history: List[float] = []
         self.__cache_options = cache_options
 
         if init_state:
@@ -419,13 +419,13 @@ class LRUCache(object):
         self.size_history = [self.size_history[-1]]
         self.hit_rate_history = [self.hit_rate_history[-1]]
         self.write_history = [self.write_history[-1]]
-        self.read_on_hit = [self.read_on_hit[-1]]
+        self.read_on_hit_history = [self.read_on_hit_history[-1]]
 
     def reset_history(self):
         self.size_history = []
         self.hit_rate_history = []
         self.write_history = []
-        self.read_on_hit = []
+        self.read_on_hit_history = []
         self._hit = 0
         self._miss = 0
 
@@ -441,13 +441,13 @@ class LRUCache(object):
     
     def update_read_history(self, size: float, hit: bool):
         try:
-            last = self.read_on_hit[-1]
+            last = self.read_on_hit_history[-1]
         except IndexError:
             last = 0.0
         if not hit:
-            self.read_on_hit.append(last)
+            self.read_on_hit_history.append(last)
         else:
-            self.read_on_hit.append(last + size)
+            self.read_on_hit_history.append(last + size)
 
     @property
     def state(self) -> dict:
