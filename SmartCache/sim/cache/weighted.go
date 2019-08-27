@@ -31,7 +31,7 @@ type weightedFile struct {
 
 type fileStats struct {
 	size              float32
-	numRequests       float32
+	totRequests       float32
 	lastTimeRequested time.Time
 	requests          [2]time.Time
 	requestWeights    [2]float32
@@ -42,7 +42,7 @@ func (stats *fileStats) updateRequestFileStats() {
 	stats.requestWeights[1] = stats.requestWeights[0]
 
 	stats.requests[0] = time.Now()
-	stats.requestWeights[0] = stats.size / float32(stats.requests[0].Sub(stats.lastTimeRequested))
+	stats.requestWeights[0] = (stats.size + float32(stats.requests[0].Sub(stats.lastTimeRequested))) / stats.totRequests
 }
 
 func (stats fileStats) getRequestWeightFileStats() float32 {
@@ -82,18 +82,18 @@ func (cache *Weighted) Clear() {
 	cache.size = 0.
 }
 
-func fileWeight(size float32, numRequests float32, exp float32) float32 {
-	return float32(math.Pow(float64(size/numRequests), float64(exp)))
+func fileWeight(size float32, totRequests float32, exp float32) float32 {
+	return float32(math.Pow(float64(size/totRequests), float64(exp)))
 }
 
-func fileWeightAndTime(size float32, numRequests float32, exp float32, lastTimeRequested time.Time) float32 {
+func fileWeightAndTime(size float32, totRequests float32, exp float32, lastTimeRequested time.Time) float32 {
 	deltaLastTimeRequested := float64(time.Now().Sub(lastTimeRequested) / time.Second)
-	return (size / float32(math.Pow(float64(numRequests), float64(exp)))) + float32(math.Pow(deltaLastTimeRequested, float64(exp)))
+	return (size / float32(math.Pow(float64(totRequests), float64(exp)))) + float32(math.Pow(deltaLastTimeRequested, float64(exp)))
 }
 
-func fileWeightOnlyTime(numRequests float32, exp float32, lastTimeRequested time.Time) float32 {
+func fileWeightOnlyTime(totRequests float32, exp float32, lastTimeRequested time.Time) float32 {
 	deltaLastTimeRequested := float64(time.Now().Sub(lastTimeRequested) / time.Second)
-	return (1. / float32(math.Pow(float64(numRequests), float64(exp)))) + float32(math.Pow(deltaLastTimeRequested, float64(exp)))
+	return (1. / float32(math.Pow(float64(totRequests), float64(exp)))) + float32(math.Pow(deltaLastTimeRequested, float64(exp)))
 }
 
 func fileWeightedRequests(weight float32, exp float32, lastTimeRequested time.Time) float32 {
@@ -148,19 +148,19 @@ func (cache *Weighted) SimServiceGetInfoFilesWeights(_ *empty.Empty, stream pb.S
 		case FuncFileWeight:
 			weight = fileWeight(
 				stats.size,
-				stats.numRequests,
+				stats.totRequests,
 				cache.exp,
 			)
 		case FuncFileWeightAndTime:
 			weight = fileWeightAndTime(
 				stats.size,
-				stats.numRequests,
+				stats.totRequests,
 				cache.exp,
 				stats.lastTimeRequested,
 			)
 		case FuncFileWeightOnlyTime:
 			weight = fileWeightOnlyTime(
-				stats.numRequests,
+				stats.totRequests,
 				cache.exp,
 				stats.lastTimeRequested,
 			)
@@ -206,7 +206,7 @@ func (cache *Weighted) updatePolicy(filename string, size float32, hit bool) boo
 		}
 	}
 
-	cache.stats[filename].numRequests += 1.
+	cache.stats[filename].totRequests += 1.
 	cache.stats[filename].lastTimeRequested = currentTime
 	cache.stats[filename].updateRequestFileStats()
 
@@ -229,19 +229,19 @@ func (cache *Weighted) updatePolicy(filename string, size float32, hit bool) boo
 			case FuncFileWeight:
 				curFile.weight = fileWeight(
 					cache.stats[curFile.filename].size,
-					cache.stats[curFile.filename].numRequests,
+					cache.stats[curFile.filename].totRequests,
 					cache.exp,
 				)
 			case FuncFileWeightAndTime:
 				curFile.weight = fileWeightAndTime(
 					cache.stats[curFile.filename].size,
-					cache.stats[curFile.filename].numRequests,
+					cache.stats[curFile.filename].totRequests,
 					cache.exp,
 					cache.stats[curFile.filename].lastTimeRequested,
 				)
 			case FuncFileWeightOnlyTime:
 				curFile.weight = fileWeightOnlyTime(
-					cache.stats[curFile.filename].numRequests,
+					cache.stats[curFile.filename].totRequests,
 					cache.exp,
 					cache.stats[curFile.filename].lastTimeRequested,
 				)
