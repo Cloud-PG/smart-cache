@@ -629,7 +629,7 @@ def simulate(cache, windows: list, region: str = "_all_",
                     cur_hit_rate = cache.hit_rate
                     cur_capacity = cache.capacity
                     cur_written_data = cache.written_data
-                    cur_read_on_hit = stub_result.read_on_hit
+                    cur_read_on_hit = cache.read_on_hit
                     cur_size = cache.size
 
                 if plot_server:
