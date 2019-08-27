@@ -407,7 +407,7 @@ class LRUCache(object):
     
     @property
     def read_on_hit(self):
-        return self.read_on_hit[-1]
+        return self.read_on_hit_history[-1]
 
     def clear(self):
         self.__counter = 0
