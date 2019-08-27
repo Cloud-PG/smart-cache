@@ -564,13 +564,20 @@ def simulate(cache, windows: list, region: str = "_all_",
             'read_on_hit': [],
         }
 
+    win_pbar = tqdm(
+        desc=f"[{str(cache_name)[:4]+str(cache_name)[-12:]}][Open Data Frames]",
+        position=process_num, ascii=True,
+        total=len(window)
+    )
+    record_pbar = tqdm(
+        total=df.shape[0], position=process_num,
+        desc=f"[{str(cache_name)[:4]+str(cache_name)[-12:]}][Simulation]",
+        ascii=True
+    )
+
     for num_window, window in enumerate(windows):
         num_file = 1
-        win_pbar = tqdm(
-            desc=f"[{str(cache_name)[:4]+str(cache_name)[-12:]}][Open Data Frames][Window {num_window+1}/{len(windows)}][File {num_file}/{len(window)}]",
-            position=process_num, ascii=True,
-            total=len(window)
-        )
+
         request_idx = 0
 
         for filename in window:
@@ -584,12 +591,6 @@ def simulate(cache, windows: list, region: str = "_all_",
                     ][['filename', 'size']].dropna().reset_index()
                 else:
                     df = df[['filename', 'size']].dropna().reset_index()
-
-            record_pbar = tqdm(
-                total=df.shape[0], position=process_num,
-                desc=f"[{str(cache_name)[:4]+str(cache_name)[-12:]}][Simulation][Window {num_window+1}/{len(windows)}][File {num_file}/{len(window)}]",
-                ascii=True
-            )
 
             for row_idx, record in df.iterrows():
                 if remote:
@@ -678,7 +679,6 @@ def simulate(cache, windows: list, region: str = "_all_",
                     )
 
             num_file += 1
-            record_pbar.close()
 
         if plot_server:
             if remote:
@@ -715,8 +715,8 @@ def simulate(cache, windows: list, region: str = "_all_",
                 timeout=None
             )
 
-        win_pbar.update(1)
         win_pbar.desc = f"[{cache_name[:4]+cache_name[-12:]}][Open Data Frames][Window {num_window+1}/{len(windows)}][File {num_file}/{len(window)}]"
+        win_pbar.update(1)
 
         if not plot_server and not remote:
             cur_size_history, cur_hit_rate_history, cur_write_history, _ = cache.history
@@ -734,7 +734,8 @@ def simulate(cache, windows: list, region: str = "_all_",
             if cache.clear_my_weights:
                 cache.reset_weights()
 
-        win_pbar.close()
+    record_pbar.close()
+    win_pbar.close()
 
     if remote:
         channel.close()
