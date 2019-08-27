@@ -411,7 +411,6 @@ class LRUCache(object):
         self.__counter = 0
         self._queue = []
         self._cache = {}
-        self._sizes = []
 
     def clear_history(self):
         self.size_history = [self.size_history[-1]]
@@ -451,7 +450,6 @@ class LRUCache(object):
     def state(self) -> dict:
         return {
             'cache': self._cache,
-            'sizes': self._sizes,
             'hit': self._hit,
             'miss': self._miss,
             'max_size': self._max_size,
@@ -468,7 +466,6 @@ class LRUCache(object):
 
     def __setstate__(self, state):
         self._cache = state['cache']
-        self._sizes = state['sizes']
         self._hit = state['hit']
         self._miss = state['miss']
         self._max_size = state['max_size']
@@ -489,7 +486,7 @@ class LRUCache(object):
 
     @property
     def size(self) -> float:
-        return sum(self._sizes)
+        return sum(self._cache.values())
 
     def check(self, filename: str) -> bool:
         return filename in self._cache
