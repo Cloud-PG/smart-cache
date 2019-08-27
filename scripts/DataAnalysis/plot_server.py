@@ -42,8 +42,8 @@ def plot_info_window(window: int, filename: str, **kwargs):
     filters = kwargs.get('filters', [])
 
     for cache_name, info in WINDOW_INFO.items():
+        size = get_size_from_name(cache_name)
         if filters:
-            size = get_size_from_name(cache_name)
             if size not in filters:
                 continue
         if size not in data:
