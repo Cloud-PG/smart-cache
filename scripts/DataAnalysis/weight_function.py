@@ -354,13 +354,11 @@ class LRUCache(object):
 
     def __init__(self, max_size: float, cache_options: dict = {},
                  init_state: dict = {}):
-        self._cache: List[str] = []
-        self._sizes: List[float] = []
+        self._cache: Dict[str, float] = {}
         self._hit = 0
         self._miss = 0
         self._max_size = max_size
-        self._counters: List[int] = []
-        self.__counter = 0
+        self._queue: List[str] = []
         self.size_history: List[float] = []
         self.hit_rate_history: List[float] = []
         self.write_history: List[float] = []
@@ -391,7 +389,7 @@ class LRUCache(object):
     def info(self):
         info = {
             'weights': None,
-            'cache': dict(zip(self._cache, self._counters)),
+            'cache': self._cache,
             'df': None,
             'correlation_matrix': None
         }
@@ -411,8 +409,8 @@ class LRUCache(object):
 
     def clear(self):
         self.__counter = 0
-        self._counters = []
-        self._cache = []
+        self._queue = []
+        self._cache = {}
         self._sizes = []
 
     def clear_history(self):
@@ -457,8 +455,7 @@ class LRUCache(object):
             'hit': self._hit,
             'miss': self._miss,
             'max_size': self._max_size,
-            'counters': self._counters,
-            'counter': self.__counter,
+            'queue': self._queue,
             'size_history': self.size_history,
             'hit_rate_history': self.hit_rate_history,
             'write_history': self.write_history,
@@ -475,8 +472,7 @@ class LRUCache(object):
         self._hit = state['hit']
         self._miss = state['miss']
         self._max_size = state['max_size']
-        self._counters = state['counters']
-        self.__counter = state['counter']
+        self._queue = state['queue']
         self.size_history = state['size_history']
         self.hit_rate_history = state['hit_rate_history']
         self.write_history = state['write_history']
@@ -515,24 +511,19 @@ class LRUCache(object):
         return hit
 
     def update_policy(self, filename: str, size: float, hit: bool) -> bool:
-        self.__counter += 1
-
         if hit:
-            self._counters[self._cache.index(filename)] = self.__counter
+            file_ = self._queue.pop(self._queue.index(filename))
+            self._queue.append(file_)
         elif self.size + size > self._max_size:
             while self.size + size > self._max_size:
-                idx = self._counters.index(min(self._counters))
-                self._cache.pop(idx)
-                self._sizes.pop(idx)
-                self._counters.pop(idx)
-            self._cache.append(filename)
-            self._sizes.append(size)
-            self._counters.append(self.__counter)
+                file_ = self._queue.pop(0)
+                del self._cache[file_]
+            self._cache[filename] = size
+            self._queue.append(filename)
             return True
         else:
-            self._cache.append(filename)
-            self._sizes.append(size)
-            self._counters.append(self.__counter)
+            self._cache[filename] = size
+            self._queue.append(filename)
             return True
 
         return False
