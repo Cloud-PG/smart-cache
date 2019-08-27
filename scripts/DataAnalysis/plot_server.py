@@ -148,6 +148,7 @@ def plot_line(table_name: str, filename: str, **kwargs):
         kwargs.get('title', "Line plot"),
         mode="inline"
     )
+    filters = kwargs.get('filters', [])
 
     # create a new plot
     plot_figure = figure(
@@ -165,6 +166,10 @@ def plot_line(table_name: str, filename: str, **kwargs):
 
     if table_name != 'ratio':
         for name, values in TABLES[table_name].items():
+            if filters:
+                size = get_size_from_name(cache_name)
+                if size not in filters:
+                    continue
             if not v_lines:
                 v_lines = [len(elm) for elm in values]
                 for idx in range(1, len(v_lines)):
@@ -198,6 +203,10 @@ def plot_line(table_name: str, filename: str, **kwargs):
         }
         for cur_table_name in points:
             for name, values in TABLES[cur_table_name].items():
+                if filters:
+                    size = get_size_from_name(cache_name)
+                    if size not in filters:
+                        continue
                 if not v_lines:
                     v_lines = [len(elm) for elm in values]
                     for idx in range(1, len(v_lines)):
@@ -258,6 +267,10 @@ def service_status():
 
 @app.route('/cache/plot/<string:table_name>', methods=['GET'])
 def table_plot(table_name: str):
+    filters = request.args.get('filter')
+    if filters:
+        filters = filters.split(',')
+
     kwargs = {
         'x_axis_label': "Requests"
     }
@@ -278,6 +291,7 @@ def table_plot(table_name: str):
         table_name,
         f"plot_{table_name}.html",
         title=f"Cache {table_name}",
+        filters=filters,
         **kwargs
     )
 
