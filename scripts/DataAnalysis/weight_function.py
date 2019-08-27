@@ -364,6 +364,7 @@ class LRUCache(object):
         self.size_history: List[float] = []
         self.hit_rate_history: List[float] = []
         self.write_history: List[float] = []
+        self.read_on_hit: List[float] = []
         self.__cache_options = cache_options
 
         if init_state:
@@ -403,6 +404,10 @@ class LRUCache(object):
     @property
     def written_data(self):
         return self.write_history[-1]
+    
+    @property
+    def read_on_hit(self):
+        return self.read_on_hit[-1]
 
     def clear(self):
         self.__counter = 0
@@ -414,11 +419,13 @@ class LRUCache(object):
         self.size_history = [self.size_history[-1]]
         self.hit_rate_history = [self.hit_rate_history[-1]]
         self.write_history = [self.write_history[-1]]
+        self.read_on_hit = [self.read_on_hit[-1]]
 
     def reset_history(self):
         self.size_history = []
         self.hit_rate_history = []
         self.write_history = []
+        self.read_on_hit = []
         self._hit = 0
         self._miss = 0
 
@@ -431,6 +438,16 @@ class LRUCache(object):
             self.write_history.append(last)
         else:
             self.write_history.append(last + size)
+    
+    def update_read_history(self, size: float, hit: bool):
+        try:
+            last = self.read_on_hit[-1]
+        except IndexError:
+            last = 0.0
+        if not hit:
+            self.read_on_hit.append(last)
+        else:
+            self.read_on_hit.append(last + size)
 
     @property
     def state(self) -> dict:
@@ -445,6 +462,7 @@ class LRUCache(object):
             'size_history': self.size_history,
             'hit_rate_history': self.hit_rate_history,
             'write_history': self.write_history,
+            'read_on_hit_history': self.read_on_hit_history,
             'cache_options': self.__cache_options,
         }
 
@@ -462,11 +480,12 @@ class LRUCache(object):
         self.size_history = state['size_history']
         self.hit_rate_history = state['hit_rate_history']
         self.write_history = state['write_history']
+        self.read_on_hit_history = state['read_on_hit_history']
         self.__cache_options = state['cache_options']
 
     @property
     def history(self) -> Tuple[List[float]]:
-        return (self.size_history, self.hit_rate_history, self.write_history)
+        return (self.size_history, self.hit_rate_history, self.write_history, self.read_on_hit_history)
 
     @property
     def hit_rate(self) -> float:
@@ -491,6 +510,7 @@ class LRUCache(object):
         self.size_history.append(self.size)
         self.hit_rate_history.append(self.hit_rate)
         self.update_write_history(size, added)
+        self.update_read_history(size, hit)
 
         return hit
 
@@ -609,6 +629,7 @@ def simulate(cache, windows: list, region: str = "_all_",
                     cur_hit_rate = cache.hit_rate
                     cur_capacity = cache.capacity
                     cur_written_data = cache.written_data
+                    cur_read_on_hit = stub_result.read_on_hit
                     cur_size = cache.size
 
                 if plot_server:
@@ -687,7 +708,7 @@ def simulate(cache, windows: list, region: str = "_all_",
         win_pbar.desc = f"[{cache_name[:4]+cache_name[-12:]}][Open Data Frames][Window {num_window+1}/{len(windows)}][File {num_file}/{len(window)}]"
 
         if not plot_server and not remote:
-            cur_size_history, cur_hit_rate_history, cur_write_history = cache.history
+            cur_size_history, cur_hit_rate_history, cur_write_history, _ = cache.history
             store_results(tmp_size_history.name, [cur_size_history])
             store_results(tmp_hit_rate_history.name, [cur_hit_rate_history])
             store_results(tmp_write_history.name, [cur_write_history])
