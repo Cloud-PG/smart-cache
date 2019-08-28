@@ -98,8 +98,7 @@ func fileWeightOnlyTime(totRequests float32, exp float32, lastTimeRequested time
 }
 
 func fileWeightedRequests(weight float32, exp float32, lastTimeRequested time.Time) float32 {
-	deltaLastTimeRequested := float64(time.Now().Sub(lastTimeRequested) / time.Second)
-	return float32(math.Pow(float64(weight), float64(exp))) + float32(math.Pow(deltaLastTimeRequested, float64(exp)))
+	return weight + float32(time.Now().Sub(lastTimeRequested)/time.Second)
 }
 
 // SimServiceGet updates the cache from a protobuf message
