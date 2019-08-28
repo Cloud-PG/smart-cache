@@ -15,7 +15,7 @@ type FunctionType int
 
 const (
 	// StatsMemorySize indicates the size of fileStats memory
-	StatsMemorySize int = 42
+	StatsMemorySize int = 4
 )
 
 const (
@@ -39,30 +39,28 @@ type fileStats struct {
 	totRequests       float32
 	lastTimeRequested time.Time
 	requestTimers     [StatsMemorySize]time.Time
-	requestCounters   [StatsMemorySize]float32
 	requestLastIdx    int
 }
 
-func (stats *fileStats) updateRequestFileStats(newTime time.Time) {
-	stats.totRequests += 1.
+func (stats *fileStats) updateRequests(newTime time.Time) {
 	stats.lastTimeRequested = newTime
+	stats.totRequests += 1.
 
 	stats.requestLastIdx = (stats.requestLastIdx + 1) % StatsMemorySize
 	stats.requestTimers[stats.requestLastIdx] = newTime
-	stats.requestCounters[stats.requestLastIdx] = stats.totRequests
 }
 
-func (stats fileStats) getRequestWeightFileStats() float32 {
-	var sum float32
-	for idx := 0; idx < StatsMemorySize; idx++ {
-		partial := stats.size * float32(stats.lastTimeRequested.Sub(stats.requestTimers[idx]))
-		diffNumReq := stats.totRequests - stats.requestCounters[idx]
-		if partial > 0. && diffNumReq > 0. {
-			partial /= diffNumReq
-		}
-		sum += partial
+func (stats fileStats) getRequestWeight() float32 {
+	var timeMean float32
+	stopIdx := float32(StatsMemorySize)
+	if stopIdx > stats.totRequests {
+		stopIdx = stats.totRequests
 	}
-	return sum
+	for idx := 0; idx < StatsMemorySize; idx++ {
+		timeMean += float32(time.Now().Sub(stats.requestTimers[idx]).Seconds())
+	}
+	timeMean /= float32(StatsMemorySize)
+	return timeMean / float32(math.Pow(float64(stats.totRequests), 2.))
 }
 
 // Weighted cache
@@ -106,6 +104,11 @@ func fileWeightAndTime(size float32, totRequests float32, exp float32, lastTimeR
 func fileWeightOnlyTime(totRequests float32, exp float32, lastTimeRequested time.Time) float32 {
 	deltaLastTimeRequested := float64(time.Now().Sub(lastTimeRequested) / time.Second)
 	return (1. / float32(math.Pow(float64(totRequests), float64(exp)))) + float32(math.Pow(deltaLastTimeRequested, float64(exp)))
+}
+
+func fileWeightedRequest(weight float32, exp float32, lastTimeRequested time.Time) float32 {
+	deltaLastTimeRequested := float32(time.Now().Sub(lastTimeRequested) / time.Second)
+	return weight + deltaLastTimeRequested
 }
 
 // SimServiceGet updates the cache from a protobuf message
@@ -172,7 +175,12 @@ func (cache *Weighted) SimServiceGetInfoFilesWeights(_ *empty.Empty, stream pb.S
 				stats.lastTimeRequested,
 			)
 		case FuncWeightedRequests:
-			weight = stats.getRequestWeightFileStats()
+			fileWeight := stats.getRequestWeight()
+			weight = fileWeightedRequest(
+				fileWeight,
+				cache.exp,
+				stats.lastTimeRequested,
+			)
 		}
 
 		curFile := &pb.SimFileWeight{
@@ -205,12 +213,11 @@ func (cache *Weighted) updatePolicy(filename string, size float32, hit bool) boo
 			0.,
 			currentTime,
 			[StatsMemorySize]time.Time{},
-			[StatsMemorySize]float32{},
 			0,
 		}
 	}
 
-	cache.stats[filename].updateRequestFileStats(currentTime)
+	cache.stats[filename].updateRequests(currentTime)
 
 	if !hit {
 		cache.queue = append(
@@ -248,7 +255,12 @@ func (cache *Weighted) updatePolicy(filename string, size float32, hit bool) boo
 					cache.stats[curFile.filename].lastTimeRequested,
 				)
 			case FuncWeightedRequests:
-				curFile.weight = cache.stats[curFile.filename].getRequestWeightFileStats()
+				fileWeight := cache.stats[curFile.filename].getRequestWeight()
+				curFile.weight = fileWeightedRequest(
+					fileWeight,
+					cache.exp,
+					cache.stats[curFile.filename].lastTimeRequested,
+				)
 			}
 		}
 		// Sort queue
