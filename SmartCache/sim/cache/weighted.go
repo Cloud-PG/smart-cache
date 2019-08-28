@@ -14,11 +14,15 @@ import (
 type FunctionType int
 
 const (
+	StatsMemorySize int = 5
+)
+
+const (
 	// FuncFileWeight indicates the simple function for weighted cache
 	FuncFileWeight FunctionType = iota
 	// FuncFileWeightAndTime indicates the function that uses time
 	FuncFileWeightAndTime
-	// FuncFileWeightAndTime indicates the function that uses time
+	// FuncFileWeightOnlyTime indicates the function that uses time
 	FuncFileWeightOnlyTime
 	// FuncWeightedRequests has a small memory for request time
 	FuncWeightedRequests
@@ -33,22 +37,19 @@ type fileStats struct {
 	size              float32
 	totRequests       float32
 	lastTimeRequested time.Time
-	requests          [2]time.Time
-	requestWeights    [2]float32
+	requests          [StatsMemorySize]time.Time
+	requestLastIdx    int
 }
 
-func (stats *fileStats) updateRequestFileStats() {
-	stats.requests[1] = stats.requests[0]
-	stats.requestWeights[1] = stats.requestWeights[0]
-
-	stats.requests[0] = time.Now()
-	stats.requestWeights[0] = (stats.size + float32(stats.requests[0].Sub(stats.lastTimeRequested))) / stats.totRequests
+func (stats *fileStats) updateRequestFileStats(newTime time.Time) {
+	stats.requestLastIdx = (stats.requestLastIdx + 1) % StatsMemorySize
+	stats.requests[stats.requestLastIdx] = newTime
 }
 
 func (stats fileStats) getRequestWeightFileStats() float32 {
 	var sum float32
-	for idx := 0; idx < len(stats.requestWeights); idx++ {
-		sum += stats.requestWeights[idx]
+	for idx := 0; idx < StatsMemorySize; idx++ {
+		sum += stats.size + float32(stats.lastTimeRequested.Sub(stats.requests[idx]))
 	}
 	return sum
 }
@@ -201,14 +202,14 @@ func (cache *Weighted) updatePolicy(filename string, size float32, hit bool) boo
 			size,
 			0.,
 			currentTime,
-			[2]time.Time{currentTime, currentTime},
-			[2]float32{0., 0.},
+			[5]time.Time{},
+			0,
 		}
 	}
 
 	cache.stats[filename].totRequests += 1.
 	cache.stats[filename].lastTimeRequested = currentTime
-	cache.stats[filename].updateRequestFileStats()
+	cache.stats[filename].updateRequestFileStats(currentTime)
 
 	if !hit {
 		cache.queue = append(
