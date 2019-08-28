@@ -14,7 +14,8 @@ import (
 type FunctionType int
 
 const (
-	StatsMemorySize int = 5
+	// StatsMemorySize indicates the size of fileStats memory
+	StatsMemorySize int = 42
 )
 
 const (
@@ -37,19 +38,29 @@ type fileStats struct {
 	size              float32
 	totRequests       float32
 	lastTimeRequested time.Time
-	requests          [StatsMemorySize]time.Time
+	requestTimers     [StatsMemorySize]time.Time
+	requestCounters   [StatsMemorySize]float32
 	requestLastIdx    int
 }
 
 func (stats *fileStats) updateRequestFileStats(newTime time.Time) {
+	stats.totRequests += 1.
+	stats.lastTimeRequested = newTime
+
 	stats.requestLastIdx = (stats.requestLastIdx + 1) % StatsMemorySize
-	stats.requests[stats.requestLastIdx] = newTime
+	stats.requestTimers[stats.requestLastIdx] = newTime
+	stats.requestCounters[stats.requestLastIdx] = stats.totRequests
 }
 
 func (stats fileStats) getRequestWeightFileStats() float32 {
 	var sum float32
 	for idx := 0; idx < StatsMemorySize; idx++ {
-		sum += stats.size + float32(stats.lastTimeRequested.Sub(stats.requests[idx]))
+		partial := stats.size * float32(stats.lastTimeRequested.Sub(stats.requestTimers[idx]))
+		diffNumReq := stats.totRequests - stats.requestCounters[idx]
+		if partial > 0. && diffNumReq > 0. {
+			partial /= diffNumReq
+		}
+		sum += partial
 	}
 	return sum
 }
@@ -95,10 +106,6 @@ func fileWeightAndTime(size float32, totRequests float32, exp float32, lastTimeR
 func fileWeightOnlyTime(totRequests float32, exp float32, lastTimeRequested time.Time) float32 {
 	deltaLastTimeRequested := float64(time.Now().Sub(lastTimeRequested) / time.Second)
 	return (1. / float32(math.Pow(float64(totRequests), float64(exp)))) + float32(math.Pow(deltaLastTimeRequested, float64(exp)))
-}
-
-func fileWeightedRequests(weight float32, exp float32, lastTimeRequested time.Time) float32 {
-	return weight + float32(time.Now().Sub(lastTimeRequested)/time.Second)
 }
 
 // SimServiceGet updates the cache from a protobuf message
@@ -165,11 +172,7 @@ func (cache *Weighted) SimServiceGetInfoFilesWeights(_ *empty.Empty, stream pb.S
 				stats.lastTimeRequested,
 			)
 		case FuncWeightedRequests:
-			weight = fileWeightedRequests(
-				stats.getRequestWeightFileStats(),
-				cache.exp,
-				stats.lastTimeRequested,
-			)
+			weight = stats.getRequestWeightFileStats()
 		}
 
 		curFile := &pb.SimFileWeight{
@@ -201,13 +204,12 @@ func (cache *Weighted) updatePolicy(filename string, size float32, hit bool) boo
 			size,
 			0.,
 			currentTime,
-			[5]time.Time{},
+			[StatsMemorySize]time.Time{},
+			[StatsMemorySize]float32{},
 			0,
 		}
 	}
 
-	cache.stats[filename].totRequests += 1.
-	cache.stats[filename].lastTimeRequested = currentTime
 	cache.stats[filename].updateRequestFileStats(currentTime)
 
 	if !hit {
@@ -246,11 +248,7 @@ func (cache *Weighted) updatePolicy(filename string, size float32, hit bool) boo
 					cache.stats[curFile.filename].lastTimeRequested,
 				)
 			case FuncWeightedRequests:
-				curFile.weight = fileWeightOnlyTime(
-					cache.stats[curFile.filename].getRequestWeightFileStats(),
-					cache.exp,
-					cache.stats[curFile.filename].lastTimeRequested,
-				)
+				curFile.weight = cache.stats[curFile.filename].getRequestWeightFileStats()
 			}
 		}
 		// Sort queue
