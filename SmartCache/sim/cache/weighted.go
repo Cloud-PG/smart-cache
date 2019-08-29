@@ -10,8 +10,9 @@ import (
 	empty "github.com/golang/protobuf/ptypes/empty"
 )
 
+type emptyMessage struct{}
+
 // FunctionType is used to select the weight function
-type emptyMessage {}
 type FunctionType int
 
 const (
