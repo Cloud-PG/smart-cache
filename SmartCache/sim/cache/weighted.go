@@ -59,7 +59,7 @@ func (stats fileStats) getMeanTicks(curTick float32) float32 {
 	for idx := 0; idx < int(numTicks); idx++ {
 		timeMean += curTick - stats.requestTicks[idx]
 	}
-	timeMean /= numTicks
+	timeMean /= float32(StatsMemorySize)
 	return timeMean
 }
 
