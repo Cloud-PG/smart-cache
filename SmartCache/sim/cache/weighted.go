@@ -107,8 +107,8 @@ func fileWeightOnlyTime(totRequests float32, exp float32, lastTimeRequested time
 	return (1. / float32(math.Pow(float64(totRequests), float64(exp)))) + float32(math.Pow(deltaLastTimeRequested, float64(exp)))
 }
 
-func fileWeightedRequest(size float32, totRequests float32, meanTicks float32, exp float32) float32 {
-	return meanTicks - totRequests
+func fileWeightedRequest(totRequests float32, meanTicks float32, exp float32) float32 {
+	return meanTicks / totRequests
 }
 
 // SimServiceGet updates the cache from a protobuf message
@@ -176,7 +176,6 @@ func (cache *Weighted) SimServiceGetInfoFilesWeights(_ *empty.Empty, stream pb.S
 			)
 		case FuncWeightedRequests:
 			weight = fileWeightedRequest(
-				stats.size,
 				stats.totRequests,
 				stats.getMeanTicks(cache.tick),
 				cache.exp,
@@ -257,7 +256,6 @@ func (cache *Weighted) updatePolicy(filename string, size float32, hit bool) boo
 				)
 			case FuncWeightedRequests:
 				curFile.weight = fileWeightedRequest(
-					curStats.size,
 					curStats.totRequests,
 					curStats.getMeanTicks(cache.tick),
 					cache.exp,
