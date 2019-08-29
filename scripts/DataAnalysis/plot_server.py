@@ -6,7 +6,7 @@ from itertools import cycle
 from typing import Dict, List
 
 from bokeh.models import Span
-from bokeh.layouts import column
+from bokeh.layouts import column, row
 from bokeh.plotting import figure, output_file, save
 from flask import Flask, escape, request, jsonify
 from tqdm import tqdm
@@ -77,13 +77,13 @@ def plot_info_window(window: int, filename: str, **kwargs):
             filenames = [key for key, _ in sorted(
                 cur_data['weights'].items(),
                 key=lambda elm: elm[1],
-                reverse=True
-            )
+                reverse=True)
             ]
+            # Weights plot
             plot_figure = figure(
-                title=f"{cache_name} window {window}",
+                title=f"{cache_name} window {window} - Cache files (sorted by weight score)",
                 tools="box_zoom,pan,reset,save",
-                plot_width=kwargs.get('plot_width', 1280),
+                plot_width=kwargs.get('plot_width', 640),
                 plot_height=kwargs.get('plot_height', 800),
                 x_range=filenames,
                 y_range=(1, int(max(cur_data['weights'].values())) + 10),
@@ -94,18 +94,20 @@ def plot_info_window(window: int, filename: str, **kwargs):
             # Empty plot with log scale:
             # - https://github.com/bokeh/bokeh/issues/6671
 
+            # All weights
             plot_figure.vbar(
                 filenames,
                 top=[
                     cur_data['weights'][filename]
                     for filename in filenames
                 ],
-                color="gray",
+                color="gainsboro",
                 width=1.0,
                 bottom=0.01 if kwargs.get(
                     'y_axis_type', False) == 'log' else 0.0  # To avoid empty plot
             )
 
+            # Weighted cache files
             plot_figure.vbar(
                 filenames,
                 top=[
@@ -119,6 +121,7 @@ def plot_info_window(window: int, filename: str, **kwargs):
                     'y_axis_type', False) == 'log' else 0.0  # To avoid empty plot
             )
 
+            # Cache files
             plot_figure.vbar(
                 filenames,
                 top=[
@@ -132,7 +135,75 @@ def plot_info_window(window: int, filename: str, **kwargs):
                     'y_axis_type', False) == 'log' else 0.0  # To avoid empty plot
             )
 
-            figures.append(plot_figure)
+            # Filter files to get size
+            filenames_not_in_cache = list(sorted([
+                filename for filename in filenames
+                if filename in cur_data['cache'] and filename not in caches['lru']
+            ],
+                key=lambda name: cur_data['cache'][name],
+                reverse=True
+            ))
+            filenames_not_in_weighted_cache = list(sorted([
+                filename for filename in filenames
+                if filename not in cur_data['cache'] and filename in caches['lru']
+            ],
+                key=lambda name: caches['lru'][name],
+                reverse=True
+            ))
+            # Sizes plot
+            plot_figure_size_weighted_cache = figure(
+                title=f"Sizes of files not in cache (sort by size)",
+                tools="box_zoom,pan,reset,save",
+                plot_width=kwargs.get('plot_width', 640),
+                plot_height=kwargs.get('plot_height', 400),
+                x_range=filenames_not_in_cache,
+                y_range=(1, int(max(cur_data['weights'].values())) + 10),
+                x_axis_type=None,
+                y_axis_type=kwargs.get('y_axis_type', 'auto'),
+            )
+
+            # Size of weighted cache files
+            plot_figure_size_weighted_cache.vbar(
+                filenames_not_in_cache,
+                top=[
+                    cur_data['cache'][filename]
+                    if filename in cur_data['cache'] else 0
+                    for filename in filenames_not_in_cache
+                ],
+                color="blue",
+                width=1.0,
+                bottom=0.01 if kwargs.get(
+                    'y_axis_type', False) == 'log' else 0.0  # To avoid empty plot
+            )
+
+            # Sizes plot
+            plot_figure_size_cache = figure(
+                title=f"Sizes of files not in {cache_name} (sort by size)",
+                tools="box_zoom,pan,reset,save",
+                plot_width=kwargs.get('plot_width', 640),
+                plot_height=kwargs.get('plot_height', 400),
+                x_range=filenames_not_in_weighted_cache,
+                y_range=(1, int(max(cur_data['weights'].values())) + 10),
+                x_axis_type=None,
+                y_axis_type=kwargs.get('y_axis_type', 'auto'),
+            )
+
+            # Size of cache files
+            plot_figure_size_cache.vbar(
+                filenames_not_in_weighted_cache,
+                top=[
+                    caches['lru'][filename]
+                    if filename in caches['lru'] else 0
+                    for filename in filenames_not_in_weighted_cache
+                ],
+                color="red",
+                width=1.0,
+                bottom=0.01 if kwargs.get(
+                    'y_axis_type', False) == 'log' else 0.0  # To avoid empty plot
+            )
+
+            figures.append(row(plot_figure, column(
+                plot_figure_size_weighted_cache, plot_figure_size_cache)))
 
     save(column(*figures))
 
@@ -204,7 +275,7 @@ def plot_line(table_name: str, filename: str, **kwargs):
         for cur_table_name in points:
             for name, values in TABLES[cur_table_name].items():
                 if filters:
-                    size = get_size_from_name(cache_name)
+                    size = get_size_from_name(name)
                     if size not in filters:
                         continue
                 if not v_lines:
@@ -221,7 +292,8 @@ def plot_line(table_name: str, filename: str, **kwargs):
                         ]
                     else:
                         v_lines = []
-                points[cur_table_name] = [value for bucket in values for value in bucket]
+                points[cur_table_name] = [
+                    value for bucket in values for value in bucket]
                 if name not in TABLE_COLORS:
                     TABLE_COLORS[name] = next(COLORS)
 
