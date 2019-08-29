@@ -298,7 +298,7 @@ def plot_line(table_name: str, filename: str, **kwargs):
                     TABLE_COLORS[name] = next(COLORS)
 
         plot_figure.line(
-            range(len(points)),
+            range(len(points['read_on_hit'])),
             [value / points['written_data'][idx]
                 for idx, value in enumerate(points['read_on_hit'])],
             legend=name,
