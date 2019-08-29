@@ -297,14 +297,14 @@ def plot_line(table_name: str, filename: str, **kwargs):
                 if name not in TABLE_COLORS:
                     TABLE_COLORS[name] = next(COLORS)
 
-        plot_figure.line(
-            range(len(points['read_on_hit'])),
-            [value / points['written_data'][idx]
-                for idx, value in enumerate(points['read_on_hit'])],
-            legend=name,
-            color=TABLE_COLORS[name],
-            line_width=2.
-        )
+                plot_figure.line(
+                    range(len(points['read_on_hit'])),
+                    [value / points['written_data'][idx]
+                        for idx, value in enumerate(points['read_on_hit'])],
+                    legend=name,
+                    color=TABLE_COLORS[name],
+                    line_width=2.
+                )
 
     if v_lines:
         plot_figure.renderers.extend(v_lines)
