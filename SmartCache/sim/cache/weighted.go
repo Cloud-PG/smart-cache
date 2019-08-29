@@ -15,7 +15,7 @@ type FunctionType int
 
 const (
 	// StatsMemorySize indicates the size of fileStats memory
-	StatsMemorySize int = 42
+	StatsMemorySize int = 8
 )
 
 const (
@@ -46,18 +46,18 @@ func (stats *fileStats) updateRequests(tick float32, newTime time.Time) {
 	stats.lastTimeRequested = newTime
 	stats.totRequests += 1.
 
-	stats.requestLastIdx = (stats.requestLastIdx + 1) % StatsMemorySize
 	stats.requestTicks[stats.requestLastIdx] = tick
+	stats.requestLastIdx = (stats.requestLastIdx + 1) % StatsMemorySize
 }
 
-func (stats fileStats) getMeanTicks() float32 {
+func (stats fileStats) getMeanTicks(curTick float32) float32 {
 	var timeMean float32
 	numTicks := float32(StatsMemorySize)
 	if numTicks > stats.totRequests {
 		numTicks = stats.totRequests
 	}
-	for idx := 0; idx < StatsMemorySize; idx++ {
-		timeMean += stats.requestTicks[idx]
+	for idx := 0; idx < int(numTicks); idx++ {
+		timeMean += curTick - stats.requestTicks[idx]
 	}
 	timeMean /= numTicks
 	return timeMean
@@ -108,7 +108,7 @@ func fileWeightOnlyTime(totRequests float32, exp float32, lastTimeRequested time
 }
 
 func fileWeightedRequest(size float32, totRequests float32, meanTicks float32, exp float32) float32 {
-	return (size / totRequests) * float32(math.Pow(float64(meanTicks), float64(exp)))
+	return meanTicks - totRequests
 }
 
 // SimServiceGet updates the cache from a protobuf message
@@ -178,7 +178,7 @@ func (cache *Weighted) SimServiceGetInfoFilesWeights(_ *empty.Empty, stream pb.S
 			weight = fileWeightedRequest(
 				stats.size,
 				stats.totRequests,
-				stats.getMeanTicks(),
+				stats.getMeanTicks(cache.tick),
 				cache.exp,
 			)
 		}
@@ -259,7 +259,7 @@ func (cache *Weighted) updatePolicy(filename string, size float32, hit bool) boo
 				curFile.weight = fileWeightedRequest(
 					curStats.size,
 					curStats.totRequests,
-					curStats.getMeanTicks(),
+					curStats.getMeanTicks(cache.tick),
 					cache.exp,
 				)
 			}
