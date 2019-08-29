@@ -233,34 +233,36 @@ func (cache *Weighted) updatePolicy(filename string, size float32, hit bool) boo
 	if queueSize > cache.MaxSize {
 		// Update weights
 		for _, curFile := range cache.queue {
-			curStats := cache.stats[curFile.filename]
-			switch cache.functionType {
-			case FuncFileWeight:
-				curFile.weight = fileWeight(
-					curStats.size,
-					curStats.totRequests,
-					cache.exp,
-				)
-			case FuncFileWeightAndTime:
-				curFile.weight = fileWeightAndTime(
-					curStats.size,
-					curStats.totRequests,
-					cache.exp,
-					curStats.lastTimeRequested,
-				)
-			case FuncFileWeightOnlyTime:
-				curFile.weight = fileWeightOnlyTime(
-					curStats.totRequests,
-					cache.exp,
-					curStats.lastTimeRequested,
-				)
-			case FuncWeightedRequests:
-				curFile.weight = fileWeightedRequest(
-					curStats.totRequests,
-					curStats.getMeanTicks(cache.tick),
-					cache.exp,
-				)
-			}
+			go func(curFile *weightedFile) {
+				curStats := cache.stats[curFile.filename]
+				switch cache.functionType {
+				case FuncFileWeight:
+					curFile.weight = fileWeight(
+						curStats.size,
+						curStats.totRequests,
+						cache.exp,
+					)
+				case FuncFileWeightAndTime:
+					curFile.weight = fileWeightAndTime(
+						curStats.size,
+						curStats.totRequests,
+						cache.exp,
+						curStats.lastTimeRequested,
+					)
+				case FuncFileWeightOnlyTime:
+					curFile.weight = fileWeightOnlyTime(
+						curStats.totRequests,
+						cache.exp,
+						curStats.lastTimeRequested,
+					)
+				case FuncWeightedRequests:
+					curFile.weight = fileWeightedRequest(
+						curStats.totRequests,
+						curStats.getMeanTicks(cache.tick),
+						cache.exp,
+					)
+				}
+			}(curFile)
 		}
 		// Sort queue
 		sort.Slice(
