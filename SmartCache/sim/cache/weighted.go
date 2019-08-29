@@ -233,7 +233,7 @@ func (cache *Weighted) updatePolicy(filename string, size float32, hit bool) boo
 
 	queueSize := cache.getQueueSize()
 	if queueSize > cache.MaxSize {
-		sem := make(chan empty, len(cache.queue)) // semaphore pattern
+		sem := make(chan emptyMessage, len(cache.queue)) // semaphore pattern
 		// Update weights
 		for _, curFile := range cache.queue {
 			go func(curFile *weightedFile) {
