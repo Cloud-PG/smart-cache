@@ -11,6 +11,7 @@ import (
 )
 
 // FunctionType is used to select the weight function
+type emptyMessage {}
 type FunctionType int
 
 const (
@@ -231,6 +232,7 @@ func (cache *Weighted) updatePolicy(filename string, size float32, hit bool) boo
 
 	queueSize := cache.getQueueSize()
 	if queueSize > cache.MaxSize {
+		sem := make(chan empty, len(cache.queue)) // semaphore pattern
 		// Update weights
 		for _, curFile := range cache.queue {
 			go func(curFile *weightedFile) {
@@ -262,7 +264,11 @@ func (cache *Weighted) updatePolicy(filename string, size float32, hit bool) boo
 						cache.exp,
 					)
 				}
+				sem <- emptyMessage{}
 			}(curFile)
+		}
+		for idx := 0; idx < len(cache.queue); idx++ {
+			<-sem
 		}
 		// Sort queue
 		sort.Slice(
