@@ -17,7 +17,7 @@ module.exports = {
     interpreter: null,
 
     // Options reference: https://pm2.io/doc/en/runtime/reference/ecosystem-file/
-    args: "run weighted --port 5431 --size 104857600 --weightFunction FuncWeightedRequests",
+    args: "run weighted --port 5432 --size 104857600 --weightFunction FuncWeightedRequests",
     instances: 1,
     autorestart: true,
     watch: true,
@@ -29,7 +29,7 @@ module.exports = {
     interpreter: null,
 
     // Options reference: https://pm2.io/doc/en/runtime/reference/ecosystem-file/
-    args: "run weighted --port 5431 --size 209715200 --weightFunction FuncWeightedRequests",
+    args: "run weighted --port 5433 --size 209715200 --weightFunction FuncWeightedRequests",
     instances: 1,
     autorestart: true,
     watch: true,
@@ -53,7 +53,7 @@ module.exports = {
     interpreter: null,
 
     // Options reference: https://pm2.io/doc/en/runtime/reference/ecosystem-file/
-    args: "run lru --port 5531 --size 104857600",
+    args: "run lru --port 5532 --size 104857600",
     instances: 1,
     autorestart: true,
     watch: true,
@@ -65,7 +65,7 @@ module.exports = {
     interpreter: null,
 
     // Options reference: https://pm2.io/doc/en/runtime/reference/ecosystem-file/
-    args: "run lru --port 5531 --size 209715200",
+    args: "run lru --port 5533 --size 209715200",
     instances: 1,
     autorestart: true,
     watch: true,
