@@ -1,14 +1,17 @@
 import gzip
 import json
+import math
 import os
 import pickle
 from itertools import cycle
 from typing import Dict, List
 
-from bokeh.models import Span
+import pandas as pd
 from bokeh.layouts import column, row
+from bokeh.models import ColumnDataSource, LabelSet, Span
 from bokeh.plotting import figure, output_file, save
-from flask import Flask, escape, request, jsonify
+from bokeh.transform import cumsum
+from flask import Flask, escape, jsonify, request
 from tqdm import tqdm
 
 BASE_PATH = "plot_server_app"
@@ -36,7 +39,28 @@ def get_size_from_name(name: str) -> str:
     return 'unknown'
 
 
+def get_size_from_cache_list(name, cache_list):
+    for cache in cache_list:
+        if name in cache:
+            return cache[name]
+    return 0.
+
+
+def create_map(size: int, filenames: list, sizes: list):
+    element_idx = iter(range(len(filenames)))
+    for _x_ in reversed(range(size + 1)):
+        for _y_ in range(size + 1):
+            try:
+                cur_idx = next(element_idx)
+            except StopIteration:
+                return
+            if cur_idx < len(filenames):
+                yield (filenames[cur_idx], (_y_, _x_, sizes[cur_idx]))
+
+
 def plot_info_window(window: int, filename: str, **kwargs):
+    # Empty plot with log scale:
+    # - https://github.com/bokeh/bokeh/issues/6671
     global TABLES, WINDOW_INFO, TABLE_COLORS
     data = {}
     filters = kwargs.get('filters', [])
@@ -79,27 +103,139 @@ def plot_info_window(window: int, filename: str, **kwargs):
                 key=lambda elm: elm[1],
                 reverse=True)
             ]
-            # Weights plot
-            plot_figure = figure(
-                title=f"{cache_name} window {window} - Cache files (sorted by weight score)",
+            sizes = [
+                get_size_from_cache_list(
+                    filename, [cur_data['cache'], caches['lru']])
+                for filename in filenames
+            ]
+            tot = len(filenames)
+            map_size = math.ceil(math.sqrt(tot))
+            map_ = dict((key, value)
+                        for key, value in create_map(map_size, filenames, sizes)
+                        )
+
+            dots_plot = figure(
+                title=f"File weights",
                 tools="box_zoom,pan,reset,save",
                 plot_width=kwargs.get('plot_width', 640),
-                plot_height=kwargs.get('plot_height', 800),
-                x_range=filenames,
+                plot_height=kwargs.get('plot_height', 400),
+                x_range=(0, map_size),
+                y_range=(0, map_size),
+                x_axis_type=None,
+                y_axis_type=None,
+            )
+
+            dots_plot.circle(
+                [map_[filename][0] for filename in filenames],
+                [map_[filename][1] for filename in filenames],
+                color="gainsboro",
+                size=1.
+            )
+
+            dots_plot.circle(
+                [map_[filename][0]
+                    for filename in filenames if filename in cur_data['cache']],
+                [map_[filename][1]
+                    for filename in filenames if filename in cur_data['cache']],
+                fill_color="blue",
+                fill_alpha=1.0,
+                size=2.5
+            )
+
+            dots_plot.circle(
+                [map_[filename][0]
+                    for filename in filenames if filename in caches['lru']],
+                [map_[filename][1]
+                    for filename in filenames if filename in caches['lru']],
+                fill_color="red",
+                fill_alpha=0.9,
+                size=2.5
+            )
+
+            # Pie
+            plot_figure_pie = figure(
+                plot_width=kwargs.get('plot_width', 640),
+                plot_height=kwargs.get('plot_height', 400),
+                title="% all file seen",
+                tools="box_zoom,pan,reset,save",
+                tooltips="@type: @value",
+                x_range=(-0.5, 1.0)
+            )
+
+            two_pi = 2.0*3.14
+            pie_data = pd.Series({
+                'all files': len(filenames),
+                'weighted': len(
+                    [filename for filename in filenames if filename in cur_data['cache']]),
+                'cache': len(
+                    [filename for filename in filenames if filename in caches['lru']]),
+                'both': len(
+                    [filename for filename in filenames if filename in cur_data['cache'] or filename in caches['lru']])
+            }).reset_index(name='value').rename(
+                columns={'index': 'type'})
+            pie_data['angle'] = pie_data['value'] / \
+                pie_data['value'].sum() * two_pi
+            # pie_data['color'] = Category20c[len(x)]
+            pie_data['color'] = ['gainsboro', 'blue', 'red', 'green']
+
+            plot_figure_pie.wedge(
+                x=0, y=1, radius=0.35,
+                start_angle=cumsum('angle', include_zero=True),
+                end_angle=cumsum('angle'),
+                line_color="white",
+                fill_color='color',
+                legend='type',
+                source=pie_data
+            )
+
+            pie_data['value'] = (
+                pie_data['value'] / pie_data['value'].sum()
+            ) * 100.
+
+            pie_data["value"] = pie_data['value'].astype(int)
+            pie_data["value"] = pie_data['value'].astype(str)
+            pie_data["value"] = pie_data["value"].str.pad(35, side="left")
+            labels = LabelSet(
+                x=0, y=1, text='value', level='glyph',
+                angle=cumsum('angle', include_zero=True), 
+                source=ColumnDataSource(pie_data),
+                # render_mode='canvas'
+            )
+
+            plot_figure_pie.add_layout(labels)
+
+            plot_figure_pie.axis.axis_label = None
+            plot_figure_pie.axis.visible = False
+            plot_figure_pie.grid.grid_line_color = None
+
+            filenames_common = list(sorted([
+                filename for filename in filenames
+                if filename in cur_data['cache'] or filename in caches['lru']
+            ],
+                key=lambda name: get_size_from_cache_list(
+                    name, [cur_data['cache'], caches['lru']]
+            ),
+                reverse=True
+            ))
+
+            # Sizes plot
+            plot_figure_size_weighted_cache = figure(
+                title=f"Sizes of files in {cache_name} (sort by size)",
+                tools="box_zoom,pan,reset,save",
+                plot_width=kwargs.get('plot_width', 640),
+                plot_height=kwargs.get('plot_height', 400),
+                x_range=filenames_common,
                 y_range=(1, int(max(cur_data['weights'].values())) + 10),
                 x_axis_type=None,
                 y_axis_type=kwargs.get('y_axis_type', 'auto'),
             )
 
-            # Empty plot with log scale:
-            # - https://github.com/bokeh/bokeh/issues/6671
-
-            # All weights
-            plot_figure.vbar(
+            plot_figure_size_weighted_cache.vbar(
                 filenames,
                 top=[
-                    cur_data['weights'][filename]
-                    for filename in filenames
+                    get_size_from_cache_list(
+                        filename, [cur_data['cache'], caches['lru']])
+                    for filename in filenames_common
                 ],
                 color="gainsboro",
                 width=1.0,
@@ -107,68 +243,13 @@ def plot_info_window(window: int, filename: str, **kwargs):
                     'y_axis_type', False) == 'log' else 0.0  # To avoid empty plot
             )
 
-            # Weighted cache files
-            plot_figure.vbar(
-                filenames,
-                top=[
-                    cur_data['weights'][filename] * 0.75
-                    if filename in cur_data['cache'] else 0
-                    for filename in filenames
-                ],
-                color="blue",
-                width=1.0,
-                bottom=0.01 if kwargs.get(
-                    'y_axis_type', False) == 'log' else 0.0  # To avoid empty plot
-            )
-
-            # Cache files
-            plot_figure.vbar(
-                filenames,
-                top=[
-                    cur_data['weights'][filename] * 0.5
-                    if filename in caches['lru'] else 0
-                    for filename in filenames
-                ],
-                color="red",
-                width=1.0,
-                bottom=0.01 if kwargs.get(
-                    'y_axis_type', False) == 'log' else 0.0  # To avoid empty plot
-            )
-
-            # Filter files to get size
-            filenames_not_in_cache = list(sorted([
-                filename for filename in filenames
-                if filename in cur_data['cache'] and filename not in caches['lru']
-            ],
-                key=lambda name: cur_data['cache'][name],
-                reverse=True
-            ))
-            filenames_not_in_weighted_cache = list(sorted([
-                filename for filename in filenames
-                if filename not in cur_data['cache'] and filename in caches['lru']
-            ],
-                key=lambda name: caches['lru'][name],
-                reverse=True
-            ))
-            # Sizes plot
-            plot_figure_size_weighted_cache = figure(
-                title=f"Sizes of files not in cache (sort by size)",
-                tools="box_zoom,pan,reset,save",
-                plot_width=kwargs.get('plot_width', 640),
-                plot_height=kwargs.get('plot_height', 400),
-                x_range=filenames_not_in_cache,
-                y_range=(1, int(max(cur_data['weights'].values())) + 10),
-                x_axis_type=None,
-                y_axis_type=kwargs.get('y_axis_type', 'auto'),
-            )
-
             # Size of weighted cache files
             plot_figure_size_weighted_cache.vbar(
-                filenames_not_in_cache,
+                filenames_common,
                 top=[
                     cur_data['cache'][filename]
                     if filename in cur_data['cache'] else 0
-                    for filename in filenames_not_in_cache
+                    for filename in filenames_common
                 ],
                 color="blue",
                 width=1.0,
@@ -182,19 +263,32 @@ def plot_info_window(window: int, filename: str, **kwargs):
                 tools="box_zoom,pan,reset,save",
                 plot_width=kwargs.get('plot_width', 640),
                 plot_height=kwargs.get('plot_height', 400),
-                x_range=filenames_not_in_weighted_cache,
+                x_range=filenames_common,
                 y_range=(1, int(max(cur_data['weights'].values())) + 10),
                 x_axis_type=None,
                 y_axis_type=kwargs.get('y_axis_type', 'auto'),
             )
 
+            plot_figure_size_weighted_cache.vbar(
+                filenames,
+                top=[
+                    get_size_from_cache_list(
+                        filename, [cur_data['cache'], caches['lru']])
+                    for filename in filenames_common
+                ],
+                color="gainsboro",
+                width=1.0,
+                bottom=0.01 if kwargs.get(
+                    'y_axis_type', False) == 'log' else 0.0  # To avoid empty plot
+            )
+
             # Size of cache files
             plot_figure_size_cache.vbar(
-                filenames_not_in_weighted_cache,
+                filenames_common,
                 top=[
                     caches['lru'][filename]
                     if filename in caches['lru'] else 0
-                    for filename in filenames_not_in_weighted_cache
+                    for filename in filenames_common
                 ],
                 color="red",
                 width=1.0,
@@ -202,7 +296,7 @@ def plot_info_window(window: int, filename: str, **kwargs):
                     'y_axis_type', False) == 'log' else 0.0  # To avoid empty plot
             )
 
-            figures.append(row(plot_figure, column(
+            figures.append(row(column(dots_plot, plot_figure_pie), column(
                 plot_figure_size_weighted_cache, plot_figure_size_cache)))
 
     save(column(*figures))
@@ -505,6 +599,7 @@ def load_table(table_name):
 if __name__ == '__main__':
     os.makedirs(BASE_PATH, exist_ok=True)
 
+    print("[Loading data...]")
     for table in TABLES:
         loaded_table = load_table(table)
         if loaded_table:
@@ -522,6 +617,7 @@ if __name__ == '__main__':
         ), "rb") as input_file:
             WINDOW_INFO = pickle.load(input_file)
 
+    print("[Loading data done!]")
     app.run(
         host="0.0.0.0",
         port=5524
