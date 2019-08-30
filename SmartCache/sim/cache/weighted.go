@@ -33,6 +33,7 @@ const (
 
 type weightedFile struct {
 	filename string
+	size     float32
 	weight   float32
 }
 
@@ -109,8 +110,8 @@ func fileWeightOnlyTime(totRequests float32, exp float32, lastTimeRequested time
 	return (1. / float32(math.Pow(float64(totRequests), float64(exp)))) + float32(math.Pow(deltaLastTimeRequested, float64(exp)))
 }
 
-func fileWeightedRequest(totRequests float32, meanTicks float32, exp float32) float32 {
-	return meanTicks / totRequests
+func fileWeightedRequest(size float32, totRequests float32, meanTicks float32, exp float32) float32 {
+	return meanTicks + (size / totRequests)
 }
 
 // SimServiceGet updates the cache from a protobuf message
@@ -178,6 +179,7 @@ func (cache *Weighted) SimServiceGetInfoFilesWeights(_ *empty.Empty, stream pb.S
 			)
 		case FuncWeightedRequests:
 			weight = fileWeightedRequest(
+				stats.size,
 				stats.totRequests,
 				stats.getMeanTicks(cache.tick),
 				cache.exp,
@@ -204,6 +206,22 @@ func (cache *Weighted) getQueueSize() float32 {
 	return size
 }
 
+func (cache *Weighted) removeSimilar(targetSize float32) *weightedFile {
+	var removedElm *weightedFile
+	for idx := 0; idx < len(cache.queue); idx++ {
+		if float32(math.Abs(float64(cache.queue[idx].size-targetSize)))/targetSize < 0.1 {
+			removedElm = cache.queue[idx]
+			cache.queue = append(cache.queue[:idx], cache.queue[idx+1:]...)
+			break
+		}
+	}
+	return removedElm
+}
+
+func (cache *Weighted) removeLast() *weightedFile {
+	return cache.queue[len(cache.queue)-1]
+}
+
 func (cache *Weighted) updatePolicy(filename string, size float32, hit bool) bool {
 	var added = false
 	var currentTime = time.Now()
@@ -225,6 +243,7 @@ func (cache *Weighted) updatePolicy(filename string, size float32, hit bool) boo
 			cache.queue,
 			&weightedFile{
 				filename,
+				size,
 				-1.,
 			},
 		)
@@ -258,6 +277,7 @@ func (cache *Weighted) updatePolicy(filename string, size float32, hit bool) boo
 				)
 			case FuncWeightedRequests:
 				curFile.weight = fileWeightedRequest(
+					curStats.size,
 					curStats.totRequests,
 					curStats.getMeanTicks(cache.tick),
 					cache.exp,
@@ -267,21 +287,26 @@ func (cache *Weighted) updatePolicy(filename string, size float32, hit bool) boo
 		// Sort queue
 		sort.Slice(
 			cache.queue,
-			func(i, j int) bool { return cache.queue[i].weight < cache.queue[j].weight },
+			func(i, j int) bool {
+				return cache.queue[i].size < cache.queue[j].size && cache.queue[i].weight < cache.queue[j].weight
+			},
 		)
 		// Remove files if possible
 		for {
 			if queueSize <= cache.MaxSize {
 				break
 			}
-			lastElm := cache.queue[len(cache.queue)-1]
-			if lastElm.filename == filename {
+			elmRemoved := cache.removeSimilar(size)
+			if elmRemoved == nil {
+				elmRemoved = cache.removeLast()
+			}
+			if elmRemoved.filename == filename {
 				added = false
 			}
-			queueSize -= cache.stats[lastElm.filename].size
-			if _, inCache := cache.files[lastElm.filename]; inCache == true {
-				cache.size -= cache.files[lastElm.filename]
-				delete(cache.files, lastElm.filename)
+			queueSize -= cache.stats[elmRemoved.filename].size
+			if _, inCache := cache.files[elmRemoved.filename]; inCache == true {
+				cache.size -= cache.files[elmRemoved.filename]
+				delete(cache.files, elmRemoved.filename)
 			}
 			cache.queue = cache.queue[:len(cache.queue)-1]
 		}
