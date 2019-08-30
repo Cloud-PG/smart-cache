@@ -233,43 +233,36 @@ func (cache *Weighted) updatePolicy(filename string, size float32, hit bool) boo
 
 	queueSize := cache.getQueueSize()
 	if queueSize > cache.MaxSize {
-		sem := make(chan emptyMessage, len(cache.queue)) // semaphore pattern
 		// Update weights
 		for _, curFile := range cache.queue {
-			go func(curFile *weightedFile) {
-				curStats := cache.stats[curFile.filename]
-				switch cache.functionType {
-				case FuncFileWeight:
-					curFile.weight = fileWeight(
-						curStats.size,
-						curStats.totRequests,
-						cache.exp,
-					)
-				case FuncFileWeightAndTime:
-					curFile.weight = fileWeightAndTime(
-						curStats.size,
-						curStats.totRequests,
-						cache.exp,
-						curStats.lastTimeRequested,
-					)
-				case FuncFileWeightOnlyTime:
-					curFile.weight = fileWeightOnlyTime(
-						curStats.totRequests,
-						cache.exp,
-						curStats.lastTimeRequested,
-					)
-				case FuncWeightedRequests:
-					curFile.weight = fileWeightedRequest(
-						curStats.totRequests,
-						curStats.getMeanTicks(cache.tick),
-						cache.exp,
-					)
-				}
-				sem <- emptyMessage{}
-			}(curFile)
-		}
-		for idx := 0; idx < len(cache.queue); idx++ {
-			<-sem
+			curStats := cache.stats[curFile.filename]
+			switch cache.functionType {
+			case FuncFileWeight:
+				curFile.weight = fileWeight(
+					curStats.size,
+					curStats.totRequests,
+					cache.exp,
+				)
+			case FuncFileWeightAndTime:
+				curFile.weight = fileWeightAndTime(
+					curStats.size,
+					curStats.totRequests,
+					cache.exp,
+					curStats.lastTimeRequested,
+				)
+			case FuncFileWeightOnlyTime:
+				curFile.weight = fileWeightOnlyTime(
+					curStats.totRequests,
+					cache.exp,
+					curStats.lastTimeRequested,
+				)
+			case FuncWeightedRequests:
+				curFile.weight = fileWeightedRequest(
+					curStats.totRequests,
+					curStats.getMeanTicks(cache.tick),
+					cache.exp,
+				)
+			}
 		}
 		// Sort queue
 		sort.Slice(
