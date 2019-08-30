@@ -268,12 +268,14 @@ def plot_line(table_name: str, filename: str, **kwargs):
             )
 
     elif table_name == 'ratio':
-        points = {
-            'written_data': [],
-            'read_on_hit': []
-        }
-        for cur_table_name in points:
+        data = {}
+        for cur_table_name in ['written_data', 'read_on_hit']:
             for name, values in TABLES[cur_table_name].items():
+                if name not in data:
+                    data[name] = {
+                        'written_data': [],
+                        'read_on_hit': []
+                    }
                 if filters:
                     size = get_size_from_name(name)
                     if size not in filters:
@@ -292,19 +294,20 @@ def plot_line(table_name: str, filename: str, **kwargs):
                         ]
                     else:
                         v_lines = []
-                points[cur_table_name] = [
+                data[name][cur_table_name] = [
                     value for bucket in values for value in bucket]
                 if name not in TABLE_COLORS:
                     TABLE_COLORS[name] = next(COLORS)
 
-                plot_figure.line(
-                    range(len(points['read_on_hit'])),
-                    [value / points['written_data'][idx]
-                        for idx, value in enumerate(points['read_on_hit'])],
-                    legend=name,
-                    color=TABLE_COLORS[name],
-                    line_width=2.
-                )
+        for name, values in data.items():
+            plot_figure.line(
+                range(len(values['read_on_hit'])),
+                [value / values['written_data'][idx]
+                    for idx, value in enumerate(values['read_on_hit'])],
+                legend=name,
+                color=TABLE_COLORS[name],
+                line_width=2.
+            )
 
     if v_lines:
         plot_figure.renderers.extend(v_lines)
