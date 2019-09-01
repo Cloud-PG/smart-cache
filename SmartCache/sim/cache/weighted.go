@@ -206,10 +206,10 @@ func (cache *Weighted) getQueueSize() float32 {
 	return size
 }
 
-func (cache *Weighted) removeSimilar(targetSize float32) *weightedFile {
+func (cache *Weighted) removeLastSimilar(targetSize float32) *weightedFile {
 	var removedElm *weightedFile
-	for idx := 0; idx < len(cache.queue); idx++ {
-		if float32(math.Abs(float64(cache.queue[idx].size-targetSize)))/targetSize < 0.1 {
+	for idx := len(cache.queue) - 1; idx > -1; idx-- {
+		if float32(math.Abs(float64(cache.queue[idx].size-targetSize)))/targetSize < 0.25 {
 			removedElm = cache.queue[idx]
 			cache.queue = append(cache.queue[:idx], cache.queue[idx+1:]...)
 			break
@@ -219,7 +219,9 @@ func (cache *Weighted) removeSimilar(targetSize float32) *weightedFile {
 }
 
 func (cache *Weighted) removeLast() *weightedFile {
-	return cache.queue[len(cache.queue)-1]
+	removedElm := cache.queue[len(cache.queue)-1]
+	cache.queue = cache.queue[:len(cache.queue)-1]
+	return removedElm
 }
 
 func (cache *Weighted) updatePolicy(filename string, size float32, hit bool) bool {
@@ -296,19 +298,19 @@ func (cache *Weighted) updatePolicy(filename string, size float32, hit bool) boo
 			if queueSize <= cache.MaxSize {
 				break
 			}
-			elmRemoved := cache.removeSimilar(size)
+			elmRemoved := cache.removeLastSimilar(size)
 			if elmRemoved == nil {
 				elmRemoved = cache.removeLast()
 			}
+
 			if elmRemoved.filename == filename {
 				added = false
-			}
-			queueSize -= cache.stats[elmRemoved.filename].size
-			if _, inCache := cache.files[elmRemoved.filename]; inCache == true {
+			} else {
 				cache.size -= cache.files[elmRemoved.filename]
 				delete(cache.files, elmRemoved.filename)
 			}
-			cache.queue = cache.queue[:len(cache.queue)-1]
+
+			queueSize -= cache.stats[elmRemoved.filename].size
 		}
 	}
 
