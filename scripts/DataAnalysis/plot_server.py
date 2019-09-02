@@ -554,8 +554,8 @@ def insert_line_in_table(table_name: str, cache_name: str,
     except IndexError:
         cur_line.append([])
     else:
-        if req_idx < len(cur_line[window])
-        cur_line[window] = []
+        if req_idx < len(cur_line[window]):
+            cur_line[window] = []
 
     cur_line[window].append(value)
     result = f"Inserted value {value} with index {req_idx} in window {window}"
