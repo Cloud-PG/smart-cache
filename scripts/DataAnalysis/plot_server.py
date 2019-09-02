@@ -553,17 +553,16 @@ def insert_line_in_table(table_name: str, cache_name: str,
         cur_line[window]
     except IndexError:
         cur_line.append([])
-    else:
-        if req_idx < len(cur_line[window]):
-            cur_line[window] = []
 
-    cur_line[window].append(value)
-    result = f"Inserted value {value} with index {req_idx} in window {window}"
+    try:
+        cur_line[window][req_idx] = value
+    except IndexError:
+        cur_line[window].append(value)
 
     if force_save:
         save_table(table_name, cur_table)
 
-    return result
+    return f"Inserted value {value} with index {req_idx} in window {window}"
 
 
 def save_table(table_name, table):
