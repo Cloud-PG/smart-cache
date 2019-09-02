@@ -10,7 +10,7 @@ func TestWeightedCacheBaseMultipleInsert(t *testing.T) {
 	testCache := Weighted{
 		MaxSize: 3.0,
 	}
-	testCache.Init(FuncFileGroupWeight)
+	testCache.Init(FuncWeightedRequests)
 
 	res := testCache.Get("/a/b/c/d/file0", 1.0)
 	testCache.Get("/a/b/c/d/file0", 1.0)
@@ -32,7 +32,7 @@ func TestWeightedCacheClear(t *testing.T) {
 	testCache := Weighted{
 		MaxSize: 3.0,
 	}
-	testCache.Init(FuncFileGroupWeight)
+	testCache.Init(FuncWeightedRequests)
 
 	testCache.Get("/a/b/c/d/file0", 1.0)
 	testCache.Get("/a/b/c/d/file0", 1.0)
@@ -60,7 +60,7 @@ func TestWeightedCacheInsert(t *testing.T) {
 	testCache := Weighted{
 		MaxSize: 3.0,
 	}
-	testCache.Init(FuncFileGroupWeight)
+	testCache.Init(FuncWeightedRequests)
 
 	testCache.Get("/a/b/c/d/file0", 1.0)
 	testCache.Get("/a/b/c/d/file1", 2.0)
@@ -97,7 +97,7 @@ func BenchmarkWeightedCache(b *testing.B) {
 	testCache := Weighted{
 		MaxSize: maxSize,
 	}
-	testCache.Init(FuncFileGroupWeight)
+	testCache.Init(FuncWeightedRequests)
 
 	for n := 0; n < b.N; n++ {
 		testCache.Get(genRandomFilePath(5), rand.Float32()*maxSize)
