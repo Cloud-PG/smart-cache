@@ -8,6 +8,7 @@ from typing import Dict, List
 
 import pandas as pd
 from bokeh.layouts import column, row
+from bokeh.palettes import Category10
 from bokeh.models import ColumnDataSource, LabelSet, Span
 from bokeh.plotting import figure, output_file, save
 from bokeh.transform import cumsum
@@ -27,8 +28,7 @@ WINDOW_INFO = {}
 
 TABLE_COLORS = {}
 
-COLORS = cycle(["red", "mediumblue", "green", "purple",
-                "black", "gold", "darkorange", "plum"])
+COLORS = cycle(Category10[10])
 
 
 def get_size_from_name(name: str) -> str:
@@ -175,11 +175,10 @@ def plot_info_window(window: int, filename: str, **kwargs):
                 columns={'index': 'type'})
             pie_data['angle'] = pie_data['value'] / \
                 pie_data['value'].sum() * two_pi
-            # pie_data['color'] = Category20c[len(x)]
             pie_data['color'] = ['gainsboro', 'blue', 'red', 'green']
 
             plot_figure_pie.wedge(
-                x=0, y=1, radius=0.35,
+                x=0, y=0, radius=0.4,
                 start_angle=cumsum('angle', include_zero=True),
                 end_angle=cumsum('angle'),
                 line_color="white",
@@ -192,11 +191,10 @@ def plot_info_window(window: int, filename: str, **kwargs):
                 pie_data['value'] / pie_data['value'].sum()
             ) * 100.
 
-            pie_data["value"] = pie_data['value'].astype(int)
-            pie_data["value"] = pie_data['value'].astype(str)
-            pie_data["value"] = pie_data["value"].str.pad(35, side="left")
+            pie_data["value"] = pie_data['value'].apply(lambda elm: f"{elm:0.2f}%")
+            pie_data["value"] = pie_data["value"].str.pad(42, side="left")
             labels = LabelSet(
-                x=0, y=1, text='value', level='glyph',
+                x=0, y=0, text='value', level='glyph',
                 angle=cumsum('angle', include_zero=True), 
                 source=ColumnDataSource(pie_data),
                 # render_mode='canvas'
@@ -231,7 +229,7 @@ def plot_info_window(window: int, filename: str, **kwargs):
             )
 
             plot_figure_size_weighted_cache.vbar(
-                filenames,
+                filenames_common,
                 top=[
                     get_size_from_cache_list(
                         filename, [cur_data['cache'], caches['lru']])
@@ -269,8 +267,8 @@ def plot_info_window(window: int, filename: str, **kwargs):
                 y_axis_type=kwargs.get('y_axis_type', 'auto'),
             )
 
-            plot_figure_size_weighted_cache.vbar(
-                filenames,
+            plot_figure_size_cache.vbar(
+                filenames_common,
                 top=[
                     get_size_from_cache_list(
                         filename, [cur_data['cache'], caches['lru']])
@@ -360,7 +358,6 @@ def plot_line(table_name: str, filename: str, **kwargs):
                 color=TABLE_COLORS[name],
                 line_width=2.
             )
-
     elif table_name == 'ratio':
         data = {}
         for cur_table_name in ['written_data', 'read_on_hit']:
@@ -556,13 +553,12 @@ def insert_line_in_table(table_name: str, cache_name: str,
         cur_line[window]
     except IndexError:
         cur_line.append([])
-
-    if req_idx < len(cur_line[window]):
-        cur_line[window][req_idx] = value
-        result = f"Updated index {req_idx} of window {window} with the value {value}"
     else:
-        cur_line[window].append(value)
-        result = f"Inserted value {value} with index {req_idx} in window {window}"
+        if req_idx < len(cur_line[window])
+        cur_line[window] = []
+
+    cur_line[window].append(value)
+    result = f"Inserted value {value} with index {req_idx} in window {window}"
 
     if force_save:
         save_table(table_name, cur_table)
