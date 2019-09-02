@@ -657,7 +657,7 @@ def simulate(cache, windows: list, region: str = "_all_",
                             'read_on_hit': [],
                         }
 
-                record_pbar.desc = f"[{cache_name[:4]+cache_name[-12:]}][Simulation][Window {num_window+1}/{len(windows)}][File {num_file}/{len(window)}][Hit Rate {cur_hit_rate:06.2f}][Ratio {cur_read_on_hit/cur_written_data:06.2f}][Capacity {cur_capacity:06.2f}]"
+                record_pbar.desc = f"[{cache_name[:4]+cache_name[-12:]}][Simulation][Window {num_window+1}/{len(windows)}][File {num_file}/{len(window)}][Hit Rate {cur_hit_rate:06.2f}][Ratio {cur_read_on_hit/cur_written_data:0.2f}][Capacity {cur_capacity:06.2f}]"
                 record_pbar.update(1)
 
                 # TEST
