@@ -278,7 +278,7 @@ func (cache *Weighted) updatePolicy(filename string, size float32, hit bool) boo
 				return cache.queue[i].weight < cache.queue[j].weight
 			},
 		)
-		// Remove files if possible
+		// Remove files
 		for {
 			if queueSize <= cache.MaxSize {
 				break
