@@ -15,6 +15,7 @@ import (
 
 var cacheInstance cache.Cache
 var cacheSize float32
+var serviceHost string
 var servicePort int32
 var weightExp float32
 var weightedFunc string
@@ -24,6 +25,7 @@ func main() {
 	rootCmd.AddCommand(commandRun())
 
 	rootCmd.PersistentFlags().Float32Var(&cacheSize, "size", 0.0, "cache size")
+	rootCmd.PersistentFlags().StringVar(&serviceHost, "host", "localhost", "Ip to listen to")
 	rootCmd.PersistentFlags().Int32Var(&servicePort, "port", 5432, "cache sim service port")
 	rootCmd.PersistentFlags().StringVar(&weightedFunc, "weightFunction", "FuncFileGroupWeight", "function to use with weighted cache")
 	rootCmd.PersistentFlags().Float32Var(&weightExp, "weightExp", 2.0, "Exponential to use with weighted cache function")
@@ -77,12 +79,12 @@ func commandRun() *cobra.Command {
 				os.Exit(-2)
 			}
 
-			fmt.Printf("[Try to liste to port %d]\n", servicePort)
-			lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", servicePort))
+			fmt.Printf("[Try to liste to %s:%d]\n", serviceHost, servicePort)
+			lis, err := net.Listen("tcp", fmt.Sprintf("%s:%d", serviceHost, servicePort))
 			if err != nil {
-				log.Fatalf("ERR: failed to listen on localhost:%d -> %v", servicePort, err)
+				log.Fatalf("ERR: failed to listen on %s:%d -> %v", serviceHost, servicePort, err)
 			}
-			fmt.Printf("[Start server on port %d]\n", servicePort)
+			fmt.Printf("[Start server on %s:%d]\n", serviceHost, servicePort)
 
 			if err := grpcServer.Serve(lis); err != nil {
 				log.Fatalf("ERR: grpc serve error '%s'", err)
