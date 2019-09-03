@@ -4,6 +4,7 @@ import os
 import sqlite3
 from datetime import datetime, timedelta
 from functools import wraps
+from itertools import cycle
 from multiprocessing import Pool
 
 import matplotlib.pyplot as plt
@@ -11,11 +12,18 @@ import numpy as np
 import pandas as pd
 import redis
 import urllib3
+from bokeh.layouts import column, row
+from bokeh.models import ColumnDataSource, FactorRange, LabelSet, Span
+from bokeh.palettes import Category10, Accent
+from bokeh.plotting import figure, output_file, save
+from bokeh.transform import cumsum, factor_cmap
 from minio import Minio
 from minio.error import ResponseError
 from tqdm import tqdm
 
 from DataManager import DataFile, date_from_timestamp_ms
+
+COLORS = cycle(Accent[6])
 
 
 def create_minio_client(minio_config: str):
@@ -443,9 +451,104 @@ def plot_windows(windows: list, result_folder: str, dpi: int):
         result_folder (str): destination folder name
         dpi (int): resolution of the output plot
     """
+    output_file(
+        os.path.join(result_folder, "statistics.html"),
+        "Statistics",
+        mode="inline"
+    )
+
     bar_width = 0.2
     pbar = tqdm(desc="Plot windows", total=10, ascii=True)
 
+    ###########################################################################
+    # num req and num files
+    ###########################################################################
+    cur_windows = [f"Window {idx}" for idx, _ in enumerate(windows)]
+    p0_cur_types = ['Num. Requests', 'Num. Files']
+    p0_cur_data = {
+        'windows': cur_windows,
+        'Num. Requests': [window['num_requests'] for window in windows],
+        'Num. Files': [window['num_files'] for window in windows],
+    }
+    p0_cur_palette = [next(COLORS) for _ in range(len(p0_cur_types))]
+
+    p0_x = [
+        (window, type_)
+        for window in cur_windows
+        for type_ in p0_cur_types
+    ]
+    p0_counts = sum(zip(*[p0_cur_data[name] for name in p0_cur_types]), ())
+
+    p0_source = ColumnDataSource(data=dict(x=p0_x, counts=p0_counts))
+
+    fig_num_req_num_files = figure(
+        x_range=FactorRange(*p0_x),
+        plot_height=320,
+        title="Req. and file counts",
+        tools="box_zoom,pan,reset,save",
+    )
+
+    fig_num_req_num_files.vbar(
+        x='x', top='counts', width=1.0,
+        source=p0_source, line_color="white",
+        fill_color=factor_cmap(
+            'x', palette=p0_cur_palette,
+            factors=p0_cur_types,
+            start=1,
+            end=2
+        ))
+
+    fig_num_req_num_files.y_range.start = 0
+    fig_num_req_num_files.x_range.range_padding = 0.1
+    fig_num_req_num_files.xaxis.major_label_orientation = 1
+    fig_num_req_num_files.xgrid.grid_line_color = None
+
+    ###########################################################################
+    # Mean num req and num files
+    ###########################################################################
+
+    p1_cur_types = ['Num. Request x file', 'Num. Request x file (req > 1)']
+    p1_cur_data = {
+        'windows': cur_windows,
+        'Num. Request x file': [window['mean_num_req_x_file'] for window in windows],
+        'Num. Request x file (req > 1)': [window['mean_num_req_x_file_gmin'] for window in windows],
+    }
+    p1_cur_palette = [next(COLORS) for _ in range(len(p1_cur_types))]
+
+    p1_x = [
+        (window, type_)
+        for window in cur_windows
+        for type_ in p1_cur_types
+    ]
+    p1_counts = sum(zip(*[p1_cur_data[name] for name in p1_cur_types]), ())
+
+    p1_source = ColumnDataSource(data=dict(x=p1_x, counts=p1_counts))
+
+    fig_mean_num_req_num_files = figure(
+        x_range=FactorRange(*p1_x),
+        plot_height=320,
+        title="Mean Req. and file counts",
+        tools="box_zoom,pan,reset,save",
+    )
+
+    fig_mean_num_req_num_files.vbar(
+        x='x', top='counts', width=1.0,
+        source=p1_source, line_color="white",
+        fill_color=factor_cmap(
+            'x', palette=p1_cur_palette,
+            factors=p1_cur_types,
+            start=1,
+            end=2
+        ))
+
+    fig_mean_num_req_num_files.y_range.start = 0
+    fig_mean_num_req_num_files.x_range.range_padding = 0.1
+    fig_mean_num_req_num_files.xaxis.major_label_orientation = 1
+    fig_mean_num_req_num_files.xgrid.grid_line_color = None
+
+    save(column(fig_num_req_num_files, fig_mean_num_req_num_files))
+
+    return
     ###########################################################################
     # window_request_stats
     ###########################################################################
@@ -613,315 +716,315 @@ def plot_windows(windows: list, result_folder: str, dpi: int):
     ###########################################################################
     # window_frequency_stats
     ###########################################################################
-    plt.clf()
-    grid = plt.GridSpec(8, len(windows), wspace=2.42, hspace=2.33)
+    # plt.clf()
+    # grid = plt.GridSpec(8, len(windows), wspace=2.42, hspace=2.33)
 
-    for win_idx, window in enumerate(windows):
-        axes = plt.subplot(grid[0:4, win_idx])
-        labels = sorted(window['num_req_x_file_frequencies'].keys())
-        sizes = [
-            (window['num_req_x_file_frequencies'][label] /
-             window['num_requests']) * 100.
-            for label in labels
-        ]
-        cut_idx = -1
-        for idx, size in enumerate(sizes):
-            if size < 2.:
-                cut_idx = idx
-                break
-        labels = labels[:cut_idx] + ['< 2%']
-        sizes = sizes[:cut_idx] + [sum(sizes[cut_idx:])]
-        axes.pie(sizes, radius=2.8, labels=labels,
-                 autopct='%1.0f%%', startangle=90)
-        axes.set_xlabel(f"\n\nWindow {win_idx}")
+    # for win_idx, window in enumerate(windows):
+    #     axes = plt.subplot(grid[0:4, win_idx])
+    #     labels = sorted(window['num_req_x_file_frequencies'].keys())
+    #     sizes = [
+    #         (window['num_req_x_file_frequencies'][label] /
+    #          window['num_requests']) * 100.
+    #         for label in labels
+    #     ]
+    #     cut_idx = -1
+    #     for idx, size in enumerate(sizes):
+    #         if size < 2.:
+    #             cut_idx = idx
+    #             break
+    #     labels = labels[:cut_idx] + ['< 2%']
+    #     sizes = sizes[:cut_idx] + [sum(sizes[cut_idx:])]
+    #     axes.pie(sizes, radius=2.8, labels=labels,
+    #              autopct='%1.0f%%', startangle=90)
+    #     axes.set_xlabel(f"\n\nWindow {win_idx}")
 
-    for win_idx, window in enumerate(windows):
-        axes = plt.subplot(grid[4:8, win_idx])
-        labels = sorted(window['num_req_x_file_frequencies'].keys())[1:]
-        sizes = [
-            (window['num_req_x_file_frequencies'][label] /
-             window['num_requests']) * 100.
-            for label in labels
-        ]
-        cut_idx = -1
-        for idx, size in enumerate(sizes):
-            if size < 2.:
-                cut_idx = idx
-                break
-        labels = labels[:cut_idx] + ['< 2%']
-        sizes = sizes[:cut_idx] + [sum(sizes[cut_idx:])]
-        axes.pie(sizes, radius=2.8, labels=labels,
-                 autopct='%1.0f%%', startangle=90)
-        axes.set_xlabel(f"\n\nWindow {win_idx}\nWithout 1 request")
+    # for win_idx, window in enumerate(windows):
+    #     axes = plt.subplot(grid[4:8, win_idx])
+    #     labels = sorted(window['num_req_x_file_frequencies'].keys())[1:]
+    #     sizes = [
+    #         (window['num_req_x_file_frequencies'][label] /
+    #          window['num_requests']) * 100.
+    #         for label in labels
+    #     ]
+    #     cut_idx = -1
+    #     for idx, size in enumerate(sizes):
+    #         if size < 2.:
+    #             cut_idx = idx
+    #             break
+    #     labels = labels[:cut_idx] + ['< 2%']
+    #     sizes = sizes[:cut_idx] + [sum(sizes[cut_idx:])]
+    #     axes.pie(sizes, radius=2.8, labels=labels,
+    #              autopct='%1.0f%%', startangle=90)
+    #     axes.set_xlabel(f"\n\nWindow {win_idx}\nWithout 1 request")
 
-    pbar.update(1)
-    plt.savefig(
-        os.path.join(result_folder, "stats_window-frequencies.png"),
-        dpi=dpi
-    )
-    pbar.update(1)
+    # pbar.update(1)
+    # plt.savefig(
+    #     os.path.join(result_folder, "stats_window-frequencies.png"),
+    #     dpi=dpi
+    # )
+    # pbar.update(1)
 
-    ###########################################################################
-    # window_size_stats
-    ###########################################################################
-    plt.clf()
-    grid = plt.GridSpec(24, len(windows), wspace=2.42, hspace=5.)
+    # ###########################################################################
+    # # window_size_stats
+    # ###########################################################################
+    # plt.clf()
+    # grid = plt.GridSpec(24, len(windows), wspace=2.42, hspace=5.)
 
-    axes = plt.subplot(grid[0:9, 0:])
-    axes.bar(
-        [
-            idx - (bar_width + bar_width / 2.)
-            for idx, _ in enumerate(windows)
-        ],
-        [
-            record['size_all_files']
-            for record in windows
-        ],
-        width=bar_width,
-        label="Size all files (GB)"
-    )
-    axes.bar(
-        [
-            idx - (bar_width / 2.)
-            for idx, _ in enumerate(windows)
-        ],
-        [
-            record['size_file_1req']
-            for record in windows
-        ],
-        width=bar_width,
-        label="Size files with 1 request (GB)"
-    )
-    axes.bar(
-        [
-            idx + (bar_width / 2.)
-            for idx, _ in enumerate(windows)
-        ],
-        [
-            record['size_file_g1req']
-            for record in windows
-        ],
-        width=bar_width,
-        label="Size files with more than 1 req. (GB)"
-    )
-    axes.set_xticks(range(len(windows)))
-    axes.set_xticklabels(
-        [str(idx) for idx in range(len(windows))]
-    )
-    axes.grid()
-    axes.legend()
-    axes.set_xlabel("Window")
+    # axes = plt.subplot(grid[0:9, 0:])
+    # axes.bar(
+    #     [
+    #         idx - (bar_width + bar_width / 2.)
+    #         for idx, _ in enumerate(windows)
+    #     ],
+    #     [
+    #         record['size_all_files']
+    #         for record in windows
+    #     ],
+    #     width=bar_width,
+    #     label="Size all files (GB)"
+    # )
+    # axes.bar(
+    #     [
+    #         idx - (bar_width / 2.)
+    #         for idx, _ in enumerate(windows)
+    #     ],
+    #     [
+    #         record['size_file_1req']
+    #         for record in windows
+    #     ],
+    #     width=bar_width,
+    #     label="Size files with 1 request (GB)"
+    # )
+    # axes.bar(
+    #     [
+    #         idx + (bar_width / 2.)
+    #         for idx, _ in enumerate(windows)
+    #     ],
+    #     [
+    #         record['size_file_g1req']
+    #         for record in windows
+    #     ],
+    #     width=bar_width,
+    #     label="Size files with more than 1 req. (GB)"
+    # )
+    # axes.set_xticks(range(len(windows)))
+    # axes.set_xticklabels(
+    #     [str(idx) for idx in range(len(windows))]
+    # )
+    # axes.grid()
+    # axes.legend()
+    # axes.set_xlabel("Window")
 
-    for win_idx, window in enumerate(windows):
-        axes = plt.subplot(grid[12:18, win_idx])
-        labels = sorted(window['desc_file_sizes'].keys())
-        sizes = [
-            float(window['desc_file_sizes'][label] /
-                  sum(window['desc_file_sizes'].values())) * 100.
-            for label in labels
-        ]
-        # to_remove = []
-        # for idx, size in enumerate(sizes):
-        #     if size <= 25.:
-        #         to_remove.append(idx)
-        # for idx in reversed(sorted(to_remove)):
-        #     sizes.pop(idx)
-        #     labels.pop(idx)
-        labels = [
-            f"{int(label/1000.)} GB" if label >= 1000. else f"{label} MB"
-            for label in labels
-        ]
-        axes.pie(sizes, radius=2.4, labels=labels,
-                 autopct='%1.0f%%', startangle=90)
-        axes.set_xlabel(f"\nWin. {win_idx}")
+    # for win_idx, window in enumerate(windows):
+    #     axes = plt.subplot(grid[12:18, win_idx])
+    #     labels = sorted(window['desc_file_sizes'].keys())
+    #     sizes = [
+    #         float(window['desc_file_sizes'][label] /
+    #               sum(window['desc_file_sizes'].values())) * 100.
+    #         for label in labels
+    #     ]
+    #     # to_remove = []
+    #     # for idx, size in enumerate(sizes):
+    #     #     if size <= 25.:
+    #     #         to_remove.append(idx)
+    #     # for idx in reversed(sorted(to_remove)):
+    #     #     sizes.pop(idx)
+    #     #     labels.pop(idx)
+    #     labels = [
+    #         f"{int(label/1000.)} GB" if label >= 1000. else f"{label} MB"
+    #         for label in labels
+    #     ]
+    #     axes.pie(sizes, radius=2.4, labels=labels,
+    #              autopct='%1.0f%%', startangle=90)
+    #     axes.set_xlabel(f"\nWin. {win_idx}")
 
-    for win_idx, window in enumerate(windows):
-        axes = plt.subplot(grid[19:24, win_idx])
-        labels = sorted(window['desc_file_sizes'].keys())
-        sizes = [
-            float(window['desc_file_sizes'][label] /
-                  sum(window['desc_file_sizes'].values())) * 100.
-            for label in labels
-        ]
-        to_remove = []
-        for idx, size in enumerate(sizes):
-            if size > 25. or size <= 1.:
-                to_remove.append(idx)
-        for idx in reversed(sorted(to_remove)):
-            sizes.pop(idx)
-            labels.pop(idx)
-        labels = [
-            f"{int(label/1000.)} GB" if label >= 1000. else f"{label} MB"
-            for label in labels
-        ]
-        axes.pie(sizes, radius=2.4, labels=labels,
-                 autopct='%1.0f%%', startangle=90)
-        axes.set_xlabel(f"\nWin. {win_idx}\n1% < size <=25%")
+    # for win_idx, window in enumerate(windows):
+    #     axes = plt.subplot(grid[19:24, win_idx])
+    #     labels = sorted(window['desc_file_sizes'].keys())
+    #     sizes = [
+    #         float(window['desc_file_sizes'][label] /
+    #               sum(window['desc_file_sizes'].values())) * 100.
+    #         for label in labels
+    #     ]
+    #     to_remove = []
+    #     for idx, size in enumerate(sizes):
+    #         if size > 25. or size <= 1.:
+    #             to_remove.append(idx)
+    #     for idx in reversed(sorted(to_remove)):
+    #         sizes.pop(idx)
+    #         labels.pop(idx)
+    #     labels = [
+    #         f"{int(label/1000.)} GB" if label >= 1000. else f"{label} MB"
+    #         for label in labels
+    #     ]
+    #     axes.pie(sizes, radius=2.4, labels=labels,
+    #              autopct='%1.0f%%', startangle=90)
+    #     axes.set_xlabel(f"\nWin. {win_idx}\n1% < size <=25%")
 
-    pbar.update(1)
-    plt.savefig(
-        os.path.join(result_folder, "stats_window-sizes.png"),
-        dpi=dpi,
-        bbox_inches='tight'
-    )
-    pbar.update(1)
+    # pbar.update(1)
+    # plt.savefig(
+    #     os.path.join(result_folder, "stats_window-sizes.png"),
+    #     dpi=dpi,
+    #     bbox_inches='tight'
+    # )
+    # pbar.update(1)
 
-    ###########################################################################
-    # window_cache_size_stats
-    ###########################################################################
-    plt.clf()
-    grid = plt.GridSpec(8*len(windows), len(windows), wspace=1.42, hspace=5.)
+    # ###########################################################################
+    # # window_cache_size_stats
+    # ###########################################################################
+    # plt.clf()
+    # grid = plt.GridSpec(8*len(windows), len(windows), wspace=1.42, hspace=5.)
 
-    for win_idx, window in enumerate(windows):
-        start_idx = win_idx*8
-        axes = plt.subplot(grid[start_idx:start_idx+7, 0:])
-        keys = sorted(window['sizes_x_min_num_requests'].keys())
-        axes.bar(
-            [key - 1 for key in keys],
-            [window['sizes_x_min_num_requests'][key] for key in keys],
-            label="Cache size based on min num requests to store. (GB)"
-        )
-        axes.set_xticks(range(len(keys)))
-        axes.set_xticklabels(
-            [str(key) for key in keys]
-        )
-        axes.grid()
-        axes.legend()
-        axes.set_xlabel(f"Window {win_idx}")
+    # for win_idx, window in enumerate(windows):
+    #     start_idx = win_idx*8
+    #     axes = plt.subplot(grid[start_idx:start_idx+7, 0:])
+    #     keys = sorted(window['sizes_x_min_num_requests'].keys())
+    #     axes.bar(
+    #         [key - 1 for key in keys],
+    #         [window['sizes_x_min_num_requests'][key] for key in keys],
+    #         label="Cache size based on min num requests to store. (GB)"
+    #     )
+    #     axes.set_xticks(range(len(keys)))
+    #     axes.set_xticklabels(
+    #         [str(key) for key in keys]
+    #     )
+    #     axes.grid()
+    #     axes.legend()
+    #     axes.set_xlabel(f"Window {win_idx}")
 
-    pbar.update(1)
-    plt.savefig(
-        os.path.join(result_folder, "stats_window-cache-sizes.png"),
-        dpi=dpi,
-        bbox_inches='tight'
-    )
-    pbar.update(1)
+    # pbar.update(1)
+    # plt.savefig(
+    #     os.path.join(result_folder, "stats_window-cache-sizes.png"),
+    #     dpi=dpi,
+    #     bbox_inches='tight'
+    # )
+    # pbar.update(1)
 
-    ###########################################################################
-    # window_task_stats
-    ###########################################################################
-    plt.clf()
-    grid = plt.GridSpec(18, len(windows)*2, wspace=1, hspace=1.)
+    # ###########################################################################
+    # # window_task_stats
+    # ###########################################################################
+    # plt.clf()
+    # grid = plt.GridSpec(18, len(windows)*2, wspace=1, hspace=1.)
 
-    axes = plt.subplot(grid[0:5, 0:])
-    cur_bar_width = bar_width / 2.
-    axes.bar(
-        [
-            idx - cur_bar_width * 2
-            for idx, _ in enumerate(windows)
-        ],
-        [
-            record['num_users']
-            for record in windows
-        ],
-        width=cur_bar_width,
-        label="Num. users"
-    )
-    axes.bar(
-        [
-            idx - cur_bar_width
-            for idx, _ in enumerate(windows)
-        ],
-        [
-            record['num_sites']
-            for record in windows
-        ],
-        width=cur_bar_width,
-        label="Num. sites"
-    )
-    axes.bar(
-        [
-            idx
-            for idx, _ in enumerate(windows)
-        ],
-        [
-            record['num_tasks']
-            for record in windows
-        ],
-        width=cur_bar_width,
-        label="Num. tasks"
-    )
-    axes.bar(
-        [
-            idx + cur_bar_width
-            for idx, _ in enumerate(windows)
-        ],
-        [
-            record['num_jobs']
-            for record in windows
-        ],
-        width=cur_bar_width,
-        label="Num. jobs"
-    )
-    axes.set_yscale('log')
-    axes.set_xticks(range(len(windows)))
-    axes.set_xticklabels(
-        [str(idx) for idx in range(len(windows))]
-    )
-    axes.grid()
-    legend = axes.legend(bbox_to_anchor=(0.32, 2.3))
+    # axes = plt.subplot(grid[0:5, 0:])
+    # cur_bar_width = bar_width / 2.
+    # axes.bar(
+    #     [
+    #         idx - cur_bar_width * 2
+    #         for idx, _ in enumerate(windows)
+    #     ],
+    #     [
+    #         record['num_users']
+    #         for record in windows
+    #     ],
+    #     width=cur_bar_width,
+    #     label="Num. users"
+    # )
+    # axes.bar(
+    #     [
+    #         idx - cur_bar_width
+    #         for idx, _ in enumerate(windows)
+    #     ],
+    #     [
+    #         record['num_sites']
+    #         for record in windows
+    #     ],
+    #     width=cur_bar_width,
+    #     label="Num. sites"
+    # )
+    # axes.bar(
+    #     [
+    #         idx
+    #         for idx, _ in enumerate(windows)
+    #     ],
+    #     [
+    #         record['num_tasks']
+    #         for record in windows
+    #     ],
+    #     width=cur_bar_width,
+    #     label="Num. tasks"
+    # )
+    # axes.bar(
+    #     [
+    #         idx + cur_bar_width
+    #         for idx, _ in enumerate(windows)
+    #     ],
+    #     [
+    #         record['num_jobs']
+    #         for record in windows
+    #     ],
+    #     width=cur_bar_width,
+    #     label="Num. jobs"
+    # )
+    # axes.set_yscale('log')
+    # axes.set_xticks(range(len(windows)))
+    # axes.set_xticklabels(
+    #     [str(idx) for idx in range(len(windows))]
+    # )
+    # axes.grid()
+    # legend = axes.legend(bbox_to_anchor=(0.32, 2.3))
 
-    for win_idx, window in enumerate(windows):
-        axes = plt.subplot(grid[6:8, win_idx*2:win_idx*2+2])
-        labels = sorted(window['protocols'].keys())
-        sizes = [
-            window['protocols'][label]
-            for label in labels
-        ]
-        # to_remove = []
-        # for idx, size in enumerate(sizes):
-        #     if size <= 25.:
-        #         to_remove.append(idx)
-        # for idx in reversed(sorted(to_remove)):
-        #     sizes.pop(idx)
-        #     labels.pop(idx)
-        axes.pie(sizes, radius=1.6, labels=labels,
-                 autopct='%1.0f%%', startangle=90)
-        if win_idx == 0:
-            text = axes.text(-14, 0.1, "Protocols %")
-        # axes.set_xlabel(f"\nWin. {win_idx}\nprotocols")
+    # for win_idx, window in enumerate(windows):
+    #     axes = plt.subplot(grid[6:8, win_idx*2:win_idx*2+2])
+    #     labels = sorted(window['protocols'].keys())
+    #     sizes = [
+    #         window['protocols'][label]
+    #         for label in labels
+    #     ]
+    #     # to_remove = []
+    #     # for idx, size in enumerate(sizes):
+    #     #     if size <= 25.:
+    #     #         to_remove.append(idx)
+    #     # for idx in reversed(sorted(to_remove)):
+    #     #     sizes.pop(idx)
+    #     #     labels.pop(idx)
+    #     axes.pie(sizes, radius=1.6, labels=labels,
+    #              autopct='%1.0f%%', startangle=90)
+    #     if win_idx == 0:
+    #         text = axes.text(-14, 0.1, "Protocols %")
+    #     # axes.set_xlabel(f"\nWin. {win_idx}\nprotocols")
 
-    for win_idx, window in enumerate(windows):
-        axes = plt.subplot(grid[9:11, win_idx*2:win_idx*2+2])
-        labels = ['CPU', 'I/O']
-        sizes = [window['all_cpu_time'], window['all_io_time']]
-        axes.pie(sizes, radius=1.6, labels=labels,
-                 autopct='%1.0f%%', startangle=90)
-        if win_idx == 0:
-            text = axes.text(-14, 0.1, "Time %")
-        # axes.set_xlabel(f"\nWin. {win_idx}\ntime")
+    # for win_idx, window in enumerate(windows):
+    #     axes = plt.subplot(grid[9:11, win_idx*2:win_idx*2+2])
+    #     labels = ['CPU', 'I/O']
+    #     sizes = [window['all_cpu_time'], window['all_io_time']]
+    #     axes.pie(sizes, radius=1.6, labels=labels,
+    #              autopct='%1.0f%%', startangle=90)
+    #     if win_idx == 0:
+    #         text = axes.text(-14, 0.1, "Time %")
+    #     # axes.set_xlabel(f"\nWin. {win_idx}\ntime")
 
-    for win_idx, window in enumerate(windows):
-        axes = plt.subplot(grid[12:14, win_idx*2:win_idx*2+2])
-        labels = ['CPU', 'I/O']
-        sizes = [window['local_cpu_time'], window['local_io_time']]
-        axes.pie(sizes, radius=1.6, labels=labels,
-                 autopct='%1.0f%%', startangle=90)
-        if win_idx == 0:
-            text = axes.text(-14, 0.1, "Local Time %")
-        # axes.set_xlabel(f"\nWin. {win_idx}\ntime (local)")
+    # for win_idx, window in enumerate(windows):
+    #     axes = plt.subplot(grid[12:14, win_idx*2:win_idx*2+2])
+    #     labels = ['CPU', 'I/O']
+    #     sizes = [window['local_cpu_time'], window['local_io_time']]
+    #     axes.pie(sizes, radius=1.6, labels=labels,
+    #              autopct='%1.0f%%', startangle=90)
+    #     if win_idx == 0:
+    #         text = axes.text(-14, 0.1, "Local Time %")
+    #     # axes.set_xlabel(f"\nWin. {win_idx}\ntime (local)")
 
-    for win_idx, window in enumerate(windows):
-        axes = plt.subplot(grid[15:17, win_idx*2:win_idx*2+2])
-        labels = ['CPU', 'I/O']
-        sizes = [window['remote_cpu_time'], window['remote_io_time']]
-        axes.pie(sizes, radius=1.6, labels=labels,
-                 autopct='%1.0f%%', startangle=90)
-        if win_idx == 0:
-            text = axes.text(-14, 0.1, "Remote time %")
-        # axes.set_xlabel(f"\nWin. {win_idx}\ntime (remote)")
+    # for win_idx, window in enumerate(windows):
+    #     axes = plt.subplot(grid[15:17, win_idx*2:win_idx*2+2])
+    #     labels = ['CPU', 'I/O']
+    #     sizes = [window['remote_cpu_time'], window['remote_io_time']]
+    #     axes.pie(sizes, radius=1.6, labels=labels,
+    #              autopct='%1.0f%%', startangle=90)
+    #     if win_idx == 0:
+    #         text = axes.text(-14, 0.1, "Remote time %")
+    #     # axes.set_xlabel(f"\nWin. {win_idx}\ntime (remote)")
 
-    # with warnings.catch_warnings():
-    #     warnings.simplefilter("ignore")
-    #     plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
-    pbar.update(1)
-    plt.savefig(
-        os.path.join(result_folder, "stats_window-tasks.png"),
-        dpi=dpi,
-        bbox_extra_artists=(legend, text),
-        bbox_inches='tight'
-    )
-    pbar.update(1)
+    # # with warnings.catch_warnings():
+    # #     warnings.simplefilter("ignore")
+    # #     plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
+    # pbar.update(1)
+    # plt.savefig(
+    #     os.path.join(result_folder, "stats_window-tasks.png"),
+    #     dpi=dpi,
+    #     bbox_extra_artists=(legend, text),
+    #     bbox_inches='tight'
+    # )
+    # pbar.update(1)
 
     pbar.close()
 
@@ -1014,73 +1117,73 @@ def make_dataframe_stats(data: list, window_index: int = 0,
         [key * value for key, value in num_req_x_file_frequencies.items()])
     pbar.update(1)
 
-    # Size files with 1 request and greater than 1 request
-    size_by_filename = df[['filename', 'size']].dropna().drop_duplicates(
-        subset='filename')
-    file_1req_list = num_req_x_file[
-        num_req_x_file <= num_req_x_file.min()
-    ].keys().to_list()
-    file_g1req_list = num_req_x_file[
-        num_req_x_file > num_req_x_file.min()
-    ].keys().to_list()
-    size_1req_files = size_by_filename[size_by_filename['filename'].isin(
-        file_1req_list)]['size'].sum() / 1024. ** 3
-    size_g1req_files = size_by_filename[size_by_filename['filename'].isin(
-        file_g1req_list)]['size'].sum() / 1024. ** 3
-    desc_file_sizes = size_by_filename['size'].apply(
-        transform_sizes).value_counts().sort_index().to_dict()
-    pbar.update(1)
+    # # Size files with 1 request and greater than 1 request
+    # size_by_filename = df[['filename', 'size']].dropna().drop_duplicates(
+    #     subset='filename')
+    # file_1req_list = num_req_x_file[
+    #     num_req_x_file <= num_req_x_file.min()
+    # ].keys().to_list()
+    # file_g1req_list = num_req_x_file[
+    #     num_req_x_file > num_req_x_file.min()
+    # ].keys().to_list()
+    # size_1req_files = size_by_filename[size_by_filename['filename'].isin(
+    #     file_1req_list)]['size'].sum() / 1024. ** 3
+    # size_g1req_files = size_by_filename[size_by_filename['filename'].isin(
+    #     file_g1req_list)]['size'].sum() / 1024. ** 3
+    # desc_file_sizes = size_by_filename['size'].apply(
+    #     transform_sizes).value_counts().sort_index().to_dict()
+    # pbar.update(1)
 
-    sizes_x_min_num_requests = {}
-    for min_num_request in range(1, 21):
-        num_request_filter = num_req_x_file[
-            num_req_x_file >= min_num_request
-        ].keys().to_list()
-        sizes_x_min_num_requests[min_num_request] = size_by_filename[
-            size_by_filename['filename'].isin(
-                num_request_filter)]['size'].sum() / 1024. ** 3
-        pbar.update(1)
+    # sizes_x_min_num_requests = {}
+    # for min_num_request in range(1, 21):
+    #     num_request_filter = num_req_x_file[
+    #         num_req_x_file >= min_num_request
+    #     ].keys().to_list()
+    #     sizes_x_min_num_requests[min_num_request] = size_by_filename[
+    #         size_by_filename['filename'].isin(
+    #             num_request_filter)]['size'].sum() / 1024. ** 3
+    #     pbar.update(1)
 
-    # Task and job stats
-    num_users = df['user'].unique().shape[0]
-    num_sites = df['site_name'].unique().shape[0]
-    num_tasks = df['task_id'].unique().shape[0]
-    num_jobs = df['job_id'].unique().shape[0]
-    protocols = df['protocol'].value_counts().to_dict()
-    all_cpu_time = df['cpu_time'].sum()
-    all_io_time = df['io_time'].sum()
-    local_cpu_time = df['cpu_time'][
-        df.protocol == 'Local'
-    ].sum()
-    local_io_time = df['io_time'][
-        df.protocol == 'Local'
-    ].sum()
-    remote_cpu_time = df['cpu_time'][
-        df.protocol == 'Remote'
-    ].sum()
-    remote_io_time = df['io_time'][
-        df.protocol == 'Remote'
-    ].sum()
-    pbar.update(1)
+    # # Task and job stats
+    # num_users = df['user'].unique().shape[0]
+    # num_sites = df['site_name'].unique().shape[0]
+    # num_tasks = df['task_id'].unique().shape[0]
+    # num_jobs = df['job_id'].unique().shape[0]
+    # protocols = df['protocol'].value_counts().to_dict()
+    # all_cpu_time = df['cpu_time'].sum()
+    # all_io_time = df['io_time'].sum()
+    # local_cpu_time = df['cpu_time'][
+    #     df.protocol == 'Local'
+    # ].sum()
+    # local_io_time = df['io_time'][
+    #     df.protocol == 'Local'
+    # ].sum()
+    # remote_cpu_time = df['cpu_time'][
+    #     df.protocol == 'Remote'
+    # ].sum()
+    # remote_io_time = df['io_time'][
+    #     df.protocol == 'Remote'
+    # ].sum()
+    # pbar.update(1)
 
-    mean_num_files_x_job = df[['job_id', 'filename']].groupby(
-        'job_id')['filename'].nunique().mean()
-    pbar.update(1)
-    mean_num_files_x_task = df[['task_id', 'filename']].groupby(
-        'task_id')['filename'].nunique().mean()
-    pbar.update(1)
-    mean_num_files_x_user = df[['user', 'filename']].groupby(
-        'user')['filename'].nunique().mean()
-    pbar.update(1)
-    mean_num_jobs_x_task = df[['job_id', 'task_id']].groupby(
-        'task_id')['job_id'].nunique().mean()
-    pbar.update(1)
-    mean_num_jobs_x_user = df[['job_id', 'user']].groupby(
-        'user')['job_id'].nunique().mean()
-    pbar.update(1)
-    mean_num_tasks_x_user = df[['task_id', 'user']].groupby(
-        'user')['task_id'].nunique().mean()
-    pbar.update(1)
+    # mean_num_files_x_job = df[['job_id', 'filename']].groupby(
+    #     'job_id')['filename'].nunique().mean()
+    # pbar.update(1)
+    # mean_num_files_x_task = df[['task_id', 'filename']].groupby(
+    #     'task_id')['filename'].nunique().mean()
+    # pbar.update(1)
+    # mean_num_files_x_user = df[['user', 'filename']].groupby(
+    #     'user')['filename'].nunique().mean()
+    # pbar.update(1)
+    # mean_num_jobs_x_task = df[['job_id', 'task_id']].groupby(
+    #     'task_id')['job_id'].nunique().mean()
+    # pbar.update(1)
+    # mean_num_jobs_x_user = df[['job_id', 'user']].groupby(
+    #     'user')['job_id'].nunique().mean()
+    # pbar.update(1)
+    # mean_num_tasks_x_user = df[['task_id', 'user']].groupby(
+    #     'user')['task_id'].nunique().mean()
+    # pbar.update(1)
 
     pbar.close()
 
@@ -1088,35 +1191,35 @@ def make_dataframe_stats(data: list, window_index: int = 0,
         'num_requests': num_requests,
         'num_files': num_files,
 
-        'size_all_files': size_all_files,
-        'size_file_1req': size_1req_files,
-        'size_file_g1req': size_g1req_files,
-        'desc_file_sizes': desc_file_sizes,
-        'sizes_x_min_num_requests': sizes_x_min_num_requests,
-
         'mean_num_req_x_file': mean_num_req_x_file,
         'mean_num_req_x_file_gmin': mean_num_req_x_file_gmin,
 
         'num_req_x_file_frequencies': num_req_x_file_frequencies,
 
-        'num_users': num_users,
-        'num_sites': num_sites,
-        'num_tasks': num_tasks,
-        'num_jobs': num_jobs,
-        'protocols': protocols,
-        'all_cpu_time': all_cpu_time,
-        'all_io_time': all_io_time,
-        'local_cpu_time': local_cpu_time,
-        'local_io_time': local_io_time,
-        'remote_cpu_time': remote_cpu_time,
-        'remote_io_time': remote_io_time,
+        # 'size_all_files': size_all_files,
+        # 'size_file_1req': size_1req_files,
+        # 'size_file_g1req': size_g1req_files,
+        # 'desc_file_sizes': desc_file_sizes,
+        # 'sizes_x_min_num_requests': sizes_x_min_num_requests,
 
-        'mean_num_files_x_job': mean_num_files_x_job,
-        'mean_num_files_x_task': mean_num_files_x_task,
-        'mean_num_files_x_user': mean_num_files_x_user,
-        'mean_num_jobs_x_task': mean_num_jobs_x_task,
-        'mean_num_jobs_x_user': mean_num_jobs_x_user,
-        'mean_num_tasks_x_user': mean_num_tasks_x_user,
+        # 'num_users': num_users,
+        # 'num_sites': num_sites,
+        # 'num_tasks': num_tasks,
+        # 'num_jobs': num_jobs,
+        # 'protocols': protocols,
+        # 'all_cpu_time': all_cpu_time,
+        # 'all_io_time': all_io_time,
+        # 'local_cpu_time': local_cpu_time,
+        # 'local_io_time': local_io_time,
+        # 'remote_cpu_time': remote_cpu_time,
+        # 'remote_io_time': remote_io_time,
+
+        # 'mean_num_files_x_job': mean_num_files_x_job,
+        # 'mean_num_files_x_task': mean_num_files_x_task,
+        # 'mean_num_files_x_user': mean_num_files_x_user,
+        # 'mean_num_jobs_x_task': mean_num_jobs_x_task,
+        # 'mean_num_jobs_x_user': mean_num_jobs_x_user,
+        # 'mean_num_tasks_x_user': mean_num_tasks_x_user,
     }
 
 
@@ -1289,8 +1392,10 @@ def main():
                 counter += 1
 
             # TO TEST
-            # if file_idx == 5:
+            # if file_idx == 0:
             #     break
+            if len(windows) == 2:
+                break
 
         if len(data_frames) > 0:
             windows.append((
