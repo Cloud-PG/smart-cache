@@ -544,8 +544,8 @@ def simulate(cache, windows: list, region: str = "_all_",
     if remote:
         _, cache_name, cache_rpc_url = cache.split(':', 2)
         channel = grpc.insecure_channel(cache_rpc_url)
-        stub = simService_pb2_grpc.SimServiceStub(channel)
-        stub.SimServiceClear(
+        stubSimService= simService_pb2_grpc.SimServiceStub(channel)
+        stubSimService.SimClear(
             google_dot_protobuf_dot_empty__pb2.Empty()
         )
     else:
@@ -598,7 +598,7 @@ def simulate(cache, windows: list, region: str = "_all_",
 
             for row_idx, record in df.iterrows():
                 if remote:
-                    stub_result = stub.SimServiceGet(
+                    fileAdded = stubSimService.SimGet(
                         simService_pb2.SimCommonFile(
                             filename=record['filename'],
                             # Convert from Bytes to MegaBytes
@@ -613,6 +613,9 @@ def simulate(cache, windows: list, region: str = "_all_",
                     )
 
                 if remote:
+                    stub_result = stubSimService.SimGetInfoCacheStatus(
+                        google_dot_protobuf_dot_empty__pb2.Empty()
+                    )
                     cur_hit_rate = stub_result.hitRate
                     cur_capacity = stub_result.capacity
                     cur_written_data = stub_result.writtenData
@@ -689,13 +692,13 @@ def simulate(cache, windows: list, region: str = "_all_",
                 cur_cache_info = {
                     'cache': dict(
                         (cache_file.filename, cache_file.size)
-                        for cache_file in stub.SimServiceGetInfoCacheFiles(
+                        for cache_file in stubSimService.SimGetInfoCacheFiles(
                             google_dot_protobuf_dot_empty__pb2.Empty()
                         )
                     ),
                     'weights':  dict(
                         (cache_file.filename, cache_file.weight)
-                        for cache_file in stub.SimServiceGetInfoFilesWeights(
+                        for cache_file in stubSimService.SimGetInfoFilesWeights(
                             google_dot_protobuf_dot_empty__pb2.Empty()
                         )
                     ) if cache_name.lower().find("lru") else {}

@@ -111,20 +111,17 @@ func fileWeightedRequest(size float32, totRequests float32, meanTicks float32, e
 	return float32(math.Pow(float64(meanTicks*(((size/totRequests)/size)*100.)), float64(exp)))
 }
 
-// SimServiceGet updates the cache from a protobuf message
-func (cache *Weighted) SimServiceGet(ctx context.Context, commonFile *pb.SimCommonFile) (*pb.SimCacheStatus, error) {
-	cache.Get(commonFile.Filename, commonFile.Size)
-	return &pb.SimCacheStatus{
-		HitRate:     cache.HitRate(),
-		Size:        cache.Size(),
-		Capacity:    cache.Capacity(),
-		WrittenData: cache.WrittenData(),
-		ReadOnHit:   cache.ReadOnHit(),
+// SimGet updates the cache from a protobuf message
+func (cache *Weighted) SimGet(ctx context.Context, commonFile *pb.SimCommonFile) (*pb.ActionResult, error) {
+	added := cache.Get(commonFile.Filename, commonFile.Size)
+	return &pb.ActionResult{
+		Filename: commonFile.Filename,
+		Added:    added,
 	}, nil
 }
 
-// SimServiceClear deletes all cache content
-func (cache *Weighted) SimServiceClear(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
+// SimReset deletes all cache content
+func (cache *Weighted) SimReset(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
 	cache.Clear()
 	return &pb.SimCacheStatus{
 		HitRate:     cache.HitRate(),
@@ -135,8 +132,19 @@ func (cache *Weighted) SimServiceClear(ctx context.Context, _ *empty.Empty) (*pb
 	}, nil
 }
 
-// SimServiceGetInfoCacheFiles returns the content of the cache: filenames and sizes
-func (cache *Weighted) SimServiceGetInfoCacheFiles(_ *empty.Empty, stream pb.SimService_SimServiceGetInfoCacheFilesServer) error {
+// SimGetInfoCacheStatus returns the current simulation status
+func (cache *Weighted) SimGetInfoCacheStatus(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
+	return &pb.SimCacheStatus{
+		HitRate:     cache.HitRate(),
+		Size:        cache.Size(),
+		Capacity:    cache.Capacity(),
+		WrittenData: cache.WrittenData(),
+		ReadOnHit:   cache.ReadOnHit(),
+	}, nil
+}
+
+// SimGetInfoCacheFiles returns the content of the cache: filenames and sizes
+func (cache *Weighted) SimGetInfoCacheFiles(_ *empty.Empty, stream pb.SimService_SimGetInfoCacheFilesServer) error {
 	for key, value := range cache.files {
 		curFile := &pb.SimCommonFile{
 			Filename: key,
@@ -149,8 +157,8 @@ func (cache *Weighted) SimServiceGetInfoCacheFiles(_ *empty.Empty, stream pb.Sim
 	return nil
 }
 
-// SimServiceGetInfoFilesWeights returns the file weights
-func (cache *Weighted) SimServiceGetInfoFilesWeights(_ *empty.Empty, stream pb.SimService_SimServiceGetInfoFilesWeightsServer) error {
+// SimGetInfoFilesWeights returns the file weights
+func (cache *Weighted) SimGetInfoFilesWeights(_ *empty.Empty, stream pb.SimService_SimGetInfoFilesWeightsServer) error {
 	for filename, stats := range cache.stats {
 		var weight float32
 

@@ -10,11 +10,17 @@ package simservice;
 
 service SimService {
 
-  rpc SimServiceGet(SimCommonFile) returns (SimCacheStatus) {}
-  rpc SimServiceClear(google.protobuf.Empty) returns (SimCacheStatus) {}
-  rpc SimServiceGetInfoCacheFiles(google.protobuf.Empty) returns (stream SimCommonFile) {}
-  rpc SimServiceGetInfoFilesWeights(google.protobuf.Empty) returns (stream SimFileWeight) {}
+  rpc SimGet(SimCommonFile) returns (ActionResult) {}
+  rpc SimReset(google.protobuf.Empty) returns (SimCacheStatus) {}
+  rpc SimGetInfoCacheStatus(google.protobuf.Empty) returns (SimCacheStatus) {}
+  rpc SimGetInfoCacheFiles(google.protobuf.Empty) returns (stream SimCommonFile) {}
+  rpc SimGetInfoFilesWeights(google.protobuf.Empty) returns (stream SimFileWeight) {}
 
+}
+
+message ActionResult {
+  string filename = 1;
+  bool added = 2;
 }
 
 message SimCommonFile {
