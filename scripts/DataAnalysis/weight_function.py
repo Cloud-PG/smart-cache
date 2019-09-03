@@ -746,7 +746,7 @@ def simulate(cache, windows: list, region: str = "_all_",
 
     if remote:
         channel.close()
-        del stub
+        del stubSimService
         del channel
 
     if not plot_server:
