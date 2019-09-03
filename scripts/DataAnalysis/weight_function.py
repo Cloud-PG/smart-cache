@@ -544,7 +544,7 @@ def simulate(cache, windows: list, region: str = "_all_",
     if remote:
         _, cache_name, cache_rpc_url = cache.split(':', 2)
         channel = grpc.insecure_channel(cache_rpc_url)
-        stubSimService= simService_pb2_grpc.SimServiceStub(channel)
+        stubSimService = simService_pb2_grpc.SimServiceStub(channel)
         stubSimService.SimReset(
             google_dot_protobuf_dot_empty__pb2.Empty()
         )
