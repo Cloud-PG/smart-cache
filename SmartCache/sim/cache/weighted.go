@@ -10,14 +10,12 @@ import (
 	empty "github.com/golang/protobuf/ptypes/empty"
 )
 
-type emptyMessage struct{}
-
 // FunctionType is used to select the weight function
 type FunctionType int
 
 const (
 	// StatsMemorySize indicates the size of fileStats memory
-	StatsMemorySize int = 8
+	StatsMemorySize int = 6
 )
 
 const (
@@ -41,38 +39,37 @@ type fileStats struct {
 	size              float32
 	totRequests       float32
 	lastTimeRequested time.Time
-	requestTicks      [StatsMemorySize]float32
+	requestTicks      [StatsMemorySize]uint64
 	requestLastIdx    int
 }
 
-func (stats *fileStats) updateRequests(tick float32, newTime time.Time) {
+func (stats *fileStats) updateRequests(curTick uint64, newTime time.Time) {
 	stats.lastTimeRequested = newTime
 	stats.totRequests += 1.
 
-	stats.requestTicks[stats.requestLastIdx] = tick
+	stats.requestTicks[stats.requestLastIdx] = curTick
 	stats.requestLastIdx = (stats.requestLastIdx + 1) % StatsMemorySize
 }
 
-func (stats fileStats) getMeanTicks(curTick float32) float32 {
-	var timeMean float32
-	numTicks := float32(StatsMemorySize)
-	if numTicks > stats.totRequests {
-		numTicks = stats.totRequests
+func (stats fileStats) getMeanTicks(curTick uint64) float32 {
+	var timeMean uint64
+	for idx := 0; idx < StatsMemorySize; idx++ {
+		if stats.requestTicks[idx] != 0 {
+			timeMean += curTick - stats.requestTicks[idx]
+		}
 	}
-	for idx := 0; idx < int(numTicks); idx++ {
-		timeMean += curTick - stats.requestTicks[idx]
-	}
-	timeMean /= float32(StatsMemorySize)
-	return timeMean
+	timeMean /= uint64(StatsMemorySize)
+	return float32(timeMean)
 }
 
 // Weighted cache
 type Weighted struct {
-	files                                                       map[string]float32
-	stats                                                       map[string]*fileStats
-	queue                                                       []*weightedFile
-	hit, miss, writtenData, readOnHit, size, MaxSize, exp, tick float32
-	functionType                                                FunctionType
+	files                                                 map[string]float32
+	stats                                                 map[string]*fileStats
+	queue                                                 []*weightedFile
+	hit, miss, writtenData, readOnHit, size, MaxSize, exp float32
+	tick                                                  uint64
+	functionType                                          FunctionType
 }
 
 // Init the LRU struct
@@ -111,7 +108,7 @@ func fileWeightOnlyTime(totRequests float32, exp float32, lastTimeRequested time
 }
 
 func fileWeightedRequest(size float32, totRequests float32, meanTicks float32, exp float32) float32 {
-	return meanTicks + (((size / totRequests) / size) * 100.)
+	return float32(math.Pow(float64(meanTicks*(((size/totRequests)/size)*100.)), float64(exp)))
 }
 
 // SimServiceGet updates the cache from a protobuf message
@@ -221,7 +218,7 @@ func (cache *Weighted) updatePolicy(filename string, size float32, hit bool) boo
 			size,
 			0.,
 			currentTime,
-			[StatsMemorySize]float32{},
+			[StatsMemorySize]uint64{},
 			0,
 		}
 	}
@@ -304,7 +301,7 @@ func (cache *Weighted) updatePolicy(filename string, size float32, hit bool) boo
 		cache.size += size
 	}
 
-	cache.tick += 1.
+	cache.tick++
 
 	return added
 }
