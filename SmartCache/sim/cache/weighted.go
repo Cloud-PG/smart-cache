@@ -120,7 +120,9 @@ func fileWeightOnlyTime(totRequests uint32, exp float32, lastTimeRequested time.
 }
 
 func fileWeightedRequest(size float32, totRequests uint32, meanTicks float32, exp float32) float32 {
-	return float32(math.Pow(float64(meanTicks*(((size/float32(totRequests))/size)*100.)), float64(exp)))
+	return meanTicks + (size / float32(math.Pow(
+		float64(totRequests),
+		float64(exp))))
 }
 
 // SimGet updates the cache from a protobuf message
