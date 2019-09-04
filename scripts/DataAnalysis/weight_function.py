@@ -559,6 +559,7 @@ def simulate(cache, windows: list, region: str = "_all_",
     else:
         buffer = {
             'hit_rate': [],
+            'weighted_hit_rate': [],
             'size': [],
             'written_data': [],
             'read_on_hit': [],
@@ -598,7 +599,7 @@ def simulate(cache, windows: list, region: str = "_all_",
 
             for row_idx, record in df.iterrows():
                 if remote:
-                    fileAdded = stubSimService.SimGet(
+                    _ = stubSimService.SimGet(
                         simService_pb2.SimCommonFile(
                             filename=record['filename'],
                             # Convert from Bytes to MegaBytes
@@ -617,6 +618,7 @@ def simulate(cache, windows: list, region: str = "_all_",
                         google_dot_protobuf_dot_empty__pb2.Empty()
                     )
                     cur_hit_rate = stub_result.hitRate
+                    cur_weighted_hit_rate = stub_result.weightedHitRate
                     cur_capacity = stub_result.capacity
                     cur_written_data = stub_result.writtenData
                     cur_read_on_hit = stub_result.readOnHit
@@ -630,6 +632,7 @@ def simulate(cache, windows: list, region: str = "_all_",
 
                 if plot_server:
                     buffer["hit_rate"].append((request_idx, cur_hit_rate))
+                    buffer["weighted_hit_rate"].append((request_idx, cur_weighted_hit_rate))
                     buffer["size"].append((request_idx, cur_size))
                     buffer["written_data"].append(
                         (request_idx, cur_written_data))
@@ -655,12 +658,13 @@ def simulate(cache, windows: list, region: str = "_all_",
                         )
                         buffer = {
                             'hit_rate': [],
+                            'weighted_hit_rate': [],
                             'size': [],
                             'written_data': [],
                             'read_on_hit': [],
                         }
 
-                record_pbar.desc = f"[{cache_name[:4]+cache_name[-12:]}][Simulation][Window {num_window+1}/{len(windows)}][File {num_file}/{len(window)}][Hit Rate {cur_hit_rate:06.2f}][Ratio {cur_read_on_hit/cur_written_data:0.2f}][Capacity {cur_capacity:06.2f}]"
+                record_pbar.desc = f"[{cache_name[:4]+cache_name[-12:]}][Simulation][Window {num_window+1}/{len(windows)}][File {num_file}/{len(window)}][Hit Rate {cur_hit_rate:06.2f}][Weighted Hit Rate {cur_weighted_hit_rate:06.2f}][Ratio {cur_read_on_hit/cur_written_data:0.2f}][Capacity {cur_capacity:06.2f}]"
                 record_pbar.update(1)
 
                 # TEST

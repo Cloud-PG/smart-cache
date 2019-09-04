@@ -19,6 +19,7 @@ BASE_PATH = "plot_server_app"
 
 TABLES = {
     'hit_rate': {},
+    'weighted_hit_rate': {},
     'size': {},
     'written_data': {},
     'read_on_hit': {},
