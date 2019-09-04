@@ -6,11 +6,15 @@ import (
 	// "fmt"
 )
 
+const (
+	EXP float32 = 2.0
+)
+
 func TestWeightedCacheBaseMultipleInsert(t *testing.T) {
-	testCache := Weighted{
+	testCache := WeightedCache{
 		MaxSize: 3.0,
 	}
-	testCache.Init(FuncWeightedRequests)
+	testCache.Init(FuncWeightedRequests, EXP)
 
 	res := testCache.Get("/a/b/c/d/file0", 1.0)
 	testCache.Get("/a/b/c/d/file0", 1.0)
@@ -21,6 +25,8 @@ func TestWeightedCacheBaseMultipleInsert(t *testing.T) {
 		t.Fatalf("First insert error -> Expected %t but got %t", true, res)
 	} else if testCache.HitRate() != 75. {
 		t.Fatalf("Hit rate error -> Expected %f but got %f", 75., testCache.HitRate())
+	} else if testCache.WeightedHitRate() != 75. {
+		t.Fatalf("Hit rate error -> Expected %f but got %f", 75., testCache.WeightedHitRate())
 	} else if testCache.Size() != 1.0 {
 		t.Fatalf("Size error -> Expected %f but got %f", 1.0, testCache.Size())
 	} else if testCache.WrittenData() != 1.0 {
@@ -29,10 +35,10 @@ func TestWeightedCacheBaseMultipleInsert(t *testing.T) {
 }
 
 func TestWeightedCacheClear(t *testing.T) {
-	testCache := Weighted{
+	testCache := WeightedCache{
 		MaxSize: 3.0,
 	}
-	testCache.Init(FuncWeightedRequests)
+	testCache.Init(FuncWeightedRequests, EXP)
 
 	testCache.Get("/a/b/c/d/file0", 1.0)
 	testCache.Get("/a/b/c/d/file0", 1.0)
@@ -57,10 +63,10 @@ func TestWeightedCacheClear(t *testing.T) {
 }
 
 func TestWeightedCacheInsert(t *testing.T) {
-	testCache := Weighted{
+	testCache := WeightedCache{
 		MaxSize: 3.0,
 	}
-	testCache.Init(FuncWeightedRequests)
+	testCache.Init(FuncWeightedRequests, EXP)
 
 	testCache.Get("/a/b/c/d/file0", 1.0)
 	testCache.Get("/a/b/c/d/file1", 2.0)
@@ -75,10 +81,10 @@ func TestWeightedCacheInsert(t *testing.T) {
 		t.Fatalf("Hit rate error -> Expected %f but got %f", 12.5, testCache.HitRate())
 	} else if testCache.Size() != 3.0 {
 		t.Fatalf("Size error -> Expected %f but got %f", 3.0, testCache.Size())
-	} else if testCache.WrittenData() != 6.0 {
-		t.Fatalf("Written data error -> Expected %f but got %f", 6.0, testCache.WrittenData())
-	} else if testCache.ReadOnHit() != 1. {
-		t.Fatalf("Read on hit error -> Expected %f but got %f", 1., testCache.ReadOnHit())
+	} else if testCache.WrittenData() != 5.0 {
+		t.Fatalf("Written data error -> Expected %f but got %f", 5.0, testCache.WrittenData())
+	} else if testCache.ReadOnHit() != 2. {
+		t.Fatalf("Read on hit error -> Expected %f but got %f", 2., testCache.ReadOnHit())
 	}
 }
 
@@ -94,10 +100,10 @@ func BenchmarkWeightedCache(b *testing.B) {
 		return string(filepath)
 	}
 
-	testCache := Weighted{
+	testCache := WeightedCache{
 		MaxSize: maxSize,
 	}
-	testCache.Init(FuncWeightedRequests)
+	testCache.Init(FuncWeightedRequests, EXP)
 
 	for n := 0; n < b.N; n++ {
 		testCache.Get(genRandomFilePath(5), rand.Float32()*maxSize)

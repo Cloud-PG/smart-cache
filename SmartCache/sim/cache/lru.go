@@ -3,27 +3,51 @@ package cache
 import (
 	"container/list"
 	"context"
+	"time"
 
 	pb "./simService"
 	empty "github.com/golang/protobuf/ptypes/empty"
 )
 
-// LRU cache
-type LRU struct {
+type LRUFileStats struct {
+	size              float32
+	totRequests       uint32
+	nHits             uint32
+	nMiss             uint32
+	lastTimeRequested time.Time
+}
+
+func (stats *LRUFileStats) updateRequests(hit bool, newTime time.Time) {
+	stats.totRequests++
+
+	if hit {
+		stats.nHits++
+	} else {
+		stats.nMiss++
+	}
+
+	stats.lastTimeRequested = newTime
+}
+
+// LRUCache cache
+type LRUCache struct {
 	files                                            map[string]float32
+	stats                                            map[string]*LRUFileStats
 	queue                                            *list.List
 	hit, miss, writtenData, readOnHit, size, MaxSize float32
 }
 
 // Init the LRU struct
-func (cache *LRU) Init(vars ...interface{}) {
+func (cache *LRUCache) Init(vars ...interface{}) {
 	cache.files = make(map[string]float32)
+	cache.stats = make(map[string]*LRUFileStats)
 	cache.queue = list.New()
 }
 
 // Clear the LRU struct
-func (cache *LRU) Clear() {
+func (cache *LRUCache) Clear() {
 	cache.files = make(map[string]float32)
+	cache.stats = make(map[string]*LRUFileStats)
 	tmpVal := cache.queue.Front()
 	for {
 		if tmpVal == nil {
@@ -43,7 +67,7 @@ func (cache *LRU) Clear() {
 }
 
 // SimGet updates the cache from a protobuf message
-func (cache *LRU) SimGet(ctx context.Context, commonFile *pb.SimCommonFile) (*pb.ActionResult, error) {
+func (cache *LRUCache) SimGet(ctx context.Context, commonFile *pb.SimCommonFile) (*pb.ActionResult, error) {
 	added := cache.Get(commonFile.Filename, commonFile.Size)
 	return &pb.ActionResult{
 		Filename: commonFile.Filename,
@@ -52,7 +76,7 @@ func (cache *LRU) SimGet(ctx context.Context, commonFile *pb.SimCommonFile) (*pb
 }
 
 // SimReset deletes all cache content
-func (cache *LRU) SimReset(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
+func (cache *LRUCache) SimReset(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
 	cache.Clear()
 	return &pb.SimCacheStatus{
 		HitRate:     cache.HitRate(),
@@ -64,7 +88,7 @@ func (cache *LRU) SimReset(ctx context.Context, _ *empty.Empty) (*pb.SimCacheSta
 }
 
 // SimGetInfoCacheStatus returns the current simulation status
-func (cache *LRU) SimGetInfoCacheStatus(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
+func (cache *LRUCache) SimGetInfoCacheStatus(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
 	return &pb.SimCacheStatus{
 		HitRate:     cache.HitRate(),
 		Size:        cache.Size(),
@@ -75,7 +99,7 @@ func (cache *LRU) SimGetInfoCacheStatus(ctx context.Context, _ *empty.Empty) (*p
 }
 
 // SimGetInfoCacheFiles returns the content of the cache: filenames and sizes
-func (cache *LRU) SimGetInfoCacheFiles(_ *empty.Empty, stream pb.SimService_SimGetInfoCacheFilesServer) error {
+func (cache *LRUCache) SimGetInfoCacheFiles(_ *empty.Empty, stream pb.SimService_SimGetInfoCacheFilesServer) error {
 	for key, value := range cache.files {
 		curFile := &pb.SimCommonFile{
 			Filename: key,
@@ -89,11 +113,11 @@ func (cache *LRU) SimGetInfoCacheFiles(_ *empty.Empty, stream pb.SimService_SimG
 }
 
 // SimGetInfoFilesWeights returns the file weights
-func (cache *LRU) SimGetInfoFilesWeights(_ *empty.Empty, stream pb.SimService_SimGetInfoFilesWeightsServer) error {
+func (cache *LRUCache) SimGetInfoFilesWeights(_ *empty.Empty, stream pb.SimService_SimGetInfoFilesWeightsServer) error {
 	return nil
 }
 
-func (cache *LRU) updatePolicy(filename string, size float32, hit bool) bool {
+func (cache *LRUCache) updatePolicy(filename string, size float32, hit bool) bool {
 	var added = false
 	if !hit {
 		if cache.Size()+size > cache.MaxSize {
@@ -136,10 +160,21 @@ func (cache *LRU) updatePolicy(filename string, size float32, hit bool) bool {
 }
 
 // Get a file from the cache updating the statistics
-func (cache *LRU) Get(filename string, size float32) bool {
+func (cache *LRUCache) Get(filename string, size float32) bool {
+	if _, ok := cache.stats[filename]; !ok {
+		cache.stats[filename] = &LRUFileStats{
+			size,
+			0,
+			0,
+			0,
+			time.Now(),
+		}
+	}
+
 	hit := cache.check(filename)
 	added := cache.updatePolicy(filename, size, hit)
 
+	cache.stats[filename].updateRequests(hit, time.Now())
 	if hit {
 		cache.hit += 1.
 		cache.readOnHit += size
@@ -155,34 +190,48 @@ func (cache *LRU) Get(filename string, size float32) bool {
 }
 
 // HitRate of the cache
-func (cache LRU) HitRate() float32 {
+func (cache LRUCache) HitRate() float32 {
 	if cache.hit == 0. {
 		return 0.
 	}
 	return (cache.hit / (cache.hit + cache.miss)) * 100.
 }
 
+// WeightedHitRate of the cache
+func (cache LRUCache) WeightedHitRate() float32 {
+	if cache.hit == 0. {
+		return 0.
+	}
+	var sumHits float32
+	var sumMiss float32
+	for _, stats := range cache.stats {
+		sumHits += float32(stats.nHits) * stats.size
+		sumMiss += float32(stats.nMiss) * stats.size
+	}
+	return (sumHits / (sumHits + sumMiss)) * 100.
+}
+
 // Size of the cache
-func (cache LRU) Size() float32 {
+func (cache LRUCache) Size() float32 {
 	return cache.size
 }
 
 // Capacity of the cache
-func (cache LRU) Capacity() float32 {
+func (cache LRUCache) Capacity() float32 {
 	return (cache.Size() / cache.MaxSize) * 100.
 }
 
 // WrittenData of the cache
-func (cache LRU) WrittenData() float32 {
+func (cache LRUCache) WrittenData() float32 {
 	return cache.writtenData
 }
 
 // ReadOnHit of the cache
-func (cache LRU) ReadOnHit() float32 {
+func (cache LRUCache) ReadOnHit() float32 {
 	return cache.readOnHit
 }
 
-func (cache LRU) check(key string) bool {
+func (cache LRUCache) check(key string) bool {
 	_, ok := cache.files[key]
 	return ok
 }

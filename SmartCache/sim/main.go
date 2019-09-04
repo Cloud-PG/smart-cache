@@ -48,7 +48,7 @@ func commandRun() *cobra.Command {
 			switch cacheType {
 			case "lru":
 				fmt.Printf("[Create LRU Cache][Size: %f]\n", cacheSize)
-				cacheInstance = &cache.LRU{
+				cacheInstance = &cache.LRUCache{
 					MaxSize: cacheSize,
 				}
 				cacheInstance.Init()
@@ -56,7 +56,7 @@ func commandRun() *cobra.Command {
 				pb.RegisterSimServiceServer(grpcServer, cacheInstance)
 			case "weighted":
 				fmt.Printf("[Create Weighted Cache][Size: %f]\n", cacheSize)
-				cacheInstance = &cache.Weighted{
+				cacheInstance = &cache.WeightedCache{
 					MaxSize: cacheSize,
 				}
 				switch weightedFunc {

@@ -16,6 +16,7 @@ type Cache interface {
 	Clear()
 
 	HitRate() float32
+	WeightedHitRate() float32
 	Size() float32
 	Capacity() float32
 	WrittenData() float32

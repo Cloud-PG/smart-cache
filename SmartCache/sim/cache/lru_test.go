@@ -7,7 +7,7 @@ import (
 )
 
 func TestLRUCacheBaseMultipleInsert(t *testing.T) {
-	testCache := LRU{
+	testCache := LRUCache{
 		MaxSize: 3.0,
 	}
 	testCache.Init()
@@ -21,6 +21,8 @@ func TestLRUCacheBaseMultipleInsert(t *testing.T) {
 		t.Fatalf("First insert error -> Expected %t but got %t", true, res)
 	} else if testCache.HitRate() != 75. {
 		t.Fatalf("Hit rate error -> Expected %f but got %f", 75., testCache.HitRate())
+	} else if testCache.WeightedHitRate() != 75. {
+		t.Fatalf("Hit rate error -> Expected %f but got %f", 75., testCache.WeightedHitRate())
 	} else if testCache.Size() != 1.0 {
 		t.Fatalf("Size error -> Expected %f but got %f", 1.0, testCache.Size())
 	} else if testCache.WrittenData() != 1.0 {
@@ -29,7 +31,7 @@ func TestLRUCacheBaseMultipleInsert(t *testing.T) {
 }
 
 func TestLRUCacheClear(t *testing.T) {
-	testCache := LRU{
+	testCache := LRUCache{
 		MaxSize: 3.0,
 	}
 	testCache.Init()
@@ -57,7 +59,7 @@ func TestLRUCacheClear(t *testing.T) {
 }
 
 func TestLRUCacheInsert(t *testing.T) {
-	testCache := LRU{
+	testCache := LRUCache{
 		MaxSize: 3.0,
 	}
 	testCache.Init()
@@ -103,7 +105,7 @@ func BenchmarkLRUCache(b *testing.B) {
 		return string(filepath)
 	}
 
-	testCache := LRU{
+	testCache := LRUCache{
 		MaxSize: maxSize,
 	}
 	testCache.Init()
