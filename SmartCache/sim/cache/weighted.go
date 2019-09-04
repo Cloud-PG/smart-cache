@@ -67,7 +67,7 @@ func (stats weightedFileStats) getMeanReqTimes(curtime time.Time) float32 {
 			timeDiffSum += curtime.Sub(stats.requestTicks[idx])
 		}
 	}
-	return float32(timeDiffSum) / float32(StatsMemorySize)
+	return float32(timeDiffSum.Seconds()) / float32(StatsMemorySize)
 }
 
 // WeightedCache cache
