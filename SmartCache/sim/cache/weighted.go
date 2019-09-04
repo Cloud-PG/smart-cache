@@ -15,7 +15,7 @@ type FunctionType int
 
 const (
 	// StatsMemorySize indicates the size of fileStats memory
-	StatsMemorySize int = 6
+	StatsMemorySize uint64 = 64
 )
 
 const (
@@ -41,11 +41,11 @@ type weightedFileStats struct {
 	nHits             uint32
 	nMiss             uint32
 	lastTimeRequested time.Time
-	requestTicks      [StatsMemorySize]uint64
+	requestTicks      [StatsMemorySize]time.Time
 	requestLastIdx    int
 }
 
-func (stats *weightedFileStats) updateRequests(hit bool, curTick uint64, newTime time.Time) {
+func (stats *weightedFileStats) updateRequests(hit bool, curTime time.Time) {
 	stats.totRequests++
 
 	if hit {
@@ -54,21 +54,20 @@ func (stats *weightedFileStats) updateRequests(hit bool, curTick uint64, newTime
 		stats.nMiss++
 	}
 
-	stats.lastTimeRequested = newTime
+	stats.lastTimeRequested = curTime
 
-	stats.requestTicks[stats.requestLastIdx] = curTick
-	stats.requestLastIdx = (stats.requestLastIdx + 1) % StatsMemorySize
+	stats.requestTicks[stats.requestLastIdx] = curTime
+	stats.requestLastIdx = (stats.requestLastIdx + 1) % int(StatsMemorySize)
 }
 
-func (stats weightedFileStats) getMeanTicks(curTick uint64) float32 {
-	var timeMean uint64
-	for idx := 0; idx < StatsMemorySize; idx++ {
-		if stats.requestTicks[idx] != 0 {
-			timeMean += curTick - stats.requestTicks[idx]
+func (stats weightedFileStats) getMeanReqTimes(curtime time.Time) float32 {
+	var timeDiffSum time.Duration
+	for idx := 0; idx < int(StatsMemorySize); idx++ {
+		if !stats.requestTicks[idx].IsZero() {
+			timeDiffSum += curtime.Sub(stats.requestTicks[idx])
 		}
 	}
-	timeMean /= uint64(StatsMemorySize)
-	return float32(timeMean)
+	return float32(timeDiffSum) / float32(StatsMemorySize)
 }
 
 // WeightedCache cache
@@ -77,7 +76,6 @@ type WeightedCache struct {
 	stats                                                 map[string]*weightedFileStats
 	queue                                                 []*weightedFile
 	hit, miss, writtenData, readOnHit, size, MaxSize, exp float32
-	tick                                                  uint64
 	functionType                                          FunctionType
 }
 
@@ -102,7 +100,6 @@ func (cache *WeightedCache) Clear() {
 	cache.miss = 0.
 	cache.writtenData = 0.
 	cache.size = 0.
-	cache.tick = 0.
 }
 
 func fileWeight(size float32, totRequests uint32, exp float32) float32 {
@@ -202,7 +199,7 @@ func (cache *WeightedCache) SimGetInfoFilesWeights(_ *empty.Empty, stream pb.Sim
 			weight = fileWeightedRequest(
 				stats.size,
 				stats.totRequests,
-				stats.getMeanTicks(cache.tick),
+				stats.getMeanReqTimes(time.Now()),
 				cache.exp,
 			)
 		}
@@ -244,12 +241,12 @@ func (cache *WeightedCache) updatePolicy(filename string, size float32, hit bool
 			0,
 			0,
 			currentTime,
-			[StatsMemorySize]uint64{},
+			[StatsMemorySize]time.Time{},
 			0,
 		}
 	}
 
-	cache.stats[filename].updateRequests(hit, cache.tick, currentTime)
+	cache.stats[filename].updateRequests(hit, currentTime)
 
 	if !hit {
 		cache.queue = append(
@@ -292,7 +289,7 @@ func (cache *WeightedCache) updatePolicy(filename string, size float32, hit bool
 				curFile.weight = fileWeightedRequest(
 					curStats.size,
 					curStats.totRequests,
-					curStats.getMeanTicks(cache.tick),
+					curStats.getMeanReqTimes(currentTime),
 					cache.exp,
 				)
 			}
@@ -326,8 +323,6 @@ func (cache *WeightedCache) updatePolicy(filename string, size float32, hit bool
 		cache.files[filename] = size
 		cache.size += size
 	}
-
-	cache.tick++
 
 	return added
 }

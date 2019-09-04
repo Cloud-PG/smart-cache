@@ -444,6 +444,9 @@ def table_plot(table_name: str):
     if table_name == "hit_rate":
         kwargs['y_range'] = (0, 100)
         kwargs['y_axis_label'] = "Hit rate %"
+    elif table_name == "weighted_hit_rate":
+        kwargs['y_range'] = (0, 100)
+        kwargs['y_axis_label'] = "Weighted hit rate %"
     elif table_name == "size":
         kwargs['y_axis_label'] = "Size (MB)"
         kwargs['y_axis_type'] = "log"
