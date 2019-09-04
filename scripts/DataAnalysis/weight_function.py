@@ -632,7 +632,8 @@ def simulate(cache, windows: list, region: str = "_all_",
 
                 if plot_server:
                     buffer["hit_rate"].append((request_idx, cur_hit_rate))
-                    buffer["weighted_hit_rate"].append((request_idx, cur_weighted_hit_rate))
+                    buffer["weighted_hit_rate"].append(
+                        (request_idx, cur_weighted_hit_rate))
                     buffer["size"].append((request_idx, cur_size))
                     buffer["written_data"].append(
                         (request_idx, cur_written_data))
