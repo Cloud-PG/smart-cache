@@ -79,22 +79,24 @@ func (cache *LRUCache) SimGet(ctx context.Context, commonFile *pb.SimCommonFile)
 func (cache *LRUCache) SimReset(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
 	cache.Clear()
 	return &pb.SimCacheStatus{
-		HitRate:     cache.HitRate(),
-		Size:        cache.Size(),
-		Capacity:    cache.Capacity(),
-		WrittenData: cache.WrittenData(),
-		ReadOnHit:   cache.ReadOnHit(),
+		HitRate:         cache.HitRate(),
+		WeightedHitRate: cache.WeightedHitRate(),
+		Size:            cache.Size(),
+		Capacity:        cache.Capacity(),
+		WrittenData:     cache.WrittenData(),
+		ReadOnHit:       cache.ReadOnHit(),
 	}, nil
 }
 
 // SimGetInfoCacheStatus returns the current simulation status
 func (cache *LRUCache) SimGetInfoCacheStatus(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
 	return &pb.SimCacheStatus{
-		HitRate:     cache.HitRate(),
-		Size:        cache.Size(),
-		Capacity:    cache.Capacity(),
-		WrittenData: cache.WrittenData(),
-		ReadOnHit:   cache.ReadOnHit(),
+		HitRate:         cache.HitRate(),
+		WeightedHitRate: cache.WeightedHitRate(),
+		Size:            cache.Size(),
+		Capacity:        cache.Capacity(),
+		WrittenData:     cache.WrittenData(),
+		ReadOnHit:       cache.ReadOnHit(),
 	}, nil
 }
 
