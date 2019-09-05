@@ -560,12 +560,12 @@ def simulate(cache, windows: list, region: str = "_all_",
         tmp_info = NamedTemporaryFile()
     else:
         buffer = {
-            'hit_rate': [],
-            'weighted_hit_rate': [],
-            'hit_over_miss': [],
-            'size': [],
-            'written_data': [],
-            'read_on_hit': [],
+            'hit_rate': [0.0],
+            'weighted_hit_rate': [0.0],
+            'hit_over_miss': [0.0],
+            'size': [0.0],
+            'written_data': [0.0],
+            'read_on_hit': [0.0],
         }
 
     win_pbar = tqdm(
