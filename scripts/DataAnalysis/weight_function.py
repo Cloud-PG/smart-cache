@@ -650,7 +650,7 @@ def simulate(cache, windows: list, region: str = "_all_",
                     if time_diff >= time_delta:
                         if remote:
                             # Get stats and RESET
-                            stub_result = stubSimService.SimResetHitMissStats(
+                            stub_result = stubSimService.SimGetInfoCacheStatus(
                                 google_dot_protobuf_dot_empty__pb2.Empty()
                             )
                             cur_hit_rate = stub_result.hitRate
@@ -660,6 +660,9 @@ def simulate(cache, windows: list, region: str = "_all_",
                             cur_written_data = stub_result.writtenData
                             cur_read_on_hit = stub_result.readOnHit
                             cur_size = stub_result.size
+                            stubSimService.SimResetHitMissStats(
+                                google_dot_protobuf_dot_empty__pb2.Empty()
+                            )
                         else:
                             cur_hit_rate = cache.hit_rate
                             cur_weighted_hit_rate = -1
