@@ -40,6 +40,11 @@ class SimServiceStub(object):
         request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
         response_deserializer=simService_dot_simService__pb2.SimFileWeight.FromString,
         )
+    self.SimGetInfoFilesStats = channel.unary_stream(
+        '/simservice.SimService/SimGetInfoFilesStats',
+        request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+        response_deserializer=simService_dot_simService__pb2.SimFileStats.FromString,
+        )
 
 
 class SimServiceServicer(object):
@@ -81,6 +86,13 @@ class SimServiceServicer(object):
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')
 
+  def SimGetInfoFilesStats(self, request, context):
+    # missing associated documentation comment in .proto file
+    pass
+    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+    context.set_details('Method not implemented!')
+    raise NotImplementedError('Method not implemented!')
+
 
 def add_SimServiceServicer_to_server(servicer, server):
   rpc_method_handlers = {
@@ -108,6 +120,11 @@ def add_SimServiceServicer_to_server(servicer, server):
           servicer.SimGetInfoFilesWeights,
           request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
           response_serializer=simService_dot_simService__pb2.SimFileWeight.SerializeToString,
+      ),
+      'SimGetInfoFilesStats': grpc.unary_stream_rpc_method_handler(
+          servicer.SimGetInfoFilesStats,
+          request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+          response_serializer=simService_dot_simService__pb2.SimFileStats.SerializeToString,
       ),
   }
   generic_handler = grpc.method_handlers_generic_handler(

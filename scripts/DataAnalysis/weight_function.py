@@ -718,9 +718,20 @@ def simulate(cache, windows: list, region: str = "_all_",
                             google_dot_protobuf_dot_empty__pb2.Empty()
                         )
                     ),
+                    'stats': dict(
+                        (FileInfo.filename, {
+                            'size': FileInfo.size,
+                            'totReq': FileInfo.totReq,
+                            'nHits': FileInfo.nHits,
+                            'nMiss': FileInfo.nMiss
+                        })
+                        for FileInfo in stubSimService.SimGetInfoFilesStats(
+                            google_dot_protobuf_dot_empty__pb2.Empty()
+                        )
+                    ),
                     'weights':  dict(
-                        (cache_file.filename, cache_file.weight)
-                        for cache_file in stubSimService.SimGetInfoFilesWeights(
+                        (FileInfo.filename, FileInfo.weight)
+                        for FileInfo in stubSimService.SimGetInfoFilesWeights(
                             google_dot_protobuf_dot_empty__pb2.Empty()
                         )
                     ) if cache_name.lower().find("lru") else {}

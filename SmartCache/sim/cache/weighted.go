@@ -160,10 +160,27 @@ func (cache *WeightedCache) SimGetInfoCacheStatus(ctx context.Context, _ *empty.
 
 // SimGetInfoCacheFiles returns the content of the cache: filenames and sizes
 func (cache *WeightedCache) SimGetInfoCacheFiles(_ *empty.Empty, stream pb.SimService_SimGetInfoCacheFilesServer) error {
-	for key, value := range cache.files {
+	for filename, size := range cache.files {
 		curFile := &pb.SimCommonFile{
-			Filename: key,
-			Size:     value,
+			Filename: filename,
+			Size:     size,
+		}
+		if err := stream.Send(curFile); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// SimGetInfoFilesStats returns the content of the file stats
+func (cache *WeightedCache) SimGetInfoFilesStats(_ *empty.Empty, stream pb.SimService_SimGetInfoFilesStatsServer) error {
+	for filename, stats := range cache.stats {
+		curFile := &pb.SimFileStats{
+			Filename: filename,
+			Size:     stats.size,
+			TotReq:   stats.totRequests,
+			NHits:    stats.nHits,
+			NMiss:    stats.nMiss,
 		}
 		if err := stream.Send(curFile); err != nil {
 			return err

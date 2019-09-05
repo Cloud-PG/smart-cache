@@ -121,6 +121,23 @@ func (cache *LRUCache) SimGetInfoFilesWeights(_ *empty.Empty, stream pb.SimServi
 	return nil
 }
 
+// SimGetInfoFilesStats returns the content of the file stats
+func (cache *LRUCache) SimGetInfoFilesStats(_ *empty.Empty, stream pb.SimService_SimGetInfoFilesStatsServer) error {
+	for filename, stats := range cache.stats {
+		curFile := &pb.SimFileStats{
+			Filename: filename,
+			Size:     stats.size,
+			TotReq:   stats.totRequests,
+			NHits:    stats.nHits,
+			NMiss:    stats.nMiss,
+		}
+		if err := stream.Send(curFile); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (cache *LRUCache) updatePolicy(filename string, size float32, hit bool) bool {
 	var added = false
 	if !hit {

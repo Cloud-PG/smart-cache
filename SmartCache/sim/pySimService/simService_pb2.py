@@ -21,7 +21,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='simservice',
   syntax='proto3',
   serialized_options=_b('\n\031io.grpc.cache.sim.serviceB\017CacheSimServiceP\001'),
-  serialized_pb=_b('\n\x1bsimService/simService.proto\x12\nsimservice\x1a\x1bgoogle/protobuf/empty.proto\"/\n\x0c\x41\x63tionResult\x12\x10\n\x08\x66ilename\x18\x01 \x01(\t\x12\r\n\x05\x61\x64\x64\x65\x64\x18\x02 \x01(\x08\"/\n\rSimCommonFile\x12\x10\n\x08\x66ilename\x18\x01 \x01(\t\x12\x0c\n\x04size\x18\x02 \x01(\x02\"\x97\x01\n\x0eSimCacheStatus\x12\x0f\n\x07hitRate\x18\x01 \x01(\x02\x12\x17\n\x0fweightedHitRate\x18\x02 \x01(\x02\x12\x13\n\x0bhitOverMiss\x18\x03 \x01(\x02\x12\x0c\n\x04size\x18\x04 \x01(\x02\x12\x10\n\x08\x63\x61pacity\x18\x05 \x01(\x02\x12\x13\n\x0bwrittenData\x18\x06 \x01(\x02\x12\x11\n\treadOnHit\x18\x07 \x01(\x02\"1\n\rSimFileWeight\x12\x10\n\x08\x66ilename\x18\x01 \x01(\t\x12\x0e\n\x06weight\x18\x02 \x01(\x02\x32\xfe\x02\n\nSimService\x12?\n\x06SimGet\x12\x19.simservice.SimCommonFile\x1a\x18.simservice.ActionResult\"\x00\x12@\n\x08SimReset\x12\x16.google.protobuf.Empty\x1a\x1a.simservice.SimCacheStatus\"\x00\x12M\n\x15SimGetInfoCacheStatus\x12\x16.google.protobuf.Empty\x1a\x1a.simservice.SimCacheStatus\"\x00\x12M\n\x14SimGetInfoCacheFiles\x12\x16.google.protobuf.Empty\x1a\x19.simservice.SimCommonFile\"\x00\x30\x01\x12O\n\x16SimGetInfoFilesWeights\x12\x16.google.protobuf.Empty\x1a\x19.simservice.SimFileWeight\"\x00\x30\x01\x42.\n\x19io.grpc.cache.sim.serviceB\x0f\x43\x61\x63heSimServiceP\x01\x62\x06proto3')
+  serialized_pb=_b('\n\x1bsimService/simService.proto\x12\nsimservice\x1a\x1bgoogle/protobuf/empty.proto\"/\n\x0c\x41\x63tionResult\x12\x10\n\x08\x66ilename\x18\x01 \x01(\t\x12\r\n\x05\x61\x64\x64\x65\x64\x18\x02 \x01(\x08\"\x97\x01\n\x0eSimCacheStatus\x12\x0f\n\x07hitRate\x18\x01 \x01(\x02\x12\x17\n\x0fweightedHitRate\x18\x02 \x01(\x02\x12\x13\n\x0bhitOverMiss\x18\x03 \x01(\x02\x12\x0c\n\x04size\x18\x04 \x01(\x02\x12\x10\n\x08\x63\x61pacity\x18\x05 \x01(\x02\x12\x13\n\x0bwrittenData\x18\x06 \x01(\x02\x12\x11\n\treadOnHit\x18\x07 \x01(\x02\"/\n\rSimCommonFile\x12\x10\n\x08\x66ilename\x18\x01 \x01(\t\x12\x0c\n\x04size\x18\x02 \x01(\x02\"1\n\rSimFileWeight\x12\x10\n\x08\x66ilename\x18\x01 \x01(\t\x12\x0e\n\x06weight\x18\x02 \x01(\x02\"\\\n\x0cSimFileStats\x12\x10\n\x08\x66ilename\x18\x01 \x01(\t\x12\x0c\n\x04size\x18\x02 \x01(\x02\x12\x0e\n\x06totReq\x18\x03 \x01(\r\x12\r\n\x05nHits\x18\x04 \x01(\r\x12\r\n\x05nMiss\x18\x05 \x01(\r2\xcc\x03\n\nSimService\x12?\n\x06SimGet\x12\x19.simservice.SimCommonFile\x1a\x18.simservice.ActionResult\"\x00\x12@\n\x08SimReset\x12\x16.google.protobuf.Empty\x1a\x1a.simservice.SimCacheStatus\"\x00\x12M\n\x15SimGetInfoCacheStatus\x12\x16.google.protobuf.Empty\x1a\x1a.simservice.SimCacheStatus\"\x00\x12M\n\x14SimGetInfoCacheFiles\x12\x16.google.protobuf.Empty\x1a\x19.simservice.SimCommonFile\"\x00\x30\x01\x12O\n\x16SimGetInfoFilesWeights\x12\x16.google.protobuf.Empty\x1a\x19.simservice.SimFileWeight\"\x00\x30\x01\x12L\n\x14SimGetInfoFilesStats\x12\x16.google.protobuf.Empty\x1a\x18.simservice.SimFileStats\"\x00\x30\x01\x42.\n\x19io.grpc.cache.sim.serviceB\x0f\x43\x61\x63heSimServiceP\x01\x62\x06proto3')
   ,
   dependencies=[google_dot_protobuf_dot_empty__pb2.DESCRIPTOR,])
 
@@ -63,44 +63,6 @@ _ACTIONRESULT = _descriptor.Descriptor(
   ],
   serialized_start=72,
   serialized_end=119,
-)
-
-
-_SIMCOMMONFILE = _descriptor.Descriptor(
-  name='SimCommonFile',
-  full_name='simservice.SimCommonFile',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='filename', full_name='simservice.SimCommonFile.filename', index=0,
-      number=1, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='size', full_name='simservice.SimCommonFile.size', index=1,
-      number=2, type=2, cpp_type=6, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=121,
-  serialized_end=168,
 )
 
 
@@ -172,7 +134,45 @@ _SIMCACHESTATUS = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=171,
+  serialized_start=122,
+  serialized_end=273,
+)
+
+
+_SIMCOMMONFILE = _descriptor.Descriptor(
+  name='SimCommonFile',
+  full_name='simservice.SimCommonFile',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='filename', full_name='simservice.SimCommonFile.filename', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='size', full_name='simservice.SimCommonFile.size', index=1,
+      number=2, type=2, cpp_type=6, label=1,
+      has_default_value=False, default_value=float(0),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=275,
   serialized_end=322,
 )
 
@@ -214,10 +214,70 @@ _SIMFILEWEIGHT = _descriptor.Descriptor(
   serialized_end=373,
 )
 
+
+_SIMFILESTATS = _descriptor.Descriptor(
+  name='SimFileStats',
+  full_name='simservice.SimFileStats',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='filename', full_name='simservice.SimFileStats.filename', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='size', full_name='simservice.SimFileStats.size', index=1,
+      number=2, type=2, cpp_type=6, label=1,
+      has_default_value=False, default_value=float(0),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='totReq', full_name='simservice.SimFileStats.totReq', index=2,
+      number=3, type=13, cpp_type=3, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='nHits', full_name='simservice.SimFileStats.nHits', index=3,
+      number=4, type=13, cpp_type=3, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='nMiss', full_name='simservice.SimFileStats.nMiss', index=4,
+      number=5, type=13, cpp_type=3, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=375,
+  serialized_end=467,
+)
+
 DESCRIPTOR.message_types_by_name['ActionResult'] = _ACTIONRESULT
-DESCRIPTOR.message_types_by_name['SimCommonFile'] = _SIMCOMMONFILE
 DESCRIPTOR.message_types_by_name['SimCacheStatus'] = _SIMCACHESTATUS
+DESCRIPTOR.message_types_by_name['SimCommonFile'] = _SIMCOMMONFILE
 DESCRIPTOR.message_types_by_name['SimFileWeight'] = _SIMFILEWEIGHT
+DESCRIPTOR.message_types_by_name['SimFileStats'] = _SIMFILESTATS
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
 ActionResult = _reflection.GeneratedProtocolMessageType('ActionResult', (_message.Message,), {
@@ -227,13 +287,6 @@ ActionResult = _reflection.GeneratedProtocolMessageType('ActionResult', (_messag
   })
 _sym_db.RegisterMessage(ActionResult)
 
-SimCommonFile = _reflection.GeneratedProtocolMessageType('SimCommonFile', (_message.Message,), {
-  'DESCRIPTOR' : _SIMCOMMONFILE,
-  '__module__' : 'simService.simService_pb2'
-  # @@protoc_insertion_point(class_scope:simservice.SimCommonFile)
-  })
-_sym_db.RegisterMessage(SimCommonFile)
-
 SimCacheStatus = _reflection.GeneratedProtocolMessageType('SimCacheStatus', (_message.Message,), {
   'DESCRIPTOR' : _SIMCACHESTATUS,
   '__module__' : 'simService.simService_pb2'
@@ -241,12 +294,26 @@ SimCacheStatus = _reflection.GeneratedProtocolMessageType('SimCacheStatus', (_me
   })
 _sym_db.RegisterMessage(SimCacheStatus)
 
+SimCommonFile = _reflection.GeneratedProtocolMessageType('SimCommonFile', (_message.Message,), {
+  'DESCRIPTOR' : _SIMCOMMONFILE,
+  '__module__' : 'simService.simService_pb2'
+  # @@protoc_insertion_point(class_scope:simservice.SimCommonFile)
+  })
+_sym_db.RegisterMessage(SimCommonFile)
+
 SimFileWeight = _reflection.GeneratedProtocolMessageType('SimFileWeight', (_message.Message,), {
   'DESCRIPTOR' : _SIMFILEWEIGHT,
   '__module__' : 'simService.simService_pb2'
   # @@protoc_insertion_point(class_scope:simservice.SimFileWeight)
   })
 _sym_db.RegisterMessage(SimFileWeight)
+
+SimFileStats = _reflection.GeneratedProtocolMessageType('SimFileStats', (_message.Message,), {
+  'DESCRIPTOR' : _SIMFILESTATS,
+  '__module__' : 'simService.simService_pb2'
+  # @@protoc_insertion_point(class_scope:simservice.SimFileStats)
+  })
+_sym_db.RegisterMessage(SimFileStats)
 
 
 DESCRIPTOR._options = None
@@ -257,8 +324,8 @@ _SIMSERVICE = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=0,
   serialized_options=None,
-  serialized_start=376,
-  serialized_end=758,
+  serialized_start=470,
+  serialized_end=930,
   methods=[
   _descriptor.MethodDescriptor(
     name='SimGet',
@@ -303,6 +370,15 @@ _SIMSERVICE = _descriptor.ServiceDescriptor(
     containing_service=None,
     input_type=google_dot_protobuf_dot_empty__pb2._EMPTY,
     output_type=_SIMFILEWEIGHT,
+    serialized_options=None,
+  ),
+  _descriptor.MethodDescriptor(
+    name='SimGetInfoFilesStats',
+    full_name='simservice.SimService.SimGetInfoFilesStats',
+    index=5,
+    containing_service=None,
+    input_type=google_dot_protobuf_dot_empty__pb2._EMPTY,
+    output_type=_SIMFILESTATS,
     serialized_options=None,
   ),
 ])

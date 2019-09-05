@@ -530,14 +530,25 @@ def delete_plots(window: int):
 def cache_info(cache_name: str, window: int):
     global WINDOW_INFO
     data = request.data
+    # obj example:
+    # {
+    #   cache: {filename -> size}
+    #   weights: {filename -> weight}
+    #   stats: {filename -> {
+    #       size -> value,
+    #       totReq -> value,
+    #       nHits -> value,
+    #       nMiss -> value,
+    #   }}
+    # }
     obj = json.loads(gzip.decompress(data))
 
     if cache_name not in WINDOW_INFO:
         WINDOW_INFO[cache_name] = []
-
-    if window < len(WINDOW_INFO[cache_name]):
+    
+    try:
         WINDOW_INFO[cache_name][window] = obj
-    else:
+    except IndexError:
         WINDOW_INFO[cache_name].append(obj)
 
     save_table("cache_info", WINDOW_INFO)
