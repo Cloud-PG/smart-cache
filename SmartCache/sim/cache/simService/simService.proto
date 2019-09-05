@@ -12,6 +12,7 @@ service SimService {
 
   rpc SimGet(SimCommonFile) returns (ActionResult) {}
   rpc SimReset(google.protobuf.Empty) returns (SimCacheStatus) {}
+  rpc SimResetHitMissStats(google.protobuf.Empty) returns (SimCacheStatus) {}
   rpc SimGetInfoCacheStatus(google.protobuf.Empty) returns (SimCacheStatus) {}
   rpc SimGetInfoCacheFiles(google.protobuf.Empty) returns (stream SimCommonFile) {}
   rpc SimGetInfoFilesWeights(google.protobuf.Empty) returns (stream SimFileWeight) {}

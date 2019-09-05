@@ -99,7 +99,16 @@ func (cache *WeightedCache) Clear() {
 	cache.hit = 0.
 	cache.miss = 0.
 	cache.writtenData = 0.
+	cache.readOnHit = 0.
 	cache.size = 0.
+}
+
+// ClearHitMissStats the LRU struct
+func (cache *WeightedCache) ClearHitMissStats() {
+	cache.hit = 0.
+	cache.miss = 0.
+	cache.writtenData = 0.
+	cache.readOnHit = 0.
 }
 
 func fileWeight(size float32, totRequests uint32, exp float32) float32 {
@@ -134,6 +143,20 @@ func (cache *WeightedCache) SimGet(ctx context.Context, commonFile *pb.SimCommon
 // SimReset deletes all cache content
 func (cache *WeightedCache) SimReset(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
 	cache.Clear()
+	return &pb.SimCacheStatus{
+		HitRate:         cache.HitRate(),
+		WeightedHitRate: cache.WeightedHitRate(),
+		HitOverMiss:     cache.HitOverMiss(),
+		Size:            cache.Size(),
+		Capacity:        cache.Capacity(),
+		WrittenData:     cache.WrittenData(),
+		ReadOnHit:       cache.ReadOnHit(),
+	}, nil
+}
+
+// SimResetHitMissStats deletes all cache content
+func (cache *WeightedCache) SimResetHitMissStats(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
+	cache.ClearHitMissStats()
 	return &pb.SimCacheStatus{
 		HitRate:         cache.HitRate(),
 		WeightedHitRate: cache.WeightedHitRate(),

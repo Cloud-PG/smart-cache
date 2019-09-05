@@ -100,11 +100,65 @@ def plot_info_window(window: int, filename: str, **kwargs):
             for cache_name, cur_data in caches.items()
             if cache_name != 'lru'
         ]:
-            filenames = [key for key, _ in sorted(
+            filenames_sort_by_weights = [key for key, _ in sorted(
                 cur_data['weights'].items(),
                 key=lambda elm: elm[1],
                 reverse=True)
             ]
+
+            filenames_sort_by_size = [key for key, _ in sorted(
+                cur_data['stats'].items(),
+                key=lambda elm: elm[1]['size'],
+                reverse=True)
+            ]
+
+            # Pie chart - file weights
+            two_pi = 2.0*3.14
+            pie_data = pd.Series({
+                'all files': len(filenames),
+                'weighted': len(
+                    [filename for filename in filenames if filename in cur_data['cache']]),
+                'cache': len(
+                    [filename for filename in filenames if filename in caches['lru']]),
+                'both': len(
+                    [filename for filename in filenames if filename in cur_data['cache'] or filename in caches['lru']])
+            }).reset_index(name='value').rename(
+                columns={'index': 'type'})
+            pie_data['angle'] = pie_data['value'] / \
+                pie_data['value'].sum() * two_pi
+            pie_data['color'] = ['gainsboro', 'blue', 'red', 'green']
+
+            plot_figure_pie.wedge(
+                x=0, y=0, radius=0.4,
+                start_angle=cumsum('angle', include_zero=True),
+                end_angle=cumsum('angle'),
+                line_color="white",
+                fill_color='color',
+                legend='type',
+                source=pie_data
+            )
+
+            pie_data['value'] = (
+                pie_data['value'] / pie_data['value'].sum()
+            ) * 100.
+
+            pie_data["value"] = pie_data['value'].apply(lambda elm: f"{elm:0.2f}%")
+            pie_data["value"] = pie_data["value"].str.pad(42, side="left")
+            labels = LabelSet(
+                x=0, y=0, text='value', level='glyph',
+                angle=cumsum('angle', include_zero=True), 
+                source=ColumnDataSource(pie_data),
+                # render_mode='canvas'
+            )
+
+            plot_figure_pie.add_layout(labels)
+
+            plot_figure_pie.axis.axis_label = None
+            plot_figure_pie.axis.visible = False
+            plot_figure_pie.grid.grid_line_color = None
+
+
+
             sizes = [
                 get_size_from_cache_list(
                     filename, [cur_data['cache'], caches['lru']])
@@ -164,49 +218,7 @@ def plot_info_window(window: int, filename: str, **kwargs):
                 x_range=(-0.5, 1.0)
             )
 
-            two_pi = 2.0*3.14
-            pie_data = pd.Series({
-                'all files': len(filenames),
-                'weighted': len(
-                    [filename for filename in filenames if filename in cur_data['cache']]),
-                'cache': len(
-                    [filename for filename in filenames if filename in caches['lru']]),
-                'both': len(
-                    [filename for filename in filenames if filename in cur_data['cache'] or filename in caches['lru']])
-            }).reset_index(name='value').rename(
-                columns={'index': 'type'})
-            pie_data['angle'] = pie_data['value'] / \
-                pie_data['value'].sum() * two_pi
-            pie_data['color'] = ['gainsboro', 'blue', 'red', 'green']
-
-            plot_figure_pie.wedge(
-                x=0, y=0, radius=0.4,
-                start_angle=cumsum('angle', include_zero=True),
-                end_angle=cumsum('angle'),
-                line_color="white",
-                fill_color='color',
-                legend='type',
-                source=pie_data
-            )
-
-            pie_data['value'] = (
-                pie_data['value'] / pie_data['value'].sum()
-            ) * 100.
-
-            pie_data["value"] = pie_data['value'].apply(lambda elm: f"{elm:0.2f}%")
-            pie_data["value"] = pie_data["value"].str.pad(42, side="left")
-            labels = LabelSet(
-                x=0, y=0, text='value', level='glyph',
-                angle=cumsum('angle', include_zero=True), 
-                source=ColumnDataSource(pie_data),
-                # render_mode='canvas'
-            )
-
-            plot_figure_pie.add_layout(labels)
-
-            plot_figure_pie.axis.axis_label = None
-            plot_figure_pie.axis.visible = False
-            plot_figure_pie.grid.grid_line_color = None
+            
 
             filenames_common = list(sorted([
                 filename for filename in filenames

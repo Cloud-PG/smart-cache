@@ -63,7 +63,16 @@ func (cache *LRUCache) Clear() {
 	cache.hit = 0.
 	cache.miss = 0.
 	cache.writtenData = 0.
+	cache.readOnHit = 0.
 	cache.size = 0.
+}
+
+// ClearHitMissStats the LRU struct
+func (cache *LRUCache) ClearHitMissStats() {
+	cache.hit = 0.
+	cache.miss = 0.
+	cache.writtenData = 0.
+	cache.readOnHit = 0.
 }
 
 // SimGet updates the cache from a protobuf message
@@ -78,6 +87,20 @@ func (cache *LRUCache) SimGet(ctx context.Context, commonFile *pb.SimCommonFile)
 // SimReset deletes all cache content
 func (cache *LRUCache) SimReset(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
 	cache.Clear()
+	return &pb.SimCacheStatus{
+		HitRate:         cache.HitRate(),
+		WeightedHitRate: cache.WeightedHitRate(),
+		HitOverMiss:     cache.HitOverMiss(),
+		Size:            cache.Size(),
+		Capacity:        cache.Capacity(),
+		WrittenData:     cache.WrittenData(),
+		ReadOnHit:       cache.ReadOnHit(),
+	}, nil
+}
+
+// SimResetHitMissStats deletes all cache content
+func (cache *LRUCache) SimResetHitMissStats(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
+	cache.ClearHitMissStats()
 	return &pb.SimCacheStatus{
 		HitRate:         cache.HitRate(),
 		WeightedHitRate: cache.WeightedHitRate(),

@@ -25,6 +25,11 @@ class SimServiceStub(object):
         request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
         response_deserializer=simService_dot_simService__pb2.SimCacheStatus.FromString,
         )
+    self.SimResetHitMissStats = channel.unary_unary(
+        '/simservice.SimService/SimResetHitMissStats',
+        request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+        response_deserializer=simService_dot_simService__pb2.SimCacheStatus.FromString,
+        )
     self.SimGetInfoCacheStatus = channel.unary_unary(
         '/simservice.SimService/SimGetInfoCacheStatus',
         request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
@@ -59,6 +64,13 @@ class SimServiceServicer(object):
     raise NotImplementedError('Method not implemented!')
 
   def SimReset(self, request, context):
+    # missing associated documentation comment in .proto file
+    pass
+    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+    context.set_details('Method not implemented!')
+    raise NotImplementedError('Method not implemented!')
+
+  def SimResetHitMissStats(self, request, context):
     # missing associated documentation comment in .proto file
     pass
     context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -103,6 +115,11 @@ def add_SimServiceServicer_to_server(servicer, server):
       ),
       'SimReset': grpc.unary_unary_rpc_method_handler(
           servicer.SimReset,
+          request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+          response_serializer=simService_dot_simService__pb2.SimCacheStatus.SerializeToString,
+      ),
+      'SimResetHitMissStats': grpc.unary_unary_rpc_method_handler(
+          servicer.SimResetHitMissStats,
           request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
           response_serializer=simService_dot_simService__pb2.SimCacheStatus.SerializeToString,
       ),

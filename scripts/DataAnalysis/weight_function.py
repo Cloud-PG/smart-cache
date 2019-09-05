@@ -1,9 +1,11 @@
 import argparse
+import datetime
 import gzip
 import itertools
 import json
 import os
 import pickle
+import time
 from functools import partial, wraps
 from multiprocessing import Pool, current_process
 from random import seed, shuffle
@@ -576,6 +578,9 @@ def simulate(cache, windows: list, region: str = "_all_",
         ascii=True
     )
 
+    last_time = None
+    time_delta = datetime.timedelta(days=1)
+
     for num_window, window in enumerate(windows):
         win_pbar.reset(total=len(window))
 
@@ -592,13 +597,16 @@ def simulate(cache, windows: list, region: str = "_all_",
                 if region != "_all_":
                     df = df[
                         df.site_name.str.contains(region, case=False)
-                    ][['filename', 'size']].dropna().reset_index()
+                    ][['filename', 'size', 'day']].dropna().reset_index()
                 else:
-                    df = df[['filename', 'size']].dropna().reset_index()
+                    df = df[['filename', 'size', 'day']].dropna().reset_index()
 
                 record_pbar.reset(total=df.shape[0])
 
             for row_idx, record in df.iterrows():
+                if not last_time:
+                    last_time = datetime.datetime.fromtimestamp(record['day'])
+
                 if remote:
                     _ = stubSimService.SimGet(
                         simService_pb2.SimCommonFile(
@@ -635,19 +643,44 @@ def simulate(cache, windows: list, region: str = "_all_",
                     cur_size = cache.size
 
                 if plot_server:
-                    buffer["hit_rate"].append((request_idx, cur_hit_rate))
-                    buffer["weighted_hit_rate"].append(
-                        (request_idx, cur_weighted_hit_rate))
-                    buffer["hit_over_miss"].append(
-                        (request_idx, cur_hit_over_miss))
-                    buffer["size"].append((request_idx, cur_size))
-                    buffer["written_data"].append(
-                        (request_idx, cur_written_data))
-                    buffer["read_on_hit"].append(
-                        (request_idx, cur_read_on_hit))
-                    request_idx += 1
+                    time_diff = datetime.datetime.fromtimestamp(
+                        record['day']
+                    ) - last_time
 
-                    if len(buffer['hit_rate']) == 5000:
+                    if time_diff >= time_delta:
+                        if remote:
+                            # Get stats and RESET
+                            stub_result = stubSimService.SimResetHitMissStats(
+                                google_dot_protobuf_dot_empty__pb2.Empty()
+                            )
+                            cur_hit_rate = stub_result.hitRate
+                            cur_weighted_hit_rate = stub_result.weightedHitRate
+                            cur_hit_over_miss = stub_result.hitOverMiss
+                            cur_capacity = stub_result.capacity
+                            cur_written_data = stub_result.writtenData
+                            cur_read_on_hit = stub_result.readOnHit
+                            cur_size = stub_result.size
+                        else:
+                            cur_hit_rate = cache.hit_rate
+                            cur_weighted_hit_rate = -1
+                            cur_hit_over_miss = -1
+                            cur_capacity = cache.capacity
+                            cur_written_data = cache.written_data
+                            cur_read_on_hit = cache.read_on_hit
+                            cur_size = cache.size
+
+                        buffer["hit_rate"].append((request_idx, cur_hit_rate))
+                        buffer["weighted_hit_rate"].append(
+                            (request_idx, cur_weighted_hit_rate))
+                        buffer["hit_over_miss"].append(
+                            (request_idx, cur_hit_over_miss))
+                        buffer["size"].append((request_idx, cur_size))
+                        buffer["written_data"].append(
+                            (request_idx, cur_written_data))
+                        buffer["read_on_hit"].append(
+                            (request_idx, cur_read_on_hit))
+                        request_idx += 1
+
                         requests.put(
                             "/".join([
                                 plot_server,
@@ -671,6 +704,8 @@ def simulate(cache, windows: list, region: str = "_all_",
                             'written_data': [],
                             'read_on_hit': [],
                         }
+
+                        last_time = datetime.datetime.fromtimestamp(record['day'])
 
                 desc_output = ""
                 desc_output += f"[{cache_name[:4]+cache_name[-12:]}][Simulation]"
