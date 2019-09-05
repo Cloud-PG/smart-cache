@@ -81,6 +81,7 @@ func (cache *LRUCache) SimReset(ctx context.Context, _ *empty.Empty) (*pb.SimCac
 	return &pb.SimCacheStatus{
 		HitRate:         cache.HitRate(),
 		WeightedHitRate: cache.WeightedHitRate(),
+		HitOverMiss:     cache.HitOverMiss(),
 		Size:            cache.Size(),
 		Capacity:        cache.Capacity(),
 		WrittenData:     cache.WrittenData(),
@@ -93,6 +94,7 @@ func (cache *LRUCache) SimGetInfoCacheStatus(ctx context.Context, _ *empty.Empty
 	return &pb.SimCacheStatus{
 		HitRate:         cache.HitRate(),
 		WeightedHitRate: cache.WeightedHitRate(),
+		HitOverMiss:     cache.HitOverMiss(),
 		Size:            cache.Size(),
 		Capacity:        cache.Capacity(),
 		WrittenData:     cache.WrittenData(),
@@ -197,6 +199,14 @@ func (cache LRUCache) HitRate() float32 {
 		return 0.
 	}
 	return (cache.hit / (cache.hit + cache.miss)) * 100.
+}
+
+// HitOverMiss of the cache
+func (cache LRUCache) HitOverMiss() float32 {
+	if cache.hit == 0. || cache.miss == 0. {
+		return 0.
+	}
+	return cache.hit / cache.miss
 }
 
 // WeightedHitRate of the cache

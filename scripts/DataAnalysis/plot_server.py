@@ -8,8 +8,8 @@ from typing import Dict, List
 
 import pandas as pd
 from bokeh.layouts import column, row
-from bokeh.palettes import Category10
 from bokeh.models import ColumnDataSource, LabelSet, Span
+from bokeh.palettes import Category10
 from bokeh.plotting import figure, output_file, save
 from bokeh.transform import cumsum
 from flask import Flask, escape, jsonify, request
@@ -20,6 +20,7 @@ BASE_PATH = "plot_server_app"
 TABLES = {
     'hit_rate': {},
     'weighted_hit_rate': {},
+    'hit_over_miss': {},
     'size': {},
     'written_data': {},
     'read_on_hit': {},

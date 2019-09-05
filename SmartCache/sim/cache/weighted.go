@@ -137,6 +137,7 @@ func (cache *WeightedCache) SimReset(ctx context.Context, _ *empty.Empty) (*pb.S
 	return &pb.SimCacheStatus{
 		HitRate:         cache.HitRate(),
 		WeightedHitRate: cache.WeightedHitRate(),
+		HitOverMiss:     cache.HitOverMiss(),
 		Size:            cache.Size(),
 		Capacity:        cache.Capacity(),
 		WrittenData:     cache.WrittenData(),
@@ -149,6 +150,7 @@ func (cache *WeightedCache) SimGetInfoCacheStatus(ctx context.Context, _ *empty.
 	return &pb.SimCacheStatus{
 		HitRate:         cache.HitRate(),
 		WeightedHitRate: cache.WeightedHitRate(),
+		HitOverMiss:     cache.HitOverMiss(),
 		Size:            cache.Size(),
 		Capacity:        cache.Capacity(),
 		WrittenData:     cache.WrittenData(),
@@ -352,6 +354,14 @@ func (cache WeightedCache) HitRate() float32 {
 		return 0.
 	}
 	return (cache.hit / (cache.hit + cache.miss)) * 100.
+}
+
+// HitOverMiss of the cache
+func (cache WeightedCache) HitOverMiss() float32 {
+	if cache.hit == 0. || cache.miss == 0. {
+		return 0.
+	}
+	return cache.hit / cache.miss
 }
 
 // WeightedHitRate of the cache

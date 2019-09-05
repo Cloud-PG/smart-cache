@@ -31,10 +31,11 @@ message SimCommonFile {
 message SimCacheStatus {
   float hitRate = 1;
   float weightedHitRate = 2;
-  float size = 3;
-  float capacity = 4;
-  float writtenData = 5;
-  float readOnHit = 6;
+  float hitOverMiss = 3;
+  float size = 4;
+  float capacity = 5;
+  float writtenData = 6;
+  float readOnHit = 7;
 }
 
 message SimFileWeight {

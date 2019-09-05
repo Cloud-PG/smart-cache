@@ -619,12 +619,15 @@ def simulate(cache, windows: list, region: str = "_all_",
                     )
                     cur_hit_rate = stub_result.hitRate
                     cur_weighted_hit_rate = stub_result.weightedHitRate
+                    cur_hit_over_miss = stub_result.hitOverMiss
                     cur_capacity = stub_result.capacity
                     cur_written_data = stub_result.writtenData
                     cur_read_on_hit = stub_result.readOnHit
                     cur_size = stub_result.size
                 else:
                     cur_hit_rate = cache.hit_rate
+                    cur_weighted_hit_rate = -1
+                    cur_hit_over_miss = -1
                     cur_capacity = cache.capacity
                     cur_written_data = cache.written_data
                     cur_read_on_hit = cache.read_on_hit
@@ -634,6 +637,8 @@ def simulate(cache, windows: list, region: str = "_all_",
                     buffer["hit_rate"].append((request_idx, cur_hit_rate))
                     buffer["weighted_hit_rate"].append(
                         (request_idx, cur_weighted_hit_rate))
+                    buffer["hit_over_miss"].append(
+                        (request_idx, cur_hit_over_miss))
                     buffer["size"].append((request_idx, cur_size))
                     buffer["written_data"].append(
                         (request_idx, cur_written_data))
@@ -665,7 +670,17 @@ def simulate(cache, windows: list, region: str = "_all_",
                             'read_on_hit': [],
                         }
 
-                record_pbar.desc = f"[{cache_name[:4]+cache_name[-12:]}][Simulation][Window {num_window+1}/{len(windows)}][File {num_file}/{len(window)}][Hit Rate {cur_hit_rate:06.2f}][Weighted Hit Rate {cur_weighted_hit_rate:06.2f}][Ratio {cur_read_on_hit/cur_written_data:0.2f}][Capacity {cur_capacity:06.2f}]"
+                desc_output = ""
+                desc_output += f"[{cache_name[:4]+cache_name[-12:]}][Simulation]"
+                desc_output += f"[Window {num_window+1}/{len(windows)}]"
+                desc_output += f"[File {num_file}/{len(window)}]"
+                desc_output += f"[Hit Rate {cur_hit_rate:06.2f}]"
+                desc_output += f"[Weighted Hit Rate {cur_weighted_hit_rate:06.2f}]"
+                desc_output += f"[Ratio {cur_read_on_hit/cur_written_data:0.2f}]"
+                desc_output += f"[Capacity {cur_capacity:06.2f}]"
+                desc_output += f"[Hit over miss {cur_hit_over_miss:06.2f}]"
+
+                record_pbar.desc = desc_output
                 record_pbar.update(1)
 
                 # TEST
