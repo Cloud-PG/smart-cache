@@ -190,9 +190,8 @@ def plot_info_window(window: int, filename: str, **kwargs):
                     if filename in cur_data['cache']
                     else 0
                     for filename in filenames_sort_by_size
-                ], bins=range(max([elm['nHits'] for elm in cur_data['stats'].values()])))
+                ], bins=range(100))
 
-            print(hist_hit_wc, edges_hit_wc)
             pf_fileSize_hit_weighted_cache.quad(
                 bottom=0,
                 top=hist_hit_wc,
