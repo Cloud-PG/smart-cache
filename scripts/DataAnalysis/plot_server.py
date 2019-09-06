@@ -442,6 +442,8 @@ def plot_line(table_name: str, filename: str, **kwargs):
                     TABLE_COLORS[name] = next(COLORS)
 
         for name, values in data.items():
+            if name not in TABLE_COLORS:
+                TABLE_COLORS[name] = next(COLORS)
             plot_figure.line(
                 range(len(values['read_on_hit'])),
                 [
