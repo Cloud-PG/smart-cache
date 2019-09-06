@@ -200,7 +200,6 @@ def plot_info_window(window: int, filename: str, **kwargs):
                 left=edges_hit_wc[:-1], 
                 right=edges_hit_wc[1:],
                 color="blue",
-                width=1.0,
                 line_color="white"
             )
 
