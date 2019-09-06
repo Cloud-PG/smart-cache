@@ -33,7 +33,7 @@ TABLE_COLORS = {}
 
 COLORS = cycle(Category10[10])
 
-MAX_BINS = 32
+MAX_BINS = 10000
 
 
 def fill_hit_miss_bins(n_bins: int, edges: list, values: list) -> tuple:
