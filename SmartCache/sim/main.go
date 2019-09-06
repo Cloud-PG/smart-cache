@@ -74,6 +74,26 @@ func commandRun() *cobra.Command {
 				}
 				fmt.Printf("[Register Weighted Cache]\n")
 				pb.RegisterSimServiceServer(grpcServer, cacheInstance)
+			case "weightedLRU":
+				fmt.Printf("[Create Weighted Cache][Size: %f]\n", cacheSize)
+				cacheInstance = &cache.WeightedLRU{
+					MaxSize: cacheSize,
+				}
+				switch weightedFunc {
+				case "FuncFileWeight":
+					cacheInstance.Init(cache.FuncFileWeight, weightExp)
+				case "FuncFileWeightAndTime":
+					cacheInstance.Init(cache.FuncFileWeightAndTime, weightExp)
+				case "FuncFileWeightOnlyTime":
+					cacheInstance.Init(cache.FuncFileWeightOnlyTime, weightExp)
+				case "FuncWeightedRequests":
+					cacheInstance.Init(cache.FuncWeightedRequests, weightExp)
+				default:
+					fmt.Println("ERR: You need to specify a weight function.")
+					os.Exit(-1)
+				}
+				fmt.Printf("[Register Weighted LRU Cache]\n")
+				pb.RegisterSimServiceServer(grpcServer, cacheInstance)
 			default:
 				fmt.Println("ERR: You need to specify a cache type.")
 				os.Exit(-2)
