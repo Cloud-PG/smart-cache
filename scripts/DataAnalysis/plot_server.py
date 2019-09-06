@@ -6,6 +6,7 @@ import pickle
 from itertools import cycle
 from typing import Dict, List
 
+import numpy as np
 import pandas as pd
 from bokeh.layouts import column, row
 from bokeh.models import ColumnDataSource, LabelSet, Span
@@ -186,23 +187,21 @@ def plot_info_window(window: int, filename: str, **kwargs):
                 y_axis_type=kwargs.get('y_axis_type', 'auto'),
             )
 
-            y_hit_wc, x_hit_wc = pd.qcut([
+            hist_hit_wc, edges_hit_wc = np.histogram([
                     cur_data['stats'][filename]['nHits']
                     if filename in cur_data['cache']
                     else 0
                     for filename in filenames_sort_by_size
-                ],
-                100,
-                labels=False, retbins=True
-            )
+                ], density=True, bins=100)
 
-            pf_fileSize_hit_weighted_cache.vbar(
-                x_hit_wc,
-                top=y_hit_wc,
+            pf_fileSize_hit_weighted_cache.quad(
+                bottom=0,
+                top=hist_hit_wc,
+                left=edges_hit_wc[:-1], 
+                right=edges_hit_wc[1:],
                 color="blue",
                 width=1.0,
-                bottom=0.01 if kwargs.get(
-                    'y_axis_type', False) == 'log' else 0.0  # To avoid empty plot
+                line_color="white"
             )
 
             ##
