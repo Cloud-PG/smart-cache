@@ -195,7 +195,7 @@ def plot_info_window(window: int, filename: str, **kwargs):
             )
 
             size_hist, size_edges = np.histogram(
-                [stat['size'] for size in cur_data['stats']],
+                [stat['size'] for size in cur_data['stats'].values()],
                 bins=MAX_BINS
             )
             hist_hit_wc, hist_miss_wc = fill_hit_miss_bins(MAX_BINS, size_edges, [
@@ -204,8 +204,8 @@ def plot_info_window(window: int, filename: str, **kwargs):
                     cur_data['stats'][filename]['nHits'],
                     cur_data['stats'][filename]['nHits']
                 )
-                if filename in cur_data['cache']
                 for filename in filenames_sort_by_size
+                if filename in cur_data['cache']
             ])
 
             ##
