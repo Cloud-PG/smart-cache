@@ -87,13 +87,13 @@ def plot_info_window(window: int, filename: str, **kwargs):
         ]:
             filenames_sort_by_weights = [key for key, _ in sorted(
                 cur_data['weights'].items(),
-                key=lambda _, weight: weight,
+                key=lambda weight_elm: weight_elm[1],
                 reverse=True)
             ]
 
             filenames_sort_by_size = [key for key, _ in sorted(
                 cur_data['stats'].items(),
-                key=lambda _, file_: file_['size'],
+                key=lambda stat_elm: stat_elm[1]['size'],
                 reverse=True)
             ]
 
