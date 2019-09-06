@@ -190,7 +190,7 @@ def plot_info_window(window: int, filename: str, **kwargs):
                     if filename in cur_data['cache']
                     else 0
                     for filename in filenames_sort_by_size
-                ], bins=range(max(cur_data['stats']['nHits'])))
+                ], bins=range(max([elm['nHits'] for elm in cur_data['stats']])))
 
             pf_fileSize_hit_weighted_cache.quad(
                 bottom=0,
@@ -215,7 +215,7 @@ def plot_info_window(window: int, filename: str, **kwargs):
                     if filename not in cur_data['cache']
                     else 0
                     for filename in filenames_sort_by_size
-                ], bins=range(max(cur_data['stats']['nMiss'])))
+                ], bins=range(max([elm['nMiss'] for elm in cur_data['stats']])))
 
             pf_fileSize_miss_weighted_cache.quad(
                 bottom=0,
@@ -240,7 +240,7 @@ def plot_info_window(window: int, filename: str, **kwargs):
                     if filename in caches['lru']['cache']
                     else 0
                     for filename in filenames_sort_by_size
-                ], bins=range(max(caches['lru']['stats']['nHits'])))
+                ], bins=range(max([elm['nHits'] for elm in caches['lru']['stats']])))
 
             pf_fileSize_hit_LRU_cache.quad(
                 bottom=0,
@@ -265,7 +265,7 @@ def plot_info_window(window: int, filename: str, **kwargs):
                     if filename not in caches['lru']['cache']
                     else 0
                     for filename in filenames_sort_by_size
-                ], bins=range(max(caches['lru']['stats']['nMiss'])))
+                ], bins=range(max([elm['nMiss'] for elm in caches['lru']['stats']])))
 
             pf_fileSize_miss_LRU_cache.quad(
                 bottom=0,
