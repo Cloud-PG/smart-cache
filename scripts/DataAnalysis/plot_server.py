@@ -183,6 +183,7 @@ def plot_info_window(window: int, filename: str, **kwargs):
                 tools="box_zoom,pan,reset,save",
                 plot_width=kwargs.get('plot_width', 640),
                 plot_height=kwargs.get('plot_height', 200),
+                y_axis_type='log',
             )
 
             hist_hit_wc, edges_hit_wc = np.histogram([
@@ -190,7 +191,7 @@ def plot_info_window(window: int, filename: str, **kwargs):
                     if filename in cur_data['cache']
                     else 0
                     for filename in filenames_sort_by_size
-                ], bins=range(100))
+                ], bins=range(10))
 
             pf_fileSize_hit_weighted_cache.quad(
                 bottom=0,
