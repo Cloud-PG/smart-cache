@@ -208,6 +208,16 @@ def plot_info_window(window: int, filename: str, **kwargs):
                 if filename in cur_data['cache']
             ])
 
+            hist_hit_lru, hist_miss_lru = fill_hit_miss_bins(MAX_BINS, size_edges, [
+                (   
+                    caches['lru']['stats'][filename]['size'],
+                    caches['lru']['stats'][filename]['nHits'],
+                    caches['lru']['stats'][filename]['nHits']
+                )
+                for filename in filenames_sort_by_size
+                if filename in caches['lru']['cache']
+            ])
+
             ##
             # Number hits x file in weighted cache
             pf_fileSize_hit_weighted_cache = figure(
@@ -215,6 +225,8 @@ def plot_info_window(window: int, filename: str, **kwargs):
                 tools="box_zoom,pan,reset,save",
                 plot_width=kwargs.get('plot_width', 640),
                 plot_height=kwargs.get('plot_height', 200),
+                x_axis_label="File size",
+                y_axis_label="Sum n. hit",
                 y_range=(0.001, int(max(cur_data['weights'].values())) + 10),
                 y_axis_type='log',
             )
@@ -235,6 +247,10 @@ def plot_info_window(window: int, filename: str, **kwargs):
                 tools="box_zoom,pan,reset,save",
                 plot_width=kwargs.get('plot_width', 640),
                 plot_height=kwargs.get('plot_height', 200),
+                x_axis_label="File size",
+                y_axis_label="Sum n. miss",
+                y_range=(0.001, int(max(cur_data['weights'].values())) + 10),
+                y_axis_type='log',
             )
 
             pf_fileSize_miss_weighted_cache.quad(
@@ -253,20 +269,17 @@ def plot_info_window(window: int, filename: str, **kwargs):
                 tools="box_zoom,pan,reset,save",
                 plot_width=kwargs.get('plot_width', 640),
                 plot_height=kwargs.get('plot_height', 200),
+                x_axis_label="File size",
+                y_axis_label="Sum n. hit",
+                y_range=(0.001, int(max(cur_data['weights'].values())) + 10),
+                y_axis_type='log',
             )
-
-            hist_hit_lru, edges_hit_lru = np.histogram([
-                caches['lru']['stats'][filename]['nHits']
-                if filename in caches['lru']['cache']
-                else 0
-                for filename in filenames_sort_by_size
-            ], bins=range(max([elm['nHits'] for elm in caches['lru']['stats'].values()])))
 
             pf_fileSize_hit_LRU_cache.quad(
                 bottom=0,
                 top=hist_hit_lru,
-                left=edges_hit_lru[:-1],
-                right=edges_hit_lru[1:],
+                left=size_edges[:-1],
+                right=size_edges[1:],
                 color="red",
                 line_color="white"
             )
@@ -278,20 +291,17 @@ def plot_info_window(window: int, filename: str, **kwargs):
                 tools="box_zoom,pan,reset,save",
                 plot_width=kwargs.get('plot_width', 640),
                 plot_height=kwargs.get('plot_height', 200),
+                x_axis_label="File size",
+                y_axis_label="Sum n. miss",
+                y_range=(0.001, int(max(cur_data['weights'].values())) + 10),
+                y_axis_type='log',
             )
-
-            hist_miss_lru, edges_miss_lru = np.histogram([
-                caches['lru']['stats'][filename]['nMiss']
-                if filename not in caches['lru']['cache']
-                else 0
-                for filename in filenames_sort_by_size
-            ], bins=range(max([elm['nMiss'] for elm in caches['lru']['stats'].values()])))
 
             pf_fileSize_miss_LRU_cache.quad(
                 bottom=0,
                 top=hist_miss_lru,
-                left=edges_miss_lru[:-1],
-                right=edges_miss_lru[1:],
+                left=size_edges[:-1],
+                right=size_edges[1:],
                 color="red",
                 line_color="white"
             )
