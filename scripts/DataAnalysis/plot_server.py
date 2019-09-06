@@ -190,7 +190,7 @@ def plot_info_window(window: int, filename: str, **kwargs):
                     if filename in cur_data['cache']
                     else 0
                     for filename in filenames_sort_by_size
-                ], density=True, bins=10)
+                ], bins=10)
 
             pf_fileSize_hit_weighted_cache.quad(
                 bottom=0,
@@ -215,7 +215,7 @@ def plot_info_window(window: int, filename: str, **kwargs):
                     if filename not in cur_data['cache']
                     else 0
                     for filename in filenames_sort_by_size
-                ], density=True, bins=10)
+                ], bins=10)
 
             pf_fileSize_miss_weighted_cache.quad(
                 bottom=0,
@@ -240,7 +240,7 @@ def plot_info_window(window: int, filename: str, **kwargs):
                     if filename in caches['lru']['cache']
                     else 0
                     for filename in filenames_sort_by_size
-                ], density=True, bins=10)
+                ], bins=10)
 
             pf_fileSize_hit_LRU_cache.quad(
                 bottom=0,
@@ -265,9 +265,9 @@ def plot_info_window(window: int, filename: str, **kwargs):
                     if filename not in caches['lru']['cache']
                     else 0
                     for filename in filenames_sort_by_size
-                ], density=True, bins=10)
+                ], bins=10)
 
-            pf_fileSize_hit_LRU_cache.quad(
+            pf_fileSize_miss_LRU_cache.quad(
                 bottom=0,
                 top=hist_miss_lru,
                 left=edges_miss_lru[:-1], 
