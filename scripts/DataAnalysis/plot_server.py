@@ -40,6 +40,9 @@ def fill_hit_miss_bins(n_bins: int, edges: list, values: list) -> tuple:
     hist_hit_bin = [0 for _ in range(n_bins)]
     hist_miss_bin = [0 for _ in range(n_bins)]
 
+    tot_hits = sum(n_hit for _, n_hit, _ in values)
+    tot_miss = sum(n_miss for _, _, n_miss in values)
+
     for value, n_hit, n_miss in values:
         for idx in range(n_bins - 1):
             lower = edges[idx]
@@ -48,6 +51,9 @@ def fill_hit_miss_bins(n_bins: int, edges: list, values: list) -> tuple:
                 hist_hit_bin[idx] += n_hit
                 hist_miss_bin[idx] += n_miss
                 break
+    
+    hist_hit_bin = [value / tot_hits for value in hist_hit_bin]
+    hist_miss_bin = [value / tot_miss for value in hist_miss_bin]
 
     return hist_hit_bin, hist_miss_bin
 
