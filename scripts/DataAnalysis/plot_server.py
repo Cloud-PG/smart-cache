@@ -202,20 +202,18 @@ def plot_info_window(window: int, filename: str, **kwargs):
                 (   
                     cur_data['stats'][filename]['size'],
                     cur_data['stats'][filename]['nHits'],
-                    cur_data['stats'][filename]['nHits']
+                    cur_data['stats'][filename]['nMiss']
                 )
                 for filename in filenames_sort_by_size
-                if filename in cur_data['cache']
             ])
 
             hist_hit_lru, hist_miss_lru = fill_hit_miss_bins(MAX_BINS, size_edges, [
                 (   
                     caches['lru']['stats'][filename]['size'],
                     caches['lru']['stats'][filename]['nHits'],
-                    caches['lru']['stats'][filename]['nHits']
+                    caches['lru']['stats'][filename]['nMiss']
                 )
                 for filename in filenames_sort_by_size
-                if filename in caches['lru']['cache']
             ])
 
             ##
