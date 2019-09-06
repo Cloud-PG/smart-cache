@@ -560,12 +560,12 @@ def simulate(cache, windows: list, region: str = "_all_",
         tmp_info = NamedTemporaryFile()
     else:
         buffer = {
-            'hit_rate': [0.0],
-            'weighted_hit_rate': [0.0],
-            'hit_over_miss': [0.0],
-            'size': [0.0],
-            'written_data': [0.0],
-            'read_on_hit': [0.0],
+            'hit_rate': [(0, 0.0)],
+            'weighted_hit_rate': [(0, 0.0)],
+            'hit_over_miss': [(0, 0.0)],
+            'size': [(0, 0.0)],
+            'written_data': [(0, 0.0)],
+            'read_on_hit': [(0, 0.0)],
         }
 
     win_pbar = tqdm(
@@ -672,6 +672,8 @@ def simulate(cache, windows: list, region: str = "_all_",
                             cur_read_on_hit = cache.read_on_hit
                             cur_size = cache.size
 
+                        request_idx += 1
+
                         buffer["hit_rate"].append((request_idx, cur_hit_rate))
                         buffer["weighted_hit_rate"].append(
                             (request_idx, cur_weighted_hit_rate))
@@ -682,7 +684,6 @@ def simulate(cache, windows: list, region: str = "_all_",
                             (request_idx, cur_written_data))
                         buffer["read_on_hit"].append(
                             (request_idx, cur_read_on_hit))
-                        request_idx += 1
 
                         requests.put(
                             "/".join([
@@ -699,6 +700,7 @@ def simulate(cache, windows: list, region: str = "_all_",
                             ),
                             timeout=None
                         )
+
                         buffer = {
                             'hit_rate': [],
                             'weighted_hit_rate': [],
@@ -708,7 +710,8 @@ def simulate(cache, windows: list, region: str = "_all_",
                             'read_on_hit': [],
                         }
 
-                        last_time = datetime.datetime.fromtimestamp(record['day'])
+                        last_time = datetime.datetime.fromtimestamp(
+                            record['day'])
 
                 desc_output = ""
                 desc_output += f"[{cache_name[:4]+cache_name[-12:]}][Simulation]"
@@ -747,6 +750,14 @@ def simulate(cache, windows: list, region: str = "_all_",
                         ),
                         timeout=None
                     )
+                    buffer = {
+                        'hit_rate': [],
+                        'weighted_hit_rate': [],
+                        'hit_over_miss': [],
+                        'size': [],
+                        'written_data': [],
+                        'read_on_hit': [],
+                    }
 
             num_file += 1
 
