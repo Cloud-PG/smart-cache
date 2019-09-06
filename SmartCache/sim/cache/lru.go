@@ -251,16 +251,7 @@ func (cache LRUCache) HitOverMiss() float32 {
 
 // WeightedHitRate of the cache
 func (cache LRUCache) WeightedHitRate() float32 {
-	if cache.hit == 0. {
-		return 0.
-	}
-	var sumHits float32
-	var sumMiss float32
-	for _, stats := range cache.stats {
-		sumHits += float32(stats.nHits) * stats.size
-		sumMiss += float32(stats.nMiss) * stats.size
-	}
-	return (sumHits / (sumHits + sumMiss)) * 100.
+	return cache.HitRate() * cache.readOnHit
 }
 
 // Size of the cache

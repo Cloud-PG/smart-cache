@@ -183,20 +183,21 @@ def plot_info_window(window: int, filename: str, **kwargs):
                 tools="box_zoom,pan,reset,save",
                 plot_width=kwargs.get('plot_width', 640),
                 plot_height=kwargs.get('plot_height', 200),
+                y_range=(0.001, int(max(cur_data['weights'].values())) + 10),
                 y_axis_type='log',
             )
 
             hist_hit_wc, edges_hit_wc = np.histogram([
-                    cur_data['stats'][filename]['nHits']
-                    if filename in cur_data['cache']
-                    else 0
-                    for filename in filenames_sort_by_size
-                ], bins=range(10))
+                cur_data['stats'][filename]['nHits']
+                if filename in cur_data['cache']
+                else 0
+                for filename in filenames_sort_by_size
+            ], bins=range(100))
 
             pf_fileSize_hit_weighted_cache.quad(
                 bottom=0.001,
                 top=hist_hit_wc,
-                left=edges_hit_wc[:-1], 
+                left=edges_hit_wc[:-1],
                 right=edges_hit_wc[1:],
                 color="blue",
                 line_color="white"
@@ -212,16 +213,16 @@ def plot_info_window(window: int, filename: str, **kwargs):
             )
 
             hist_miss_wc, edges_miss_wc = np.histogram([
-                    cur_data['stats'][filename]['nMiss']
-                    if filename not in cur_data['cache']
-                    else 0
-                    for filename in filenames_sort_by_size
-                ], bins=range(max([elm['nMiss'] for elm in cur_data['stats'].values()])))
+                cur_data['stats'][filename]['nMiss']
+                if filename not in cur_data['cache']
+                else 0
+                for filename in filenames_sort_by_size
+            ], bins=range(max([elm['nMiss'] for elm in cur_data['stats'].values()])))
 
             pf_fileSize_miss_weighted_cache.quad(
                 bottom=0,
                 top=hist_miss_wc,
-                left=edges_miss_wc[:-1], 
+                left=edges_miss_wc[:-1],
                 right=edges_miss_wc[1:],
                 color="blue",
                 line_color="white"
@@ -237,16 +238,16 @@ def plot_info_window(window: int, filename: str, **kwargs):
             )
 
             hist_hit_lru, edges_hit_lru = np.histogram([
-                    caches['lru']['stats'][filename]['nHits']
-                    if filename in caches['lru']['cache']
-                    else 0
-                    for filename in filenames_sort_by_size
-                ], bins=range(max([elm['nHits'] for elm in caches['lru']['stats'].values()])))
+                caches['lru']['stats'][filename]['nHits']
+                if filename in caches['lru']['cache']
+                else 0
+                for filename in filenames_sort_by_size
+            ], bins=range(max([elm['nHits'] for elm in caches['lru']['stats'].values()])))
 
             pf_fileSize_hit_LRU_cache.quad(
                 bottom=0,
                 top=hist_hit_lru,
-                left=edges_hit_lru[:-1], 
+                left=edges_hit_lru[:-1],
                 right=edges_hit_lru[1:],
                 color="red",
                 line_color="white"
@@ -262,16 +263,16 @@ def plot_info_window(window: int, filename: str, **kwargs):
             )
 
             hist_miss_lru, edges_miss_lru = np.histogram([
-                    caches['lru']['stats'][filename]['nMiss']
-                    if filename not in caches['lru']['cache']
-                    else 0
-                    for filename in filenames_sort_by_size
-                ], bins=range(max([elm['nMiss'] for elm in caches['lru']['stats'].values()])))
+                caches['lru']['stats'][filename]['nMiss']
+                if filename not in caches['lru']['cache']
+                else 0
+                for filename in filenames_sort_by_size
+            ], bins=range(max([elm['nMiss'] for elm in caches['lru']['stats'].values()])))
 
             pf_fileSize_miss_LRU_cache.quad(
                 bottom=0,
                 top=hist_miss_lru,
-                left=edges_miss_lru[:-1], 
+                left=edges_miss_lru[:-1],
                 right=edges_miss_lru[1:],
                 color="red",
                 line_color="white"
@@ -324,7 +325,7 @@ def plot_line(table_name: str, filename: str, **kwargs):
 
     v_lines = []
 
-    if table_name != 'ratio':
+    if table_name != 'ratio' and table_name != 'diff':
         for name, values in TABLES[table_name].items():
             if filters:
                 size = get_size_from_name(name)
@@ -355,7 +356,7 @@ def plot_line(table_name: str, filename: str, **kwargs):
                 color=TABLE_COLORS[name],
                 line_width=2.
             )
-    elif table_name == 'ratio':
+    elif table_name == 'ratio' or table_name == 'diff':
         data = {}
         for cur_table_name in ['written_data', 'read_on_hit']:
             for name, values in TABLES[cur_table_name].items():
@@ -390,14 +391,23 @@ def plot_line(table_name: str, filename: str, **kwargs):
         for name, values in data.items():
             if name not in TABLE_COLORS:
                 TABLE_COLORS[name] = next(COLORS)
-            plot_figure.line(
-                range(len(values['read_on_hit'])),
-                [
+            if table_name == 'ratio':
+                cur_values = [
                     value / values['written_data'][idx]
                     if values['written_data'][idx] != 0.
                     else 0.
                     for idx, value in enumerate(values['read_on_hit'])
-                ],
+                ]
+            elif table_name == 'diff':
+                cur_values = [
+                    value - values['written_data'][idx]
+                    if values['written_data'][idx] != 0.
+                    else 0.
+                    for idx, value in enumerate(values['read_on_hit'])
+                ]
+            plot_figure.line(
+                range(len(values['read_on_hit'])),
+                cur_values,
                 legend=name,
                 color=TABLE_COLORS[name],
                 line_width=2.
