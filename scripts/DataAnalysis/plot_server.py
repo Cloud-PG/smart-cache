@@ -183,8 +183,6 @@ def plot_info_window(window: int, filename: str, **kwargs):
                 tools="box_zoom,pan,reset,save",
                 plot_width=kwargs.get('plot_width', 640),
                 plot_height=kwargs.get('plot_height', 200),
-                x_range=filenames_sort_by_size,
-                y_axis_type=kwargs.get('y_axis_type', 'auto'),
             )
 
             hist_hit_wc, edges_hit_wc = np.histogram([
