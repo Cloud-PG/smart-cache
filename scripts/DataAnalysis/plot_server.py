@@ -33,7 +33,7 @@ TABLE_COLORS = {}
 
 COLORS = cycle(Category10[10])
 
-MAX_BINS = 100
+MAX_BINS = 32
 
 
 def fill_hit_miss_bins(n_bins: int, edges: list, values: list) -> tuple:
@@ -254,7 +254,7 @@ def plot_info_window(window: int, filename: str, **kwargs):
             )
 
             pf_fileSize_miss_weighted_cache.quad(
-                bottom=0,
+                bottom=0.001,
                 top=hist_miss_wc,
                 left=size_edges[:-1],
                 right=size_edges[1:],
@@ -276,7 +276,7 @@ def plot_info_window(window: int, filename: str, **kwargs):
             )
 
             pf_fileSize_hit_LRU_cache.quad(
-                bottom=0,
+                bottom=0.001,
                 top=hist_hit_lru,
                 left=size_edges[:-1],
                 right=size_edges[1:],
@@ -298,7 +298,7 @@ def plot_info_window(window: int, filename: str, **kwargs):
             )
 
             pf_fileSize_miss_LRU_cache.quad(
-                bottom=0,
+                bottom=0.001,
                 top=hist_miss_lru,
                 left=size_edges[:-1],
                 right=size_edges[1:],
