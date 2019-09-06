@@ -173,7 +173,6 @@ def plot_info_window(window: int, filename: str, **kwargs):
 
             figures.append(
                 column(
-                    pf_fileW_sizes,
                     pf_fileW_hit_weighted_cache,
                     pf_fileW_hit_lru_cache
                 )
