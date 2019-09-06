@@ -457,8 +457,7 @@ def table_plot(table_name: str):
         kwargs['y_range'] = (0, 100)
         kwargs['y_axis_label'] = "Hit rate %"
     elif table_name == "weighted_hit_rate":
-        kwargs['y_range'] = (0, 100)
-        kwargs['y_axis_label'] = "Weighted hit rate %"
+        kwargs['y_axis_label'] = "Weighted hit rate"
     elif table_name == "size":
         kwargs['y_axis_label'] = "Size (MB)"
         kwargs['y_axis_type'] = "log"
@@ -468,6 +467,10 @@ def table_plot(table_name: str):
     elif table_name == "read_on_hit":
         kwargs['y_axis_label'] = "Data read on hit (MB)"
         kwargs['y_axis_type'] = "log"
+    elif table_name == "ratio":
+        kwargs['y_axis_label'] = "ratio"
+    elif table_name == "diff":
+        kwargs['y_axis_label'] = "diff"
 
     plot_line(
         table_name,
