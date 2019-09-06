@@ -194,7 +194,7 @@ def plot_info_window(window: int, filename: str, **kwargs):
                     'y_axis_type', False) == 'log' else 0.0  # To avoid empty plot
             )
 
-            size_hist, size_edges = np.histogram(
+            _, size_edges = np.histogram(
                 [stat['size'] for stat in cur_data['stats'].values()],
                 bins=MAX_BINS
             )
@@ -225,8 +225,6 @@ def plot_info_window(window: int, filename: str, **kwargs):
                 plot_height=kwargs.get('plot_height', 200),
                 x_axis_label="File size",
                 y_axis_label="Sum n. hit",
-                y_range=(0.001, int(max(cur_data['weights'].values())) + 10),
-                y_axis_type='log',
             )
 
             pf_fileSize_hit_weighted_cache.quad(
@@ -247,8 +245,6 @@ def plot_info_window(window: int, filename: str, **kwargs):
                 plot_height=kwargs.get('plot_height', 200),
                 x_axis_label="File size",
                 y_axis_label="Sum n. miss",
-                y_range=(0.001, int(max(cur_data['weights'].values())) + 10),
-                y_axis_type='log',
             )
 
             pf_fileSize_miss_weighted_cache.quad(
@@ -269,10 +265,8 @@ def plot_info_window(window: int, filename: str, **kwargs):
                 plot_height=kwargs.get('plot_height', 200),
                 x_axis_label="File size",
                 y_axis_label="Sum n. hit",
-                y_range=(0.001, int(max(cur_data['weights'].values())) + 10),
-                y_axis_type='log',
-            )
 
+            )
             pf_fileSize_hit_LRU_cache.quad(
                 bottom=0.001,
                 top=hist_hit_lru,
@@ -291,10 +285,8 @@ def plot_info_window(window: int, filename: str, **kwargs):
                 plot_height=kwargs.get('plot_height', 200),
                 x_axis_label="File size",
                 y_axis_label="Sum n. miss",
-                y_range=(0.001, int(max(cur_data['weights'].values())) + 10),
-                y_axis_type='log',
-            )
 
+            )
             pf_fileSize_miss_LRU_cache.quad(
                 bottom=0.001,
                 top=hist_miss_lru,
