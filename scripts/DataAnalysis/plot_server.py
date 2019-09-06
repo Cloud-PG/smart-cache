@@ -231,6 +231,7 @@ def plot_info_window(window: int, filename: str, **kwargs):
                 plot_height=kwargs.get('plot_height', 200),
                 x_axis_label="File size",
                 y_axis_label="Sum n. hit",
+                y_range=(0., 1.),
             )
 
             pf_fileSize_hit_weighted_cache.quad(
@@ -251,6 +252,7 @@ def plot_info_window(window: int, filename: str, **kwargs):
                 plot_height=kwargs.get('plot_height', 200),
                 x_axis_label="File size",
                 y_axis_label="Sum n. miss",
+                y_range=(0., 1.),
             )
 
             pf_fileSize_miss_weighted_cache.quad(
@@ -271,6 +273,7 @@ def plot_info_window(window: int, filename: str, **kwargs):
                 plot_height=kwargs.get('plot_height', 200),
                 x_axis_label="File size",
                 y_axis_label="Sum n. hit",
+                y_range=(0., 1.),
 
             )
             pf_fileSize_hit_LRU_cache.quad(
@@ -291,6 +294,7 @@ def plot_info_window(window: int, filename: str, **kwargs):
                 plot_height=kwargs.get('plot_height', 200),
                 x_axis_label="File size",
                 y_axis_label="Sum n. miss",
+                y_range=(0., 1.),
 
             )
             pf_fileSize_miss_LRU_cache.quad(
