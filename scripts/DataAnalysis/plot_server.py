@@ -41,25 +41,6 @@ def get_size_from_name(name: str) -> str:
     return 'unknown'
 
 
-def get_size_from_cache_list(name, cache_list):
-    for cache in cache_list:
-        if name in cache:
-            return cache[name]
-    return 0.
-
-
-def create_map(size: int, filenames: list, sizes: list):
-    element_idx = iter(range(len(filenames)))
-    for _x_ in reversed(range(size + 1)):
-        for _y_ in range(size + 1):
-            try:
-                cur_idx = next(element_idx)
-            except StopIteration:
-                return
-            if cur_idx < len(filenames):
-                yield (filenames[cur_idx], (_y_, _x_, sizes[cur_idx]))
-
-
 def plot_info_window(window: int, filename: str, **kwargs):
     # Empty plot with log scale:
     # - https://github.com/bokeh/bokeh/issues/6671
@@ -74,13 +55,17 @@ def plot_info_window(window: int, filename: str, **kwargs):
                 continue
         if size not in data:
             data[size] = {}
+
         if cache_name.lower().find('lru') != -1:
-            lru = info[window]['cache']
-            data[size]['lru'] = lru
+            data[size]['lru'] = {
+                'cache': info[window]['cache'],
+                'stats': info[window]['stats']
+            }
         else:
             data[size][cache_name] = {
                 'weights': info[window]['weights'],
-                'cache': info[window]['cache']
+                'cache': info[window]['cache'],
+                'stats': info[window]['stats']
             }
 
     output_file(
@@ -112,142 +97,22 @@ def plot_info_window(window: int, filename: str, **kwargs):
                 reverse=True)
             ]
 
-            # Pie chart - file weights
-            two_pi = 2.0*3.14
-            pie_data = pd.Series({
-                'all files': len(filenames),
-                'weighted': len(
-                    [filename for filename in filenames if filename in cur_data['cache']]),
-                'cache': len(
-                    [filename for filename in filenames if filename in caches['lru']]),
-                'both': len(
-                    [filename for filename in filenames if filename in cur_data['cache'] or filename in caches['lru']])
-            }).reset_index(name='value').rename(
-                columns={'index': 'type'})
-            pie_data['angle'] = pie_data['value'] / \
-                pie_data['value'].sum() * two_pi
-            pie_data['color'] = ['gainsboro', 'blue', 'red', 'green']
-
-            plot_figure_pie.wedge(
-                x=0, y=0, radius=0.4,
-                start_angle=cumsum('angle', include_zero=True),
-                end_angle=cumsum('angle'),
-                line_color="white",
-                fill_color='color',
-                legend='type',
-                source=pie_data
-            )
-
-            pie_data['value'] = (
-                pie_data['value'] / pie_data['value'].sum()
-            ) * 100.
-
-            pie_data["value"] = pie_data['value'].apply(lambda elm: f"{elm:0.2f}%")
-            pie_data["value"] = pie_data["value"].str.pad(42, side="left")
-            labels = LabelSet(
-                x=0, y=0, text='value', level='glyph',
-                angle=cumsum('angle', include_zero=True), 
-                source=ColumnDataSource(pie_data),
-                # render_mode='canvas'
-            )
-
-            plot_figure_pie.add_layout(labels)
-
-            plot_figure_pie.axis.axis_label = None
-            plot_figure_pie.axis.visible = False
-            plot_figure_pie.grid.grid_line_color = None
-
-
-
-            sizes = [
-                get_size_from_cache_list(
-                    filename, [cur_data['cache'], caches['lru']])
-                for filename in filenames
-            ]
-            tot = len(filenames)
-            map_size = math.ceil(math.sqrt(tot))
-            map_ = dict((key, value)
-                        for key, value in create_map(map_size, filenames, sizes)
-                        )
-
-            dots_plot = figure(
-                title=f"File weights",
+            pf_fileW_hit_weighted_cache = figure(
+                title=f"File in {cache_name} (sorted by weight function)",
                 tools="box_zoom,pan,reset,save",
-                plot_width=kwargs.get('plot_width', 640),
-                plot_height=kwargs.get('plot_height', 400),
-                x_range=(0, map_size),
-                y_range=(0, map_size),
-                x_axis_type=None,
-                y_axis_type=None,
-            )
-
-            dots_plot.circle(
-                [map_[filename][0] for filename in filenames],
-                [map_[filename][1] for filename in filenames],
-                color="gainsboro",
-                size=1.
-            )
-
-            dots_plot.circle(
-                [map_[filename][0]
-                    for filename in filenames if filename in cur_data['cache']],
-                [map_[filename][1]
-                    for filename in filenames if filename in cur_data['cache']],
-                fill_color="blue",
-                fill_alpha=1.0,
-                size=2.5
-            )
-
-            dots_plot.circle(
-                [map_[filename][0]
-                    for filename in filenames if filename in caches['lru']],
-                [map_[filename][1]
-                    for filename in filenames if filename in caches['lru']],
-                fill_color="red",
-                fill_alpha=0.9,
-                size=2.5
-            )
-
-            # Pie
-            plot_figure_pie = figure(
-                plot_width=kwargs.get('plot_width', 640),
-                plot_height=kwargs.get('plot_height', 400),
-                title="% all file seen",
-                tools="box_zoom,pan,reset,save",
-                tooltips="@type: @value",
-                x_range=(-0.5, 1.0)
-            )
-
-            
-
-            filenames_common = list(sorted([
-                filename for filename in filenames
-                if filename in cur_data['cache'] or filename in caches['lru']
-            ],
-                key=lambda name: get_size_from_cache_list(
-                    name, [cur_data['cache'], caches['lru']]
-            ),
-                reverse=True
-            ))
-
-            # Sizes plot
-            plot_figure_size_weighted_cache = figure(
-                title=f"Sizes of files in {cache_name} (sort by size)",
-                tools="box_zoom,pan,reset,save",
-                plot_width=kwargs.get('plot_width', 640),
-                plot_height=kwargs.get('plot_height', 400),
-                x_range=filenames_common,
+                plot_width=kwargs.get('plot_width', 1280),
+                plot_height=kwargs.get('plot_height', 200),
+                x_range=filenames_sort_by_weights,
                 y_range=(1, int(max(cur_data['weights'].values())) + 10),
                 x_axis_type=None,
                 y_axis_type=kwargs.get('y_axis_type', 'auto'),
             )
 
-            plot_figure_size_weighted_cache.vbar(
-                filenames_common,
+            pf_fileW_hit_weighted_cache.vbar(
+                filenames_sort_by_weights,
                 top=[
-                    get_size_from_cache_list(
-                        filename, [cur_data['cache'], caches['lru']])
-                    for filename in filenames_common
+                    cur_data['weights'][filename]
+                    for filename in filenames_sort_by_weights
                 ],
                 color="gainsboro",
                 width=1.0,
@@ -255,13 +120,13 @@ def plot_info_window(window: int, filename: str, **kwargs):
                     'y_axis_type', False) == 'log' else 0.0  # To avoid empty plot
             )
 
-            # Size of weighted cache files
-            plot_figure_size_weighted_cache.vbar(
-                filenames_common,
+            pf_fileW_hit_weighted_cache.vbar(
+                filenames_sort_by_weights,
                 top=[
-                    cur_data['cache'][filename]
-                    if filename in cur_data['cache'] else 0
-                    for filename in filenames_common
+                    cur_data['weights'][filename]
+                    if filename in cur_data['cache']
+                    else 0
+                    for filename in filenames_sort_by_weights
                 ],
                 color="blue",
                 width=1.0,
@@ -269,24 +134,22 @@ def plot_info_window(window: int, filename: str, **kwargs):
                     'y_axis_type', False) == 'log' else 0.0  # To avoid empty plot
             )
 
-            # Sizes plot
-            plot_figure_size_cache = figure(
-                title=f"Sizes of files not in {cache_name} (sort by size)",
+            pf_fileW_hit_lru_cache = figure(
+                title=f"File in LRU cache (sorted by weight function)",
                 tools="box_zoom,pan,reset,save",
-                plot_width=kwargs.get('plot_width', 640),
-                plot_height=kwargs.get('plot_height', 400),
-                x_range=filenames_common,
+                plot_width=kwargs.get('plot_width', 1280),
+                plot_height=kwargs.get('plot_height', 200),
+                x_range=filenames_sort_by_weights,
                 y_range=(1, int(max(cur_data['weights'].values())) + 10),
                 x_axis_type=None,
                 y_axis_type=kwargs.get('y_axis_type', 'auto'),
             )
 
-            plot_figure_size_cache.vbar(
-                filenames_common,
+            pf_fileW_hit_lru_cache.vbar(
+                filenames_sort_by_weights,
                 top=[
-                    get_size_from_cache_list(
-                        filename, [cur_data['cache'], caches['lru']])
-                    for filename in filenames_common
+                    cur_data['weights'][filename]
+                    for filename in filenames_sort_by_weights
                 ],
                 color="gainsboro",
                 width=1.0,
@@ -294,13 +157,13 @@ def plot_info_window(window: int, filename: str, **kwargs):
                     'y_axis_type', False) == 'log' else 0.0  # To avoid empty plot
             )
 
-            # Size of cache files
-            plot_figure_size_cache.vbar(
-                filenames_common,
+            pf_fileW_hit_lru_cache.vbar(
+                filenames_sort_by_weights,
                 top=[
-                    caches['lru'][filename]
-                    if filename in caches['lru'] else 0
-                    for filename in filenames_common
+                    cur_data['weights'][filename]
+                    if filename in caches['lru']['cache']
+                    else 0
+                    for filename in filenames_sort_by_weights
                 ],
                 color="red",
                 width=1.0,
@@ -308,8 +171,13 @@ def plot_info_window(window: int, filename: str, **kwargs):
                     'y_axis_type', False) == 'log' else 0.0  # To avoid empty plot
             )
 
-            figures.append(row(column(dots_plot, plot_figure_pie), column(
-                plot_figure_size_weighted_cache, plot_figure_size_cache)))
+            figures.append(
+                column(
+                    pf_fileW_sizes,
+                    pf_fileW_hit_weighted_cache,
+                    pf_fileW_hit_lru_cache
+                )
+            )
 
     save(column(*figures))
 
@@ -407,8 +275,12 @@ def plot_line(table_name: str, filename: str, **kwargs):
         for name, values in data.items():
             plot_figure.line(
                 range(len(values['read_on_hit'])),
-                [value / values['written_data'][idx]
-                    for idx, value in enumerate(values['read_on_hit'])],
+                [
+                    value / values['written_data'][idx]
+                    if values['written_data'][idx] != 0.
+                    else 0.
+                    for idx, value in enumerate(values['read_on_hit'])
+                ],
                 legend=name,
                 color=TABLE_COLORS[name],
                 line_width=2.
@@ -557,7 +429,7 @@ def cache_info(cache_name: str, window: int):
 
     if cache_name not in WINDOW_INFO:
         WINDOW_INFO[cache_name] = []
-    
+
     try:
         WINDOW_INFO[cache_name][window] = obj
     except IndexError:
