@@ -33,6 +33,24 @@ TABLE_COLORS = {}
 
 COLORS = cycle(Category10[10])
 
+MAX_BINS = 100
+
+
+def fill_hit_miss_bins(n_bins: int, edges: list, values: list) -> tuple:
+    hist_hit_bin = [0 for _ in range(n_bins)]
+    hist_miss_bin = [0 for _ in range(n_bins)]
+
+    for value, (n_hit, n_miss) in values:
+        for idx in range(n_bins - 1):
+            lower = edges[idx]
+            higher = edges[idx+1]
+            if value >= lower and value <= higher:
+                hist_hit_bin[idx] += n_hit
+                hist_miss_bin[idx] += n_miss
+                break
+
+    return hist_hit_bin, hist_miss_bin
+
 
 def get_size_from_name(name: str) -> str:
     string = name.split("_")
@@ -176,6 +194,20 @@ def plot_info_window(window: int, filename: str, **kwargs):
                     'y_axis_type', False) == 'log' else 0.0  # To avoid empty plot
             )
 
+            size_hist, size_edges = np.histogram(
+                [stat['size'] for size in cur_data['stats']],
+                bins=MAX_BINS
+            )
+            hist_hit_wc, hist_miss_wc = fill_hit_miss_bins(MAX_BINS, size_edges, [
+                (   
+                    cur_data['stats'][filename]['size'],
+                    cur_data['stats'][filename]['nHits'],
+                    cur_data['stats'][filename]['nHits']
+                )
+                if filename in cur_data['cache']
+                for filename in filenames_sort_by_size
+            ])
+
             ##
             # Number hits x file in weighted cache
             pf_fileSize_hit_weighted_cache = figure(
@@ -187,18 +219,11 @@ def plot_info_window(window: int, filename: str, **kwargs):
                 y_axis_type='log',
             )
 
-            hist_hit_wc, edges_hit_wc = np.histogram([
-                cur_data['stats'][filename]['nHits']
-                if filename in cur_data['cache']
-                else 0
-                for filename in filenames_sort_by_size
-            ], bins=range(100))
-
             pf_fileSize_hit_weighted_cache.quad(
                 bottom=0.001,
                 top=hist_hit_wc,
-                left=edges_hit_wc[:-1],
-                right=edges_hit_wc[1:],
+                left=size_edges[:-1],
+                right=size_edges[1:],
                 color="blue",
                 line_color="white"
             )
@@ -212,18 +237,11 @@ def plot_info_window(window: int, filename: str, **kwargs):
                 plot_height=kwargs.get('plot_height', 200),
             )
 
-            hist_miss_wc, edges_miss_wc = np.histogram([
-                cur_data['stats'][filename]['nMiss']
-                if filename not in cur_data['cache']
-                else 0
-                for filename in filenames_sort_by_size
-            ], bins=range(max([elm['nMiss'] for elm in cur_data['stats'].values()])))
-
             pf_fileSize_miss_weighted_cache.quad(
                 bottom=0,
                 top=hist_miss_wc,
-                left=edges_miss_wc[:-1],
-                right=edges_miss_wc[1:],
+                left=size_edges[:-1],
+                right=size_edges[1:],
                 color="blue",
                 line_color="white"
             )
@@ -468,9 +486,9 @@ def table_plot(table_name: str):
         kwargs['y_axis_label'] = "Data read on hit (MB)"
         kwargs['y_axis_type'] = "log"
     elif table_name == "ratio":
-        kwargs['y_axis_label'] = "ratio"
+        kwargs['y_axis_label'] = "Ratio"
     elif table_name == "diff":
-        kwargs['y_axis_label'] = "diff"
+        kwargs['y_axis_label'] = "Diff"
 
     plot_line(
         table_name,
