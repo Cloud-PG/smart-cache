@@ -190,7 +190,7 @@ def plot_info_window(window: int, filename: str, **kwargs):
                     if filename in cur_data['cache']
                     else 0
                     for filename in filenames_sort_by_size
-                ], density=True, bins=100)
+                ], density=True, bins=10)
 
             pf_fileSize_hit_weighted_cache.quad(
                 bottom=0,
@@ -208,24 +208,22 @@ def plot_info_window(window: int, filename: str, **kwargs):
                 tools="box_zoom,pan,reset,save",
                 plot_width=kwargs.get('plot_width', 640),
                 plot_height=kwargs.get('plot_height', 200),
-                x_range=filenames_sort_by_size,
-                y_range=(1, int(max(cur_data['weights'].values())) + 10),
-                x_axis_type=None,
-                y_axis_type=kwargs.get('y_axis_type', 'auto'),
             )
 
-            pf_fileSize_miss_weighted_cache.vbar(
-                filenames_sort_by_size,
-                top=[
+            hist_miss_wc, edges_miss_wc = np.histogram([
                     cur_data['stats'][filename]['nHits']
                     if filename not in cur_data['cache']
                     else 0
                     for filename in filenames_sort_by_size
-                ],
+                ], density=True, bins=10)
+
+            pf_fileSize_miss_weighted_cache.quad(
+                bottom=0,
+                top=hist_miss_wc,
+                left=edges_miss_wc[:-1], 
+                right=edges_miss_wc[1:],
                 color="blue",
-                width=1.0,
-                bottom=0.01 if kwargs.get(
-                    'y_axis_type', False) == 'log' else 0.0  # To avoid empty plot
+                line_color="white"
             )
 
             ##
@@ -235,24 +233,22 @@ def plot_info_window(window: int, filename: str, **kwargs):
                 tools="box_zoom,pan,reset,save",
                 plot_width=kwargs.get('plot_width', 640),
                 plot_height=kwargs.get('plot_height', 200),
-                x_range=filenames_sort_by_size,
-                y_range=(1, int(max(cur_data['weights'].values())) + 10),
-                x_axis_type=None,
-                y_axis_type=kwargs.get('y_axis_type', 'auto'),
             )
 
-            pf_fileSize_hit_LRU_cache.vbar(
-                filenames_sort_by_size,
-                top=[
+            hist_hit_lru, edges_hit_lru = np.histogram([
                     caches['lru']['stats'][filename]['nHits']
-                    if filename in cur_data['cache']
+                    if filename in caches['lru']['cache']
                     else 0
                     for filename in filenames_sort_by_size
-                ],
+                ], density=True, bins=10)
+
+            pf_fileSize_hit_LRU_cache.quad(
+                bottom=0,
+                top=hist_hit_lru,
+                left=edges_hit_lru[:-1], 
+                right=edges_hit_lru[1:],
                 color="red",
-                width=1.0,
-                bottom=0.01 if kwargs.get(
-                    'y_axis_type', False) == 'log' else 0.0  # To avoid empty plot
+                line_color="white"
             )
 
             ##
@@ -262,24 +258,22 @@ def plot_info_window(window: int, filename: str, **kwargs):
                 tools="box_zoom,pan,reset,save",
                 plot_width=kwargs.get('plot_width', 640),
                 plot_height=kwargs.get('plot_height', 200),
-                x_range=filenames_sort_by_size,
-                y_range=(1, int(max(cur_data['weights'].values())) + 10),
-                x_axis_type=None,
-                y_axis_type=kwargs.get('y_axis_type', 'auto'),
             )
 
-            pf_fileSize_miss_LRU_cache.vbar(
-                filenames_sort_by_size,
-                top=[
+            hist_miss_lru, edges_miss_lru = np.histogram([
                     caches['lru']['stats'][filename]['nHits']
-                    if filename not in cur_data['cache']
+                    if filename not in caches['lru']['cache']
                     else 0
                     for filename in filenames_sort_by_size
-                ],
+                ], density=True, bins=10)
+
+            pf_fileSize_hit_LRU_cache.quad(
+                bottom=0,
+                top=hist_miss_lru,
+                left=edges_miss_lru[:-1], 
+                right=edges_miss_lru[1:],
                 color="red",
-                width=1.0,
-                bottom=0.01 if kwargs.get(
-                    'y_axis_type', False) == 'log' else 0.0  # To avoid empty plot
+                line_color="white"
             )
 
             figures.append(
