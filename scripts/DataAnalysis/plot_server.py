@@ -190,7 +190,7 @@ def plot_info_window(window: int, filename: str, **kwargs):
                     if filename in cur_data['cache']
                     else 0
                     for filename in filenames_sort_by_size
-                ], bins=10)
+                ], bins=range(max(cur_data['stats']['nHits'])))
 
             pf_fileSize_hit_weighted_cache.quad(
                 bottom=0,
@@ -211,11 +211,11 @@ def plot_info_window(window: int, filename: str, **kwargs):
             )
 
             hist_miss_wc, edges_miss_wc = np.histogram([
-                    cur_data['stats'][filename]['nHits']
+                    cur_data['stats'][filename]['nMiss']
                     if filename not in cur_data['cache']
                     else 0
                     for filename in filenames_sort_by_size
-                ], bins=10)
+                ], bins=range(max(cur_data['stats']['nMiss'])))
 
             pf_fileSize_miss_weighted_cache.quad(
                 bottom=0,
@@ -240,7 +240,7 @@ def plot_info_window(window: int, filename: str, **kwargs):
                     if filename in caches['lru']['cache']
                     else 0
                     for filename in filenames_sort_by_size
-                ], bins=10)
+                ], bins=range(max(caches['lru']['stats']['nHits'])))
 
             pf_fileSize_hit_LRU_cache.quad(
                 bottom=0,
@@ -261,11 +261,11 @@ def plot_info_window(window: int, filename: str, **kwargs):
             )
 
             hist_miss_lru, edges_miss_lru = np.histogram([
-                    caches['lru']['stats'][filename]['nHits']
+                    caches['lru']['stats'][filename]['nMiss']
                     if filename not in caches['lru']['cache']
                     else 0
                     for filename in filenames_sort_by_size
-                ], bins=10)
+                ], bins=range(max(caches['lru']['stats']['nMiss'])))
 
             pf_fileSize_miss_LRU_cache.quad(
                 bottom=0,
