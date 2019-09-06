@@ -194,7 +194,7 @@ def plot_info_window(window: int, filename: str, **kwargs):
                 ], bins=range(10))
 
             pf_fileSize_hit_weighted_cache.quad(
-                bottom=0,
+                bottom=0.001,
                 top=hist_hit_wc,
                 left=edges_hit_wc[:-1], 
                 right=edges_hit_wc[1:],
