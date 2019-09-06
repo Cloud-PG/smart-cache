@@ -87,18 +87,20 @@ def plot_info_window(window: int, filename: str, **kwargs):
         ]:
             filenames_sort_by_weights = [key for key, _ in sorted(
                 cur_data['weights'].items(),
-                key=lambda elm: elm[1],
+                key=lambda _, weight: weight,
                 reverse=True)
             ]
 
             filenames_sort_by_size = [key for key, _ in sorted(
                 cur_data['stats'].items(),
-                key=lambda elm: elm[1]['size'],
+                key=lambda _, file_: file_['size'],
                 reverse=True)
             ]
 
+            ##
+            # Files in weighted cache
             pf_fileW_hit_weighted_cache = figure(
-                title=f"File in {cache_name} (sorted by weight function)",
+                title=f"File in {cache_name} (sorted by weight function score, gray area)",
                 tools="box_zoom,pan,reset,save",
                 plot_width=kwargs.get('plot_width', 1280),
                 plot_height=kwargs.get('plot_height', 200),
@@ -134,8 +136,10 @@ def plot_info_window(window: int, filename: str, **kwargs):
                     'y_axis_type', False) == 'log' else 0.0  # To avoid empty plot
             )
 
+            ##
+            # Files in LRU cache
             pf_fileW_hit_lru_cache = figure(
-                title=f"File in LRU cache (sorted by weight function)",
+                title=f"File in LRU cache (sorted by weight function score, gray area)",
                 tools="box_zoom,pan,reset,save",
                 plot_width=kwargs.get('plot_width', 1280),
                 plot_height=kwargs.get('plot_height', 200),
@@ -171,10 +175,54 @@ def plot_info_window(window: int, filename: str, **kwargs):
                     'y_axis_type', False) == 'log' else 0.0  # To avoid empty plot
             )
 
+            ##
+            # Number hits x file in weighted cache
+            pf_fileSize_hit_weighted_cache = figure(
+                title=f"Number of hits x file in {cache_name} (sorted by file size value, gray area)",
+                tools="box_zoom,pan,reset,save",
+                plot_width=kwargs.get('plot_width', 1280),
+                plot_height=kwargs.get('plot_height', 200),
+                x_range=filenames_sort_by_size,
+                y_range=(1, int(max(cur_data['weights'].values())) + 10),
+                x_axis_type=None,
+                y_axis_type=kwargs.get('y_axis_type', 'auto'),
+            )
+
+            pf_fileSize_hit_weighted_cache.vbar(
+                filenames_sort_by_size,
+                top=[
+                    cur_data['stats'][filename]['size']
+                    for filename in filenames_sort_by_size
+                ],
+                color="gainsboro",
+                width=1.0,
+                bottom=0.01 if kwargs.get(
+                    'y_axis_type', False) == 'log' else 0.0  # To avoid empty plot
+            )
+
+            pf_fileSize_hit_weighted_cache.vbar(
+                filenames_sort_by_size,
+                top=[
+                    cur_data['stats'][filename]['nHits']
+                    if filename in cur_data['cache']
+                    else 0
+                    for filename in filenames_sort_by_size
+                ],
+                color="blue",
+                width=1.0,
+                bottom=0.01 if kwargs.get(
+                    'y_axis_type', False) == 'log' else 0.0  # To avoid empty plot
+            )
+
             figures.append(
                 column(
                     pf_fileW_hit_weighted_cache,
-                    pf_fileW_hit_lru_cache
+                    pf_fileW_hit_lru_cache,
+                    row(
+                        column(
+                            pf_fileSize_hit_weighted_cache
+                        )
+                    )
                 )
             )
 
