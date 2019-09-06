@@ -183,31 +183,22 @@ def plot_info_window(window: int, filename: str, **kwargs):
                 plot_width=kwargs.get('plot_width', 640),
                 plot_height=kwargs.get('plot_height', 200),
                 x_range=filenames_sort_by_size,
-                y_range=(1, int(max(cur_data['weights'].values())) + 10),
-                x_axis_type=None,
                 y_axis_type=kwargs.get('y_axis_type', 'auto'),
             )
 
-            pf_fileSize_hit_weighted_cache.vbar(
-                filenames_sort_by_size,
-                top=[
-                    cur_data['stats'][filename]['size']
-                    for filename in filenames_sort_by_size
-                ],
-                color="gainsboro",
-                width=1.0,
-                bottom=0.01 if kwargs.get(
-                    'y_axis_type', False) == 'log' else 0.0  # To avoid empty plot
-            )
-
-            pf_fileSize_hit_weighted_cache.vbar(
-                filenames_sort_by_size,
-                top=[
+            y_hit_wc, x_hit_wc = pd.qcut([
                     cur_data['stats'][filename]['nHits']
                     if filename in cur_data['cache']
                     else 0
                     for filename in filenames_sort_by_size
                 ],
+                100,
+                labels=False, retbins=True
+            )
+
+            pf_fileSize_hit_weighted_cache.vbar(
+                x_hit_wc,
+                top=y_hit_wc,
                 color="blue",
                 width=1.0,
                 bottom=0.01 if kwargs.get(
@@ -225,18 +216,6 @@ def plot_info_window(window: int, filename: str, **kwargs):
                 y_range=(1, int(max(cur_data['weights'].values())) + 10),
                 x_axis_type=None,
                 y_axis_type=kwargs.get('y_axis_type', 'auto'),
-            )
-
-            pf_fileSize_miss_weighted_cache.vbar(
-                filenames_sort_by_size,
-                top=[
-                    cur_data['stats'][filename]['size']
-                    for filename in filenames_sort_by_size
-                ],
-                color="gainsboro",
-                width=1.0,
-                bottom=0.01 if kwargs.get(
-                    'y_axis_type', False) == 'log' else 0.0  # To avoid empty plot
             )
 
             pf_fileSize_miss_weighted_cache.vbar(
@@ -269,18 +248,6 @@ def plot_info_window(window: int, filename: str, **kwargs):
             pf_fileSize_hit_LRU_cache.vbar(
                 filenames_sort_by_size,
                 top=[
-                    cur_data['stats'][filename]['size']
-                    for filename in filenames_sort_by_size
-                ],
-                color="gainsboro",
-                width=1.0,
-                bottom=0.01 if kwargs.get(
-                    'y_axis_type', False) == 'log' else 0.0  # To avoid empty plot
-            )
-
-            pf_fileSize_hit_LRU_cache.vbar(
-                filenames_sort_by_size,
-                top=[
                     caches['lru']['stats'][filename]['nHits']
                     if filename in cur_data['cache']
                     else 0
@@ -303,18 +270,6 @@ def plot_info_window(window: int, filename: str, **kwargs):
                 y_range=(1, int(max(cur_data['weights'].values())) + 10),
                 x_axis_type=None,
                 y_axis_type=kwargs.get('y_axis_type', 'auto'),
-            )
-
-            pf_fileSize_miss_LRU_cache.vbar(
-                filenames_sort_by_size,
-                top=[
-                    cur_data['stats'][filename]['size']
-                    for filename in filenames_sort_by_size
-                ],
-                color="gainsboro",
-                width=1.0,
-                bottom=0.01 if kwargs.get(
-                    'y_axis_type', False) == 'log' else 0.0  # To avoid empty plot
             )
 
             pf_fileSize_miss_LRU_cache.vbar(
