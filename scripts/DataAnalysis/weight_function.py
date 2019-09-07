@@ -24,6 +24,8 @@ from tqdm import tqdm
 
 from SmartCache.sim.pySimService import simService_pb2, simService_pb2_grpc
 
+OUTPUT_UPDATE_STEP = 100
+
 
 def simple_cost_function(**kwargs) -> float:
     return(
@@ -622,26 +624,6 @@ def simulate(cache, windows: list, region: str = "_all_",
                         record['size'] / 1024**2
                     )
 
-                if remote:
-                    stub_result = stubSimService.SimGetInfoCacheStatus(
-                        google_dot_protobuf_dot_empty__pb2.Empty()
-                    )
-                    cur_hit_rate = stub_result.hitRate
-                    cur_weighted_hit_rate = stub_result.weightedHitRate
-                    cur_hit_over_miss = stub_result.hitOverMiss
-                    cur_capacity = stub_result.capacity
-                    cur_written_data = stub_result.writtenData
-                    cur_read_on_hit = stub_result.readOnHit
-                    cur_size = stub_result.size
-                else:
-                    cur_hit_rate = cache.hit_rate
-                    cur_weighted_hit_rate = -1
-                    cur_hit_over_miss = -1
-                    cur_capacity = cache.capacity
-                    cur_written_data = cache.written_data
-                    cur_read_on_hit = cache.read_on_hit
-                    cur_size = cache.size
-
                 if plot_server:
                     time_diff = datetime.datetime.fromtimestamp(
                         record['day']
@@ -713,21 +695,42 @@ def simulate(cache, windows: list, region: str = "_all_",
                         last_time = datetime.datetime.fromtimestamp(
                             record['day'])
 
-                desc_output = ""
-                desc_output += f"[{cache_name[:4]+cache_name[-12:]}][Simulation]"
-                desc_output += f"[Window {num_window+1}/{len(windows)}]"
-                desc_output += f"[File {num_file}/{len(window)}]"
-                desc_output += f"[Hit Rate {cur_hit_rate:06.2f}]"
-                desc_output += f"[W. Hit Rate {cur_weighted_hit_rate:06.2f}]"
-                desc_output += f"[HitOverMiss {cur_hit_over_miss:0.2f}]"
-                try:
-                    desc_output += f"[Ratio {cur_read_on_hit/cur_written_data:0.2f}]"
-                except ZeroDivisionError:
-                    desc_output += f"[Ratio 0.00]"
-                desc_output += f"[Capacity {cur_capacity:06.2f}]"
+                if row_idx % OUTPUT_UPDATE_STEP == 0:
+                    if remote:
+                        stub_result = stubSimService.SimGetInfoCacheStatus(
+                            google_dot_protobuf_dot_empty__pb2.Empty()
+                        )
+                        cur_hit_rate = stub_result.hitRate
+                        cur_weighted_hit_rate = stub_result.weightedHitRate
+                        cur_hit_over_miss = stub_result.hitOverMiss
+                        cur_capacity = stub_result.capacity
+                        cur_written_data = stub_result.writtenData
+                        cur_read_on_hit = stub_result.readOnHit
+                        cur_size = stub_result.size
+                    else:
+                        cur_hit_rate = cache.hit_rate
+                        cur_weighted_hit_rate = -1
+                        cur_hit_over_miss = -1
+                        cur_capacity = cache.capacity
+                        cur_written_data = cache.written_data
+                        cur_read_on_hit = cache.read_on_hit
+                        cur_size = cache.size
 
-                record_pbar.desc = desc_output
-                record_pbar.update(1)
+                    desc_output = ""
+                    desc_output += f"[{cache_name[:4]+cache_name[-12:]}][Simulation]"
+                    desc_output += f"[Window {num_window+1}/{len(windows)}]"
+                    desc_output += f"[File {num_file}/{len(window)}]"
+                    desc_output += f"[Hit Rate {cur_hit_rate:06.2f}]"
+                    desc_output += f"[W. Hit Rate {cur_weighted_hit_rate:06.2f}]"
+                    desc_output += f"[HitOverMiss {cur_hit_over_miss:0.2f}]"
+                    try:
+                        desc_output += f"[Ratio {cur_read_on_hit/cur_written_data:0.2f}]"
+                    except ZeroDivisionError:
+                        desc_output += f"[Ratio 0.00]"
+                    desc_output += f"[Capacity {cur_capacity:06.2f}]"
+
+                    record_pbar.desc = desc_output
+                    record_pbar.update(OUTPUT_UPDATE_STEP)
 
                 # TEST
                 # if row_idx == 2000:
