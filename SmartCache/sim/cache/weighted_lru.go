@@ -237,14 +237,14 @@ func (cache *WeightedLRU) getThreshold() float32 {
 			return allWeights[i] > allWeights[j]
 		},
 	)
-	Q3 := allWeights[int(math.Floor(float64(0.75*float32(len(cache.stats)))))]
-	return Q3
+	Q2 := allWeights[int(math.Floor(float64(0.5*float32(len(cache.stats)))))]
+	return Q2
 }
 
 func (cache *WeightedLRU) updatePolicy(filename string, size float32, hit bool) bool {
 	var added = false
 	var currentTime = time.Now()
-	var Q3 = cache.getThreshold()
+	var Q2 = cache.getThreshold()
 	var curStats *weightedFileStats
 
 	if _, inMap := cache.stats[filename]; !inMap {
@@ -295,7 +295,7 @@ func (cache *WeightedLRU) updatePolicy(filename string, size float32, hit bool) 
 
 	if !hit {
 		// If weight is higher exit and return added = false
-		if curStats.weight > Q3 {
+		if curStats.weight > Q2 {
 			return added
 		}
 		// Insert with LRU mechanism
