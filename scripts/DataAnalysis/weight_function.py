@@ -720,8 +720,8 @@ def simulate(cache, windows: list, region: str = "_all_",
                     desc_output += f"[{cache_name[:4]+cache_name[-12:]}][Simulation]"
                     desc_output += f"[Window {num_window+1}/{len(windows)}]"
                     desc_output += f"[File {num_file}/{len(window)}]"
-                    desc_output += f"[Hit Rate {cur_hit_rate:06.2f}]"
-                    desc_output += f"[W. Hit Rate {cur_weighted_hit_rate:06.2f}]"
+                    desc_output += f"[HitRate {cur_hit_rate:06.2f}]"
+                    desc_output += f"[W.HitRate {cur_weighted_hit_rate:06.2f}]"
                     desc_output += f"[HitOverMiss {cur_hit_over_miss:0.2f}]"
                     try:
                         desc_output += f"[Ratio {cur_read_on_hit/cur_written_data:0.2f}]"
