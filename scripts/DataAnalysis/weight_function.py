@@ -24,7 +24,7 @@ from tqdm import tqdm
 
 from SmartCache.sim.pySimService import simService_pb2, simService_pb2_grpc
 
-OUTPUT_UPDATE_STEP = 100
+OUTPUT_UPDATE_STEP = 1000
 
 
 def simple_cost_function(**kwargs) -> float:
