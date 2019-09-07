@@ -177,6 +177,10 @@ func (cache *LRUCache) updatePolicy(filename string, size float32, hit bool) boo
 				delete(cache.files, tmpVal.Value.(string))
 
 				tmpVal = tmpVal.Next()
+				// Check if all files are deleted
+				if tmpVal == nil {
+					break
+				}
 				cache.queue.Remove(tmpVal.Prev())
 
 				if totalDeleted >= size {
@@ -184,10 +188,12 @@ func (cache *LRUCache) updatePolicy(filename string, size float32, hit bool) boo
 				}
 			}
 		}
-		cache.files[filename] = size
-		cache.queue.PushBack(filename)
-		cache.size += size
-		added = true
+		if cache.Size()+size <= cache.MaxSize {
+			cache.files[filename] = size
+			cache.queue.PushBack(filename)
+			cache.size += size
+			added = true
+		}
 	} else {
 		var elm2move *list.Element
 		for tmpVal := cache.queue.Front(); tmpVal != nil; tmpVal = tmpVal.Next() {
@@ -219,6 +225,7 @@ func (cache *LRUCache) Get(filename string, size float32) bool {
 	added := cache.updatePolicy(filename, size, hit)
 
 	cache.stats[filename].updateRequests(hit, time.Now())
+
 	if hit {
 		cache.hit += 1.
 		cache.readOnHit += size

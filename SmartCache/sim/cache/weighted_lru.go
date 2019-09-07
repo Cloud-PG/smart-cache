@@ -1,7 +1,9 @@
 package cache
 
 import (
+	"container/list"
 	"context"
+	"math"
 	"sort"
 	"time"
 
@@ -13,7 +15,7 @@ import (
 type WeightedLRU struct {
 	files                                                 map[string]float32
 	stats                                                 map[string]*weightedFileStats
-	queue                                                 []*weightedFile
+	queue                                                 *list.List
 	hit, miss, writtenData, readOnHit, size, MaxSize, exp float32
 	functionType                                          FunctionType
 }
@@ -25,7 +27,7 @@ func (cache *WeightedLRU) Init(vars ...interface{}) {
 	}
 	cache.files = make(map[string]float32)
 	cache.stats = make(map[string]*weightedFileStats)
-	cache.queue = make([]*weightedFile, 0)
+	cache.queue = list.New()
 	cache.functionType = vars[0].(FunctionType)
 	cache.exp = vars[1].(float32)
 }
@@ -34,7 +36,18 @@ func (cache *WeightedLRU) Init(vars ...interface{}) {
 func (cache *WeightedLRU) Clear() {
 	cache.files = make(map[string]float32)
 	cache.stats = make(map[string]*weightedFileStats)
-	cache.queue = make([]*weightedFile, 0)
+	tmpVal := cache.queue.Front()
+	for {
+		if tmpVal == nil {
+			break
+		} else if tmpVal.Next() == nil {
+			cache.queue.Remove(tmpVal)
+			break
+		}
+		tmpVal = tmpVal.Next()
+		cache.queue.Remove(tmpVal.Prev())
+	}
+	cache.queue = list.New()
 	cache.hit = 0.
 	cache.miss = 0.
 	cache.writtenData = 0.
@@ -177,26 +190,67 @@ func (cache *WeightedLRU) SimGetInfoFilesWeights(_ *empty.Empty, stream pb.SimSe
 	return nil
 }
 
-func (cache *WeightedLRU) getQueueSize() float32 {
-	var size float32
-	for _, curFile := range cache.queue {
-		size += cache.stats[curFile.filename].size
+func (cache *WeightedLRU) getThreshold() float32 {
+	if len(cache.stats) == 0 {
+		return 0.0
 	}
-	return size
-}
+	var allWeights []float32
+	for _, stats := range cache.stats {
+		var weight float32
 
-func (cache *WeightedLRU) removeLast() *weightedFile {
-	removedElm := cache.queue[len(cache.queue)-1]
-	cache.queue = cache.queue[:len(cache.queue)-1]
-	return removedElm
+		switch cache.functionType {
+		case FuncFileWeight:
+			weight = fileWeight(
+				stats.size,
+				stats.totRequests,
+				cache.exp,
+			)
+		case FuncFileWeightAndTime:
+			weight = fileWeightAndTime(
+				stats.size,
+				stats.totRequests,
+				cache.exp,
+				stats.lastTimeRequested,
+			)
+		case FuncFileWeightOnlyTime:
+			weight = fileWeightOnlyTime(
+				stats.totRequests,
+				cache.exp,
+				stats.lastTimeRequested,
+			)
+		case FuncWeightedRequests:
+			weight = fileWeightedRequest(
+				stats.size,
+				stats.totRequests,
+				stats.getMeanReqTimes(time.Now()),
+				cache.exp,
+			)
+		}
+		allWeights = append(
+			allWeights,
+			weight,
+		)
+	}
+	sort.Slice(
+		allWeights,
+		func(i, j int) bool {
+			return allWeights[i] > allWeights[j]
+		},
+	)
+	Q3 := allWeights[int(math.Floor(float64(0.75*float32(len(cache.stats)))))]
+	return Q3
 }
 
 func (cache *WeightedLRU) updatePolicy(filename string, size float32, hit bool) bool {
 	var added = false
 	var currentTime = time.Now()
+	var Q3 = cache.getThreshold()
+	var curStats *weightedFileStats
 
 	if _, inMap := cache.stats[filename]; !inMap {
 		cache.stats[filename] = &weightedFileStats{
+			filename,
+			-1,
 			size,
 			0.,
 			0,
@@ -206,85 +260,87 @@ func (cache *WeightedLRU) updatePolicy(filename string, size float32, hit bool) 
 			0,
 		}
 	}
+	curStats = cache.stats[filename]
 
 	cache.stats[filename].updateRequests(hit, currentTime)
 
-	if !hit {
-		cache.queue = append(
-			cache.queue,
-			&weightedFile{
-				filename,
-				size,
-				-1.,
-			},
+	switch cache.functionType {
+	case FuncFileWeight:
+		curStats.weight = fileWeight(
+			curStats.size,
+			curStats.totRequests,
+			cache.exp,
 		)
-		added = true
+	case FuncFileWeightAndTime:
+		curStats.weight = fileWeightAndTime(
+			curStats.size,
+			curStats.totRequests,
+			cache.exp,
+			curStats.lastTimeRequested,
+		)
+	case FuncFileWeightOnlyTime:
+		curStats.weight = fileWeightOnlyTime(
+			curStats.totRequests,
+			cache.exp,
+			curStats.lastTimeRequested,
+		)
+	case FuncWeightedRequests:
+		curStats.weight = fileWeightedRequest(
+			curStats.size,
+			curStats.totRequests,
+			curStats.getMeanReqTimes(currentTime),
+			cache.exp,
+		)
 	}
 
-	queueSize := cache.getQueueSize()
-	if queueSize > cache.MaxSize {
-		// Update weights
-		for _, curFile := range cache.queue {
-			curStats := cache.stats[curFile.filename]
-			switch cache.functionType {
-			case FuncFileWeight:
-				curFile.weight = fileWeight(
-					curStats.size,
-					curStats.totRequests,
-					cache.exp,
-				)
-			case FuncFileWeightAndTime:
-				curFile.weight = fileWeightAndTime(
-					curStats.size,
-					curStats.totRequests,
-					cache.exp,
-					curStats.lastTimeRequested,
-				)
-			case FuncFileWeightOnlyTime:
-				curFile.weight = fileWeightOnlyTime(
-					curStats.totRequests,
-					cache.exp,
-					curStats.lastTimeRequested,
-				)
-			case FuncWeightedRequests:
-				curFile.weight = fileWeightedRequest(
-					curStats.size,
-					curStats.totRequests,
-					curStats.getMeanReqTimes(currentTime),
-					cache.exp,
-				)
+	if !hit {
+		// If weight is higher exit and return added = false
+		if curStats.weight > Q3 {
+			return added
+		}
+		// Insert with LRU mechanism
+		if cache.Size()+size > cache.MaxSize {
+			var totalDeleted float32
+			tmpVal := cache.queue.Front()
+			for {
+				if tmpVal == nil {
+					break
+				}
+				fileSize := cache.files[tmpVal.Value.(string)]
+				cache.size -= fileSize
+				totalDeleted += fileSize
+				delete(cache.files, tmpVal.Value.(string))
+
+				tmpVal = tmpVal.Next()
+				// Check if all files are deleted
+				if tmpVal == nil {
+					break
+				}
+				cache.queue.Remove(tmpVal.Prev())
+
+				if totalDeleted >= size {
+					break
+				}
 			}
 		}
-		// Sort queue
-		sort.Slice(
-			cache.queue,
-			func(i, j int) bool {
-				return cache.queue[i].weight < cache.queue[j].weight
-			},
-		)
-		// Remove files
-		for {
-			if queueSize <= cache.MaxSize {
+		if cache.Size()+size <= cache.MaxSize {
+			cache.files[filename] = size
+			cache.queue.PushBack(filename)
+			cache.size += size
+			added = true
+		}
+	} else {
+		var elm2move *list.Element
+		for tmpVal := cache.queue.Front(); tmpVal != nil; tmpVal = tmpVal.Next() {
+			if tmpVal.Value.(string) == filename {
+				elm2move = tmpVal
 				break
 			}
-			elmRemoved := cache.removeLast()
-
-			if elmRemoved.filename == filename {
-				added = false
-			} else {
-				cache.size -= cache.files[elmRemoved.filename]
-				delete(cache.files, elmRemoved.filename)
-			}
-
-			queueSize -= cache.stats[elmRemoved.filename].size
+		}
+		if elm2move != nil {
+			cache.queue.MoveToBack(elm2move)
 		}
 	}
-
-	if added {
-		cache.files[filename] = size
-		cache.size += size
-	}
-
 	return added
 }
 

@@ -1,9 +1,9 @@
 package cache
 
 import (
+	_ "fmt"
 	"math/rand"
 	"testing"
-	// "fmt"
 )
 
 func TestLRUCacheBaseMultipleInsert(t *testing.T) {
@@ -13,6 +13,7 @@ func TestLRUCacheBaseMultipleInsert(t *testing.T) {
 	testCache.Init()
 
 	res := testCache.Get("/a/b/c/d/file0", 1.0)
+
 	testCache.Get("/a/b/c/d/file0", 1.0)
 	testCache.Get("/a/b/c/d/file0", 1.0)
 	testCache.Get("/a/b/c/d/file0", 1.0)
@@ -21,8 +22,8 @@ func TestLRUCacheBaseMultipleInsert(t *testing.T) {
 		t.Fatalf("First insert error -> Expected %t but got %t", true, res)
 	} else if testCache.HitRate() != 75. {
 		t.Fatalf("Hit rate error -> Expected %f but got %f", 75., testCache.HitRate())
-	} else if testCache.WeightedHitRate() != 75. {
-		t.Fatalf("Hit rate error -> Expected %f but got %f", 75., testCache.WeightedHitRate())
+	} else if testCache.WeightedHitRate() != 225. {
+		t.Fatalf("Weighted hit rate error -> Expected %f but got %f", 225., testCache.WeightedHitRate())
 	} else if testCache.Size() != 1.0 {
 		t.Fatalf("Size error -> Expected %f but got %f", 1.0, testCache.Size())
 	} else if testCache.WrittenData() != 1.0 {
@@ -49,8 +50,8 @@ func TestLRUCacheClear(t *testing.T) {
 		t.Fatalf("Size error -> Expected %f but got %f", 0., testCache.Size())
 	} else if testCache.WrittenData() != 0. {
 		t.Fatalf("Written data error -> Expected %f but got %f", 0., testCache.WrittenData())
-	} else if testCache.ReadOnHit() != 3. {
-		t.Fatalf("Read on hit error -> Expected %f but got %f", 3., testCache.ReadOnHit())
+	} else if testCache.ReadOnHit() != 0. {
+		t.Fatalf("Read on hit error -> Expected %f but got %f", 0., testCache.ReadOnHit())
 	} else if testCache.queue.Len() != 0 {
 		t.Fatalf("Queue error -> Expected %d but got %d", 0, testCache.queue.Len())
 	} else if len(testCache.files) != 0 {

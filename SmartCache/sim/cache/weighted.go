@@ -13,7 +13,7 @@ import (
 type WeightedCache struct {
 	files                                                 map[string]float32
 	stats                                                 map[string]*weightedFileStats
-	queue                                                 []*weightedFile
+	queue                                                 []*weightedFileStats
 	hit, miss, writtenData, readOnHit, size, MaxSize, exp float32
 	functionType                                          FunctionType
 }
@@ -25,7 +25,7 @@ func (cache *WeightedCache) Init(vars ...interface{}) {
 	}
 	cache.files = make(map[string]float32)
 	cache.stats = make(map[string]*weightedFileStats)
-	cache.queue = make([]*weightedFile, 0)
+	cache.queue = make([]*weightedFileStats, 0)
 	cache.functionType = vars[0].(FunctionType)
 	cache.exp = vars[1].(float32)
 }
@@ -34,7 +34,7 @@ func (cache *WeightedCache) Init(vars ...interface{}) {
 func (cache *WeightedCache) Clear() {
 	cache.files = make(map[string]float32)
 	cache.stats = make(map[string]*weightedFileStats)
-	cache.queue = make([]*weightedFile, 0)
+	cache.queue = make([]*weightedFileStats, 0)
 	cache.hit = 0.
 	cache.miss = 0.
 	cache.writtenData = 0.
@@ -179,13 +179,13 @@ func (cache *WeightedCache) SimGetInfoFilesWeights(_ *empty.Empty, stream pb.Sim
 
 func (cache *WeightedCache) getQueueSize() float32 {
 	var size float32
-	for _, curFile := range cache.queue {
-		size += cache.stats[curFile.filename].size
+	for _, stats := range cache.queue {
+		size += stats.size
 	}
 	return size
 }
 
-func (cache *WeightedCache) removeLast() *weightedFile {
+func (cache *WeightedCache) removeLast() *weightedFileStats {
 	removedElm := cache.queue[len(cache.queue)-1]
 	cache.queue = cache.queue[:len(cache.queue)-1]
 	return removedElm
@@ -197,6 +197,8 @@ func (cache *WeightedCache) updatePolicy(filename string, size float32, hit bool
 
 	if _, inMap := cache.stats[filename]; !inMap {
 		cache.stats[filename] = &weightedFileStats{
+			filename,
+			-1.,
 			size,
 			0.,
 			0,
@@ -212,11 +214,7 @@ func (cache *WeightedCache) updatePolicy(filename string, size float32, hit bool
 	if !hit {
 		cache.queue = append(
 			cache.queue,
-			&weightedFile{
-				filename,
-				size,
-				-1.,
-			},
+			cache.stats[filename],
 		)
 		added = true
 	}
@@ -224,33 +222,32 @@ func (cache *WeightedCache) updatePolicy(filename string, size float32, hit bool
 	queueSize := cache.getQueueSize()
 	if queueSize > cache.MaxSize {
 		// Update weights
-		for _, curFile := range cache.queue {
-			curStats := cache.stats[curFile.filename]
+		for _, curFileStats := range cache.queue {
 			switch cache.functionType {
 			case FuncFileWeight:
-				curFile.weight = fileWeight(
-					curStats.size,
-					curStats.totRequests,
+				curFileStats.weight = fileWeight(
+					curFileStats.size,
+					curFileStats.totRequests,
 					cache.exp,
 				)
 			case FuncFileWeightAndTime:
-				curFile.weight = fileWeightAndTime(
-					curStats.size,
-					curStats.totRequests,
+				curFileStats.weight = fileWeightAndTime(
+					curFileStats.size,
+					curFileStats.totRequests,
 					cache.exp,
-					curStats.lastTimeRequested,
+					curFileStats.lastTimeRequested,
 				)
 			case FuncFileWeightOnlyTime:
-				curFile.weight = fileWeightOnlyTime(
-					curStats.totRequests,
+				curFileStats.weight = fileWeightOnlyTime(
+					curFileStats.totRequests,
 					cache.exp,
-					curStats.lastTimeRequested,
+					curFileStats.lastTimeRequested,
 				)
 			case FuncWeightedRequests:
-				curFile.weight = fileWeightedRequest(
-					curStats.size,
-					curStats.totRequests,
-					curStats.getMeanReqTimes(currentTime),
+				curFileStats.weight = fileWeightedRequest(
+					curFileStats.size,
+					curFileStats.totRequests,
+					curFileStats.getMeanReqTimes(currentTime),
 					cache.exp,
 				)
 			}

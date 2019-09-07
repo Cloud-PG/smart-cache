@@ -7,13 +7,9 @@ const (
 	StatsMemorySize uint64 = 64
 )
 
-type weightedFile struct {
-	filename string
-	size     float32
-	weight   float32
-}
-
 type weightedFileStats struct {
+	filename          string
+	weight            float32
 	size              float32
 	totRequests       uint32
 	nHits             uint32
