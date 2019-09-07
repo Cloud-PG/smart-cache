@@ -226,6 +226,7 @@ func (cache *WeightedLRU) getThreshold() float32 {
 				cache.exp,
 			)
 		}
+		stats.weight = weight
 		allWeights = append(
 			allWeights,
 			weight,
@@ -260,41 +261,11 @@ func (cache *WeightedLRU) updatePolicy(filename string, size float32, hit bool) 
 		}
 	}
 	curStats = cache.stats[filename]
-
-	cache.stats[filename].updateRequests(hit, currentTime)
-
-	switch cache.functionType {
-	case FuncFileWeight:
-		curStats.weight = fileWeight(
-			curStats.size,
-			curStats.totRequests,
-			cache.exp,
-		)
-	case FuncFileWeightAndTime:
-		curStats.weight = fileWeightAndTime(
-			curStats.size,
-			curStats.totRequests,
-			cache.exp,
-			curStats.lastTimeRequested,
-		)
-	case FuncFileWeightOnlyTime:
-		curStats.weight = fileWeightOnlyTime(
-			curStats.totRequests,
-			cache.exp,
-			curStats.lastTimeRequested,
-		)
-	case FuncWeightedRequests:
-		curStats.weight = fileWeightedRequest(
-			curStats.size,
-			curStats.totRequests,
-			curStats.getMeanReqTimes(currentTime),
-			cache.exp,
-		)
-	}
+	curStats.updateRequests(hit, currentTime)
 
 	if !hit {
-		// If weight is higher exit and return added = false
 		var Q2 = cache.getThreshold()
+		// If weight is higher exit and return added = false
 		if curStats.weight > Q2 {
 			return added
 		}
