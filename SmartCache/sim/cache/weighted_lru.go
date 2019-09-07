@@ -232,6 +232,7 @@ func (cache *WeightedLRU) getThreshold() float32 {
 			weight,
 		)
 	}
+	// Order from the highest weight to the smallest
 	sort.Slice(
 		allWeights,
 		func(i, j int) bool {
