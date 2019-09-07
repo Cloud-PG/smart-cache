@@ -58,6 +58,10 @@ def fill_hit_miss_bins(n_bins: int, edges: list, values: list) -> tuple:
     return hist_hit_bin, hist_miss_bin
 
 
+def check_filters(string: str, filters: list):
+    return not all([string.find(filter_) != -1 for filter_ in filters])
+
+
 def get_size_from_name(name: str) -> str:
     string = name.split("_")
     for part in string:
@@ -74,10 +78,10 @@ def plot_info_window(window: int, filename: str, **kwargs):
     filters = kwargs.get('filters', [])
 
     for cache_name, info in WINDOW_INFO.items():
+        if filters and check_filters(cache_name, filters):
+            continue
+
         size = get_size_from_name(cache_name)
-        if filters:
-            if size not in filters:
-                continue
         if size not in data:
             data[size] = {}
 
@@ -355,10 +359,10 @@ def plot_line(table_name: str, filename: str, **kwargs):
 
     if table_name != 'ratio' and table_name != 'diff':
         for name, values in TABLES[table_name].items():
-            if filters:
-                size = get_size_from_name(name)
-                if size not in filters:
-                    continue
+            if filters and check_filters(cache_name, filters):
+                continue
+
+            size = get_size_from_name(cache_name)
             if not v_lines:
                 v_lines = [len(elm) for elm in values]
                 for idx in range(1, len(v_lines)):
@@ -393,10 +397,10 @@ def plot_line(table_name: str, filename: str, **kwargs):
                         'written_data': [],
                         'read_on_hit': []
                     }
-                if filters:
-                    size = get_size_from_name(name)
-                    if size not in filters:
-                        continue
+                if filters and check_filters(cache_name, filters):
+                    continue
+
+                size = get_size_from_name(cache_name)
                 if not v_lines:
                     v_lines = [len(elm) for elm in values]
                     for idx in range(1, len(v_lines)):
