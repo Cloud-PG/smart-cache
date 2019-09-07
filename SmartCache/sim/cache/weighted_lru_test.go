@@ -21,12 +21,12 @@ func TestWeightedLRUBaseMultipleInsert(t *testing.T) {
 	testCache.Get("/a/b/c/d/file0", 1.0)
 	testCache.Get("/a/b/c/d/file0", 1.0)
 
-	if res == true {
-		t.Fatalf("First insert error -> Expected %t but got %t", false, res)
-	} else if testCache.HitRate() != 50. {
-		t.Fatalf("Hit rate error -> Expected %f but got %f", 50., testCache.HitRate())
-	} else if testCache.WeightedHitRate() != 100. {
-		t.Fatalf("Weighted hit rate error -> Expected %f but got %f", 100., testCache.WeightedHitRate())
+	if !res {
+		t.Fatalf("First insert error -> Expected %t but got %t", true, res)
+	} else if testCache.HitRate() != 75. {
+		t.Fatalf("Hit rate error -> Expected %f but got %f", 75., testCache.HitRate())
+	} else if testCache.WeightedHitRate() != 225. {
+		t.Fatalf("Weighted hit rate error -> Expected %f but got %f", 225., testCache.WeightedHitRate())
 	} else if testCache.Size() != 1.0 {
 		t.Fatalf("Size error -> Expected %f but got %f", 1.0, testCache.Size())
 	} else if testCache.WrittenData() != 1.0 {
@@ -76,17 +76,21 @@ func TestWeightedLRUInsert(t *testing.T) {
 	testCache.Get("/a/b/c/d/file1", 2.0)
 	testCache.Get("/a/b/c/d/file1", 2.0)
 	testCache.Get("/a/b/c/d/file4", 1.0)
+	testCache.Get("/a/b/c/d/file4", 1.0)
+	testCache.Get("/a/b/c/d/file4", 1.0)
+	testCache.Get("/a/b/c/d/file4", 1.0)
+	testCache.Get("/a/b/c/d/file4", 1.0)
 	testCache.Get("/a/b/c/d/file3", 1.0)
 	testCache.Get("/a/b/c/d/file4", 1.0)
 
-	if testCache.HitRate() != 20. {
-		t.Fatalf("Hit rate error -> Expected %f but got %f", 20., testCache.HitRate())
-	} else if testCache.Size() != 3.0 {
-		t.Fatalf("Size error -> Expected %f but got %f", 3.0, testCache.Size())
-	} else if testCache.WrittenData() != 6.0 {
-		t.Fatalf("Written data error -> Expected %f but got %f", 6.0, testCache.WrittenData())
-	} else if testCache.ReadOnHit() != 4. {
-		t.Fatalf("Read on hit error -> Expected %f but got %f", 4., testCache.ReadOnHit())
+	if testCache.HitRate() != 50. {
+		t.Fatalf("Hit rate error -> Expected %f but got %f", 50., testCache.HitRate())
+	} else if testCache.Size() != 2.0 {
+		t.Fatalf("Size error -> Expected %f but got %f", 2.0, testCache.Size())
+	} else if testCache.WrittenData() != 7.0 {
+		t.Fatalf("Written data error -> Expected %f but got %f", 7.0, testCache.WrittenData())
+	} else if testCache.ReadOnHit() != 9. {
+		t.Fatalf("Read on hit error -> Expected %f but got %f", 9., testCache.ReadOnHit())
 	}
 }
 
