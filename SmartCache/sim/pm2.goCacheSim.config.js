@@ -1,7 +1,7 @@
 module.exports = {
   apps : [{
     name: 'goCacheSim IT 10T',
-    script: 'goCacheSim IT',
+    script: 'goCacheSim',
     interpreter: null,
 
     // Options reference: https://pm2.io/doc/en/runtime/reference/ecosystem-file/
@@ -13,7 +13,7 @@ module.exports = {
   },
   {
     name: 'goCacheSim IT 100T',
-    script: 'goCacheSim IT',
+    script: 'goCacheSim',
     interpreter: null,
 
     // Options reference: https://pm2.io/doc/en/runtime/reference/ecosystem-file/
@@ -25,7 +25,7 @@ module.exports = {
   },
   {
     name: 'goCacheSim IT 200T',
-    script: 'goCacheSim IT',
+    script: 'goCacheSim',
     interpreter: null,
 
     // Options reference: https://pm2.io/doc/en/runtime/reference/ecosystem-file/
@@ -37,7 +37,7 @@ module.exports = {
   },
   {
     name: 'goCacheSim IT 10T LRU',
-    script: 'goCacheSim IT',
+    script: 'goCacheSim',
     interpreter: null,
 
     // Options reference: https://pm2.io/doc/en/runtime/reference/ecosystem-file/
@@ -49,7 +49,7 @@ module.exports = {
   },
   {
     name: 'goCacheSim IT 100T LRU',
-    script: 'goCacheSim IT',
+    script: 'goCacheSim',
     interpreter: null,
 
     // Options reference: https://pm2.io/doc/en/runtime/reference/ecosystem-file/
@@ -61,7 +61,7 @@ module.exports = {
   },
   {
     name: 'goCacheSim IT 200T LRU',
-    script: 'goCacheSim IT',
+    script: 'goCacheSim',
     interpreter: null,
 
     // Options reference: https://pm2.io/doc/en/runtime/reference/ecosystem-file/
@@ -73,7 +73,7 @@ module.exports = {
   },
   {
     name: 'goCacheSim US 10T',
-    script: 'goCacheSim US',
+    script: 'goCacheSim',
     interpreter: null,
 
     // Options reference: https://pm2.io/doc/en/runtime/reference/ecosystem-file/
@@ -85,7 +85,7 @@ module.exports = {
   },
   {
     name: 'goCacheSim US 100T',
-    script: 'goCacheSim US',
+    script: 'goCacheSim',
     interpreter: null,
 
     // Options reference: https://pm2.io/doc/en/runtime/reference/ecosystem-file/
@@ -97,7 +97,7 @@ module.exports = {
   },
   {
     name: 'goCacheSim US 200T',
-    script: 'goCacheSim US',
+    script: 'goCacheSim',
     interpreter: null,
 
     // Options reference: https://pm2.io/doc/en/runtime/reference/ecosystem-file/
@@ -109,7 +109,7 @@ module.exports = {
   },
   {
     name: 'goCacheSim US 10T LRU',
-    script: 'goCacheSim US',
+    script: 'goCacheSim',
     interpreter: null,
 
     // Options reference: https://pm2.io/doc/en/runtime/reference/ecosystem-file/
@@ -121,7 +121,7 @@ module.exports = {
   },
   {
     name: 'goCacheSim US 100T LRU',
-    script: 'goCacheSim US',
+    script: 'goCacheSim',
     interpreter: null,
 
     // Options reference: https://pm2.io/doc/en/runtime/reference/ecosystem-file/
@@ -133,7 +133,7 @@ module.exports = {
   },
   {
     name: 'goCacheSim US 200T LRU',
-    script: 'goCacheSim US',
+    script: 'goCacheSim',
     interpreter: null,
 
     // Options reference: https://pm2.io/doc/en/runtime/reference/ecosystem-file/
