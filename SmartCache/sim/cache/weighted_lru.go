@@ -244,7 +244,6 @@ func (cache *WeightedLRU) getThreshold() float32 {
 func (cache *WeightedLRU) updatePolicy(filename string, size float32, hit bool) bool {
 	var added = false
 	var currentTime = time.Now()
-	var Q2 = cache.getThreshold()
 	var curStats *weightedFileStats
 
 	if _, inMap := cache.stats[filename]; !inMap {
@@ -295,6 +294,7 @@ func (cache *WeightedLRU) updatePolicy(filename string, size float32, hit bool) 
 
 	if !hit {
 		// If weight is higher exit and return added = false
+		var Q2 = cache.getThreshold()
 		if curStats.weight > Q2 {
 			return added
 		}
