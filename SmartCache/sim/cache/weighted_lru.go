@@ -5,6 +5,7 @@ import (
 	"context"
 	"math"
 	"sort"
+	"sync"
 	"time"
 
 	pb "./simService"
@@ -16,7 +17,7 @@ type WeightedLRU struct {
 	files                                                 map[string]float32
 	stats                                                 []*weightedFileStats
 	statsFilenames                                        map[string]int
-	statsChan                                             []chan cacheEmptyMsg
+	statsWaitGroup                                        sync.WaitGroup
 	queue                                                 *list.List
 	hit, miss, writtenData, readOnHit, size, MaxSize, exp float32
 	functionType                                          FunctionType
@@ -30,7 +31,7 @@ func (cache *WeightedLRU) Init(vars ...interface{}) {
 	cache.files = make(map[string]float32)
 	cache.stats = make([]*weightedFileStats, 0)
 	cache.statsFilenames = make(map[string]int)
-	cache.statsChan = make([]chan cacheEmptyMsg, 0)
+	cache.statsWaitGroup = sync.WaitGroup{}
 	cache.queue = list.New()
 	cache.functionType = vars[0].(FunctionType)
 	cache.exp = vars[1].(float32)
@@ -41,7 +42,7 @@ func (cache *WeightedLRU) Clear() {
 	cache.files = make(map[string]float32)
 	cache.stats = make([]*weightedFileStats, 0)
 	cache.statsFilenames = make(map[string]int)
-	cache.statsChan = make([]chan cacheEmptyMsg, 0)
+	cache.statsWaitGroup = sync.WaitGroup{}
 	tmpVal := cache.queue.Front()
 	for {
 		if tmpVal == nil {
@@ -205,8 +206,10 @@ func (cache *WeightedLRU) getThreshold() float32 {
 		return 0.0
 	}
 
-	for idx, stats := range cache.stats {
-		go func(statIdx int, curStats *weightedFileStats) {
+	for _, stats := range cache.stats {
+		cache.statsWaitGroup.Add(1)
+
+		go func(curStats *weightedFileStats, wg *sync.WaitGroup) {
 			var weight float32
 
 			switch cache.functionType {
@@ -238,14 +241,11 @@ func (cache *WeightedLRU) getThreshold() float32 {
 				)
 			}
 			curStats.weight = weight
-			cache.statsChan[statIdx] <- cacheEmptyMsg{}
-		}(idx, stats)
+			wg.Done()
+		}(stats, &cache.statsWaitGroup)
 	}
 
-	// wait for goroutines to finish
-	for idx := 0; idx < len(cache.statsChan); idx++ {
-		<-cache.statsChan[idx]
-	}
+	cache.statsWaitGroup.Wait()
 
 	// Order from the highest weight to the smallest
 	sort.Slice(
@@ -272,7 +272,6 @@ func (cache *WeightedLRU) getOrInsertStats(filename string, size float32) *weigh
 			[StatsMemorySize]time.Time{},
 			0,
 		})
-		cache.statsChan = append(cache.statsChan, make(chan cacheEmptyMsg))
 		cache.statsFilenames[filename] = len(cache.stats) - 1
 		result = cache.stats[len(cache.stats)-1]
 	} else {
