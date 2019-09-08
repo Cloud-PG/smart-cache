@@ -7,6 +7,7 @@ const (
 	StatsMemorySize uint64 = 64
 )
 
+type cacheEmptyMsg struct{}
 type weightedFileStats struct {
 	filename          string
 	weight            float32
