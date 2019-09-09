@@ -429,6 +429,8 @@ def plot_line(table_name: str, filename: str, **kwargs):
                     update_colors(cache_name)
 
         for cache_name, values in data.items():
+            if filters and check_filters(cache_name, filters):
+                continue
             if cache_name not in TABLE_COLORS:
                 update_colors(cache_name)
             if table_name == 'ratio':
