@@ -452,16 +452,16 @@ def plot_line(table_name: str, filename: str, **kwargs):
 
             if table_name != 'ratio':
                 plot_figure.line(
-                    range(len(values['read_on_hit'])),
-                    values['written_data']['ratio'],
+                    range(len(values['ratio'])),
+                    values['ratio'],
                     legend=cache_name,
                     color=TABLE_COLORS[cache_name],
                     line_width=2.
                 )
             elif table_name != 'diff':
                 plot_figure.line(
-                    range(len(values['read_on_hit'])),
-                    values['written_data']['diff'],
+                    range(len(values['diff'])),
+                    values['diff'],
                     legend=cache_name,
                     color=TABLE_COLORS[cache_name],
                     line_width=2.
