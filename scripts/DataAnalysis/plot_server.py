@@ -363,7 +363,7 @@ def plot_line(table_name: str, filename: str, **kwargs):
 
     v_lines = []
 
-    if table_name != 'ratio' and table_name != 'diff':
+    if table_name != 'ratio' and table_name != 'diff' and table_name != 'diff_ratio':
         for cache_name, values in sorted(
             TABLES[table_name].items(), key=lambda elm: elm[0]
         ):
