@@ -363,7 +363,7 @@ def plot_line(table_name: str, filename: str, **kwargs):
 
     v_lines = []
 
-    if table_name not in ['ratio', 'diff', 'diff_ratio']:
+    if table_name not in ['ratio', 'diff', 'diff_compare']:
         for cache_name, values in sorted(
             TABLES[table_name].items(), key=lambda elm: elm[0]
         ):
@@ -395,7 +395,7 @@ def plot_line(table_name: str, filename: str, **kwargs):
                 color=TABLE_COLORS[cache_name],
                 line_width=2.
             )
-    elif table_name in ['ratio', 'diff', 'diff_ratio']:
+    elif table_name in ['ratio', 'diff', 'diff_compare']:
         data = {}
         for cur_table_name in ['written_data', 'read_on_hit']:
             for cache_name, values in sorted(
@@ -466,20 +466,27 @@ def plot_line(table_name: str, filename: str, **kwargs):
                     color=TABLE_COLORS[cache_name],
                     line_width=2.
                 )
-            elif table_name == 'diff_ratio':
+            elif table_name == 'diff_compare':
                 if cache_name.lower().find('lru') > 0:
                     size = get_size_from_name(cache_name)
                     for cur_name in data:
                         cur_size = get_size_from_name(cur_name)
-                        if cur_size == size and cur_name.lower().find('lru') != -1:
-                            lru_values = data[cur_name]['diff']
+                        if cur_size == size and cur_name.lower().find('lru') == 0:
+                            lru_values = data[cur_name]
                             break
 
                     plot_figure.line(
                         range(len(values['diff'])),
                         [
-                            value - lru_values[idx]
-                            if lru_values[idx] != 0. else 0.
+                            (
+                                value -
+                                lru_values['diff'][idx]
+                            ) / (
+                                lru_values['written_data'][idx] +
+                                lru_values['read_on_hit'][idx]
+                            )
+                            if lru_values['written_data'][idx] != 0. and lru_values['read_on_hit'][idx] != 0.
+                            else 0.
                             for idx, value in enumerate(
                                 values['diff']
                             )
@@ -547,7 +554,7 @@ def table_plot(table_name: str):
         kwargs['y_axis_label'] = "Ratio"
     elif table_name == "diff":
         kwargs['y_axis_label'] = "Diff"
-    elif table_name == "diff_ratio":
+    elif table_name == "diff_compare":
         kwargs['y_axis_label'] = "Diff compare"
 
     plot_line(
