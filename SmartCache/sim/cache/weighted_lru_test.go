@@ -7,14 +7,15 @@ import (
 )
 
 const (
-	WeightedLRUEXP float32 = 2.0
+	UpdateStatsPolicy UpdateStatsPolicyType = UpdateStatsOnMiss
+	WeightedLRUEXP    float32               = 2.0
 )
 
 func TestWeightedLRUBaseMultipleInsert(t *testing.T) {
 	testCache := WeightedLRU{
 		MaxSize: 3.0,
 	}
-	testCache.Init(FuncWeightedRequests, WeightedLRUEXP)
+	testCache.Init(FuncWeightedRequests, UpdateStatsPolicy, WeightedLRUEXP)
 
 	res := testCache.Get("/a/b/c/d/file0", 1.0)
 	testCache.Get("/a/b/c/d/file0", 1.0)
@@ -38,7 +39,7 @@ func TestWeightedLRUClear(t *testing.T) {
 	testCache := WeightedLRU{
 		MaxSize: 3.0,
 	}
-	testCache.Init(FuncWeightedRequests, WeightedLRUEXP)
+	testCache.Init(FuncWeightedRequests, UpdateStatsPolicy, WeightedLRUEXP)
 
 	testCache.Get("/a/b/c/d/file0", 1.0)
 	testCache.Get("/a/b/c/d/file0", 1.0)
@@ -66,7 +67,7 @@ func TestWeightedLRUInsert(t *testing.T) {
 	testCache := WeightedLRU{
 		MaxSize: 3.0,
 	}
-	testCache.Init(FuncWeightedRequests, WeightedLRUEXP)
+	testCache.Init(FuncWeightedRequests, UpdateStatsPolicy, WeightedLRUEXP)
 
 	testCache.Get("/a/b/c/d/file0", 1.0)
 	testCache.Get("/a/b/c/d/file1", 2.0)
@@ -109,7 +110,7 @@ func BenchmarkWeightedLRU(b *testing.B) {
 	testCache := WeightedLRU{
 		MaxSize: maxSize,
 	}
-	testCache.Init(FuncWeightedRequests, WeightedLRUEXP)
+	testCache.Init(FuncWeightedRequests, UpdateStatsPolicy, WeightedLRUEXP)
 
 	for n := 0; n < b.N; n++ {
 		testCache.Get(genRandomFilePath(5), rand.Float32()*maxSize)
