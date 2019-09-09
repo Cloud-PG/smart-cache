@@ -358,7 +358,7 @@ def plot_line(table_name: str, filename: str, **kwargs):
     v_lines = []
 
     if table_name != 'ratio' and table_name != 'diff':
-        for name, values in TABLES[table_name].items():
+        for cache_name, values in TABLES[table_name].items():
             if filters and check_filters(cache_name, filters):
                 continue
 
@@ -379,13 +379,13 @@ def plot_line(table_name: str, filename: str, **kwargs):
                     v_lines = []
 
             points = [value for bucket in values for value in bucket]
-            if name not in TABLE_COLORS:
-                TABLE_COLORS[name] = next(COLORS)
+            if cache_name not in TABLE_COLORS:
+                TABLE_COLORS[cache_name] = next(COLORS)
             plot_figure.line(
                 range(len(points)),
                 points,
-                legend=name,
-                color=TABLE_COLORS[name],
+                legend=cache_name,
+                color=TABLE_COLORS[cache_name],
                 line_width=2.
             )
     elif table_name == 'ratio' or table_name == 'diff':
