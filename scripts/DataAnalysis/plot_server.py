@@ -35,7 +35,7 @@ MAX_BINS = 100
 
 def update_colors(new_name: str):
     global TABLE_COLORS
-    names = TABLE_COLORS.keys() + [new_name]
+    names = list(TABLE_COLORS.keys()) + [new_name]
     colors = cycle(Category10[10])
     for name in sorted(names):
         cur_color = next(colors)
