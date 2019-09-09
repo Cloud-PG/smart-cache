@@ -395,7 +395,7 @@ def plot_line(table_name: str, filename: str, **kwargs):
                 color=TABLE_COLORS[cache_name],
                 line_width=2.
             )
-    elif table_name == 'ratio' or table_name == 'diff':
+    elif table_name == 'ratio' or table_name == 'diff' or table_name == 'diff_ratio':
         data = {}
         for cur_table_name in ['written_data', 'read_on_hit']:
             for cache_name, values in sorted(
@@ -404,7 +404,9 @@ def plot_line(table_name: str, filename: str, **kwargs):
                 if cache_name not in data:
                     data[cache_name] = {
                         'written_data': [],
-                        'read_on_hit': []
+                        'read_on_hit': [],
+                        'ratio': [],
+                        'diff': []
                     }
                 if filters and check_filters(cache_name, filters):
                     continue
@@ -434,26 +436,57 @@ def plot_line(table_name: str, filename: str, **kwargs):
             if cache_name not in TABLE_COLORS:
                 update_colors(cache_name)
             if table_name == 'ratio':
-                cur_values = [
+                values['written_data']['ratio'] = [
                     value / values['written_data'][idx]
                     if values['written_data'][idx] != 0.
                     else 0.
                     for idx, value in enumerate(values['read_on_hit'])
                 ]
             elif table_name == 'diff':
-                cur_values = [
+                values['written_data']['diff'] = [
                     value - values['written_data'][idx]
                     if values['written_data'][idx] != 0.
                     else 0.
                     for idx, value in enumerate(values['read_on_hit'])
                 ]
-            plot_figure.line(
-                range(len(values['read_on_hit'])),
-                cur_values,
-                legend=cache_name,
-                color=TABLE_COLORS[cache_name],
-                line_width=2.
-            )
+
+            if table_name != 'ratio':
+                plot_figure.line(
+                    range(len(values['read_on_hit'])),
+                    values['written_data']['ratio'],
+                    legend=cache_name,
+                    color=TABLE_COLORS[cache_name],
+                    line_width=2.
+                )
+            elif table_name != 'diff':
+                plot_figure.line(
+                    range(len(values['read_on_hit'])),
+                    values['written_data']['diff'],
+                    legend=cache_name,
+                    color=TABLE_COLORS[cache_name],
+                    line_width=2.
+                )
+            elif table_name != 'diff_ratio':
+                if cache_name.lower().find('lru') == -1:
+                    size = get_size_from_name(cache_name)
+                else:
+                    continue
+                for cur_name in data.items():
+                    cur_size = get_size_from_name(cur_name)
+                    if cur_size == size and cur_name.lower().find('lru') != -1:
+                        lru_values = data[cur_name]['diff']
+                plot_figure.line(
+                    range(len(values['read_on_hit'])),
+                    [
+                        value / lru_values[idx]
+                        for idx, value in enumerate(
+                            values['written_data']['diff']
+                        )
+                    ],
+                    legend=cache_name,
+                    color=TABLE_COLORS[cache_name],
+                    line_width=2.
+                )
 
     if v_lines:
         plot_figure.renderers.extend(v_lines)
