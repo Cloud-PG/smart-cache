@@ -216,7 +216,6 @@ func (cache *WeightedLRU) getThreshold() float32 {
 	if chunkSize > 0 {
 		for idx := 0; idx < MaxCoroutines; idx++ {
 			cache.statsWaitGroup.Add(1)
-
 			go func(stats []*weightedFileStats, startIdx int, chunkSize int, wg *sync.WaitGroup) {
 				start := (startIdx * chunkSize)
 				end := start + chunkSize
