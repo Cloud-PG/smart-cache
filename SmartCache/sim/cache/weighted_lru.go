@@ -12,6 +12,10 @@ import (
 	empty "github.com/golang/protobuf/ptypes/empty"
 )
 
+const (
+	MaxCoroutines int = 8
+)
+
 // WeightedLRU cache
 type WeightedLRU struct {
 	files                                                 map[string]float32
@@ -208,15 +212,15 @@ func (cache *WeightedLRU) getThreshold() float32 {
 		return 0.0
 	}
 
-	var chunkSize = len(cache.stats) / 4
+	var chunkSize = len(cache.stats) / MaxCoroutines
 	if chunkSize > 0 {
-		for idx := 0; idx < 4; idx++ {
+		for idx := 0; idx < MaxCoroutines; idx++ {
 			cache.statsWaitGroup.Add(1)
 
 			go func(stats []*weightedFileStats, startIdx int, chunkSize int, wg *sync.WaitGroup) {
 				start := (startIdx * chunkSize)
 				end := start + chunkSize
-				if startIdx == 3 {
+				if startIdx == MaxCoroutines-1 {
 					end = len(stats)
 				}
 
