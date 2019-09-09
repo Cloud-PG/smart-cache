@@ -18,7 +18,7 @@ type WeightedCache struct {
 	functionType                                          FunctionType
 }
 
-// Init the LRU struct
+// Init the WeightedCache struct
 func (cache *WeightedCache) Init(vars ...interface{}) {
 	if len(vars) < 2 {
 		panic("ERROR: you need to specify the weighted function to use and the exponent...")
@@ -30,7 +30,7 @@ func (cache *WeightedCache) Init(vars ...interface{}) {
 	cache.exp = vars[1].(float32)
 }
 
-// Clear the LRU struct
+// Clear the WeightedCache struct
 func (cache *WeightedCache) Clear() {
 	cache.files = make(map[string]float32)
 	cache.stats = make(map[string]*weightedFileStats)

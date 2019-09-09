@@ -4,10 +4,11 @@ import "time"
 
 const (
 	// StatsMemorySize indicates the size of fileStats memory
-	StatsMemorySize uint64 = 64
+	StatsMemorySize uint64 = 8
 )
 
 type cacheEmptyMsg struct{}
+
 type weightedFileStats struct {
 	filename          string
 	weight            float32

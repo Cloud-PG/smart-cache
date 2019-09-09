@@ -23,7 +23,7 @@ type WeightedLRU struct {
 	functionType                                          FunctionType
 }
 
-// Init the LRU struct
+// Init the WeightedLRU struct
 func (cache *WeightedLRU) Init(vars ...interface{}) {
 	if len(vars) < 2 {
 		panic("ERROR: you need to specify the weighted function to use and the exponent...")
@@ -37,7 +37,7 @@ func (cache *WeightedLRU) Init(vars ...interface{}) {
 	cache.exp = vars[1].(float32)
 }
 
-// Clear the LRU struct
+// Clear the WeightedLRU struct
 func (cache *WeightedLRU) Clear() {
 	cache.files = make(map[string]float32)
 	cache.stats = make([]*weightedFileStats, 0)
@@ -302,10 +302,10 @@ func (cache *WeightedLRU) updatePolicy(filename string, size float32, hit bool) 
 	var currentTime = time.Now()
 	var curStats *weightedFileStats
 
-	curStats = cache.getOrInsertStats(filename, size)
-	curStats.updateRequests(hit, currentTime)
-
 	if !hit {
+		curStats = cache.getOrInsertStats(filename, size)
+		curStats.updateRequests(hit, currentTime)
+
 		var Q2 = cache.getThreshold()
 		// If weight is higher exit and return added = false
 		if curStats.weight > Q2 {
