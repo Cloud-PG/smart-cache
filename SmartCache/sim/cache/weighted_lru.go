@@ -5,7 +5,6 @@ import (
 	"context"
 	"math"
 	"sort"
-	"sync"
 	"time"
 
 	pb "./simService"
@@ -17,7 +16,6 @@ type WeightedLRU struct {
 	files                                                 map[string]float32
 	stats                                                 []*weightedFileStats
 	statsFilenames                                        map[string]int
-	statsWaitGroup                                        sync.WaitGroup
 	queue                                                 *list.List
 	hit, miss, writtenData, readOnHit, size, MaxSize, exp float32
 	functionType                                          FunctionType
@@ -32,7 +30,6 @@ func (cache *WeightedLRU) Init(vars ...interface{}) {
 	cache.files = make(map[string]float32)
 	cache.stats = make([]*weightedFileStats, 0)
 	cache.statsFilenames = make(map[string]int)
-	cache.statsWaitGroup = sync.WaitGroup{}
 	cache.queue = list.New()
 	cache.functionType = vars[0].(FunctionType)
 	cache.updatePolicyType = vars[1].(UpdateStatsPolicyType)
@@ -44,7 +41,6 @@ func (cache *WeightedLRU) Clear() {
 	cache.files = make(map[string]float32)
 	cache.stats = make([]*weightedFileStats, 0)
 	cache.statsFilenames = make(map[string]int)
-	cache.statsWaitGroup = sync.WaitGroup{}
 	tmpVal := cache.queue.Front()
 	for {
 		if tmpVal == nil {
@@ -209,45 +205,38 @@ func (cache *WeightedLRU) getThreshold() float32 {
 	}
 
 	for _, stats := range cache.stats {
-		cache.statsWaitGroup.Add(1)
+		var weight float32
 
-		go func(curStats *weightedFileStats, wg *sync.WaitGroup) {
-			var weight float32
-
-			switch cache.functionType {
-			case FuncFileWeight:
-				weight = fileWeight(
-					curStats.size,
-					curStats.totRequests,
-					cache.exp,
-				)
-			case FuncFileWeightAndTime:
-				weight = fileWeightAndTime(
-					curStats.size,
-					curStats.totRequests,
-					cache.exp,
-					curStats.lastTimeRequested,
-				)
-			case FuncFileWeightOnlyTime:
-				weight = fileWeightOnlyTime(
-					curStats.totRequests,
-					cache.exp,
-					curStats.lastTimeRequested,
-				)
-			case FuncWeightedRequests:
-				weight = fileWeightedRequest(
-					curStats.size,
-					curStats.totRequests,
-					curStats.getMeanReqTimes(time.Now()),
-					cache.exp,
-				)
-			}
-			curStats.weight = weight
-			wg.Done()
-		}(stats, &cache.statsWaitGroup)
+		switch cache.functionType {
+		case FuncFileWeight:
+			weight = fileWeight(
+				stats.size,
+				stats.totRequests,
+				cache.exp,
+			)
+		case FuncFileWeightAndTime:
+			weight = fileWeightAndTime(
+				stats.size,
+				stats.totRequests,
+				cache.exp,
+				stats.lastTimeRequested,
+			)
+		case FuncFileWeightOnlyTime:
+			weight = fileWeightOnlyTime(
+				stats.totRequests,
+				cache.exp,
+				stats.lastTimeRequested,
+			)
+		case FuncWeightedRequests:
+			weight = fileWeightedRequest(
+				stats.size,
+				stats.totRequests,
+				stats.getMeanReqTimes(time.Now()),
+				cache.exp,
+			)
+		}
+		stats.weight = weight
 	}
-
-	cache.statsWaitGroup.Wait()
 
 	// Order from the highest weight to the smallest
 	sort.Slice(
