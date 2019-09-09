@@ -431,24 +431,24 @@ def plot_line(table_name: str, filename: str, **kwargs):
                     update_colors(cache_name)
 
         for cache_name, values in data.items():
+            values['ratio'] = [
+                value / values['written_data'][idx]
+                if values['written_data'][idx] != 0.
+                else 0.
+                for idx, value in enumerate(values['read_on_hit'])
+            ]
+            values['diff'] = [
+                value - values['written_data'][idx]
+                if values['written_data'][idx] != 0.
+                else 0.
+                for idx, value in enumerate(values['read_on_hit'])
+            ]
+
+        for cache_name, values in data.items():
             if filters and check_filters(cache_name, filters):
                 continue
             if cache_name not in TABLE_COLORS:
                 update_colors(cache_name)
-            if table_name == 'ratio':
-                values['ratio'] = [
-                    value / values['written_data'][idx]
-                    if values['written_data'][idx] != 0.
-                    else 0.
-                    for idx, value in enumerate(values['read_on_hit'])
-                ]
-            elif table_name == 'diff':
-                values['diff'] = [
-                    value - values['written_data'][idx]
-                    if values['written_data'][idx] != 0.
-                    else 0.
-                    for idx, value in enumerate(values['read_on_hit'])
-                ]
 
             if table_name != 'ratio':
                 plot_figure.line(
@@ -480,7 +480,7 @@ def plot_line(table_name: str, filename: str, **kwargs):
                     [
                         value / lru_values[idx]
                         for idx, value in enumerate(
-                            values['written_data']['diff']
+                            values['diff']
                         )
                     ],
                     legend=cache_name,
