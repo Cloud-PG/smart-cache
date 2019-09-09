@@ -71,7 +71,7 @@ def check_filters(string: str, filters: list):
 def get_size_from_name(name: str) -> str:
     string = name.split("_")
     for part in string:
-        if part.find("T") != -1:
+        if part[-1] == "T":
             return part
     return 'unknown'
 
@@ -363,7 +363,7 @@ def plot_line(table_name: str, filename: str, **kwargs):
 
     v_lines = []
 
-    if table_name != 'ratio' and table_name != 'diff' and table_name != 'diff_ratio':
+    if table_name not in ['ratio', 'diff', 'diff_ratio']:
         for cache_name, values in sorted(
             TABLES[table_name].items(), key=lambda elm: elm[0]
         ):
@@ -395,7 +395,7 @@ def plot_line(table_name: str, filename: str, **kwargs):
                 color=TABLE_COLORS[cache_name],
                 line_width=2.
             )
-    elif table_name == 'ratio' or table_name == 'diff' or table_name == 'diff_ratio':
+    elif table_name in ['ratio', 'diff', 'diff_ratio']:
         data = {}
         for cur_table_name in ['written_data', 'read_on_hit']:
             for cache_name, values in sorted(
@@ -467,26 +467,27 @@ def plot_line(table_name: str, filename: str, **kwargs):
                     line_width=2.
                 )
             elif table_name == 'diff_ratio':
-                if cache_name.lower().find('lru') == -1:
+                if cache_name.lower().find('lru') > 0:
                     size = get_size_from_name(cache_name)
-                else:
-                    continue
-                for cur_name in data.items():
-                    cur_size = get_size_from_name(cur_name)
-                    if cur_size == size and cur_name.lower().find('lru') != -1:
-                        lru_values = data[cur_name]['diff']
-                plot_figure.line(
-                    range(len(values['read_on_hit'])),
-                    [
-                        value / lru_values[idx]
-                        for idx, value in enumerate(
-                            values['diff']
-                        )
-                    ],
-                    legend=cache_name,
-                    color=TABLE_COLORS[cache_name],
-                    line_width=2.
-                )
+                    for cur_name in data:
+                        cur_size = get_size_from_name(cur_name)
+                        if cur_size == size and cur_name.lower().find('lru') != -1:
+                            lru_values = data[cur_name]['diff']
+                            break
+
+                    plot_figure.line(
+                        range(len(values['diff'])),
+                        [
+                            value - lru_values[idx]
+                            if lru_values[idx] != 0. else 0.
+                            for idx, value in enumerate(
+                                values['diff']
+                            )
+                        ],
+                        legend=cache_name,
+                        color=TABLE_COLORS[cache_name],
+                        line_width=2.
+                    )
 
     if v_lines:
         plot_figure.renderers.extend(v_lines)
@@ -547,7 +548,7 @@ def table_plot(table_name: str):
     elif table_name == "diff":
         kwargs['y_axis_label'] = "Diff"
     elif table_name == "diff_ratio":
-        kwargs['y_axis_label'] = "Diff ratio"
+        kwargs['y_axis_label'] = "Diff compare"
 
     plot_line(
         table_name,
