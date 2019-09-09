@@ -436,14 +436,14 @@ def plot_line(table_name: str, filename: str, **kwargs):
             if cache_name not in TABLE_COLORS:
                 update_colors(cache_name)
             if table_name == 'ratio':
-                values['written_data']['ratio'] = [
+                values['ratio'] = [
                     value / values['written_data'][idx]
                     if values['written_data'][idx] != 0.
                     else 0.
                     for idx, value in enumerate(values['read_on_hit'])
                 ]
             elif table_name == 'diff':
-                values['written_data']['diff'] = [
+                values['diff'] = [
                     value - values['written_data'][idx]
                     if values['written_data'][idx] != 0.
                     else 0.
