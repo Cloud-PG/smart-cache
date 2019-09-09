@@ -228,3 +228,4 @@ SmartCache/sim/goCacheSim
 
 # Proxy certificate for das
 SmartCache/plugin/proxy
+SmartCache/plugin/dasgoclient
