@@ -450,7 +450,7 @@ def plot_line(table_name: str, filename: str, **kwargs):
             if cache_name not in TABLE_COLORS:
                 update_colors(cache_name)
 
-            if table_name != 'ratio':
+            if table_name == 'ratio':
                 plot_figure.line(
                     range(len(values['ratio'])),
                     values['ratio'],
@@ -458,7 +458,7 @@ def plot_line(table_name: str, filename: str, **kwargs):
                     color=TABLE_COLORS[cache_name],
                     line_width=2.
                 )
-            elif table_name != 'diff':
+            elif table_name == 'diff':
                 plot_figure.line(
                     range(len(values['diff'])),
                     values['diff'],
@@ -466,7 +466,7 @@ def plot_line(table_name: str, filename: str, **kwargs):
                     color=TABLE_COLORS[cache_name],
                     line_width=2.
                 )
-            elif table_name != 'diff_ratio':
+            elif table_name == 'diff_ratio':
                 if cache_name.lower().find('lru') == -1:
                     size = get_size_from_name(cache_name)
                 else:
@@ -546,6 +546,8 @@ def table_plot(table_name: str):
         kwargs['y_axis_label'] = "Ratio"
     elif table_name == "diff":
         kwargs['y_axis_label'] = "Diff"
+    elif table_name == "diff_ratio":
+        kwargs['y_axis_label'] = "Diff ratio"
 
     plot_line(
         table_name,
