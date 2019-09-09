@@ -364,11 +364,12 @@ def plot_line(table_name: str, filename: str, **kwargs):
     v_lines = []
 
     if table_name != 'ratio' and table_name != 'diff':
-        for cache_name, values in TABLES[table_name].items():
+        for cache_name, values in sorted(
+            TABLES[table_name].items(), key=lambda elm: elm[0]
+        ):
             if filters and check_filters(cache_name, filters):
                 continue
 
-            size = get_size_from_name(cache_name)
             if not v_lines:
                 v_lines = [len(elm) for elm in values]
                 for idx in range(1, len(v_lines)):
@@ -397,7 +398,9 @@ def plot_line(table_name: str, filename: str, **kwargs):
     elif table_name == 'ratio' or table_name == 'diff':
         data = {}
         for cur_table_name in ['written_data', 'read_on_hit']:
-            for cache_name, values in TABLES[cur_table_name].items():
+            for cache_name, values in sorted(
+                TABLES[cur_table_name].items(), key=lambda elm: elm[0]
+            ):
                 if cache_name not in data:
                     data[cache_name] = {
                         'written_data': [],
@@ -406,7 +409,6 @@ def plot_line(table_name: str, filename: str, **kwargs):
                 if filters and check_filters(cache_name, filters):
                     continue
 
-                size = get_size_from_name(cache_name)
                 if not v_lines:
                     v_lines = [len(elm) for elm in values]
                     for idx in range(1, len(v_lines)):
@@ -446,8 +448,8 @@ def plot_line(table_name: str, filename: str, **kwargs):
             plot_figure.line(
                 range(len(values['read_on_hit'])),
                 cur_values,
-                legend=name,
-                color=TABLE_COLORS[name],
+                legend=cache_name,
+                color=TABLE_COLORS[cache_name],
                 line_width=2.
             )
 
