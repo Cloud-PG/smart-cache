@@ -4,7 +4,6 @@ import math
 import os
 import pickle
 from itertools import cycle
-from typing import Dict, List
 
 import numpy as np
 import pandas as pd
@@ -13,7 +12,7 @@ from bokeh.models import ColumnDataSource, LabelSet, Span
 from bokeh.palettes import Category10
 from bokeh.plotting import figure, output_file, save
 from bokeh.transform import cumsum
-from flask import Flask, escape, jsonify, request
+from flask import Flask, jsonify, request
 from tqdm import tqdm
 
 BASE_PATH = "plot_server_app"
@@ -31,9 +30,16 @@ WINDOW_INFO = {}
 
 TABLE_COLORS = {}
 
-COLORS = cycle(Category10[10])
-
 MAX_BINS = 100
+
+
+def update_colors(new_name: str):
+    global TABLE_COLORS
+    names = TABLE_COLORS.keys() + [new_name]
+    colors = cycle(Category10[10])
+    for name in sorted(names):
+        cur_color = next(colors)
+        TABLE_COLORS[name] = cur_color
 
 
 def fill_hit_miss_bins(n_bins: int, edges: list, values: list) -> tuple:
@@ -380,7 +386,7 @@ def plot_line(table_name: str, filename: str, **kwargs):
 
             points = [value for bucket in values for value in bucket]
             if cache_name not in TABLE_COLORS:
-                TABLE_COLORS[cache_name] = next(COLORS)
+                update_colors(cache_name)
             plot_figure.line(
                 range(len(points)),
                 points,
@@ -391,9 +397,9 @@ def plot_line(table_name: str, filename: str, **kwargs):
     elif table_name == 'ratio' or table_name == 'diff':
         data = {}
         for cur_table_name in ['written_data', 'read_on_hit']:
-            for name, values in TABLES[cur_table_name].items():
-                if name not in data:
-                    data[name] = {
+            for cache_name, values in TABLES[cur_table_name].items():
+                if cache_name not in data:
+                    data[cache_name] = {
                         'written_data': [],
                         'read_on_hit': []
                     }
@@ -415,14 +421,14 @@ def plot_line(table_name: str, filename: str, **kwargs):
                         ]
                     else:
                         v_lines = []
-                data[name][cur_table_name] = [
+                data[cache_name][cur_table_name] = [
                     value for bucket in values for value in bucket]
-                if name not in TABLE_COLORS:
-                    TABLE_COLORS[name] = next(COLORS)
+                if cache_name not in TABLE_COLORS:
+                    update_colors(cache_name)
 
-        for name, values in data.items():
-            if name not in TABLE_COLORS:
-                TABLE_COLORS[name] = next(COLORS)
+        for cache_name, values in data.items():
+            if cache_name not in TABLE_COLORS:
+                update_colors(cache_name)
             if table_name == 'ratio':
                 cur_values = [
                     value / values['written_data'][idx]
