@@ -45,3 +45,13 @@ func (stats weightedFileStats) getMeanReqTimes(curtime time.Time) float32 {
 	}
 	return float32(timeDiffSum.Seconds()) / float32(StatsMemorySize)
 }
+
+// UpdateStatsPolicy is used to select the update stats policy
+type UpdateStatsPolicyType int
+
+const (
+	// UpdateStatsOnRequest indicates to update the file stats on each request
+	UpdateStatsOnRequest UpdateStatsPolicyType = iota
+	// UpdateStatsOnMiss indicates to update the file stats only on file miss
+	UpdateStatsOnMiss
+)

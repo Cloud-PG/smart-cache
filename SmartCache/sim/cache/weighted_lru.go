@@ -21,6 +21,7 @@ type WeightedLRU struct {
 	queue                                                 *list.List
 	hit, miss, writtenData, readOnHit, size, MaxSize, exp float32
 	functionType                                          FunctionType
+	updatePolicyType                                      UpdateStatsPolicyType
 }
 
 // Init the WeightedLRU struct
@@ -34,7 +35,8 @@ func (cache *WeightedLRU) Init(vars ...interface{}) {
 	cache.statsWaitGroup = sync.WaitGroup{}
 	cache.queue = list.New()
 	cache.functionType = vars[0].(FunctionType)
-	cache.exp = vars[1].(float32)
+	cache.updatePolicyType = vars[1].(UpdateStatsPolicyType)
+	cache.exp = vars[2].(float32)
 }
 
 // Clear the WeightedLRU struct
@@ -302,9 +304,16 @@ func (cache *WeightedLRU) updatePolicy(filename string, size float32, hit bool) 
 	var currentTime = time.Now()
 	var curStats *weightedFileStats
 
-	if !hit {
+	if cache.updatePolicyType == UpdateStatsOnRequest {
 		curStats = cache.getOrInsertStats(filename, size)
 		curStats.updateRequests(hit, currentTime)
+	}
+
+	if !hit {
+		if cache.updatePolicyType == UpdateStatsOnMiss {
+			curStats = cache.getOrInsertStats(filename, size)
+			curStats.updateRequests(hit, currentTime)
+		}
 
 		var Q2 = cache.getThreshold()
 		// If weight is higher exit and return added = false

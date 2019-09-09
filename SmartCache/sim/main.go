@@ -19,6 +19,7 @@ var serviceHost string
 var servicePort int32
 var weightExp float32
 var weightedFunc string
+var weightUpdatePolicy string
 
 func main() {
 	rootCmd := &cobra.Command{}
@@ -29,6 +30,7 @@ func main() {
 	rootCmd.PersistentFlags().Int32Var(&servicePort, "port", 5432, "cache sim service port")
 	rootCmd.PersistentFlags().StringVar(&weightedFunc, "weightFunction", "FuncFileGroupWeight", "function to use with weighted cache")
 	rootCmd.PersistentFlags().Float32Var(&weightExp, "weightExp", 2.0, "Exponential to use with weighted cache function")
+	rootCmd.PersistentFlags().StringVar(&weightUpdatePolicy, "weightUpdatePolicy", "miss", "when to update the file stats: ['miss', 'request']")
 
 	if err := rootCmd.Execute(); err != nil {
 		println(err.Error())
@@ -59,19 +61,21 @@ func commandRun() *cobra.Command {
 				cacheInstance = &cache.WeightedCache{
 					MaxSize: cacheSize,
 				}
+				var functionType cache.FunctionType
 				switch weightedFunc {
 				case "FuncFileWeight":
-					cacheInstance.Init(cache.FuncFileWeight, weightExp)
+					functionType = cache.FuncFileWeight
 				case "FuncFileWeightAndTime":
-					cacheInstance.Init(cache.FuncFileWeightAndTime, weightExp)
+					functionType = cache.FuncFileWeightAndTime
 				case "FuncFileWeightOnlyTime":
-					cacheInstance.Init(cache.FuncFileWeightOnlyTime, weightExp)
+					functionType = cache.FuncFileWeightOnlyTime
 				case "FuncWeightedRequests":
-					cacheInstance.Init(cache.FuncWeightedRequests, weightExp)
+					functionType = cache.FuncWeightedRequests
 				default:
 					fmt.Println("ERR: You need to specify a weight function.")
 					os.Exit(-1)
 				}
+				cacheInstance.Init(functionType, weightExp)
 				fmt.Printf("[Register Weighted Cache]\n")
 				pb.RegisterSimServiceServer(grpcServer, cacheInstance)
 			case "weightedLRU":
@@ -79,19 +83,31 @@ func commandRun() *cobra.Command {
 				cacheInstance = &cache.WeightedLRU{
 					MaxSize: cacheSize,
 				}
+				var functionType cache.FunctionType
+				var updatePolicyType cache.UpdateStatsPolicyType
 				switch weightedFunc {
 				case "FuncFileWeight":
-					cacheInstance.Init(cache.FuncFileWeight, weightExp)
+					functionType = cache.FuncFileWeight
 				case "FuncFileWeightAndTime":
-					cacheInstance.Init(cache.FuncFileWeightAndTime, weightExp)
+					functionType = cache.FuncFileWeightAndTime
 				case "FuncFileWeightOnlyTime":
-					cacheInstance.Init(cache.FuncFileWeightOnlyTime, weightExp)
+					functionType = cache.FuncFileWeightOnlyTime
 				case "FuncWeightedRequests":
-					cacheInstance.Init(cache.FuncWeightedRequests, weightExp)
+					functionType = cache.FuncWeightedRequests
 				default:
 					fmt.Println("ERR: You need to specify a weight function.")
 					os.Exit(-1)
 				}
+				switch weightUpdatePolicy {
+				case "miss":
+					updatePolicyType = cache.UpdateStatsOnMiss
+				case "request":
+					updatePolicyType = cache.UpdateStatsOnRequest
+				default:
+					fmt.Println("ERR: You need to specify a weight function.")
+					os.Exit(-1)
+				}
+				cacheInstance.Init(functionType, updatePolicyType, weightExp)
 				fmt.Printf("[Register Weighted LRU Cache]\n")
 				pb.RegisterSimServiceServer(grpcServer, cacheInstance)
 			default:
