@@ -78,7 +78,7 @@ def get_size_from_name(name: str) -> str:
 
 def get_num_similarities(name_a: str, name_b: str) -> str:
     return len(
-        set(name_a.split("_")) & set(name_b.split("_"))
+        set(name_a.replace("_rpc", "").split("_")) & set(name_b.replace("_rpc", "").split("_"))
     )
 
 
@@ -419,7 +419,7 @@ def plot_line(table_name: str, filename: str, **kwargs):
 
             if compare:
                 points = [
-                    point / lru_values[idx]
+                    (point - lru_values[idx]) / lru_values[idx]
                     if lru_values[idx] != 0. else 0.
                     for idx, point in enumerate(points)
                 ]
