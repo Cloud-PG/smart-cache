@@ -2,10 +2,10 @@
 import grpc
 
 from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
-from . import pluginService_pb2 as pluginProto_dot_pluginService__pb2
+from . import pluginProto_pb2 as pluginProto_dot_pluginProto__pb2
 
 
-class PluginServiceStub(object):
+class PluginProtoStub(object):
   # missing associated documentation comment in .proto file
   pass
 
@@ -16,23 +16,23 @@ class PluginServiceStub(object):
       channel: A grpc.Channel.
     """
     self.GetHint = channel.unary_unary(
-        '/pluginservice.PluginService/GetHint',
-        request_serializer=pluginProto_dot_pluginService__pb2.FileRequest.SerializeToString,
-        response_deserializer=pluginProto_dot_pluginService__pb2.FileHint.FromString,
+        '/pluginproto.PluginProto/GetHint',
+        request_serializer=pluginProto_dot_pluginProto__pb2.FileHint.SerializeToString,
+        response_deserializer=pluginProto_dot_pluginProto__pb2.FileHint.FromString,
         )
     self.UpdateStats = channel.unary_unary(
-        '/pluginservice.PluginService/UpdateStats',
-        request_serializer=pluginProto_dot_pluginService__pb2.FileRequest.SerializeToString,
+        '/pluginproto.PluginProto/UpdateStats',
+        request_serializer=pluginProto_dot_pluginProto__pb2.FileRequest.SerializeToString,
         response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
         )
     self.ResetHistory = channel.unary_unary(
-        '/pluginservice.PluginService/ResetHistory',
+        '/pluginproto.PluginProto/ResetHistory',
         request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
         response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
         )
 
 
-class PluginServiceServicer(object):
+class PluginProtoServicer(object):
   # missing associated documentation comment in .proto file
   pass
 
@@ -58,16 +58,16 @@ class PluginServiceServicer(object):
     raise NotImplementedError('Method not implemented!')
 
 
-def add_PluginServiceServicer_to_server(servicer, server):
+def add_PluginProtoServicer_to_server(servicer, server):
   rpc_method_handlers = {
       'GetHint': grpc.unary_unary_rpc_method_handler(
           servicer.GetHint,
-          request_deserializer=pluginProto_dot_pluginService__pb2.FileRequest.FromString,
-          response_serializer=pluginProto_dot_pluginService__pb2.FileHint.SerializeToString,
+          request_deserializer=pluginProto_dot_pluginProto__pb2.FileHint.FromString,
+          response_serializer=pluginProto_dot_pluginProto__pb2.FileHint.SerializeToString,
       ),
       'UpdateStats': grpc.unary_unary_rpc_method_handler(
           servicer.UpdateStats,
-          request_deserializer=pluginProto_dot_pluginService__pb2.FileRequest.FromString,
+          request_deserializer=pluginProto_dot_pluginProto__pb2.FileRequest.FromString,
           response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
       ),
       'ResetHistory': grpc.unary_unary_rpc_method_handler(
@@ -77,5 +77,5 @@ def add_PluginServiceServicer_to_server(servicer, server):
       ),
   }
   generic_handler = grpc.method_handlers_generic_handler(
-      'pluginservice.PluginService', rpc_method_handlers)
+      'pluginproto.PluginProto', rpc_method_handlers)
   server.add_generic_rpc_handlers((generic_handler,))

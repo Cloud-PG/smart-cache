@@ -6,14 +6,14 @@ import (
 	"net"
 	"os"
 
-	"./cache"
-	pb "./cache/simService"
+	"./service"
+	pb "./service/pluginProto"
 	"google.golang.org/grpc"
 
 	"github.com/spf13/cobra"
 )
 
-var cacheInstance cache.Cache
+var serviceInstance service.XCachePlugin
 var cacheSize float32
 var serviceHost string
 var servicePort int32
@@ -26,7 +26,7 @@ func main() {
 
 	rootCmd.PersistentFlags().StringVar(&serviceHost, "host", "localhost", "Ip to listen to")
 	rootCmd.PersistentFlags().Int32Var(&servicePort, "port", 5432, "cache sim service port")
-	rootCmd.PersistentFlags().StringVar(&weightedFunc, "weightFunction", "FuncFileGroupWeight", "function to use with weighted cache")
+	rootCmd.PersistentFlags().StringVar(&weightedFunc, "weightFunction", "FuncWeightedRequests", "function to use with weighted cache")
 	rootCmd.PersistentFlags().Float32Var(&weightExp, "weightExp", 2.0, "Exponential to use with weighted cache function")
 
 	if err := rootCmd.Execute(); err != nil {
@@ -37,65 +37,45 @@ func main() {
 func commandRun() *cobra.Command {
 	cmd := &cobra.Command{
 		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) != 1 {
+				fmt.Println("ERR: You need to specify only 1 type of service...")
+				os.Exit(-1)
+			}
 			// Get first element and reuse same memory space to allocate args
-			cacheType := args[0]
+			serviceType := args[0]
 			copy(args, args[1:])
 			args = args[:len(args)-1]
 
 			grpcServer := grpc.NewServer()
+			var function service.FunctionType
 
-			switch cacheType {
-			case "lru":
-				fmt.Printf("[Create LRU Cache][Size: %f]\n", cacheSize)
-				cacheInstance = &cache.LRUCache{
-					MaxSize: cacheSize,
-				}
-				cacheInstance.Init()
-				fmt.Printf("[Register LRU Cache]\n")
-				pb.RegisterSimServiceServer(grpcServer, cacheInstance)
-			case "weighted":
-				fmt.Printf("[Create Weighted Cache][Size: %f]\n", cacheSize)
-				cacheInstance = &cache.WeightedCache{
-					MaxSize: cacheSize,
-				}
-				switch weightedFunc {
-				case "FuncFileWeight":
-					cacheInstance.Init(cache.FuncFileWeight, weightExp)
-				case "FuncFileWeightAndTime":
-					cacheInstance.Init(cache.FuncFileWeightAndTime, weightExp)
-				case "FuncFileWeightOnlyTime":
-					cacheInstance.Init(cache.FuncFileWeightOnlyTime, weightExp)
-				case "FuncWeightedRequests":
-					cacheInstance.Init(cache.FuncWeightedRequests, weightExp)
-				default:
-					fmt.Println("ERR: You need to specify a weight function.")
-					os.Exit(-1)
-				}
-				fmt.Printf("[Register Weighted Cache]\n")
-				pb.RegisterSimServiceServer(grpcServer, cacheInstance)
+			switch weightedFunc {
+			case "FuncFileWeight":
+				function = service.FuncFileWeight
+			case "FuncFileWeightAndTime":
+				function = service.FuncFileWeightAndTime
+			case "FuncFileWeightOnlyTime":
+				function = service.FuncFileWeightOnlyTime
+			case "FuncWeightedRequests":
+				function = service.FuncWeightedRequests
+			default:
+				fmt.Printf("ERR: You need to specify a valid weight function. '%s' is not valid...\n", weightedFunc)
+				os.Exit(-2)
+			}
+
+			switch serviceType {
 			case "weightedLRU":
-				fmt.Printf("[Create Weighted Cache][Size: %f]\n", cacheSize)
-				cacheInstance = &cache.WeightedLRU{
-					MaxSize: cacheSize,
+				fmt.Printf("[Create Weighted Cache]")
+				serviceInstance = service.PluginServiceServer{
+					Exp:             weightExp,
+					SelFunctionType: function,
 				}
-				switch weightedFunc {
-				case "FuncFileWeight":
-					cacheInstance.Init(cache.FuncFileWeight, weightExp)
-				case "FuncFileWeightAndTime":
-					cacheInstance.Init(cache.FuncFileWeightAndTime, weightExp)
-				case "FuncFileWeightOnlyTime":
-					cacheInstance.Init(cache.FuncFileWeightOnlyTime, weightExp)
-				case "FuncWeightedRequests":
-					cacheInstance.Init(cache.FuncWeightedRequests, weightExp)
-				default:
-					fmt.Println("ERR: You need to specify a weight function.")
-					os.Exit(-1)
-				}
+				serviceInstance.Init()
 				fmt.Printf("[Register Weighted LRU Cache]\n")
-				pb.RegisterSimServiceServer(grpcServer, cacheInstance)
+				pb.RegisterPluginProtoServer(grpcServer, serviceInstance)
 			default:
 				fmt.Println("ERR: You need to specify a cache type.")
-				os.Exit(-2)
+				os.Exit(-3)
 			}
 
 			fmt.Printf("[Try to liste to %s:%d]\n", serviceHost, servicePort)
@@ -111,7 +91,7 @@ func commandRun() *cobra.Command {
 		},
 		Use:   `run cacheType`,
 		Short: "Command run",
-		Long:  "Run a cache simulator",
+		Long:  "Run the xcache plugin service",
 		Args:  cobra.MaximumNArgs(1),
 	}
 	return cmd

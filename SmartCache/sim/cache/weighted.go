@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"math"
 	"sort"
 	"time"
 
@@ -14,20 +15,15 @@ type WeightedCache struct {
 	files                                                 map[string]float32
 	stats                                                 map[string]*weightedFileStats
 	queue                                                 []*weightedFileStats
-	hit, miss, writtenData, readOnHit, size, MaxSize, exp float32
-	functionType                                          FunctionType
+	hit, miss, writtenData, readOnHit, size, MaxSize, Exp float32
+	SelFunctionType                                       FunctionType
 }
 
 // Init the WeightedCache struct
 func (cache *WeightedCache) Init(vars ...interface{}) {
-	if len(vars) < 2 {
-		panic("ERROR: you need to specify the weighted function to use and the exponent...")
-	}
 	cache.files = make(map[string]float32)
 	cache.stats = make(map[string]*weightedFileStats)
 	cache.queue = make([]*weightedFileStats, 0)
-	cache.functionType = vars[0].(FunctionType)
-	cache.exp = vars[1].(float32)
 }
 
 // Clear the WeightedCache struct
@@ -135,7 +131,7 @@ func (cache *WeightedCache) SimGetInfoFilesStats(_ *empty.Empty, stream pb.SimSe
 func (cache *WeightedCache) SimGetInfoFilesWeights(_ *empty.Empty, stream pb.SimService_SimGetInfoFilesWeightsServer) error {
 	for filename, stats := range cache.stats {
 
-		stats.updateWeight(cache.functionType, cache.exp)
+		stats.updateWeight(cache.SelFunctionType, cache.Exp)
 
 		curFile := &pb.SimFileWeight{
 			Filename: filename,
@@ -170,18 +166,21 @@ func (cache *WeightedCache) updatePolicy(filename string, size float32, hit bool
 	if _, inMap := cache.stats[filename]; !inMap {
 		cache.stats[filename] = &weightedFileStats{
 			filename,
-			-1.,
-			size,
+			0.,
+			0.,
 			0.,
 			0,
 			0,
 			currentTime,
 			[StatsMemorySize]time.Time{},
 			0,
+			float32(math.NaN()),
 		}
 	}
 
-	cache.stats[filename].updateStats(hit, currentTime)
+	cache.stats[filename].updateStats(
+		hit, cache.stats[filename].totRequests+1, size, currentTime, float32(math.NaN()),
+	)
 
 	if !hit {
 		cache.queue = append(
@@ -195,7 +194,7 @@ func (cache *WeightedCache) updatePolicy(filename string, size float32, hit bool
 	if queueSize > cache.MaxSize {
 		// Update weights
 		for _, curFileStats := range cache.queue {
-			curFileStats.updateWeight(cache.functionType, cache.exp)
+			curFileStats.updateWeight(cache.SelFunctionType, cache.Exp)
 		}
 		// Sort queue
 		sort.Slice(

@@ -13,9 +13,12 @@ const (
 
 func TestWeightedLRUBaseMultipleInsert(t *testing.T) {
 	testCache := WeightedLRU{
-		MaxSize: 3.0,
+		MaxSize:             3.0,
+		SelFunctionType:     FuncWeightedRequests,
+		SelUpdatePolicyType: UpdateStatsPolicy,
+		Exp:                 WeightedCacheEXP,
 	}
-	testCache.Init(FuncWeightedRequests, UpdateStatsPolicy, WeightedLRUEXP)
+	testCache.Init()
 
 	res := testCache.Get("/a/b/c/d/file0", 1.0)
 	testCache.Get("/a/b/c/d/file0", 1.0)
@@ -37,9 +40,12 @@ func TestWeightedLRUBaseMultipleInsert(t *testing.T) {
 
 func TestWeightedLRUClear(t *testing.T) {
 	testCache := WeightedLRU{
-		MaxSize: 3.0,
+		MaxSize:             3.0,
+		SelFunctionType:     FuncWeightedRequests,
+		SelUpdatePolicyType: UpdateStatsPolicy,
+		Exp:                 WeightedCacheEXP,
 	}
-	testCache.Init(FuncWeightedRequests, UpdateStatsPolicy, WeightedLRUEXP)
+	testCache.Init()
 
 	testCache.Get("/a/b/c/d/file0", 1.0)
 	testCache.Get("/a/b/c/d/file0", 1.0)
@@ -65,9 +71,12 @@ func TestWeightedLRUClear(t *testing.T) {
 
 func TestWeightedLRUInsert(t *testing.T) {
 	testCache := WeightedLRU{
-		MaxSize: 5.0,
+		MaxSize:             5.0,
+		SelFunctionType:     FuncWeightedRequests,
+		SelUpdatePolicyType: UpdateStatsPolicy,
+		Exp:                 WeightedCacheEXP,
 	}
-	testCache.Init(FuncWeightedRequests, UpdateStatsPolicy, WeightedLRUEXP)
+	testCache.Init()
 
 	testCache.Get("/a/b/c/d/file0", 1.0)
 	testCache.Get("/a/b/c/d/file1", 2.0)

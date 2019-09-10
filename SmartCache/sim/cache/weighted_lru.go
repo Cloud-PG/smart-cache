@@ -17,23 +17,17 @@ type WeightedLRU struct {
 	stats                                                 []*weightedFileStats
 	statsFilenames                                        map[string]int
 	queue                                                 *list.List
-	hit, miss, writtenData, readOnHit, size, MaxSize, exp float32
-	functionType                                          FunctionType
-	updatePolicyType                                      UpdateStatsPolicyType
+	hit, miss, writtenData, readOnHit, size, MaxSize, Exp float32
+	SelFunctionType                                       FunctionType
+	SelUpdatePolicyType                                   UpdateStatsPolicyType
 }
 
 // Init the WeightedLRU struct
 func (cache *WeightedLRU) Init(vars ...interface{}) {
-	if len(vars) < 2 {
-		panic("ERROR: you need to specify the weighted function to use and the exponent...")
-	}
 	cache.files = make(map[string]float32)
 	cache.stats = make([]*weightedFileStats, 0)
 	cache.statsFilenames = make(map[string]int)
 	cache.queue = list.New()
-	cache.functionType = vars[0].(FunctionType)
-	cache.updatePolicyType = vars[1].(UpdateStatsPolicyType)
-	cache.exp = vars[2].(float32)
 }
 
 // Clear the WeightedLRU struct
@@ -155,7 +149,7 @@ func (cache *WeightedLRU) SimGetInfoFilesWeights(_ *empty.Empty, stream pb.SimSe
 	for idx := 0; idx < len(cache.stats); idx++ {
 		stats := cache.stats[idx]
 
-		stats.updateWeight(cache.functionType, cache.exp)
+		stats.updateWeight(cache.SelFunctionType, cache.Exp)
 
 		curFile := &pb.SimFileWeight{
 			Filename: stats.filename,
@@ -189,19 +183,20 @@ func (cache *WeightedLRU) getThreshold() float32 {
 	return Q2
 }
 
-func (cache *WeightedLRU) getOrInsertStats(filename string, size float32) *weightedFileStats {
+func (cache *WeightedLRU) getOrInsertStats(filename string) *weightedFileStats {
 	var result *weightedFileStats
 	if _, inStats := cache.statsFilenames[filename]; !inStats {
 		cache.stats = append(cache.stats, &weightedFileStats{
 			filename,
-			-1,
-			size,
+			0.,
+			0.,
 			0.,
 			0,
 			0,
 			time.Now(),
 			[StatsMemorySize]time.Time{},
 			0,
+			float32(math.NaN()),
 		})
 		cache.statsFilenames[filename] = len(cache.stats) - 1
 		result = cache.stats[len(cache.stats)-1]
@@ -224,17 +219,21 @@ func (cache *WeightedLRU) updatePolicy(filename string, size float32, hit bool) 
 	var currentTime = time.Now()
 	var curStats *weightedFileStats
 
-	if cache.updatePolicyType == UpdateStatsOnRequest {
-		curStats = cache.getOrInsertStats(filename, size)
-		curStats.updateStats(hit, currentTime)
-		curStats.updateWeight(cache.functionType, cache.exp)
+	if cache.SelUpdatePolicyType == UpdateStatsOnRequest {
+		curStats = cache.getOrInsertStats(filename)
+		curStats.updateStats(
+			hit, curStats.totRequests+1, size, currentTime, float32(math.NaN()),
+		)
+		curStats.updateWeight(cache.SelFunctionType, cache.Exp)
 	}
 
 	if !hit {
-		if cache.updatePolicyType == UpdateStatsOnMiss {
-			curStats = cache.getOrInsertStats(filename, size)
-			curStats.updateStats(hit, currentTime)
-			curStats.updateWeight(cache.functionType, cache.exp)
+		if cache.SelUpdatePolicyType == UpdateStatsOnMiss {
+			curStats = cache.getOrInsertStats(filename)
+			curStats.updateStats(
+				hit, curStats.totRequests+1, size, currentTime, float32(math.NaN()),
+			)
+			curStats.updateWeight(cache.SelFunctionType, cache.Exp)
 		}
 
 		var Q2 = cache.getThreshold()

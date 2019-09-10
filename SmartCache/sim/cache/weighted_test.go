@@ -12,9 +12,11 @@ const (
 
 func TestWeightedCacheBaseMultipleInsert(t *testing.T) {
 	testCache := WeightedCache{
-		MaxSize: 3.0,
+		MaxSize:         3.0,
+		SelFunctionType: FuncWeightedRequests,
+		Exp:             WeightedCacheEXP,
 	}
-	testCache.Init(FuncWeightedRequests, WeightedCacheEXP)
+	testCache.Init()
 
 	res := testCache.Get("/a/b/c/d/file0", 1.0)
 	testCache.Get("/a/b/c/d/file0", 1.0)
@@ -36,9 +38,11 @@ func TestWeightedCacheBaseMultipleInsert(t *testing.T) {
 
 func TestWeightedCacheClear(t *testing.T) {
 	testCache := WeightedCache{
-		MaxSize: 3.0,
+		MaxSize:         3.0,
+		SelFunctionType: FuncWeightedRequests,
+		Exp:             WeightedCacheEXP,
 	}
-	testCache.Init(FuncWeightedRequests, WeightedCacheEXP)
+	testCache.Init()
 
 	testCache.Get("/a/b/c/d/file0", 1.0)
 	testCache.Get("/a/b/c/d/file0", 1.0)
@@ -64,9 +68,11 @@ func TestWeightedCacheClear(t *testing.T) {
 
 func TestWeightedCacheInsert(t *testing.T) {
 	testCache := WeightedCache{
-		MaxSize: 3.0,
+		MaxSize:         3.0,
+		SelFunctionType: FuncWeightedRequests,
+		Exp:             WeightedCacheEXP,
 	}
-	testCache.Init(FuncWeightedRequests, WeightedCacheEXP)
+	testCache.Init()
 
 	testCache.Get("/a/b/c/d/file0", 1.0)
 	testCache.Get("/a/b/c/d/file1", 2.0)

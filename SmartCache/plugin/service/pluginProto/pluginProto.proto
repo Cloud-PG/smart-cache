@@ -4,13 +4,13 @@ import "google/protobuf/empty.proto";
 
 option java_multiple_files = true;
 option java_package = "io.grpc.cache.plugin.service";
-option java_outer_classname = "PluginService";
+option java_outer_classname = "PluginProto";
 
-package pluginservice;
+package pluginproto;
 
-service PluginService {
+service PluginProto {
 
-  rpc GetHint(FileRequest) returns (FileHint) {}
+  rpc GetHint(FileHint) returns (FileHint) {}
   rpc UpdateStats(FileRequest) returns (google.protobuf.Empty) {}
   rpc ResetHistory(google.protobuf.Empty) returns (google.protobuf.Empty) {}
 
@@ -18,8 +18,10 @@ service PluginService {
 
 message FileRequest {
   string filename = 1;
-  float size = 2;
+  float downloaded = 2;
   bool hit = 3;
+  float meanTime = 4;
+  uint32 nAccess = 5;
 }
 
 message FileHint {
