@@ -3,7 +3,7 @@ package cache
 import "time"
 
 const (
-	// StatsMemorySize indicates the size of fileStats memory
+	// StatsMemorySize represents the  number of slots
 	StatsMemorySize uint64 = 8
 )
 
@@ -21,7 +21,7 @@ type weightedFileStats struct {
 	requestLastIdx    int
 }
 
-func (stats *weightedFileStats) updateRequests(hit bool, curTime time.Time) {
+func (stats *weightedFileStats) updateStats(hit bool, curTime time.Time) {
 	stats.totRequests++
 
 	if hit {
@@ -36,17 +36,52 @@ func (stats *weightedFileStats) updateRequests(hit bool, curTime time.Time) {
 	stats.requestLastIdx = (stats.requestLastIdx + 1) % int(StatsMemorySize)
 }
 
-func (stats weightedFileStats) getMeanReqTimes(curtime time.Time) float32 {
-	var timeDiffSum time.Duration
-	for idx := 0; idx < int(StatsMemorySize); idx++ {
-		if !stats.requestTicks[idx].IsZero() {
-			timeDiffSum += curtime.Sub(stats.requestTicks[idx])
-		}
+func (stats *weightedFileStats) updateWeight(functionType FunctionType, exp float32) {
+	switch functionType {
+	case FuncFileWeight:
+		stats.weight = fileWeight(
+			stats.size,
+			stats.totRequests,
+			exp,
+		)
+	case FuncFileWeightAndTime:
+		stats.weight = fileWeightAndTime(
+			stats.size,
+			stats.totRequests,
+			exp,
+			stats.lastTimeRequested,
+		)
+	case FuncFileWeightOnlyTime:
+		stats.weight = fileWeightOnlyTime(
+			stats.totRequests,
+			exp,
+			stats.lastTimeRequested,
+		)
+	case FuncWeightedRequests:
+		stats.weight = fileWeightedRequest(
+			stats.size,
+			stats.totRequests,
+			stats.getMeanReqTimes(),
+			exp,
+		)
 	}
-	return float32(timeDiffSum.Seconds()) / float32(StatsMemorySize)
 }
 
-// UpdateStatsPolicy is used to select the update stats policy
+func (stats weightedFileStats) getMeanReqTimes() float32 {
+	var timeDiffSum time.Duration
+	lastTimeRequested := stats.lastTimeRequested
+	for idx := 0; idx < int(StatsMemorySize); idx++ {
+		if !stats.requestTicks[idx].IsZero() {
+			timeDiffSum += lastTimeRequested.Sub(stats.requestTicks[idx])
+		}
+	}
+	if timeDiffSum != 0. {
+		return float32(timeDiffSum.Seconds()) / float32(StatsMemorySize)
+	}
+	return 0.
+}
+
+// UpdateStatsPolicyType is used to select the update stats policy
 type UpdateStatsPolicyType int
 
 const (

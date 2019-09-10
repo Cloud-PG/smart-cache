@@ -134,40 +134,12 @@ func (cache *WeightedCache) SimGetInfoFilesStats(_ *empty.Empty, stream pb.SimSe
 // SimGetInfoFilesWeights returns the file weights
 func (cache *WeightedCache) SimGetInfoFilesWeights(_ *empty.Empty, stream pb.SimService_SimGetInfoFilesWeightsServer) error {
 	for filename, stats := range cache.stats {
-		var weight float32
 
-		switch cache.functionType {
-		case FuncFileWeight:
-			weight = fileWeight(
-				stats.size,
-				stats.totRequests,
-				cache.exp,
-			)
-		case FuncFileWeightAndTime:
-			weight = fileWeightAndTime(
-				stats.size,
-				stats.totRequests,
-				cache.exp,
-				stats.lastTimeRequested,
-			)
-		case FuncFileWeightOnlyTime:
-			weight = fileWeightOnlyTime(
-				stats.totRequests,
-				cache.exp,
-				stats.lastTimeRequested,
-			)
-		case FuncWeightedRequests:
-			weight = fileWeightedRequest(
-				stats.size,
-				stats.totRequests,
-				stats.getMeanReqTimes(time.Now()),
-				cache.exp,
-			)
-		}
+		stats.updateWeight(cache.functionType, cache.exp)
 
 		curFile := &pb.SimFileWeight{
 			Filename: filename,
-			Weight:   weight,
+			Weight:   stats.weight,
 		}
 		if err := stream.Send(curFile); err != nil {
 			return err
@@ -209,7 +181,7 @@ func (cache *WeightedCache) updatePolicy(filename string, size float32, hit bool
 		}
 	}
 
-	cache.stats[filename].updateRequests(hit, currentTime)
+	cache.stats[filename].updateStats(hit, currentTime)
 
 	if !hit {
 		cache.queue = append(
@@ -223,34 +195,7 @@ func (cache *WeightedCache) updatePolicy(filename string, size float32, hit bool
 	if queueSize > cache.MaxSize {
 		// Update weights
 		for _, curFileStats := range cache.queue {
-			switch cache.functionType {
-			case FuncFileWeight:
-				curFileStats.weight = fileWeight(
-					curFileStats.size,
-					curFileStats.totRequests,
-					cache.exp,
-				)
-			case FuncFileWeightAndTime:
-				curFileStats.weight = fileWeightAndTime(
-					curFileStats.size,
-					curFileStats.totRequests,
-					cache.exp,
-					curFileStats.lastTimeRequested,
-				)
-			case FuncFileWeightOnlyTime:
-				curFileStats.weight = fileWeightOnlyTime(
-					curFileStats.totRequests,
-					cache.exp,
-					curFileStats.lastTimeRequested,
-				)
-			case FuncWeightedRequests:
-				curFileStats.weight = fileWeightedRequest(
-					curFileStats.size,
-					curFileStats.totRequests,
-					curFileStats.getMeanReqTimes(currentTime),
-					cache.exp,
-				)
-			}
+			curFileStats.updateWeight(cache.functionType, cache.exp)
 		}
 		// Sort queue
 		sort.Slice(
