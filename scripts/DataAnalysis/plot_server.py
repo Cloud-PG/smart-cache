@@ -392,8 +392,8 @@ def plot_line(table_name: str, filename: str, **kwargs):
                                 cur_size == size and\
                                 cur_name.lower().find('lru') == 0:
                             lru_values = [
-                                value 
-                                for bucket in TABLES[cur_table_name][cur_name] 
+                                value
+                                for bucket in TABLES[cur_table_name][cur_name]
                                 for value in bucket
                             ]
                             break
