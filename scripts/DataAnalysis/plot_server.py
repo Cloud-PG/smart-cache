@@ -419,8 +419,8 @@ def plot_line(table_name: str, filename: str, **kwargs):
 
             if compare:
                 points = [
-                    point / lru_point[idx]
-                    if lru_point[idx] != 0. else 0.
+                    point / lru_values[idx]
+                    if lru_values[idx] != 0. else 0.
                     for idx, point in enumerate(points)
                 ]
 
