@@ -174,12 +174,8 @@ func (cache *WeightedLRU) getThreshold() float32 {
 		return 0.0
 	}
 	// Order from the highest weight to the smallest
-	sort.Slice(
-		cache.stats,
-		func(i, j int) bool {
-			return cache.stats[i].weight > cache.stats[j].weight
-		},
-	)
+	sort.Sort(ByWeight(cache.stats))
+
 	Q2 := cache.stats[int(math.Floor(float64(0.5*float32(len(cache.stats)))))].weight
 	Q1Idx := int(math.Floor(float64(0.25 * float32(len(cache.stats)))))
 	Q1 := cache.stats[Q1Idx].weight

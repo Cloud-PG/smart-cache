@@ -90,3 +90,12 @@ const (
 	// UpdateStatsOnMiss indicates to update the file stats only on file miss
 	UpdateStatsOnMiss
 )
+
+// ByWeight implements sort.Interface based on the Weight field.
+type ByWeight []*weightedFileStats
+
+func (a ByWeight) Len() int { return len(a) }
+
+// Order from the highest weight to the smallest
+func (a ByWeight) Less(i, j int) bool { return a[i].weight > a[j].weight }
+func (a ByWeight) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
