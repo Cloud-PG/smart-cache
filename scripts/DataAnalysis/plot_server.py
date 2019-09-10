@@ -391,7 +391,11 @@ def plot_line(table_name: str, filename: str, **kwargs):
                         if get_num_similarities(cache_name, cur_name) >= 2 and\
                                 cur_size == size and\
                                 cur_name.lower().find('lru') == 0:
-                            lru_values = TABLES[cur_table_name][cur_name]
+                            lru_values = [
+                                value 
+                                for bucket in TABLES[cur_table_name][cur_name] 
+                                for value in bucket
+                            ]
                             break
                 else:
                     continue
@@ -415,11 +419,9 @@ def plot_line(table_name: str, filename: str, **kwargs):
 
             if compare:
                 points = [
-                    points[idx] / lru_point
-                    if lru_point != 0. else 0.
-                    for idx, lru_point in enumerate(
-                        [value for bucket in lru_values for value in bucket]
-                    )
+                    point / lru_point[idx]
+                    if lru_point[idx] != 0. else 0.
+                    for idx, point in enumerate(points)
                 ]
 
             if cache_name not in TABLE_COLORS:
