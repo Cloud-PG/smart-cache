@@ -76,6 +76,12 @@ def get_size_from_name(name: str) -> str:
     return 'unknown'
 
 
+def get_num_similarities(name_a: str, name_b: str) -> str:
+    return len(
+        set(name_a.split("_")) & set(name_b.split("_"))
+    )
+
+
 def plot_info_window(window: int, filename: str, **kwargs):
     # Empty plot with log scale:
     # - https://github.com/bokeh/bokeh/issues/6671
@@ -382,7 +388,9 @@ def plot_line(table_name: str, filename: str, **kwargs):
                     size = get_size_from_name(cache_name)
                     for cur_name in TABLES[cur_table_name]:
                         cur_size = get_size_from_name(cur_name)
-                        if cur_size == size and cur_name.lower().find('lru') == 0:
+                        if get_num_similarities(cache_name, cur_name) >= 2 and\
+                                cur_size == size and\
+                                cur_name.lower().find('lru') == 0:
                             lru_values = TABLES[cur_table_name][cur_name]
                             break
                 else:
@@ -411,12 +419,12 @@ def plot_line(table_name: str, filename: str, **kwargs):
                     if lru_point != 0. else 0.
                     for idx, lru_point in enumerate(
                         [value for bucket in lru_values for value in bucket]
-                        )
+                    )
                 ]
 
             if cache_name not in TABLE_COLORS:
                 update_colors(cache_name)
-            
+
             plot_figure.line(
                 range(len(points)),
                 points,
