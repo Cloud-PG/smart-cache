@@ -364,11 +364,29 @@ def plot_line(table_name: str, filename: str, **kwargs):
     v_lines = []
 
     if table_name not in ['ratio', 'diff', 'diff_compare']:
+        compare = False
+        lru_values = None
+        if table_name.find("_compare") != -1:
+            cur_table_name = table_name.split("_compare")[0]
+            compare = True
+        else:
+            cur_table_name = table_name
         for cache_name, values in sorted(
-            TABLES[table_name].items(), key=lambda elm: elm[0]
+            TABLES[cur_table_name].items(), key=lambda elm: elm[0]
         ):
             if filters and check_filters(cache_name, filters):
                 continue
+
+            if compare:
+                if cur_name.lower().find('lru') != 0:
+                    size = get_size_from_name(cache_name)
+                    for cur_name in TABLES[cur_table_name]:
+                        cur_size = get_size_from_name(cur_name)
+                        if cur_size == size and cur_name.lower().find('lru') == 0:
+                            lru_values = TABLES[cur_table_name][cur_name]
+                            break
+                else:
+                    continue
 
             if not v_lines:
                 v_lines = [len(elm) for elm in values]
@@ -386,8 +404,19 @@ def plot_line(table_name: str, filename: str, **kwargs):
                     v_lines = []
 
             points = [value for bucket in values for value in bucket]
+
+            if compare:
+                points = [
+                    points[idx] / lru_point
+                    if lru_point != 0. else 0.
+                    for idx, lru_point in enumerate(
+                        [value for bucket in lru_values for value in bucket]
+                        )
+                ]
+
             if cache_name not in TABLE_COLORS:
                 update_colors(cache_name)
+            
             plot_figure.line(
                 range(len(points)),
                 points,
@@ -478,15 +507,8 @@ def plot_line(table_name: str, filename: str, **kwargs):
                     plot_figure.line(
                         range(len(values['diff'])),
                         [
-                            (
-                                value -
-                                lru_values['diff'][idx]
-                            ) / (
-                                lru_values['written_data'][idx] +
-                                lru_values['read_on_hit'][idx]
-                            )
-                            if lru_values['written_data'][idx] != 0. and lru_values['read_on_hit'][idx] != 0.
-                            else 0.
+                            value -
+                            lru_values['diff'][idx]
                             for idx, value in enumerate(
                                 values['diff']
                             )
@@ -547,6 +569,8 @@ def table_plot(table_name: str):
     elif table_name == "written_data":
         kwargs['y_axis_label'] = "Written data (MB)"
         kwargs['y_axis_type'] = "log"
+    elif table_name == "written_data_compare":
+        kwargs['y_axis_label'] = "Written data ratio"
     elif table_name == "read_on_hit":
         kwargs['y_axis_label'] = "Data read on hit (MB)"
         kwargs['y_axis_type'] = "log"
@@ -556,6 +580,7 @@ def table_plot(table_name: str):
         kwargs['y_axis_label'] = "Diff"
     elif table_name == "diff_compare":
         kwargs['y_axis_label'] = "Diff compare"
+        kwargs['y_axis_type'] = "log"
 
     plot_line(
         table_name,
