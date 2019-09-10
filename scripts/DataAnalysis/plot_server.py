@@ -378,7 +378,7 @@ def plot_line(table_name: str, filename: str, **kwargs):
                 continue
 
             if compare:
-                if cur_name.lower().find('lru') != 0:
+                if cache_name.lower().find('lru') != 0:
                     size = get_size_from_name(cache_name)
                     for cur_name in TABLES[cur_table_name]:
                         cur_size = get_size_from_name(cur_name)
@@ -580,7 +580,6 @@ def table_plot(table_name: str):
         kwargs['y_axis_label'] = "Diff"
     elif table_name == "diff_compare":
         kwargs['y_axis_label'] = "Diff compare"
-        kwargs['y_axis_type'] = "log"
 
     plot_line(
         table_name,
