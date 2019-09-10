@@ -584,6 +584,8 @@ def table_plot(table_name: str):
     elif table_name == "read_on_hit":
         kwargs['y_axis_label'] = "Data read on hit (MB)"
         kwargs['y_axis_type'] = "log"
+    elif table_name == "read_on_hit_compare":
+        kwargs['y_axis_label'] = "Data read on hit ratio"
     elif table_name == "ratio":
         kwargs['y_axis_label'] = "Ratio"
     elif table_name == "diff":
