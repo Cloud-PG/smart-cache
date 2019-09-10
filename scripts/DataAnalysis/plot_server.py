@@ -434,6 +434,10 @@ def plot_line(table_name: str, filename: str, **kwargs):
                 color=TABLE_COLORS[cache_name],
                 line_width=2.
             )
+            if compare:
+                # Horizontal line
+                hline = Span(location=1, dimension='width', line_color='red', line_width=1.2)
+                plot_figure.renderers.extend([hline])
     elif table_name in ['ratio', 'diff', 'diff_compare']:
         data = {}
         for cur_table_name in ['written_data', 'read_on_hit']:
