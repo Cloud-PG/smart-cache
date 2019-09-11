@@ -107,14 +107,14 @@ func TestWeightedLRUInsert(t *testing.T) {
 	testCache.Get("/a/b/c/d/file4", 1.0)
 	testCache.Get("/a/b/c/d/file5", 1.0)
 
-	if testCache.HitRate() != 50. {
-		t.Fatalf("Hit rate error -> Expected %f but got %f", 50., testCache.HitRate())
+	if testCache.HitRate() != 42.857143 {
+		t.Fatalf("Hit rate error -> Expected %f but got %f", 42.857143, testCache.HitRate())
 	} else if testCache.Size() != 5.0 {
 		t.Fatalf("Size error -> Expected %f but got %f", 5.0, testCache.Size())
-	} else if testCache.WrittenData() != 18.0 {
-		t.Fatalf("Written data error -> Expected %f but got %f", 18.0, testCache.WrittenData())
-	} else if testCache.ReadOnHit() != 17. {
-		t.Fatalf("Read on hit error -> Expected %f but got %f", 17., testCache.ReadOnHit())
+	} else if testCache.WrittenData() != 13.0 {
+		t.Fatalf("Written data error -> Expected %f but got %f", 13.0, testCache.WrittenData())
+	} else if testCache.ReadOnHit() != 14. {
+		t.Fatalf("Read on hit error -> Expected %f but got %f", 14., testCache.ReadOnHit())
 	}
 }
 
