@@ -43,11 +43,11 @@ func (stats *weightedFileStats) updateStats(hit bool, totRequests uint32, size f
 	if !math.IsNaN(float64(meanTime)) {
 		stats.meanTime = meanTime
 	} else {
-		stats.meanTime = stats.getMeanReqTimes()
+		stats.meanTime = stats.getMeanReqTimes(curTime)
 	}
 }
 
-func (stats *weightedFileStats) updateWeight(functionType FunctionType, exp float32) {
+func (stats *weightedFileStats) updateWeight(functionType FunctionType, curTime time.Time, exp float32) {
 	switch functionType {
 	case FuncFileWeight:
 		stats.weight = fileWeight(
@@ -71,21 +71,22 @@ func (stats *weightedFileStats) updateWeight(functionType FunctionType, exp floa
 	case FuncWeightedRequests:
 		stats.weight = fileWeightedRequest(
 			stats.size,
+			stats.nHits,
 			stats.totRequests,
+			stats.getMeanReqTimes(curTime),
 			exp,
 		)
 	}
 }
 
-func (stats weightedFileStats) getMeanReqTimes() float32 {
+func (stats weightedFileStats) getMeanReqTimes(curTime time.Time) float32 {
 	if !math.IsNaN(float64(stats.meanTime)) {
 		return stats.meanTime
 	}
 	var timeDiffSum time.Duration
-	lastTime := stats.lastTimeRequested
 	for idx := 0; idx < int(StatsMemorySize); idx++ {
 		if !stats.requestTicks[idx].IsZero() {
-			timeDiffSum += lastTime.Sub(stats.requestTicks[idx])
+			timeDiffSum += curTime.Sub(stats.requestTicks[idx])
 		}
 	}
 	if timeDiffSum != 0. {

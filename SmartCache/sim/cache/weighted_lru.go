@@ -147,10 +147,11 @@ func (cache *WeightedLRU) SimGetInfoFilesStats(_ *empty.Empty, stream pb.SimServ
 
 // SimGetInfoFilesWeights returns the file weights
 func (cache *WeightedLRU) SimGetInfoFilesWeights(_ *empty.Empty, stream pb.SimService_SimGetInfoFilesWeightsServer) error {
+	curTime := time.Now()
 	for idx := 0; idx < len(cache.stats); idx++ {
 		stats := cache.stats[idx]
 
-		stats.updateWeight(cache.SelFunctionType, cache.Exp)
+		stats.updateWeight(cache.SelFunctionType, curTime, cache.Exp)
 
 		curFile := &pb.SimFileWeight{
 			Filename: stats.filename,
@@ -164,9 +165,10 @@ func (cache *WeightedLRU) SimGetInfoFilesWeights(_ *empty.Empty, stream pb.SimSe
 	return nil
 }
 
-func updateWeightSingleFile(curStats *weightedFileStats, functionType FunctionType, exp float32, curWg *sync.WaitGroup) {
+func updateWeightSingleFile(curStats *weightedFileStats, functionType FunctionType, curTime time.Time, exp float32, curWg *sync.WaitGroup) {
 	curStats.updateWeight(
 		functionType,
+		curTime,
 		exp,
 	)
 	curWg.Done()
@@ -174,9 +176,10 @@ func updateWeightSingleFile(curStats *weightedFileStats, functionType FunctionTy
 
 func (cache *WeightedLRU) updateWeights() {
 	wg := sync.WaitGroup{}
+	curTime := time.Now()
 	for idx := 0; idx < len(cache.stats); idx++ {
 		wg.Add(1)
-		go updateWeightSingleFile(cache.stats[idx], cache.SelFunctionType, cache.Exp, &wg)
+		go updateWeightSingleFile(cache.stats[idx], cache.SelFunctionType, curTime, cache.Exp, &wg)
 	}
 	wg.Wait()
 }
@@ -185,9 +188,7 @@ func (cache *WeightedLRU) getThreshold() float32 {
 	if len(cache.stats) == 0 {
 		return 0.0
 	}
-
-	// cache.updateWeights()
-
+	cache.updateWeights()
 	// Order from the highest weight to the smallest
 	sort.Sort(ByWeight(cache.stats))
 
@@ -245,7 +246,6 @@ func (cache *WeightedLRU) updatePolicy(filename string, size float32, hit bool) 
 		curStats.updateStats(
 			hit, curStats.totRequests+1, size, currentTime, float32(math.NaN()),
 		)
-		curStats.updateWeight(cache.SelFunctionType, cache.Exp)
 	}
 
 	if !hit {
@@ -254,7 +254,6 @@ func (cache *WeightedLRU) updatePolicy(filename string, size float32, hit bool) 
 			curStats.updateStats(
 				hit, curStats.totRequests+1, size, currentTime, float32(math.NaN()),
 			)
-			curStats.updateWeight(cache.SelFunctionType, cache.Exp)
 		}
 
 		var Q2 = cache.getThreshold()
