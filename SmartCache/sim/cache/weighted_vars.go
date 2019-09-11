@@ -7,7 +7,7 @@ import (
 
 const (
 	// StatsMemorySize represents the  number of slots
-	StatsMemorySize uint64 = 64
+	StatsMemorySize uint64 = 8
 )
 
 type cacheEmptyMsg struct{}
