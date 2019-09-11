@@ -129,9 +129,10 @@ func (cache *WeightedCache) SimGetInfoFilesStats(_ *empty.Empty, stream pb.SimSe
 
 // SimGetInfoFilesWeights returns the file weights
 func (cache *WeightedCache) SimGetInfoFilesWeights(_ *empty.Empty, stream pb.SimService_SimGetInfoFilesWeightsServer) error {
+	curTime := time.Now()
 	for filename, stats := range cache.stats {
 
-		stats.updateWeight(cache.SelFunctionType, cache.Exp)
+		stats.updateWeight(cache.SelFunctionType, curTime, cache.Exp)
 
 		curFile := &pb.SimFileWeight{
 			Filename: filename,
@@ -161,7 +162,7 @@ func (cache *WeightedCache) removeLast() *weightedFileStats {
 
 func (cache *WeightedCache) updatePolicy(filename string, size float32, hit bool) bool {
 	var added = false
-	var currentTime = time.Now()
+	curTime := time.Now()
 
 	if _, inMap := cache.stats[filename]; !inMap {
 		cache.stats[filename] = &weightedFileStats{
@@ -171,7 +172,7 @@ func (cache *WeightedCache) updatePolicy(filename string, size float32, hit bool
 			0.,
 			0,
 			0,
-			currentTime,
+			curTime,
 			[StatsMemorySize]time.Time{},
 			0,
 			float32(math.NaN()),
@@ -179,7 +180,7 @@ func (cache *WeightedCache) updatePolicy(filename string, size float32, hit bool
 	}
 
 	cache.stats[filename].updateStats(
-		hit, cache.stats[filename].totRequests+1, size, currentTime, float32(math.NaN()),
+		hit, cache.stats[filename].totRequests+1, size, curTime, float32(math.NaN()),
 	)
 
 	if !hit {
@@ -194,7 +195,7 @@ func (cache *WeightedCache) updatePolicy(filename string, size float32, hit bool
 	if queueSize > cache.MaxSize {
 		// Update weights
 		for _, curFileStats := range cache.queue {
-			curFileStats.updateWeight(cache.SelFunctionType, cache.Exp)
+			curFileStats.updateWeight(cache.SelFunctionType, curTime, cache.Exp)
 		}
 		// Sort queue
 		sort.Slice(

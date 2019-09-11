@@ -45,7 +45,7 @@ func (stats *weightedFileStats) updateStats(hit bool, totRequests uint32, size f
 	}
 }
 
-func (stats *weightedFileStats) updateWeight(functionType FunctionType, exp float32) {
+func (stats *weightedFileStats) updateWeight(functionType FunctionType, curTime time.Time, exp float32) {
 	switch functionType {
 	case FuncFileWeight:
 		stats.weight = fileWeight(
@@ -67,11 +67,11 @@ func (stats *weightedFileStats) updateWeight(functionType FunctionType, exp floa
 			stats.lastTimeRequested,
 		)
 	case FuncWeightedRequests:
-
 		stats.weight = fileWeightedRequest(
 			stats.size,
 			stats.totRequests,
 			stats.getMeanReqTimes(),
+			curTime,
 			exp,
 		)
 	}
