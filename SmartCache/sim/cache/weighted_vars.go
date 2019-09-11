@@ -42,6 +42,8 @@ func (stats *weightedFileStats) updateStats(hit bool, totRequests uint32, size f
 
 	if !math.IsNaN(float64(meanTime)) {
 		stats.meanTime = meanTime
+	} else {
+		stats.meanTime = stats.getMeanReqTimes()
 	}
 }
 
@@ -70,7 +72,7 @@ func (stats *weightedFileStats) updateWeight(functionType FunctionType, curTime 
 		stats.weight = fileWeightedRequest(
 			stats.size,
 			stats.totRequests,
-			stats.getMeanReqTimes(),
+			stats.meanTime,
 			curTime,
 			exp,
 		)
