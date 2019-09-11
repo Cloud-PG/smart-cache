@@ -85,14 +85,14 @@ func TestWeightedCacheInsert(t *testing.T) {
 	testCache.Get("/a/b/c/d/file3", 1.0)
 	testCache.Get("/a/b/c/d/file4", 1.0)
 
-	if testCache.HitRate() != 20. {
-		t.Fatalf("Hit rate error -> Expected %f but got %f", 20., testCache.HitRate())
+	if testCache.HitRate() != 30.000002 {
+		t.Fatalf("Hit rate error -> Expected %f but got %f", 30.000002, testCache.HitRate())
 	} else if testCache.Size() != 3.0 {
 		t.Fatalf("Size error -> Expected %f but got %f", 3.0, testCache.Size())
-	} else if testCache.WrittenData() != 8. {
-		t.Fatalf("Written data error -> Expected %f but got %f", 8., testCache.WrittenData())
-	} else if testCache.ReadOnHit() != 4. {
-		t.Fatalf("Read on hit error -> Expected %f but got %f", 4., testCache.ReadOnHit())
+	} else if testCache.WrittenData() != 3. {
+		t.Fatalf("Written data error -> Expected %f but got %f", 3., testCache.WrittenData())
+	} else if testCache.ReadOnHit() != 6. {
+		t.Fatalf("Read on hit error -> Expected %f but got %f", 6., testCache.ReadOnHit())
 	}
 }
 
