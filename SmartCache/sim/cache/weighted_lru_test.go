@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	UpdateStatsPolicy UpdateStatsPolicyType = UpdateStatsOnMiss
+	UpdateStatsPolicy UpdateStatsPolicyType = UpdateStatsOnRequest
 	WeightedLRUEXP    float32               = 2.0
 )
 
@@ -86,35 +86,17 @@ func TestWeightedLRUInsert(t *testing.T) {
 	testCache.Get("/a/b/c/d/file1", 2.0)
 	testCache.Get("/a/b/c/d/file1", 2.0)
 	testCache.Get("/a/b/c/d/file4", 1.0)
-	testCache.Get("/a/b/c/d/file4", 1.0)
-	testCache.Get("/a/b/c/d/file4", 1.0)
-	testCache.Get("/a/b/c/d/file4", 1.0)
-	testCache.Get("/a/b/c/d/file4", 1.0)
 	testCache.Get("/a/b/c/d/file3", 1.0)
 	testCache.Get("/a/b/c/d/file4", 1.0)
-	testCache.Get("/a/b/c/d/file4", 1.0)
-	testCache.Get("/a/b/c/d/file4", 1.0)
-	testCache.Get("/a/b/c/d/file5", 2.0)
-	testCache.Get("/a/b/c/d/file7", 2.0)
-	testCache.Get("/a/b/c/d/file8", 2.0)
-	testCache.Get("/a/b/c/d/file8", 1.0)
-	testCache.Get("/a/b/c/d/file9", 1.0)
-	testCache.Get("/a/b/c/d/file6", 1.0)
-	testCache.Get("/a/b/c/d/file5", 1.0)
-	testCache.Get("/a/b/c/d/file9", 1.0)
-	testCache.Get("/a/b/c/d/file1", 1.0)
-	testCache.Get("/a/b/c/d/file2", 1.0)
-	testCache.Get("/a/b/c/d/file4", 1.0)
-	testCache.Get("/a/b/c/d/file5", 1.0)
 
-	if testCache.HitRate() != 42.857143 {
-		t.Fatalf("Hit rate error -> Expected %f but got %f", 42.857143, testCache.HitRate())
-	} else if testCache.Size() != 5.0 {
-		t.Fatalf("Size error -> Expected %f but got %f", 5.0, testCache.Size())
-	} else if testCache.WrittenData() != 13.0 {
-		t.Fatalf("Written data error -> Expected %f but got %f", 13.0, testCache.WrittenData())
-	} else if testCache.ReadOnHit() != 14. {
-		t.Fatalf("Read on hit error -> Expected %f but got %f", 14., testCache.ReadOnHit())
+	if testCache.HitRate() != 20. {
+		t.Fatalf("Hit rate error -> Expected %f but got %f", 20., testCache.HitRate())
+	} else if testCache.Size() != 4.0 {
+		t.Fatalf("Size error -> Expected %f but got %f", 4.0, testCache.Size())
+	} else if testCache.WrittenData() != 4.0 {
+		t.Fatalf("Written data error -> Expected %f but got %f", 4.0, testCache.WrittenData())
+	} else if testCache.ReadOnHit() != 2. {
+		t.Fatalf("Read on hit error -> Expected %f but got %f", 2., testCache.ReadOnHit())
 	}
 }
 

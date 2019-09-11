@@ -71,6 +71,7 @@ func (stats *weightedFileStats) updateWeight(functionType FunctionType, curTime 
 	case FuncWeightedRequests:
 		stats.weight = fileWeightedRequest(
 			stats.size,
+			stats.nHits,
 			stats.totRequests,
 			stats.getMeanReqTimes(curTime),
 			exp,
