@@ -74,7 +74,6 @@ func (stats *weightedFileStats) updateWeight(functionType FunctionType, curTime 
 			stats.totRequests,
 			stats.getMeanReqTimes(curTime),
 			exp,
-			stats.lastTimeRequested,
 		)
 	}
 }
