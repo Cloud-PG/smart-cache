@@ -35,5 +35,5 @@ func fileWeightOnlyTime(totRequests uint32, exp float32, lastTimeRequested time.
 
 func fileWeightedRequest(size float32, totRequests uint32, meanTicks float32, lastTimeRequested time.Time, exp float32) float32 {
 	deltaLastTimeRequested := float32(time.Now().Sub(lastTimeRequested).Seconds())
-	return ((meanTicks + deltaLastTimeRequested) / 2.) + (size / float32(math.Pow(float64(totRequests), float64(exp))))
+	return (meanTicks + (size / float32(math.Pow(float64(totRequests), float64(exp))))) * deltaLastTimeRequested
 }
