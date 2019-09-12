@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	UpdateStatsPolicy UpdateStatsPolicyType = UpdateStatsOnRequest
+	UpdateStatsPolicy UpdateStatsPolicyType = UpdateStatsOnMiss
 	WeightedLRUEXP    float32               = 2.0
 )
 
