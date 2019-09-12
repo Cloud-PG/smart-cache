@@ -23,7 +23,8 @@ var weightUpdatePolicy string
 
 func main() {
 	rootCmd := &cobra.Command{}
-	rootCmd.AddCommand(commandRun())
+	rootCmd.AddCommand(commandServe())
+	rootCmd.AddCommand(commandSimulate())
 
 	rootCmd.PersistentFlags().Float32Var(&cacheSize, "size", 0.0, "cache size")
 	rootCmd.PersistentFlags().StringVar(&serviceHost, "host", "localhost", "Ip to listen to")
@@ -37,7 +38,7 @@ func main() {
 	}
 }
 
-func commandRun() *cobra.Command {
+func commandServe() *cobra.Command {
 	cmd := &cobra.Command{
 		Run: func(cmd *cobra.Command, args []string) {
 			// Get first element and reuse same memory space to allocate args
@@ -133,8 +134,24 @@ func commandRun() *cobra.Command {
 			}
 		},
 		Use:   `serve cacheType`,
-		Short: "Command serve",
+		Short: "Simulator service",
 		Long:  "Run a cache simulator service",
+		Args:  cobra.MaximumNArgs(1),
+	}
+	return cmd
+}
+
+func commandSimulate() *cobra.Command {
+	cmd := &cobra.Command{
+		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) != 1 {
+				fmt.Println("ERR: You need to specify only 1 type of service...")
+				os.Exit(-1)
+			}
+		},
+		Use:   `simulate cacheType`,
+		Short: "Simulate a session",
+		Long:  "Simulate a session from data input",
 		Args:  cobra.MaximumNArgs(1),
 	}
 	return cmd
