@@ -21,7 +21,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='pluginproto',
   syntax='proto3',
   serialized_options=_b('\n\034io.grpc.cache.plugin.serviceB\013PluginProtoP\001'),
-  serialized_pb=_b('\n\x1dpluginProto/pluginProto.proto\x12\x0bpluginproto\x1a\x1bgoogle/protobuf/empty.proto\"c\n\x0b\x46ileRequest\x12\x10\n\x08\x66ilename\x18\x01 \x01(\t\x12\x12\n\ndownloaded\x18\x02 \x01(\x02\x12\x0b\n\x03hit\x18\x03 \x01(\x08\x12\x10\n\x08meanTime\x18\x04 \x01(\x02\x12\x0f\n\x07nAccess\x18\x05 \x01(\r\"+\n\x08\x46ileHint\x12\x10\n\x08\x66ilename\x18\x01 \x01(\t\x12\r\n\x05store\x18\x02 \x01(\x08\x32\xcd\x01\n\x0bPluginProto\x12\x39\n\x07GetHint\x12\x15.pluginproto.FileHint\x1a\x15.pluginproto.FileHint\"\x00\x12\x41\n\x0bUpdateStats\x12\x18.pluginproto.FileRequest\x1a\x16.google.protobuf.Empty\"\x00\x12@\n\x0cResetHistory\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\"\x00\x42-\n\x1cio.grpc.cache.plugin.serviceB\x0bPluginProtoP\x01\x62\x06proto3')
+  serialized_pb=_b('\n\x1dpluginProto/pluginProto.proto\x12\x0bpluginproto\x1a\x1bgoogle/protobuf/empty.proto\"@\n\x0b\x46ileRequest\x12\x10\n\x08\x66ilename\x18\x01 \x01(\t\x12\x12\n\ndownloaded\x18\x02 \x01(\x02\x12\x0b\n\x03hit\x18\x03 \x01(\x08\"+\n\x08\x46ileHint\x12\x10\n\x08\x66ilename\x18\x01 \x01(\t\x12\r\n\x05store\x18\x02 \x01(\x08\x32\xcd\x01\n\x0bPluginProto\x12\x39\n\x07GetHint\x12\x15.pluginproto.FileHint\x1a\x15.pluginproto.FileHint\"\x00\x12\x41\n\x0bUpdateStats\x12\x18.pluginproto.FileRequest\x1a\x16.google.protobuf.Empty\"\x00\x12@\n\x0cResetHistory\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\"\x00\x42-\n\x1cio.grpc.cache.plugin.serviceB\x0bPluginProtoP\x01\x62\x06proto3')
   ,
   dependencies=[google_dot_protobuf_dot_empty__pb2.DESCRIPTOR,])
 
@@ -56,20 +56,6 @@ _FILEREQUEST = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='meanTime', full_name='pluginproto.FileRequest.meanTime', index=3,
-      number=4, type=2, cpp_type=6, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='nAccess', full_name='pluginproto.FileRequest.nAccess', index=4,
-      number=5, type=13, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
   ],
   extensions=[
   ],
@@ -83,7 +69,7 @@ _FILEREQUEST = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=75,
-  serialized_end=174,
+  serialized_end=139,
 )
 
 
@@ -120,8 +106,8 @@ _FILEHINT = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=176,
-  serialized_end=219,
+  serialized_start=141,
+  serialized_end=184,
 )
 
 DESCRIPTOR.message_types_by_name['FileRequest'] = _FILEREQUEST
@@ -151,8 +137,8 @@ _PLUGINPROTO = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=0,
   serialized_options=None,
-  serialized_start=222,
-  serialized_end=427,
+  serialized_start=187,
+  serialized_end=392,
   methods=[
   _descriptor.MethodDescriptor(
     name='GetHint',

@@ -20,8 +20,6 @@ message FileRequest {
   string filename = 1;
   float downloaded = 2;
   bool hit = 3;
-  float meanTime = 4;
-  uint32 nAccess = 5;
 }
 
 message FileHint {

@@ -7,7 +7,7 @@ import (
 
 const (
 	// StatsMemorySize represents the  number of slots
-	StatsMemorySize uint64 = 64
+	StatsMemorySize uint64 = 8
 )
 
 type cacheEmptyMsg struct{}
@@ -42,10 +42,12 @@ func (stats *weightedFileStats) updateStats(hit bool, totRequests uint32, size f
 
 	if !math.IsNaN(float64(meanTime)) {
 		stats.meanTime = meanTime
+	} else {
+		stats.meanTime = stats.getMeanReqTimes(curTime)
 	}
 }
 
-func (stats *weightedFileStats) updateWeight(functionType FunctionType, exp float32) {
+func (stats *weightedFileStats) updateWeight(functionType FunctionType, exp float32, curTime time.Time) {
 	switch functionType {
 	case FuncFileWeight:
 		stats.weight = fileWeight(
@@ -67,25 +69,23 @@ func (stats *weightedFileStats) updateWeight(functionType FunctionType, exp floa
 			stats.lastTimeRequested,
 		)
 	case FuncWeightedRequests:
-
 		stats.weight = fileWeightedRequest(
 			stats.size,
 			stats.totRequests,
-			stats.getMeanReqTimes(),
+			stats.getMeanReqTimes(curTime),
 			exp,
 		)
 	}
 }
 
-func (stats weightedFileStats) getMeanReqTimes() float32 {
+func (stats weightedFileStats) getMeanReqTimes(curTime time.Time) float32 {
 	if !math.IsNaN(float64(stats.meanTime)) {
 		return stats.meanTime
 	}
 	var timeDiffSum time.Duration
-	lastTimeRequested := stats.lastTimeRequested
 	for idx := 0; idx < int(StatsMemorySize); idx++ {
 		if !stats.requestTicks[idx].IsZero() {
-			timeDiffSum += lastTimeRequested.Sub(stats.requestTicks[idx])
+			timeDiffSum += curTime.Sub(stats.requestTicks[idx])
 		}
 	}
 	if timeDiffSum != 0. {

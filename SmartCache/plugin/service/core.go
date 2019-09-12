@@ -4,6 +4,7 @@ import (
 	"context"
 	"math"
 	"sort"
+	"sync"
 	"time"
 
 	pb "./pluginProto"
@@ -57,9 +58,8 @@ func (curService PluginServiceServer) UpdateStats(ctx context.Context, curFile *
 	currentTime := time.Now()
 	curStats := curService.getOrInsertStats(curFile.Filename)
 	curStats.updateStats(
-		curFile.Hit, curFile.NAccess, curFile.Downloaded, currentTime, curFile.MeanTime,
+		curFile.Hit, curStats.totRequests+1, curFile.Downloaded, currentTime, curFile.MeanTime,
 	)
-	curStats.updateWeight(curService.SelFunctionType, curService.Exp)
 	return &empty.Empty{}, nil
 }
 
@@ -69,10 +69,30 @@ func (curService PluginServiceServer) ResetHistory(ctx context.Context, _ *empty
 	return &empty.Empty{}, nil
 }
 
+func updateWeightSingleFile(curStats *weightedFileStats, functionType FunctionType, exp float32, curTime time.Time, curWg *sync.WaitGroup) {
+	curStats.updateWeight(
+		functionType,
+		exp,
+		curTime,
+	)
+	curWg.Done()
+}
+
+func (curService *PluginServiceServer) updateWeights() {
+	wg := sync.WaitGroup{}
+	curTime := time.Now()
+	for idx := 0; idx < len(curService.stats); idx++ {
+		wg.Add(1)
+		go updateWeightSingleFile(curService.stats[idx], curService.SelFunctionType, curService.Exp, curTime, &wg)
+	}
+	wg.Wait()
+}
+
 func (curService *PluginServiceServer) getThreshold() float32 {
 	if len(curService.stats) == 0 {
 		return 0.0
 	}
+	curService.updateWeights()
 	// Order from the highest weight to the smallest
 	sort.Sort(ByWeight(curService.stats))
 

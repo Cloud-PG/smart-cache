@@ -35,8 +35,6 @@ def resolve():
     file_downloaded = request.values.get('downloaded', 0.)
     print(json.dumps({
         'filename': file_name,
-        'mean_time': mean_time,
-        'n_acces': n_access,
         'downloaded': file_downloaded
     }, indent=2, sort_keys=True))
     if file_name:
@@ -64,8 +62,6 @@ def resolve():
                 file_name,
                 file_downloaded,
                 False,
-                mean_time,
-                n_access
             )
         )
         result = stubSimService.GetHint(
