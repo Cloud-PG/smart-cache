@@ -188,23 +188,25 @@ func (cache *WeightedLRU) getThreshold() float32 {
 	if len(cache.stats) == 0 {
 		return 0.0
 	}
-	cache.updateWeights()
+	// TODO: make parametric update
+	// cache.updateWeights()
 	// Order from the highest weight to the smallest
 	sort.Sort(ByWeight(cache.stats))
 
 	Q2 := cache.stats[int(math.Floor(float64(0.5*float32(len(cache.stats)))))].weight
-	Q1Idx := int(math.Floor(float64(0.25 * float32(len(cache.stats)))))
-	Q1 := cache.stats[Q1Idx].weight
-	if Q1 > 2*Q2 {
-		for idx := 0; idx < Q1Idx; idx++ {
-			delete(cache.statsFilenames, cache.stats[idx].filename)
-		}
-		copy(cache.stats, cache.stats[Q1Idx:])
-		cache.stats = cache.stats[:len(cache.stats)-1]
-		for idx := 0; idx < Q1Idx; idx++ {
-			cache.statsFilenames[cache.stats[idx].filename] = idx
-		}
-	}
+	// TODO: make delete parametric
+	// Q1Idx := int(math.Floor(float64(0.25 * float32(len(cache.stats)))))
+	// Q1 := cache.stats[Q1Idx].weight
+	// if Q1 > 2*Q2 {
+	// 	for idx := 0; idx < Q1Idx; idx++ {
+	// 		delete(cache.statsFilenames, cache.stats[idx].filename)
+	// 	}
+	// 	copy(cache.stats, cache.stats[Q1Idx:])
+	// 	cache.stats = cache.stats[:len(cache.stats)-1]
+	// 	for idx := 0; idx < Q1Idx; idx++ {
+	// 		cache.statsFilenames[cache.stats[idx].filename] = idx
+	// 	}
+	// }
 	return Q2
 }
 
@@ -249,6 +251,8 @@ func (cache *WeightedLRU) updatePolicy(filename string, size float32, hit bool) 
 		curStats.updateStats(
 			hit, curStats.totRequests+1, size, currentTime, float32(math.NaN()),
 		)
+		// TODO: make parametric update
+		curStats.updateWeight(cache.SelFunctionType, cache.Exp, time.Time{})
 	}
 
 	if !hit {
@@ -257,6 +261,8 @@ func (cache *WeightedLRU) updatePolicy(filename string, size float32, hit bool) 
 			curStats.updateStats(
 				hit, curStats.totRequests+1, size, currentTime, float32(math.NaN()),
 			)
+			// TODO: make parametric update
+			curStats.updateWeight(cache.SelFunctionType, cache.Exp, time.Time{})
 		}
 
 		var Q2 = cache.getThreshold()

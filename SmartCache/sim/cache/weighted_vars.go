@@ -83,9 +83,15 @@ func (stats weightedFileStats) getMeanReqTimes(curTime time.Time) float32 {
 		return stats.meanTime
 	}
 	var timeDiffSum time.Duration
+	var timeReference time.Time
+	if curTime.IsZero() {
+		timeReference = stats.lastTimeRequested
+	} else {
+		timeReference = curTime
+	}
 	for idx := 0; idx < int(StatsMemorySize); idx++ {
 		if !stats.requestTicks[idx].IsZero() {
-			timeDiffSum += curTime.Sub(stats.requestTicks[idx])
+			timeDiffSum += timeReference.Sub(stats.requestTicks[idx])
 		}
 	}
 	if timeDiffSum != 0. {
