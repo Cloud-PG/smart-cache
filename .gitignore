@@ -232,3 +232,6 @@ SmartCache/plugin/dasgoclient
 
 # Plugin executable
 SmartCache/plugin/goXcachePlugin
+
+# Simulation data
+*.csv.gz

@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"time"
 
 	"./cache"
 	pb "./cache/simService"
@@ -144,15 +145,118 @@ func commandServe() *cobra.Command {
 func commandSimulate() *cobra.Command {
 	cmd := &cobra.Command{
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 1 {
-				fmt.Println("ERR: You need to specify only 1 type of service...")
+			if len(args) != 2 {
+				fmt.Println("ERR: You need to specify the cache type and a file or a folder")
 				os.Exit(-1)
 			}
+			cacheType := args[0]
+			pathString := args[1]
+			copy(args, args[2:])
+			args = args[:len(args)-1]
+
+			// Create cache
+			switch cacheType {
+			case "lru":
+				fmt.Printf("[Create LRU Cache][Size: %f]\n", cacheSize)
+				cacheInstance = &cache.LRUCache{
+					MaxSize: cacheSize,
+				}
+				cacheInstance.Init()
+			case "weighted":
+				fmt.Printf("[Create Weighted Cache][Size: %f]\n", cacheSize)
+
+				var functionType cache.FunctionType
+				switch weightedFunc {
+				case "FuncFileWeight":
+					functionType = cache.FuncFileWeight
+				case "FuncFileWeightAndTime":
+					functionType = cache.FuncFileWeightAndTime
+				case "FuncFileWeightOnlyTime":
+					functionType = cache.FuncFileWeightOnlyTime
+				case "FuncWeightedRequests":
+					functionType = cache.FuncWeightedRequests
+				default:
+					fmt.Println("ERR: You need to specify a weight function.")
+					os.Exit(-1)
+				}
+				cacheInstance = &cache.WeightedCache{
+					MaxSize:         cacheSize,
+					Exp:             weightExp,
+					SelFunctionType: functionType,
+				}
+				cacheInstance.Init()
+			case "weightedLRU":
+				fmt.Printf("[Create Weighted Cache][Size: %f]\n", cacheSize)
+				var functionType cache.FunctionType
+				var updatePolicyType cache.UpdateStatsPolicyType
+				switch weightedFunc {
+				case "FuncFileWeight":
+					functionType = cache.FuncFileWeight
+				case "FuncFileWeightAndTime":
+					functionType = cache.FuncFileWeightAndTime
+				case "FuncFileWeightOnlyTime":
+					functionType = cache.FuncFileWeightOnlyTime
+				case "FuncWeightedRequests":
+					functionType = cache.FuncWeightedRequests
+				default:
+					fmt.Println("ERR: You need to specify a weight function.")
+					os.Exit(-1)
+				}
+				switch weightUpdatePolicy {
+				case "miss":
+					updatePolicyType = cache.UpdateStatsOnMiss
+				case "request":
+					updatePolicyType = cache.UpdateStatsOnRequest
+				default:
+					fmt.Println("ERR: You need to specify a weight function.")
+					os.Exit(-1)
+				}
+				cacheInstance = &cache.WeightedLRU{
+					MaxSize:             cacheSize,
+					Exp:                 weightExp,
+					SelFunctionType:     functionType,
+					SelUpdatePolicyType: updatePolicyType,
+				}
+				cacheInstance.Init()
+			default:
+				fmt.Println("ERR: You need to specify a cache type.")
+				os.Exit(-2)
+			}
+
+			// Open simulation files
+			fileStats, statErr := os.Stat(pathString)
+			if statErr != nil {
+				fmt.Printf("ERR: Can not have stat for %s.\n", pathString)
+				os.Exit(-1)
+			}
+
+			var iterator chan cache.CSVRecord
+
+			switch mode := fileStats.Mode(); {
+			case mode.IsRegular():
+				iterator = cache.OpenSimFile(pathString)
+			case mode.IsDir():
+				println("folder")
+			}
+
+			// var passedTime time.Time
+			start := time.Now()
+			var numIterations uint32
+
+			for record := range iterator {
+				cacheInstance.Get(record.Filename, record.Size)
+				if time.Now().Sub(start).Seconds() >= 1. {
+					fmt.Printf("[%d it/s]\r", numIterations)
+					numIterations = 0
+					start = time.Now()
+				}
+				numIterations++
+			}
 		},
-		Use:   `simulate cacheType`,
+		Use:   `simulate cacheType fileOrFolderPath`,
 		Short: "Simulate a session",
 		Long:  "Simulate a session from data input",
-		Args:  cobra.MaximumNArgs(1),
+		Args:  cobra.MaximumNArgs(2),
 	}
 	return cmd
 }
