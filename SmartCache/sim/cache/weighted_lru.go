@@ -201,6 +201,9 @@ func (cache *WeightedLRU) getThreshold() float32 {
 		}
 		copy(cache.stats, cache.stats[Q1Idx:])
 		cache.stats = cache.stats[:len(cache.stats)-1]
+		for idx := 0; idx < Q1Idx; idx++ {
+			cache.statsFilenames[cache.stats[idx].filename] = idx
+		}
 	}
 	return Q2
 }
