@@ -132,9 +132,9 @@ func commandRun() *cobra.Command {
 				log.Fatalf("ERR: grpc serve error '%s'", err)
 			}
 		},
-		Use:   `run cacheType`,
-		Short: "Command run",
-		Long:  "Run a cache simulator",
+		Use:   `serve cacheType`,
+		Short: "Command serve",
+		Long:  "Run a cache simulator service",
 		Args:  cobra.MaximumNArgs(1),
 	}
 	return cmd

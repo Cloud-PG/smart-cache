@@ -89,8 +89,8 @@ func commandRun() *cobra.Command {
 				log.Fatalf("ERR: grpc serve error '%s'", err)
 			}
 		},
-		Use:   `run cacheType`,
-		Short: "Command run",
+		Use:   `serve cacheType`,
+		Short: "Command serve",
 		Long:  "Run the xcache plugin service",
 		Args:  cobra.MaximumNArgs(1),
 	}

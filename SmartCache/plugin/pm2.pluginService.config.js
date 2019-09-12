@@ -5,7 +5,7 @@ module.exports = {
             interpreter: null,
 
             // Options reference: https://pm2.io/doc/en/runtime/reference/ecosystem-file/
-            args: "run weighted --port 4243 --size 10485760 --weightFunction FuncWeightedRequests",
+            args: "serve weighted --port 4243 --size 10485760 --weightFunction FuncWeightedRequests",
             instances: 1,
             cwd: ".",
         },
