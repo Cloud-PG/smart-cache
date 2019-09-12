@@ -30,7 +30,7 @@ func main() {
 	rootCmd.PersistentFlags().Int32Var(&servicePort, "port", 5432, "cache sim service port")
 	rootCmd.PersistentFlags().StringVar(&weightedFunc, "weightFunction", "FuncWeightedRequests", "function to use with weighted cache")
 	rootCmd.PersistentFlags().Float32Var(&weightExp, "weightExp", 2.0, "Exponential to use with weighted cache function")
-	rootCmd.PersistentFlags().StringVar(&weightUpdatePolicy, "weightUpdatePolicy", "request", "when to update the file stats: ['miss', 'request']. Default: request")
+	rootCmd.PersistentFlags().StringVar(&weightUpdatePolicy, "weightUpdatePolicy", "miss", "when to update the file stats: ['miss', 'request']. Default: request")
 
 	if err := rootCmd.Execute(); err != nil {
 		println(err.Error())
