@@ -147,10 +147,11 @@ func (cache *WeightedLRU) SimGetInfoFilesStats(_ *empty.Empty, stream pb.SimServ
 
 // SimGetInfoFilesWeights returns the file weights
 func (cache *WeightedLRU) SimGetInfoFilesWeights(_ *empty.Empty, stream pb.SimService_SimGetInfoFilesWeightsServer) error {
+	curTime := time.Now()
 	for idx := 0; idx < len(cache.stats); idx++ {
 		stats := cache.stats[idx]
 
-		stats.updateWeight(cache.SelFunctionType, cache.Exp)
+		stats.updateWeight(cache.SelFunctionType, cache.Exp, curTime)
 
 		curFile := &pb.SimFileWeight{
 			Filename: stats.filename,
@@ -164,19 +165,21 @@ func (cache *WeightedLRU) SimGetInfoFilesWeights(_ *empty.Empty, stream pb.SimSe
 	return nil
 }
 
-func updateWeightSingleFile(curStats *weightedFileStats, functionType FunctionType, exp float32, curWg *sync.WaitGroup) {
+func updateWeightSingleFile(curStats *weightedFileStats, functionType FunctionType, exp float32, curTime time.Time, curWg *sync.WaitGroup) {
 	curStats.updateWeight(
 		functionType,
 		exp,
+		curTime,
 	)
 	curWg.Done()
 }
 
 func (cache *WeightedLRU) updateWeights() {
 	wg := sync.WaitGroup{}
+	curTime := time.Now()
 	for idx := 0; idx < len(cache.stats); idx++ {
 		wg.Add(1)
-		go updateWeightSingleFile(cache.stats[idx], cache.SelFunctionType, cache.Exp, &wg)
+		go updateWeightSingleFile(cache.stats[idx], cache.SelFunctionType, cache.Exp, curTime, &wg)
 	}
 	wg.Wait()
 }
