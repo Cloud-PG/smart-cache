@@ -208,11 +208,11 @@ func (cache *WeightedLRU) getThreshold() float32 {
 
 	Q2 := cache.stats[int(math.Floor(float64(0.5*float32(len(cache.stats)))))].weight
 
-	if cache.Capacity() > 50. {
-		if cache.SelLimitStatsPolicyType == QDiffGTQ2HalhLimitStats {
+	if cache.Capacity() > 75. {
+		if cache.SelLimitStatsPolicyType == Q1IsDoubleQ2LimitStats {
 			Q1Idx := int(math.Floor(float64(0.25 * float32(len(cache.stats)))))
 			Q1 := cache.stats[Q1Idx].weight
-			if Q1-Q2 > Q2/2. {
+			if Q1 > 2.*Q2 {
 				for idx := 0; idx < Q1Idx; idx++ {
 					delete(cache.statsFilenames, cache.stats[idx].filename)
 				}
