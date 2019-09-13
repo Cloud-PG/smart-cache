@@ -149,12 +149,8 @@ func (cache *WeightedLRU) SimGetInfoFilesStats(_ *empty.Empty, stream pb.SimServ
 
 // SimGetInfoFilesWeights returns the file weights
 func (cache *WeightedLRU) SimGetInfoFilesWeights(_ *empty.Empty, stream pb.SimService_SimGetInfoFilesWeightsServer) error {
-	curTime := time.Now()
 	for idx := 0; idx < len(cache.stats); idx++ {
 		stats := cache.stats[idx]
-
-		stats.updateWeight(cache.SelFunctionType, cache.Exp, curTime)
-
 		curFile := &pb.SimFileWeight{
 			Filename: stats.filename,
 			Weight:   stats.weight,
