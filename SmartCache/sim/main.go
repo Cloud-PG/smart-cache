@@ -21,6 +21,7 @@ var weightExp float32
 var weightedFunc string
 var statUpdatePolicy string
 var weightUpdatePolicy string
+var limitStatsPolicy string
 
 func main() {
 	rootCmd := &cobra.Command{}
@@ -54,6 +55,10 @@ func main() {
 	rootCmd.PersistentFlags().StringVar(
 		&weightUpdatePolicy, "weightUpdatePolicy", "single",
 		"[WeightedLRU] how to update the file weight: ['single', 'all']. Default: single",
+	)
+	rootCmd.PersistentFlags().StringVar(
+		&limitStatsPolicy, "limitStatsPolicy", "Q1IsDoubleQ2LimitStats",
+		"[WeightedLRU] how to maintain the file stats ['noLimit', 'Q1IsDoubleQ2LimitStats']. Default: single",
 	)
 
 	if err := rootCmd.Execute(); err != nil {
@@ -184,47 +189,62 @@ func genCache(cacheType string) cache.Cache {
 	case "weightedLRU":
 		fmt.Printf("[Create Weighted Cache][Size: %f]\n", cacheSize)
 
-		var functionType cache.FunctionType
-		var updateStatPolicy cache.UpdateStatsPolicyType
-		var updateWeightPolicy cache.UpdateWeightPolicyType
+		var selFunctionType cache.FunctionType
+		var selUpdateStatPolicyType cache.UpdateStatsPolicyType
+		var selUpdateWeightPolicyType cache.UpdateWeightPolicyType
+		var selLimitStatsPolicyType cache.LimitStatsPolicyType
 
 		switch weightedFunc {
 		case "FuncFileWeight":
-			functionType = cache.FuncFileWeight
+			selFunctionType = cache.FuncFileWeight
 		case "FuncFileWeightAndTime":
-			functionType = cache.FuncFileWeightAndTime
+			selFunctionType = cache.FuncFileWeightAndTime
 		case "FuncFileWeightOnlyTime":
-			functionType = cache.FuncFileWeightOnlyTime
+			selFunctionType = cache.FuncFileWeightOnlyTime
 		case "FuncWeightedRequests":
-			functionType = cache.FuncWeightedRequests
+			selFunctionType = cache.FuncWeightedRequests
 		default:
 			fmt.Println("ERR: You need to specify a weight function.")
 			os.Exit(-1)
 		}
+
 		switch statUpdatePolicy {
 		case "miss":
-			updateStatPolicy = cache.UpdateStatsOnMiss
+			selUpdateStatPolicyType = cache.UpdateStatsOnMiss
 		case "request":
-			updateStatPolicy = cache.UpdateStatsOnRequest
+			selUpdateStatPolicyType = cache.UpdateStatsOnRequest
 		default:
 			fmt.Println("ERR: You need to specify a weight function.")
 			os.Exit(-1)
 		}
+
 		switch weightUpdatePolicy {
 		case "single":
-			updateWeightPolicy = cache.UpdateSingleWeight
+			selUpdateWeightPolicyType = cache.UpdateSingleWeight
 		case "all":
-			updateWeightPolicy = cache.UpdateAllWeights
+			selUpdateWeightPolicyType = cache.UpdateAllWeights
 		default:
 			fmt.Println("ERR: You need to specify a weight function.")
 			os.Exit(-1)
 		}
+
+		switch limitStatsPolicy {
+		case "noLimit":
+			selLimitStatsPolicyType = cache.NoLimitStats
+		case "Q1IsDoubleQ2LimitStats":
+			selLimitStatsPolicyType = cache.Q1IsDoubleQ2LimitStats
+		default:
+			fmt.Println("ERR: You need to specify a weight function.")
+			os.Exit(-1)
+		}
+
 		cacheInstance = &cache.WeightedLRU{
 			MaxSize:                   cacheSize,
 			Exp:                       weightExp,
-			SelFunctionType:           functionType,
-			SelUpdateStatPolicyType:   updateStatPolicy,
-			SelUpdateWeightPolicyType: updateWeightPolicy,
+			SelFunctionType:           selFunctionType,
+			SelUpdateStatPolicyType:   selUpdateStatPolicyType,
+			SelUpdateWeightPolicyType: selUpdateWeightPolicyType,
+			SelLimitStatsPolicyType:   selLimitStatsPolicyType,
 		}
 		cacheInstance.Init()
 	default:

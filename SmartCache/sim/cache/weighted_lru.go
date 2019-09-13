@@ -22,6 +22,7 @@ type WeightedLRU struct {
 	SelFunctionType                                       FunctionType
 	SelUpdateStatPolicyType                               UpdateStatsPolicyType
 	SelUpdateWeightPolicyType                             UpdateWeightPolicyType
+	SelLimitStatsPolicyType                               LimitStatsPolicyType
 }
 
 // Init the WeightedLRU struct
@@ -196,21 +197,30 @@ func (cache *WeightedLRU) getThreshold() float32 {
 
 	// Order from the highest weight to the smallest
 	sort.Sort(ByWeight(cache.stats))
+	for idx := 0; idx < len(cache.stats); idx++ {
+		curStatFilename := cache.stats[idx].filename
+		if cache.statsFilenames[curStatFilename] != idx {
+			cache.statsFilenames[curStatFilename] = idx
+		}
+	}
 
 	Q2 := cache.stats[int(math.Floor(float64(0.5*float32(len(cache.stats)))))].weight
-	// TODO: make delete parametric
-	// Q1Idx := int(math.Floor(float64(0.25 * float32(len(cache.stats)))))
-	// Q1 := cache.stats[Q1Idx].weight
-	// if Q1 > 2*Q2 {
-	// 	for idx := 0; idx < Q1Idx; idx++ {
-	// 		delete(cache.statsFilenames, cache.stats[idx].filename)
-	// 	}
-	// 	copy(cache.stats, cache.stats[Q1Idx:])
-	// 	cache.stats = cache.stats[:len(cache.stats)-1]
-	// 	for idx := 0; idx < Q1Idx; idx++ {
-	// 		cache.statsFilenames[cache.stats[idx].filename] = idx
-	// 	}
-	// }
+
+	if cache.SelLimitStatsPolicyType == Q1IsDoubleQ2LimitStats {
+		Q1Idx := int(math.Floor(float64(0.25 * float32(len(cache.stats)))))
+		Q1 := cache.stats[Q1Idx].weight
+		if Q1 > 2*Q2 {
+			for idx := 0; idx < Q1Idx; idx++ {
+				delete(cache.statsFilenames, cache.stats[idx].filename)
+			}
+			copy(cache.stats, cache.stats[Q1Idx:])
+			cache.stats = cache.stats[:len(cache.stats)-1]
+			for idx := 0; idx < len(cache.stats); idx++ {
+				cache.statsFilenames[cache.stats[idx].filename] = idx
+			}
+		}
+	}
+
 	return Q2
 }
 
