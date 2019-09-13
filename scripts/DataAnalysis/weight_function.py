@@ -605,7 +605,8 @@ def simulate(cache, windows: list, region: str = "_all_",
 
                 record_pbar.reset(total=df.shape[0])
 
-            for row_idx, record in df.itertuples():
+            for record in df.itertuples():
+                row_idx = record.Index
                 if not last_time:
                     last_time = datetime.datetime.fromtimestamp(record.day)
 
