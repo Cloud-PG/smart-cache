@@ -605,28 +605,28 @@ def simulate(cache, windows: list, region: str = "_all_",
 
                 record_pbar.reset(total=df.shape[0])
 
-            for row_idx, record in df.iterrows():
+            for row_idx, record in df.itertuples():
                 if not last_time:
-                    last_time = datetime.datetime.fromtimestamp(record['day'])
+                    last_time = datetime.datetime.fromtimestamp(record.day)
 
                 if remote:
                     _ = stubSimService.SimGet(
                         simService_pb2.SimCommonFile(
-                            filename=record['filename'],
+                            filename=record.filename,
                             # Convert from Bytes to MegaBytes
-                            size=record['size'] / 1024**2
+                            size=record.size / 1024**2
                         )
                     )
                 else:
                     cache.get(
-                        record['filename'],
+                        record.filename,
                         # Convert from Bytes to MegaBytes
-                        record['size'] / 1024**2
+                        record.size / 1024**2
                     )
 
                 if plot_server:
                     time_diff = datetime.datetime.fromtimestamp(
-                        record['day']
+                        record.day
                     ) - last_time
 
                     if time_diff >= time_delta:
@@ -693,7 +693,7 @@ def simulate(cache, windows: list, region: str = "_all_",
                         }
 
                         last_time = datetime.datetime.fromtimestamp(
-                            record['day'])
+                            record.day)
 
                 if row_idx % OUTPUT_UPDATE_STEP == 0:
                     if remote:
