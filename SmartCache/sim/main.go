@@ -20,6 +20,7 @@ var serviceHost string
 var servicePort int32
 var weightExp float32
 var weightedFunc string
+var statUpdatePolicy string
 var weightUpdatePolicy string
 
 func main() {
@@ -32,7 +33,8 @@ func main() {
 	rootCmd.PersistentFlags().Int32Var(&servicePort, "port", 5432, "cache sim service port")
 	rootCmd.PersistentFlags().StringVar(&weightedFunc, "weightFunction", "FuncWeightedRequests", "function to use with weighted cache")
 	rootCmd.PersistentFlags().Float32Var(&weightExp, "weightExp", 2.0, "Exponential to use with weighted cache function")
-	rootCmd.PersistentFlags().StringVar(&weightUpdatePolicy, "weightUpdatePolicy", "request", "when to update the file stats: ['miss', 'request']. Default: request")
+	rootCmd.PersistentFlags().StringVar(&statUpdatePolicy, "statUpdatePolicy", "request", "when to update the file stats: ['miss', 'request']. Default: request")
+	rootCmd.PersistentFlags().StringVar(&weightUpdatePolicy, "weightUpdatePolicy", "single", "how to update the file weight: ['single', 'all']. Default: single")
 
 	if err := rootCmd.Execute(); err != nil {
 		println(err.Error())
@@ -85,8 +87,11 @@ func commandServe() *cobra.Command {
 				pb.RegisterSimServiceServer(grpcServer, cacheInstance)
 			case "weightedLRU":
 				fmt.Printf("[Create Weighted Cache][Size: %f]\n", cacheSize)
+
 				var functionType cache.FunctionType
-				var updatePolicyType cache.UpdateStatsPolicyType
+				var updateStatPolicy cache.UpdateStatsPolicyType
+				var updateWeightPolicy cache.UpdateWeightPolicyType
+
 				switch weightedFunc {
 				case "FuncFileWeight":
 					functionType = cache.FuncFileWeight
@@ -100,20 +105,30 @@ func commandServe() *cobra.Command {
 					fmt.Println("ERR: You need to specify a weight function.")
 					os.Exit(-1)
 				}
-				switch weightUpdatePolicy {
+				switch statUpdatePolicy {
 				case "miss":
-					updatePolicyType = cache.UpdateStatsOnMiss
+					updateStatPolicy = cache.UpdateStatsOnMiss
 				case "request":
-					updatePolicyType = cache.UpdateStatsOnRequest
+					updateStatPolicy = cache.UpdateStatsOnRequest
+				default:
+					fmt.Println("ERR: You need to specify a weight function.")
+					os.Exit(-1)
+				}
+				switch weightUpdatePolicy {
+				case "single":
+					updateWeightPolicy = cache.UpdateSingleWeight
+				case "all":
+					updateWeightPolicy = cache.UpdateAllWeights
 				default:
 					fmt.Println("ERR: You need to specify a weight function.")
 					os.Exit(-1)
 				}
 				cacheInstance = &cache.WeightedLRU{
-					MaxSize:             cacheSize,
-					Exp:                 weightExp,
-					SelFunctionType:     functionType,
-					SelUpdatePolicyType: updatePolicyType,
+					MaxSize:                   cacheSize,
+					Exp:                       weightExp,
+					SelFunctionType:           functionType,
+					SelUpdateStatPolicyType:   updateStatPolicy,
+					SelUpdateWeightPolicyType: updateWeightPolicy,
 				}
 				cacheInstance.Init()
 				fmt.Printf("[Register Weighted LRU Cache]\n")
@@ -187,8 +202,11 @@ func commandSimulate() *cobra.Command {
 				cacheInstance.Init()
 			case "weightedLRU":
 				fmt.Printf("[Create Weighted Cache][Size: %f]\n", cacheSize)
+
 				var functionType cache.FunctionType
-				var updatePolicyType cache.UpdateStatsPolicyType
+				var updateStatPolicy cache.UpdateStatsPolicyType
+				var updateWeightPolicy cache.UpdateWeightPolicyType
+
 				switch weightedFunc {
 				case "FuncFileWeight":
 					functionType = cache.FuncFileWeight
@@ -202,20 +220,30 @@ func commandSimulate() *cobra.Command {
 					fmt.Println("ERR: You need to specify a weight function.")
 					os.Exit(-1)
 				}
-				switch weightUpdatePolicy {
+				switch statUpdatePolicy {
 				case "miss":
-					updatePolicyType = cache.UpdateStatsOnMiss
+					updateStatPolicy = cache.UpdateStatsOnMiss
 				case "request":
-					updatePolicyType = cache.UpdateStatsOnRequest
+					updateStatPolicy = cache.UpdateStatsOnRequest
+				default:
+					fmt.Println("ERR: You need to specify a weight function.")
+					os.Exit(-1)
+				}
+				switch weightUpdatePolicy {
+				case "single":
+					updateWeightPolicy = cache.UpdateSingleWeight
+				case "all":
+					updateWeightPolicy = cache.UpdateAllWeights
 				default:
 					fmt.Println("ERR: You need to specify a weight function.")
 					os.Exit(-1)
 				}
 				cacheInstance = &cache.WeightedLRU{
-					MaxSize:             cacheSize,
-					Exp:                 weightExp,
-					SelFunctionType:     functionType,
-					SelUpdatePolicyType: updatePolicyType,
+					MaxSize:                   cacheSize,
+					Exp:                       weightExp,
+					SelFunctionType:           functionType,
+					SelUpdateStatPolicyType:   updateStatPolicy,
+					SelUpdateWeightPolicyType: updateWeightPolicy,
 				}
 				cacheInstance.Init()
 			default:

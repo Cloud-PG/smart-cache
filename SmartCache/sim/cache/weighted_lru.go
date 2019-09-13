@@ -20,7 +20,8 @@ type WeightedLRU struct {
 	queue                                                 *list.List
 	hit, miss, writtenData, readOnHit, size, MaxSize, Exp float32
 	SelFunctionType                                       FunctionType
-	SelUpdatePolicyType                                   UpdateStatsPolicyType
+	SelUpdateStatPolicyType                               UpdateStatsPolicyType
+	SelUpdateWeightPolicyType                             UpdateWeightPolicyType
 }
 
 // Init the WeightedLRU struct
@@ -188,8 +189,11 @@ func (cache *WeightedLRU) getThreshold() float32 {
 	if len(cache.stats) == 0 {
 		return 0.0
 	}
-	// TODO: make parametric update
-	// cache.updateWeights()
+
+	if cache.SelUpdateWeightPolicyType == UpdateAllWeights {
+		cache.updateWeights()
+	}
+
 	// Order from the highest weight to the smallest
 	sort.Sort(ByWeight(cache.stats))
 
@@ -246,23 +250,25 @@ func (cache *WeightedLRU) updatePolicy(filename string, size float32, hit bool) 
 	var currentTime = time.Now()
 	var curStats *weightedFileStats
 
-	if cache.SelUpdatePolicyType == UpdateStatsOnRequest {
+	if cache.SelUpdateStatPolicyType == UpdateStatsOnRequest {
 		curStats = cache.getOrInsertStats(filename)
 		curStats.updateStats(
 			hit, curStats.totRequests+1, size, currentTime, float32(math.NaN()),
 		)
-		// TODO: make parametric update
-		curStats.updateWeight(cache.SelFunctionType, cache.Exp, time.Time{})
+		if cache.SelUpdateWeightPolicyType == UpdateSingleWeight {
+			curStats.updateWeight(cache.SelFunctionType, cache.Exp, time.Time{})
+		}
 	}
 
 	if !hit {
-		if cache.SelUpdatePolicyType == UpdateStatsOnMiss {
+		if cache.SelUpdateStatPolicyType == UpdateStatsOnMiss {
 			curStats = cache.getOrInsertStats(filename)
 			curStats.updateStats(
 				hit, curStats.totRequests+1, size, currentTime, float32(math.NaN()),
 			)
-			// TODO: make parametric update
-			curStats.updateWeight(cache.SelFunctionType, cache.Exp, time.Time{})
+			if cache.SelUpdateWeightPolicyType == UpdateSingleWeight {
+				curStats.updateWeight(cache.SelFunctionType, cache.Exp, time.Time{})
+			}
 		}
 
 		var Q2 = cache.getThreshold()

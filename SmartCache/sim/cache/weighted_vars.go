@@ -10,6 +10,26 @@ const (
 	StatsMemorySize uint64 = 8
 )
 
+// UpdateStatsPolicyType is used to select the update stats policy
+type UpdateStatsPolicyType int
+
+const (
+	// UpdateStatsOnRequest indicates to update the file stats on each request
+	UpdateStatsOnRequest UpdateStatsPolicyType = iota
+	// UpdateStatsOnMiss indicates to update the file stats only on file miss
+	UpdateStatsOnMiss
+)
+
+// UpdateWeightPolicyType is used to select the update weight policy
+type UpdateWeightPolicyType int
+
+const (
+	// UpdateSingleWeight indicates to update the file weight only for the current file
+	UpdateSingleWeight UpdateWeightPolicyType = iota
+	// UpdateAllWeights indicates to update the file weight for each file in stats
+	UpdateAllWeights
+)
+
 type cacheEmptyMsg struct{}
 
 type weightedFileStats struct {
@@ -99,16 +119,6 @@ func (stats weightedFileStats) getMeanReqTimes(curTime time.Time) float32 {
 	}
 	return 0.
 }
-
-// UpdateStatsPolicyType is used to select the update stats policy
-type UpdateStatsPolicyType int
-
-const (
-	// UpdateStatsOnRequest indicates to update the file stats on each request
-	UpdateStatsOnRequest UpdateStatsPolicyType = iota
-	// UpdateStatsOnMiss indicates to update the file stats only on file miss
-	UpdateStatsOnMiss
-)
 
 // ByWeight implements sort.Interface based on the Weight field.
 type ByWeight []*weightedFileStats
