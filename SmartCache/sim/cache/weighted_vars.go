@@ -36,8 +36,8 @@ type LimitStatsPolicyType int
 const (
 	// NoLimitStats indicates to not delete stats ever
 	NoLimitStats LimitStatsPolicyType = iota
-	// Q1IsDoubleQ2LimitStats indicates to remove stats with weight >= Q1 if Q1 > 2*Q2
-	Q1IsDoubleQ2LimitStats
+	// QDiffGTQ2HalhLimitStats indicates to remove stats with Q1 - Q2 > Q2 / 2.
+	QDiffGTQ2HalhLimitStats
 )
 
 type cacheEmptyMsg struct{}

@@ -57,8 +57,8 @@ func main() {
 		"[WeightedLRU] how to update the file weight: ['single', 'all']. Default: single",
 	)
 	rootCmd.PersistentFlags().StringVar(
-		&limitStatsPolicy, "limitStatsPolicy", "Q1IsDoubleQ2LimitStats",
-		"[WeightedLRU] how to maintain the file stats ['noLimit', 'Q1IsDoubleQ2LimitStats']. Default: single",
+		&limitStatsPolicy, "limitStatsPolicy", "QDiffGTQ2HalhLimitStats",
+		"[WeightedLRU] how to maintain the file stats ['noLimit', 'QDiffGTQ2HalhLimitStats']. Default: single",
 	)
 
 	if err := rootCmd.Execute(); err != nil {
@@ -231,8 +231,8 @@ func genCache(cacheType string) cache.Cache {
 		switch limitStatsPolicy {
 		case "noLimit":
 			selLimitStatsPolicyType = cache.NoLimitStats
-		case "Q1IsDoubleQ2LimitStats":
-			selLimitStatsPolicyType = cache.Q1IsDoubleQ2LimitStats
+		case "QDiffGTQ2HalhLimitStats":
+			selLimitStatsPolicyType = cache.QDiffGTQ2HalhLimitStats
 		default:
 			fmt.Println("ERR: You need to specify a weight function.")
 			os.Exit(-1)
