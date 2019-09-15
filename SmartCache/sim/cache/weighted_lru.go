@@ -194,12 +194,13 @@ func (cache *WeightedLRU) getThreshold() float32 {
 	// Order from the highest weight to the smallest
 	if !sort.IsSorted(ByWeight(cache.stats)) {
 		sort.Sort(ByWeight(cache.stats))
-		for idx := 0; idx < len(cache.stats); idx++ {
-			curStatFilename := cache.stats[idx].filename
-			if cache.statsFilenames[curStatFilename] != idx {
-				cache.statsFilenames[curStatFilename] = idx
-			}
-		}
+		// Force to reindex
+		// for idx := 0; idx < len(cache.stats); idx++ {
+		// 	curStatFilename := cache.stats[idx].filename
+		// 	if cache.statsFilenames[curStatFilename] != idx {
+		// 		cache.statsFilenames[curStatFilename] = idx
+		// 	}
+		// }
 	}
 
 	Q2 := cache.stats[int(math.Floor(float64(0.5*float32(len(cache.stats)))))].weight
