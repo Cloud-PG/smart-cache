@@ -12,6 +12,10 @@ import (
 	empty "github.com/golang/protobuf/ptypes/empty"
 )
 
+const (
+	numCoRoutines4ReIndex int = 8
+)
+
 // WeightedLRU cache
 type WeightedLRU struct {
 	files                                                 map[string]float32
@@ -182,6 +186,29 @@ func (cache *WeightedLRU) updateWeights() {
 	wg.Wait()
 }
 
+func (cache *WeightedLRU) reIndex(numCoRoutines int) {
+	chunkSize := len(cache.stats) / numCoRoutines
+	waitGroup := sync.WaitGroup{}
+	for idx := 0; idx < numCoRoutines; idx++ {
+		waitGroup.Add(1)
+		go func(stats []*weightedFileStats, fileMap map[string]int, startIdx int, chunkSize int, wg *sync.WaitGroup) {
+			start := startIdx * chunkSize
+			stop := startIdx*chunkSize + chunkSize
+			if stop > len(stats) {
+				stop = len(stats)
+			}
+			for curIdx := start; curIdx < stop; curIdx++ {
+				curStatFilename := stats[idx].filename
+				if fileMap[curStatFilename] != idx {
+					fileMap[curStatFilename] = idx
+				}
+			}
+			wg.Done()
+		}(cache.stats, cache.statsFilenames, idx, chunkSize, &waitGroup)
+	}
+	waitGroup.Wait()
+}
+
 func (cache *WeightedLRU) getThreshold() float32 {
 	if len(cache.stats) == 0 {
 		return 0.0
@@ -195,12 +222,7 @@ func (cache *WeightedLRU) getThreshold() float32 {
 	if !sort.IsSorted(ByWeight(cache.stats)) {
 		sort.Sort(ByWeight(cache.stats))
 		// Force to reindex
-		// for idx := 0; idx < len(cache.stats); idx++ {
-		// 	curStatFilename := cache.stats[idx].filename
-		// 	if cache.statsFilenames[curStatFilename] != idx {
-		// 		cache.statsFilenames[curStatFilename] = idx
-		// 	}
-		// }
+		cache.reIndex(numCoRoutines4ReIndex)
 	}
 
 	Q2 := cache.stats[int(math.Floor(float64(0.5*float32(len(cache.stats)))))].weight
@@ -215,9 +237,8 @@ func (cache *WeightedLRU) getThreshold() float32 {
 				}
 				copy(cache.stats, cache.stats[Q1Idx:])
 				cache.stats = cache.stats[:len(cache.stats)-1]
-				for idx := 0; idx < len(cache.stats); idx++ {
-					cache.statsFilenames[cache.stats[idx].filename] = idx
-				}
+				// Force to reindex
+				cache.reIndex(numCoRoutines4ReIndex)
 			}
 		}
 	}
