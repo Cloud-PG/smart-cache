@@ -482,8 +482,6 @@ def plot_line(table_name: str, filename: str, **kwargs):
             ]
             values['diff'] = [
                 value - values['written_data'][idx]
-                if values['written_data'][idx] != 0.
-                else 0.
                 for idx, value in enumerate(values['read_on_hit'])
             ]
 
