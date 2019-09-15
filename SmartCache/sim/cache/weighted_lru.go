@@ -20,7 +20,7 @@ const (
 type WeightedLRU struct {
 	files                                                 map[string]float32
 	stats                                                 []*weightedFileStats
-	statsFilenames                                        map[string]int
+	statsFilenames                                        sync.Map
 	queue                                                 *list.List
 	hit, miss, writtenData, readOnHit, size, MaxSize, Exp float32
 	SelFunctionType                                       FunctionType
@@ -33,7 +33,7 @@ type WeightedLRU struct {
 func (cache *WeightedLRU) Init(vars ...interface{}) {
 	cache.files = make(map[string]float32)
 	cache.stats = make([]*weightedFileStats, 0)
-	cache.statsFilenames = make(map[string]int)
+	cache.statsFilenames = sync.Map{}
 	cache.queue = list.New()
 }
 
@@ -41,7 +41,7 @@ func (cache *WeightedLRU) Init(vars ...interface{}) {
 func (cache *WeightedLRU) Clear() {
 	cache.files = make(map[string]float32)
 	cache.stats = make([]*weightedFileStats, 0)
-	cache.statsFilenames = make(map[string]int)
+	cache.statsFilenames = sync.Map{}
 	tmpVal := cache.queue.Front()
 	for {
 		if tmpVal == nil {
@@ -188,25 +188,28 @@ func (cache *WeightedLRU) updateWeights() {
 
 func (cache *WeightedLRU) reIndex(numCoRoutines int) {
 	chunkSize := len(cache.stats) / numCoRoutines
-	waitGroup := sync.WaitGroup{}
-	for idx := 0; idx < numCoRoutines; idx++ {
-		waitGroup.Add(1)
-		go func(stats []*weightedFileStats, fileMap map[string]int, startIdx int, chunkSize int, wg *sync.WaitGroup) {
-			start := startIdx * chunkSize
-			stop := startIdx*chunkSize + chunkSize
-			if stop > len(stats) {
-				stop = len(stats)
-			}
-			for curIdx := start; curIdx < stop; curIdx++ {
-				curStatFilename := stats[curIdx].filename
-				if fileMap[curStatFilename] != curIdx {
-					fileMap[curStatFilename] = curIdx
+	if chunkSize > numCoRoutines {
+		waitGroup := sync.WaitGroup{}
+		for idx := 0; idx < numCoRoutines; idx++ {
+			waitGroup.Add(1)
+			go func(stats []*weightedFileStats, fileMap sync.Map, startIdx int, chunkSize int, wg *sync.WaitGroup) {
+				start := startIdx * chunkSize
+				stop := startIdx*chunkSize + chunkSize
+				if stop > len(stats) {
+					stop = len(stats)
 				}
-			}
-			wg.Done()
-		}(cache.stats, cache.statsFilenames, idx, chunkSize, &waitGroup)
+				for curIdx := start; curIdx < stop; curIdx++ {
+					curStatFilename := stats[curIdx].filename
+					curValue, _ := fileMap.Load(curStatFilename)
+					if curValue.(int) != curIdx {
+						fileMap.Store(curStatFilename, curIdx)
+					}
+				}
+				wg.Done()
+			}(cache.stats, cache.statsFilenames, idx, chunkSize, &waitGroup)
+		}
+		waitGroup.Wait()
 	}
-	waitGroup.Wait()
 }
 
 func (cache *WeightedLRU) getThreshold() float32 {
@@ -233,7 +236,7 @@ func (cache *WeightedLRU) getThreshold() float32 {
 			Q1 := cache.stats[Q1Idx].weight
 			if Q1 > 2.*Q2 {
 				for idx := 0; idx < Q1Idx; idx++ {
-					delete(cache.statsFilenames, cache.stats[idx].filename)
+					cache.statsFilenames.Delete(cache.stats[idx].filename)
 				}
 				copy(cache.stats, cache.stats[Q1Idx:])
 				cache.stats = cache.stats[:len(cache.stats)-1]
@@ -248,7 +251,7 @@ func (cache *WeightedLRU) getThreshold() float32 {
 
 func (cache *WeightedLRU) getOrInsertStats(filename string) *weightedFileStats {
 	var result *weightedFileStats
-	if _, inStats := cache.statsFilenames[filename]; !inStats {
+	if _, inStats := cache.statsFilenames.Load(filename); !inStats {
 		cache.stats = append(cache.stats, &weightedFileStats{
 			filename,
 			0.,
@@ -261,18 +264,20 @@ func (cache *WeightedLRU) getOrInsertStats(filename string) *weightedFileStats {
 			0,
 			float32(math.NaN()),
 		})
-		cache.statsFilenames[filename] = len(cache.stats) - 1
+		cache.statsFilenames.Store(filename, len(cache.stats)-1)
 		result = cache.stats[len(cache.stats)-1]
 	} else {
-		if cache.stats[cache.statsFilenames[filename]].filename != filename {
+		guessIndex, _ := cache.statsFilenames.Load(filename)
+		if cache.stats[guessIndex.(int)].filename != filename {
 			for idx := 0; idx < len(cache.stats); idx++ {
 				if cache.stats[idx].filename == filename {
-					cache.statsFilenames[filename] = idx
+					cache.statsFilenames.Store(filename, idx)
 					break
 				}
 			}
 		}
-		result = cache.stats[cache.statsFilenames[filename]]
+		guessIndex, _ = cache.statsFilenames.Load(filename)
+		result = cache.stats[guessIndex.(int)]
 	}
 	return result
 }
