@@ -538,7 +538,10 @@ def star_decorator(func):
 
 
 @star_decorator
-def simulate(cache, windows: list, region: str = "_all_",
+def simulate(cache, 
+             windows: list, 
+             get_window_cache_info: bool, 
+             region: str = "_all_",
              plot_server: str = None,
              remote: bool = False):
     process_num = int(
@@ -766,50 +769,51 @@ def simulate(cache, windows: list, region: str = "_all_",
             num_file += 1
 
         if plot_server:
-            if remote:
-                cur_cache_info = {
-                    'cache': dict(
-                        (cache_file.filename, cache_file.size)
-                        for cache_file in stubSimService.SimGetInfoCacheFiles(
-                            google_dot_protobuf_dot_empty__pb2.Empty()
-                        )
-                    ),
-                    'stats': dict(
-                        (FileInfo.filename, {
-                            'size': FileInfo.size,
-                            'totReq': FileInfo.totReq,
-                            'nHits': FileInfo.nHits,
-                            'nMiss': FileInfo.nMiss
-                        })
-                        for FileInfo in stubSimService.SimGetInfoFilesStats(
-                            google_dot_protobuf_dot_empty__pb2.Empty()
-                        )
-                    ),
-                    'weights':  dict(
-                        (FileInfo.filename, FileInfo.weight)
-                        for FileInfo in stubSimService.SimGetInfoFilesWeights(
-                            google_dot_protobuf_dot_empty__pb2.Empty()
-                        )
-                    ) if cache_name.lower().find("lru") else {}
-                }
-            else:
-                cur_cache_info = cache.info
+            if get_window_cache_info:
+                if remote:
+                    cur_cache_info = {
+                        'cache': dict(
+                            (cache_file.filename, cache_file.size)
+                            for cache_file in stubSimService.SimGetInfoCacheFiles(
+                                google_dot_protobuf_dot_empty__pb2.Empty()
+                            )
+                        ),
+                        'stats': dict(
+                            (FileInfo.filename, {
+                                'size': FileInfo.size,
+                                'totReq': FileInfo.totReq,
+                                'nHits': FileInfo.nHits,
+                                'nMiss': FileInfo.nMiss
+                            })
+                            for FileInfo in stubSimService.SimGetInfoFilesStats(
+                                google_dot_protobuf_dot_empty__pb2.Empty()
+                            )
+                        ),
+                        'weights':  dict(
+                            (FileInfo.filename, FileInfo.weight)
+                            for FileInfo in stubSimService.SimGetInfoFilesWeights(
+                                google_dot_protobuf_dot_empty__pb2.Empty()
+                            )
+                        ) if cache_name.lower().find("lru") else {}
+                    }
+                else:
+                    cur_cache_info = cache.info
 
-            requests.put(
-                "/".join([
-                    plot_server,
-                    "cache",
-                    "info",
-                    cache_name,
-                    f"{num_window}"
-                ]),
-                headers={
-                    'Content-Type': 'application/octet-stream'},
-                data=gzip.compress(
-                    json.dumps(cur_cache_info).encode('utf-8')
-                ),
-                timeout=None
-            )
+                requests.put(
+                    "/".join([
+                        plot_server,
+                        "cache",
+                        "info",
+                        cache_name,
+                        f"{num_window}"
+                    ]),
+                    headers={
+                        'Content-Type': 'application/octet-stream'},
+                    data=gzip.compress(
+                        json.dumps(cur_cache_info).encode('utf-8')
+                    ),
+                    timeout=None
+                )
 
         win_pbar.desc = f"[{cache_name[:4]+cache_name[-12:]}][Open Data Frames][Window {num_window+1}/{len(windows)}][File {num_file}/{len(window)}]"
         win_pbar.update(1)
@@ -1133,6 +1137,9 @@ def main():
     parser.add_argument('--out-folder', type=str,
                         default="./sim_res",
                         help='The output plot name.')
+    parser.add_argument('--get-window-cache-info', type=bool,
+                        default=False,
+                        help='Indicates if retrieve info of the window')
     parser.add_argument('--plot-server', type=str,
                         default=None,
                         help='The plotting server url. It needs the protocol, e.g. "http://localhost:4321"')
@@ -1264,6 +1271,7 @@ def main():
         for idx, cache_results in enumerate(tqdm(pool.imap(simulate, zip(
             cache_list,
             [windows for _ in range(len(cache_list))],
+            [args.get_window_cache_info for _ in range(len(cache_list))],
             [f"_{args.region}_" for _ in range(len(cache_list))],
             [args.plot_server for _ in range(len(cache_list))],
             cache_remote_list
