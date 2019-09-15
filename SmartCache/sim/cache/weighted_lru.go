@@ -198,9 +198,9 @@ func (cache *WeightedLRU) reIndex(numCoRoutines int) {
 				stop = len(stats)
 			}
 			for curIdx := start; curIdx < stop; curIdx++ {
-				curStatFilename := stats[idx].filename
-				if fileMap[curStatFilename] != idx {
-					fileMap[curStatFilename] = idx
+				curStatFilename := stats[curIdx].filename
+				if fileMap[curStatFilename] != curIdx {
+					fileMap[curStatFilename] = curIdx
 				}
 			}
 			wg.Done()
