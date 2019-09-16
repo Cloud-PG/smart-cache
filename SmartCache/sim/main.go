@@ -1,6 +1,7 @@
 package main
 
 import (
+	"compress/gzip"
 	"encoding/csv"
 	"fmt"
 	"log"
@@ -26,6 +27,8 @@ var weightUpdatePolicy string
 var limitStatsPolicy string
 var simRegion string
 var simOutFile string
+var simGenDataset bool
+var simGenDatasetName string
 
 func main() {
 	rootCmd := &cobra.Command{}
@@ -63,14 +66,6 @@ func main() {
 	rootCmd.PersistentFlags().StringVar(
 		&limitStatsPolicy, "limitStatsPolicy", "Q1IsDoubleQ2LimitStats",
 		"[WeightedLRU] how to maintain the file stats ['noLimit', 'Q1IsDoubleQ2LimitStats']. Default: single",
-	)
-	rootCmd.PersistentFlags().StringVar(
-		&simRegion, "simRegion", "all",
-		"[simulation] indicate the filter for record region",
-	)
-	rootCmd.PersistentFlags().StringVar(
-		&simOutFile, "simOutFile", "result.csv",
-		"[simulation] the output file name",
 	)
 
 	if err := rootCmd.Execute(); err != nil {
@@ -158,6 +153,22 @@ func commandSimulate() *cobra.Command {
 			csvOutput.Write([]string{"date", "hit rate", "hit over miss", "weighted hit rate", "written data", "read on hit", "size"})
 			csvOutput.Flush()
 
+			var datasetOutFile *os.File
+			var datasetGzipFile *gzip.Writer
+
+			if simGenDataset {
+				datasetOutFile, _ = os.Create(simGenDatasetName)
+				datasetGzipFile = gzip.NewWriter(datasetOutFile)
+				defer datasetOutFile.Close()
+				defer datasetGzipFile.Close()
+
+				switch cacheType {
+				case "weightedLRU":
+					datasetHeader := []string{"size", "totRequests", "nHits", "nMiss", "meanTime", "class"}
+					datasetGzipFile.Write([]byte(strings.Join(datasetHeader, ",") + "\n"))
+				}
+			}
+
 			for record := range iterator {
 				if strings.Compare(simRegion, "all") != 0 {
 					if strings.Index(strings.ToLower(record.SiteName), fmt.Sprintf("_%s_", strings.ToLower(simRegion))) == -1 {
@@ -183,6 +194,7 @@ func commandSimulate() *cobra.Command {
 						latestTime = time.Unix(record.Day, 0.)
 					}
 				}
+
 				sizeInMbytes := record.Size / (1024 * 1024)
 				curCacheInstance.Get(record.Filename, sizeInMbytes)
 				if time.Now().Sub(start).Seconds() >= 1. {
@@ -195,6 +207,31 @@ func commandSimulate() *cobra.Command {
 					start = time.Now()
 				}
 				numIterations++
+
+				if simGenDataset {
+					switch cacheType {
+					case "weightedLRU":
+						_, latestAddDecision := curCacheInstance.GetLatestDecision()
+						fileStats, err := curCacheInstance.GetFileStats(record.Filename)
+						if err == nil {
+							var curClass string
+							if latestAddDecision {
+								curClass = "1" // STORE
+							} else {
+								curClass = "0" // DISCARD
+							}
+							curRow := []string{
+								fmt.Sprintf("%f", fileStats.Size),
+								fmt.Sprintf("%d", fileStats.TotRequests),
+								fmt.Sprintf("%d", fileStats.NHits),
+								fmt.Sprintf("%d", fileStats.NMiss),
+								fmt.Sprintf("%f", fileStats.MeanTime),
+								curClass,
+							}
+							datasetGzipFile.Write([]byte(strings.Join(curRow, ",") + "\n"))
+						}
+					}
+				}
 			}
 			fmt.Printf("[Simulation ended][Time elapsed: %f minutes]\n", time.Now().Sub(simBeginTime).Minutes())
 		},
@@ -203,6 +240,22 @@ func commandSimulate() *cobra.Command {
 		Long:  "Simulate a session from data input",
 		Args:  cobra.MaximumNArgs(2),
 	}
+	cmd.PersistentFlags().StringVar(
+		&simRegion, "simRegion", "all",
+		"indicate the filter for record region",
+	)
+	cmd.PersistentFlags().StringVar(
+		&simOutFile, "simOutFile", "result.csv",
+		"the output file name",
+	)
+	cmd.PersistentFlags().BoolVar(
+		&simGenDataset, "simGenDataset", false,
+		"indicates if a dataset have to be generated",
+	)
+	cmd.PersistentFlags().StringVar(
+		&simGenDatasetName, "simGenDatasetName", "dataset.csv.gz",
+		"the output dataset file name",
+	)
 	return cmd
 }
 

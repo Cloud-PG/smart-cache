@@ -1,7 +1,6 @@
 package cache
 
 import (
-	"math"
 	"time"
 )
 
@@ -42,7 +41,8 @@ const (
 
 type cacheEmptyMsg struct{}
 
-type weightedFileStats struct {
+// WeightedFileStats contains file statistics collected by weighted caches
+type WeightedFileStats struct {
 	filename          string
 	weight            float32
 	size              float32
@@ -52,11 +52,10 @@ type weightedFileStats struct {
 	lastTimeRequested time.Time
 	requestTicks      [StatsMemorySize]time.Time
 	requestLastIdx    int
-	meanTime          float32
 }
 
-func (stats *weightedFileStats) updateStats(hit bool, totRequests uint32, size float32, curTime time.Time, meanTime float32) {
-	stats.totRequests = totRequests
+func (stats *WeightedFileStats) updateStats(hit bool, size float32, curTime time.Time) {
+	stats.totRequests++
 	stats.size = size
 
 	if hit {
@@ -69,15 +68,9 @@ func (stats *weightedFileStats) updateStats(hit bool, totRequests uint32, size f
 
 	stats.requestTicks[stats.requestLastIdx] = curTime
 	stats.requestLastIdx = (stats.requestLastIdx + 1) % int(StatsMemorySize)
-
-	if !math.IsNaN(float64(meanTime)) {
-		stats.meanTime = meanTime
-	} else {
-		stats.meanTime = stats.getMeanReqTimes(curTime)
-	}
 }
 
-func (stats *weightedFileStats) updateWeight(functionType FunctionType, exp float32, curTime time.Time) {
+func (stats *WeightedFileStats) updateWeight(functionType FunctionType, exp float32, curTime time.Time) {
 	switch functionType {
 	case FuncFileWeight:
 		stats.weight = fileWeight(
@@ -108,10 +101,7 @@ func (stats *weightedFileStats) updateWeight(functionType FunctionType, exp floa
 	}
 }
 
-func (stats weightedFileStats) getMeanReqTimes(curTime time.Time) float32 {
-	if !math.IsNaN(float64(stats.meanTime)) {
-		return stats.meanTime
-	}
+func (stats WeightedFileStats) getMeanReqTimes(curTime time.Time) float32 {
 	var timeDiffSum time.Duration
 	var timeReference time.Time
 	if curTime.IsZero() {
@@ -131,7 +121,7 @@ func (stats weightedFileStats) getMeanReqTimes(curTime time.Time) float32 {
 }
 
 // ByWeight implements sort.Interface based on the Weight field.
-type ByWeight []*weightedFileStats
+type ByWeight []*WeightedFileStats
 
 func (a ByWeight) Len() int { return len(a) }
 

@@ -2,7 +2,7 @@ package cache
 
 import (
 	"context"
-	"math"
+	"errors"
 	"sort"
 	"time"
 
@@ -13,29 +13,46 @@ import (
 // WeightedCache cache
 type WeightedCache struct {
 	files                                                 map[string]float32
-	stats                                                 map[string]*weightedFileStats
-	queue                                                 []*weightedFileStats
+	stats                                                 map[string]*WeightedFileStats
+	queue                                                 []*WeightedFileStats
 	hit, miss, writtenData, readOnHit, size, MaxSize, Exp float32
 	SelFunctionType                                       FunctionType
+	latestHitDecision                                     bool
+	latestAddDecision                                     bool
 }
 
 // Init the WeightedCache struct
 func (cache *WeightedCache) Init(vars ...interface{}) {
 	cache.files = make(map[string]float32)
-	cache.stats = make(map[string]*weightedFileStats)
-	cache.queue = make([]*weightedFileStats, 0)
+	cache.stats = make(map[string]*WeightedFileStats)
+	cache.queue = make([]*WeightedFileStats, 0)
 }
 
 // Clear the WeightedCache struct
 func (cache *WeightedCache) Clear() {
 	cache.files = make(map[string]float32)
-	cache.stats = make(map[string]*weightedFileStats)
-	cache.queue = make([]*weightedFileStats, 0)
+	cache.stats = make(map[string]*WeightedFileStats)
+	cache.queue = make([]*WeightedFileStats, 0)
 	cache.hit = 0.
 	cache.miss = 0.
 	cache.writtenData = 0.
 	cache.readOnHit = 0.
 	cache.size = 0.
+}
+
+// GetFileStats from the cache
+func (cache *WeightedCache) GetFileStats(filename string) (*DatasetInput, error) {
+	stats, inStats := cache.stats[filename]
+	if !inStats {
+		return nil, errors.New("The file is not in cache stats anymore")
+	}
+	return &DatasetInput{
+		stats.size,
+		stats.nHits,
+		stats.nMiss,
+		stats.totRequests,
+		stats.getMeanReqTimes(time.Now()),
+	}, nil
 }
 
 // ClearHitMissStats the LRU struct
@@ -150,7 +167,7 @@ func (cache *WeightedCache) getQueueSize() float32 {
 	return size
 }
 
-func (cache *WeightedCache) removeLast() *weightedFileStats {
+func (cache *WeightedCache) removeLast() *WeightedFileStats {
 	removedElm := cache.queue[len(cache.queue)-1]
 	cache.queue = cache.queue[:len(cache.queue)-1]
 	return removedElm
@@ -161,22 +178,21 @@ func (cache *WeightedCache) updatePolicy(filename string, size float32, hit bool
 	curTime := time.Now()
 
 	if _, inMap := cache.stats[filename]; !inMap {
-		cache.stats[filename] = &weightedFileStats{
+		cache.stats[filename] = &WeightedFileStats{
 			filename,
 			0.,
 			0.,
-			0.,
+			0,
 			0,
 			0,
 			curTime,
 			[StatsMemorySize]time.Time{},
 			0,
-			float32(math.NaN()),
 		}
 	}
 
 	cache.stats[filename].updateStats(
-		hit, cache.stats[filename].totRequests+1, size, curTime, float32(math.NaN()),
+		hit, size, curTime,
 	)
 
 	if !hit {
@@ -226,6 +242,11 @@ func (cache *WeightedCache) updatePolicy(filename string, size float32, hit bool
 	return added
 }
 
+// GetLatestDecision returns the latest decision of the cache
+func (cache *WeightedCache) GetLatestDecision() (bool, bool) {
+	return cache.latestHitDecision, cache.latestAddDecision
+}
+
 // Get a file from the cache updating the statistics
 func (cache *WeightedCache) Get(filename string, size float32) bool {
 	hit := cache.check(filename)
@@ -241,6 +262,9 @@ func (cache *WeightedCache) Get(filename string, size float32) bool {
 	if added {
 		cache.writtenData += size
 	}
+
+	cache.latestHitDecision = hit
+	cache.latestAddDecision = added
 
 	return added
 }

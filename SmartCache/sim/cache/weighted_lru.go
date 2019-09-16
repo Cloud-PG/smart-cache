@@ -3,6 +3,7 @@ package cache
 import (
 	"container/list"
 	"context"
+	"errors"
 	"math"
 	"sort"
 	"sync"
@@ -19,7 +20,7 @@ const (
 // WeightedLRU cache
 type WeightedLRU struct {
 	files                                                 map[string]float32
-	stats                                                 []*weightedFileStats
+	stats                                                 []*WeightedFileStats
 	statsFilenames                                        sync.Map
 	queue                                                 *list.List
 	hit, miss, writtenData, readOnHit, size, MaxSize, Exp float32
@@ -27,12 +28,14 @@ type WeightedLRU struct {
 	SelUpdateStatPolicyType                               UpdateStatsPolicyType
 	SelUpdateWeightPolicyType                             UpdateWeightPolicyType
 	SelLimitStatsPolicyType                               LimitStatsPolicyType
+	latestHitDecision                                     bool
+	latestAddDecision                                     bool
 }
 
 // Init the WeightedLRU struct
 func (cache *WeightedLRU) Init(vars ...interface{}) {
 	cache.files = make(map[string]float32)
-	cache.stats = make([]*weightedFileStats, 0)
+	cache.stats = make([]*WeightedFileStats, 0)
 	cache.statsFilenames = sync.Map{}
 	cache.queue = list.New()
 }
@@ -40,7 +43,7 @@ func (cache *WeightedLRU) Init(vars ...interface{}) {
 // Clear the WeightedLRU struct
 func (cache *WeightedLRU) Clear() {
 	cache.files = make(map[string]float32)
-	cache.stats = make([]*weightedFileStats, 0)
+	cache.stats = make([]*WeightedFileStats, 0)
 	cache.statsFilenames = sync.Map{}
 	tmpVal := cache.queue.Front()
 	for {
@@ -59,6 +62,22 @@ func (cache *WeightedLRU) Clear() {
 	cache.writtenData = 0.
 	cache.readOnHit = 0.
 	cache.size = 0.
+}
+
+// GetFileStats from the cache
+func (cache *WeightedLRU) GetFileStats(filename string) (*DatasetInput, error) {
+	index, inStats := cache.statsFilenames.Load(filename)
+	if !inStats {
+		return nil, errors.New("The file is not in cache stats anymore")
+	}
+	stats := cache.stats[index.(int)]
+	return &DatasetInput{
+		stats.size,
+		stats.totRequests,
+		stats.nHits,
+		stats.nMiss,
+		stats.getMeanReqTimes(time.Time{}),
+	}, nil
 }
 
 // ClearHitMissStats the LRU struct
@@ -167,7 +186,7 @@ func (cache *WeightedLRU) SimGetInfoFilesWeights(_ *empty.Empty, stream pb.SimSe
 	return nil
 }
 
-func updateWeightSingleFile(curStats *weightedFileStats, functionType FunctionType, exp float32, curTime time.Time, curWg *sync.WaitGroup) {
+func updateWeightSingleFile(curStats *WeightedFileStats, functionType FunctionType, exp float32, curTime time.Time, curWg *sync.WaitGroup) {
 	curStats.updateWeight(
 		functionType,
 		exp,
@@ -178,7 +197,7 @@ func updateWeightSingleFile(curStats *weightedFileStats, functionType FunctionTy
 
 func (cache *WeightedLRU) updateWeights() {
 	wg := sync.WaitGroup{}
-	curTime := time.Now()
+	curTime := time.Time{}
 	for idx := 0; idx < len(cache.stats); idx++ {
 		wg.Add(1)
 		go updateWeightSingleFile(cache.stats[idx], cache.SelFunctionType, cache.Exp, curTime, &wg)
@@ -192,7 +211,7 @@ func (cache *WeightedLRU) reIndex(numCoRoutines int) {
 		waitGroup := sync.WaitGroup{}
 		for idx := 0; idx < numCoRoutines; idx++ {
 			waitGroup.Add(1)
-			go func(stats []*weightedFileStats, fileMap sync.Map, startIdx int, chunkSize int, wg *sync.WaitGroup) {
+			go func(stats []*WeightedFileStats, fileMap sync.Map, startIdx int, chunkSize int, wg *sync.WaitGroup) {
 				start := startIdx * chunkSize
 				stop := startIdx*chunkSize + chunkSize
 				if stop > len(stats) {
@@ -249,20 +268,19 @@ func (cache *WeightedLRU) getThreshold() float32 {
 	return Q2
 }
 
-func (cache *WeightedLRU) getOrInsertStats(filename string) *weightedFileStats {
-	var result *weightedFileStats
+func (cache *WeightedLRU) getOrInsertStats(filename string) *WeightedFileStats {
+	var result *WeightedFileStats
 	if _, inStats := cache.statsFilenames.Load(filename); !inStats {
-		cache.stats = append(cache.stats, &weightedFileStats{
+		cache.stats = append(cache.stats, &WeightedFileStats{
 			filename,
 			0.,
 			0.,
-			0.,
+			0,
 			0,
 			0,
 			time.Now(),
 			[StatsMemorySize]time.Time{},
 			0,
-			float32(math.NaN()),
 		})
 		cache.statsFilenames.Store(filename, len(cache.stats)-1)
 		result = cache.stats[len(cache.stats)-1]
@@ -285,13 +303,11 @@ func (cache *WeightedLRU) getOrInsertStats(filename string) *weightedFileStats {
 func (cache *WeightedLRU) updatePolicy(filename string, size float32, hit bool) bool {
 	var added = false
 	var currentTime = time.Now()
-	var curStats *weightedFileStats
+	var curStats *WeightedFileStats
 
 	if cache.SelUpdateStatPolicyType == UpdateStatsOnRequest {
 		curStats = cache.getOrInsertStats(filename)
-		curStats.updateStats(
-			hit, curStats.totRequests+1, size, currentTime, float32(math.NaN()),
-		)
+		curStats.updateStats(hit, size, currentTime)
 		if cache.SelUpdateWeightPolicyType == UpdateSingleWeight {
 			curStats.updateWeight(cache.SelFunctionType, cache.Exp, time.Time{})
 		}
@@ -300,9 +316,7 @@ func (cache *WeightedLRU) updatePolicy(filename string, size float32, hit bool) 
 	if !hit {
 		if cache.SelUpdateStatPolicyType == UpdateStatsOnMiss {
 			curStats = cache.getOrInsertStats(filename)
-			curStats.updateStats(
-				hit, curStats.totRequests+1, size, currentTime, float32(math.NaN()),
-			)
+			curStats.updateStats(hit, size, currentTime)
 			if cache.SelUpdateWeightPolicyType == UpdateSingleWeight {
 				curStats.updateWeight(cache.SelFunctionType, cache.Exp, time.Time{})
 			}
@@ -359,6 +373,11 @@ func (cache *WeightedLRU) updatePolicy(filename string, size float32, hit bool) 
 	return added
 }
 
+// GetLatestDecision returns the latest decision of the cache
+func (cache *WeightedLRU) GetLatestDecision() (bool, bool) {
+	return cache.latestHitDecision, cache.latestAddDecision
+}
+
 // Get a file from the cache updating the statistics
 func (cache *WeightedLRU) Get(filename string, size float32) bool {
 	hit := cache.check(filename)
@@ -374,6 +393,9 @@ func (cache *WeightedLRU) Get(filename string, size float32) bool {
 	if added {
 		cache.writtenData += size
 	}
+
+	cache.latestHitDecision = hit
+	cache.latestAddDecision = added
 
 	return added
 }

@@ -3,12 +3,14 @@ package cache
 import (
 	"container/list"
 	"context"
+	"errors"
 	"time"
 
 	pb "./simService"
 	empty "github.com/golang/protobuf/ptypes/empty"
 )
 
+// LRUFileStats contain file statistics collected by LRU cache
 type LRUFileStats struct {
 	size              float32
 	totRequests       uint32
@@ -35,6 +37,8 @@ type LRUCache struct {
 	stats                                            map[string]*LRUFileStats
 	queue                                            *list.List
 	hit, miss, writtenData, readOnHit, size, MaxSize float32
+	latestHitDecision                                bool
+	latestAddDecision                                bool
 }
 
 // Init the LRU struct
@@ -65,6 +69,21 @@ func (cache *LRUCache) Clear() {
 	cache.writtenData = 0.
 	cache.readOnHit = 0.
 	cache.size = 0.
+}
+
+// GetFileStats from the cache
+func (cache *LRUCache) GetFileStats(filename string) (*DatasetInput, error) {
+	stats, inStats := cache.stats[filename]
+	if !inStats {
+		return nil, errors.New("The file is not in cache stats anymore")
+	}
+	return &DatasetInput{
+		stats.size,
+		stats.nHits,
+		stats.nMiss,
+		stats.totRequests,
+		0.0,
+	}, nil
 }
 
 // ClearHitMissStats the LRU struct
@@ -209,6 +228,11 @@ func (cache *LRUCache) updatePolicy(filename string, size float32, hit bool) boo
 	return added
 }
 
+// GetLatestDecision returns the latest decision of the cache
+func (cache *LRUCache) GetLatestDecision() (bool, bool) {
+	return cache.latestHitDecision, cache.latestAddDecision
+}
+
 // Get a file from the cache updating the statistics
 func (cache *LRUCache) Get(filename string, size float32) bool {
 	if _, ok := cache.stats[filename]; !ok {
@@ -236,6 +260,9 @@ func (cache *LRUCache) Get(filename string, size float32) bool {
 	if added {
 		cache.writtenData += size
 	}
+
+	cache.latestHitDecision = hit
+	cache.latestAddDecision = added
 
 	return added
 }

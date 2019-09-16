@@ -25,6 +25,8 @@ type Cache interface {
 	ReadOnHit() float32
 
 	Get(filename string, size float32) bool
+	GetLatestDecision() (bool, bool)
+	GetFileStats(string) (*DatasetInput, error)
 
 	SimGet(context.Context, *pb.SimCommonFile) (*pb.ActionResult, error)
 	SimReset(context.Context, *empty.Empty) (*pb.SimCacheStatus, error)
@@ -33,4 +35,13 @@ type Cache interface {
 	SimGetInfoCacheFiles(*empty.Empty, pb.SimService_SimGetInfoCacheFilesServer) error
 	SimGetInfoFilesWeights(*empty.Empty, pb.SimService_SimGetInfoFilesWeightsServer) error
 	SimGetInfoFilesStats(*empty.Empty, pb.SimService_SimGetInfoFilesStatsServer) error
+}
+
+// DatasetInput contains file statistics collected by weighted caches
+type DatasetInput struct {
+	Size        float32
+	TotRequests uint32
+	NHits       uint32
+	NMiss       uint32
+	MeanTime    float32
 }
