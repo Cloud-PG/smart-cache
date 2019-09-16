@@ -7,12 +7,14 @@ import (
 	"log"
 	"os"
 	"path"
+	"sort"
 	"strconv"
 )
 
+// CSVRecord is the base record composition readed from the logs
 type CSVRecord struct {
 	Index         int     `json:"index"`
-	Day           float32 `json:"day"`
+	Day           int64   `json:"day"`
 	Filename      string  `json:"filename"`
 	Protocol      string  `json:"protocol"`
 	TaskMonitorID string  `json:"taskMonitorID"`
@@ -42,7 +44,7 @@ func recordGenerator(csvReader *csv.Reader, curFile *os.File) chan CSVRecord {
 			}
 
 			index, _ := strconv.ParseInt(record[0], 10, 32)
-			day, _ := strconv.ParseFloat(record[1], 32)
+			day, _ := strconv.ParseFloat(record[1], 64)
 			joblengthh, _ := strconv.ParseFloat(record[9], 32)
 			joblengthm, _ := strconv.ParseFloat(record[10], 32)
 			cputime, _ := strconv.ParseFloat(record[12], 32)
@@ -51,7 +53,7 @@ func recordGenerator(csvReader *csv.Reader, curFile *os.File) chan CSVRecord {
 
 			channel <- CSVRecord{
 				int(index),
-				float32(day),
+				int64(day),
 				record[2],
 				record[3],
 				record[4],
@@ -90,4 +92,29 @@ func OpenSimFile(filePath string) chan CSVRecord {
 		iterator = recordGenerator(csvReader, gzFile)
 	}
 	return iterator
+}
+
+// OpenSimFolder opens a simulation folder
+func OpenSimFolder(dirPath *os.File) chan CSVRecord {
+
+	channel := make(chan CSVRecord)
+
+	fileStats, _ := dirPath.Readdir(0)
+	var fileList []string
+
+	for _, file := range fileStats {
+		fileList = append(fileList, path.Join(dirPath.Name(), file.Name()))
+	}
+	sort.Slice(fileList, func(i, j int) bool { return fileList[i] < fileList[j] })
+
+	go func() {
+		for _, name := range fileList {
+			for record := range OpenSimFile(name) {
+				channel <- record
+			}
+		}
+		close(channel)
+	}()
+
+	return channel
 }

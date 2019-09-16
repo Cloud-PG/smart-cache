@@ -1,10 +1,12 @@
 package main
 
 import (
+	"encoding/csv"
 	"fmt"
 	"log"
 	"net"
 	"os"
+	"strings"
 	"time"
 
 	"./cache"
@@ -22,6 +24,8 @@ var weightedFunc string
 var statUpdatePolicy string
 var weightUpdatePolicy string
 var limitStatsPolicy string
+var simRegion string
+var simOutFile string
 
 func main() {
 	rootCmd := &cobra.Command{}
@@ -29,7 +33,7 @@ func main() {
 	rootCmd.AddCommand(commandSimulate())
 
 	rootCmd.PersistentFlags().Float32Var(
-		&cacheSize, "size", 0.0,
+		&cacheSize, "size", 10485760., // 10TB
 		"cache size",
 	)
 	rootCmd.PersistentFlags().StringVar(
@@ -59,6 +63,14 @@ func main() {
 	rootCmd.PersistentFlags().StringVar(
 		&limitStatsPolicy, "limitStatsPolicy", "Q1IsDoubleQ2LimitStats",
 		"[WeightedLRU] how to maintain the file stats ['noLimit', 'Q1IsDoubleQ2LimitStats']. Default: single",
+	)
+	rootCmd.PersistentFlags().StringVar(
+		&simRegion, "simRegion", "all",
+		"[simulation] indicate the filter for record region",
+	)
+	rootCmd.PersistentFlags().StringVar(
+		&simOutFile, "simOutFile", "result.csv",
+		"[simulation] the output file name",
 	)
 
 	if err := rootCmd.Execute(); err != nil {
@@ -128,22 +140,63 @@ func commandSimulate() *cobra.Command {
 			case mode.IsRegular():
 				iterator = cache.OpenSimFile(pathString)
 			case mode.IsDir():
-				println("folder")
+				curFolder, _ := os.Open(pathString)
+				defer curFolder.Close()
+				iterator = cache.OpenSimFolder(curFolder)
 			}
 
-			// var passedTime time.Time
+			simBeginTime := time.Now()
 			start := time.Now()
+			var latestTime time.Time
 			var numIterations uint32
 
+			outputFile, _ := os.Create(simOutFile)
+			defer outputFile.Close()
+			csvOutput := csv.NewWriter(outputFile)
+			defer csvOutput.Flush()
+
+			csvOutput.Write([]string{"date", "hit rate", "hit over miss", "weighted hit rate", "written data", "read on hit", "size"})
+			csvOutput.Flush()
+
 			for record := range iterator {
-				curCacheInstance.Get(record.Filename, record.Size)
+				if strings.Compare(simRegion, "all") != 0 {
+					if strings.Index(strings.ToLower(record.SiteName), fmt.Sprintf("_%s_", strings.ToLower(simRegion))) == -1 {
+						continue
+					}
+				}
+				if latestTime.IsZero() {
+					latestTime = time.Unix(record.Day, 0.)
+				} else {
+					curTime := time.Unix(record.Day, 0.)
+					if curTime.Sub(latestTime).Hours() >= 24. {
+						csvOutput.Write([]string{
+							fmt.Sprintf("%s", latestTime),
+							fmt.Sprintf("%0.2f", curCacheInstance.HitRate()),
+							fmt.Sprintf("%0.2f", curCacheInstance.HitOverMiss()),
+							fmt.Sprintf("%0.2f", curCacheInstance.WeightedHitRate()),
+							fmt.Sprintf("%f", curCacheInstance.WrittenData()),
+							fmt.Sprintf("%f", curCacheInstance.ReadOnHit()),
+							fmt.Sprintf("%f", curCacheInstance.Size()),
+						})
+						csvOutput.Flush()
+						curCacheInstance.ClearHitMissStats()
+						latestTime = time.Unix(record.Day, 0.)
+					}
+				}
+				sizeInMbytes := record.Size / (1024 * 1024)
+				curCacheInstance.Get(record.Filename, sizeInMbytes)
 				if time.Now().Sub(start).Seconds() >= 1. {
-					fmt.Printf("[%d it/s]\r", numIterations)
+					fmt.Printf("[Hit Rate %.2f][Capacity %.2f][%d it/s]\r",
+						curCacheInstance.HitRate(),
+						curCacheInstance.Capacity(),
+						numIterations,
+					)
 					numIterations = 0
 					start = time.Now()
 				}
 				numIterations++
 			}
+			fmt.Printf("[Simulation ended][Time elapsed: %f minutes]\n", time.Now().Sub(simBeginTime).Minutes())
 		},
 		Use:   `simulate cacheType fileOrFolderPath`,
 		Short: "Simulate a session",

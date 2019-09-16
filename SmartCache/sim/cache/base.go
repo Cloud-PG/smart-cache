@@ -13,6 +13,7 @@ type Cache interface {
 	updatePolicy(filename string, size float32, hit bool) bool
 
 	Init(...interface{})
+	ClearHitMissStats()
 	Clear()
 
 	HitRate() float32

@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	numCoRoutines4ReIndex int = 32
+	numCoRoutines4ReIndex int = 64
 )
 
 // WeightedLRU cache
