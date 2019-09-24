@@ -1,6 +1,8 @@
 package cache
 
 import (
+	"encoding/json"
+	"strings"
 	"time"
 )
 
@@ -33,59 +35,73 @@ type cacheEmptyMsg struct{}
 
 // WeightedFileStats contains file statistics collected by weighted caches
 type WeightedFileStats struct {
-	filename          string
-	weight            float32
-	size              float32
-	totRequests       uint32
-	nHits             uint32
-	nMiss             uint32
-	lastTimeRequested time.Time
-	requestTicks      [StatsMemorySize]time.Time
-	requestLastIdx    int
+	Filename          string                     `json:"filename"`
+	Weight            float32                    `json:"weight"`
+	Size              float32                    `json:"size"`
+	TotRequests       uint32                     `json:"totRequests"`
+	NHits             uint32                     `json:"nHits"`
+	NMiss             uint32                     `json:"nMiss"`
+	LastTimeRequested time.Time                  `json:"lastTimeRequested"`
+	RequestTicks      [StatsMemorySize]time.Time `json:"requestTicks"`
+	RequestLastIdx    int                        `json:"requestLastIdx"`
+}
+
+func (stats WeightedFileStats) dumps() []byte {
+	emp, _ := json.Marshal(stats)
+	outString := "{\"type\": \"STATS\"}->" + string(emp)
+	return []byte(outString)
+}
+
+func (stats *WeightedFileStats) loads(inString string) *WeightedFileStats {
+	parts := strings.Split(inString, "->")
+	if parts[0] == "{\"type\": \"STATS\"}" {
+		json.Unmarshal([]byte(parts[1]), &stats)
+	}
+	return stats
 }
 
 func (stats *WeightedFileStats) updateStats(hit bool, size float32, curTime time.Time) {
-	stats.totRequests++
-	stats.size = size
+	stats.TotRequests++
+	stats.Size = size
 
 	if hit {
-		stats.nHits++
+		stats.NHits++
 	} else {
-		stats.nMiss++
+		stats.NMiss++
 	}
 
-	stats.lastTimeRequested = curTime
+	stats.LastTimeRequested = curTime
 
-	stats.requestTicks[stats.requestLastIdx] = curTime
-	stats.requestLastIdx = (stats.requestLastIdx + 1) % int(StatsMemorySize)
+	stats.RequestTicks[stats.RequestLastIdx] = curTime
+	stats.RequestLastIdx = (stats.RequestLastIdx + 1) % int(StatsMemorySize)
 }
 
 func (stats *WeightedFileStats) updateWeight(functionType FunctionType, exp float32, curTime time.Time) {
 	switch functionType {
 	case FuncFileWeight:
-		stats.weight = fileWeight(
-			stats.size,
-			stats.totRequests,
+		stats.Weight = fileWeight(
+			stats.Size,
+			stats.TotRequests,
 			exp,
 		)
 	case FuncFileWeightAndTime:
-		stats.weight = fileWeightAndTime(
-			stats.size,
-			stats.totRequests,
+		stats.Weight = fileWeightAndTime(
+			stats.Size,
+			stats.TotRequests,
 			exp,
-			stats.lastTimeRequested,
+			stats.LastTimeRequested,
 		)
 	case FuncFileWeightOnlyTime:
-		stats.weight = fileWeightOnlyTime(
-			stats.totRequests,
+		stats.Weight = fileWeightOnlyTime(
+			stats.TotRequests,
 			exp,
-			stats.lastTimeRequested,
+			stats.LastTimeRequested,
 		)
 	case FuncWeightedRequests:
-		stats.weight = fileWeightedRequest(
-			stats.size,
-			stats.totRequests,
-			stats.getMeanReqTimes(curTime),
+		stats.Weight = fileWeightedRequest(
+			stats.Size,
+			stats.TotRequests,
+			stats.GetMeanReqTimes(curTime),
 			exp,
 		)
 	}
@@ -95,13 +111,13 @@ func (stats WeightedFileStats) getMeanReqTimes(curTime time.Time) float32 {
 	var timeDiffSum time.Duration
 	var timeReference time.Time
 	if curTime.IsZero() {
-		timeReference = stats.lastTimeRequested
+		timeReference = stats.LastTimeRequested
 	} else {
 		timeReference = curTime
 	}
 	for idx := 0; idx < int(StatsMemorySize); idx++ {
-		if !stats.requestTicks[idx].IsZero() {
-			timeDiffSum += timeReference.Sub(stats.requestTicks[idx])
+		if !stats.RequestTicks[idx].IsZero() {
+			timeDiffSum += timeReference.Sub(stats.RequestTicks[idx])
 		}
 	}
 	if timeDiffSum != 0. {

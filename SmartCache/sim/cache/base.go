@@ -14,6 +14,8 @@ type Cache interface {
 
 	Init(...interface{})
 	ClearHitMissStats()
+	Dump(filename string)
+	Load(filename string)
 	Clear()
 
 	HitRate() float32
