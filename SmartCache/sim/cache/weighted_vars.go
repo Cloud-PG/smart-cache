@@ -19,16 +19,6 @@ const (
 	UpdateStatsOnMiss
 )
 
-// UpdateWeightPolicyType is used to select the update weight policy
-type UpdateWeightPolicyType int
-
-const (
-	// UpdateSingleWeight indicates to update the file weight only for the current file
-	UpdateSingleWeight UpdateWeightPolicyType = iota
-	// UpdateAllWeights indicates to update the file weight for each file in stats
-	UpdateAllWeights
-)
-
 // LimitStatsPolicyType is used to limit the amount of stats collected
 type LimitStatsPolicyType int
 

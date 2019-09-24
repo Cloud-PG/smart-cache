@@ -5,8 +5,6 @@ import (
 	"context"
 	"errors"
 	"math"
-	"sort"
-	"sync"
 	"time"
 
 	pb "./simService"
@@ -21,12 +19,11 @@ const (
 type WeightedLRU struct {
 	files                                                 map[string]float32
 	stats                                                 []*WeightedFileStats
-	statsFilenames                                        sync.Map
+	statsFilenames                                        map[string]int
 	queue                                                 *list.List
 	hit, miss, writtenData, readOnHit, size, MaxSize, Exp float32
 	SelFunctionType                                       FunctionType
 	SelUpdateStatPolicyType                               UpdateStatsPolicyType
-	SelUpdateWeightPolicyType                             UpdateWeightPolicyType
 	SelLimitStatsPolicyType                               LimitStatsPolicyType
 	latestHitDecision                                     bool
 	latestAddDecision                                     bool
@@ -36,7 +33,7 @@ type WeightedLRU struct {
 func (cache *WeightedLRU) Init(vars ...interface{}) {
 	cache.files = make(map[string]float32)
 	cache.stats = make([]*WeightedFileStats, 0)
-	cache.statsFilenames = sync.Map{}
+	cache.statsFilenames = make(map[string]int)
 	cache.queue = list.New()
 }
 
@@ -44,7 +41,7 @@ func (cache *WeightedLRU) Init(vars ...interface{}) {
 func (cache *WeightedLRU) Clear() {
 	cache.files = make(map[string]float32)
 	cache.stats = make([]*WeightedFileStats, 0)
-	cache.statsFilenames = sync.Map{}
+	cache.statsFilenames = make(map[string]int)
 	tmpVal := cache.queue.Front()
 	for {
 		if tmpVal == nil {
@@ -66,11 +63,11 @@ func (cache *WeightedLRU) Clear() {
 
 // GetFileStats from the cache
 func (cache *WeightedLRU) GetFileStats(filename string) (*DatasetInput, error) {
-	index, inStats := cache.statsFilenames.Load(filename)
+	index, inStats := cache.statsFilenames[filename]
 	if !inStats {
 		return nil, errors.New("The file is not in cache stats anymore")
 	}
-	stats := cache.stats[index.(int)]
+	stats := cache.stats[index]
 	return &DatasetInput{
 		stats.size,
 		stats.totRequests,
@@ -186,65 +183,16 @@ func (cache *WeightedLRU) SimGetInfoFilesWeights(_ *empty.Empty, stream pb.SimSe
 	return nil
 }
 
-func updateWeightSingleFile(curStats *WeightedFileStats, functionType FunctionType, exp float32, curTime time.Time, curWg *sync.WaitGroup) {
-	curStats.updateWeight(
-		functionType,
-		exp,
-		curTime,
-	)
-	curWg.Done()
-}
-
-func (cache *WeightedLRU) updateWeights() {
-	wg := sync.WaitGroup{}
-	curTime := time.Time{}
-	for idx := 0; idx < len(cache.stats); idx++ {
-		wg.Add(1)
-		go updateWeightSingleFile(cache.stats[idx], cache.SelFunctionType, cache.Exp, curTime, &wg)
-	}
-	wg.Wait()
-}
-
-func (cache *WeightedLRU) reIndex(numCoRoutines int) {
-	chunkSize := len(cache.stats) / numCoRoutines
-	if chunkSize > numCoRoutines {
-		waitGroup := sync.WaitGroup{}
-		for idx := 0; idx < numCoRoutines; idx++ {
-			waitGroup.Add(1)
-			go func(stats []*WeightedFileStats, fileMap sync.Map, startIdx int, chunkSize int, wg *sync.WaitGroup) {
-				start := startIdx * chunkSize
-				stop := startIdx*chunkSize + chunkSize
-				if stop > len(stats) {
-					stop = len(stats)
-				}
-				for curIdx := start; curIdx < stop; curIdx++ {
-					curStatFilename := stats[curIdx].filename
-					curValue, _ := fileMap.Load(curStatFilename)
-					if curValue.(int) != curIdx {
-						fileMap.Store(curStatFilename, curIdx)
-					}
-				}
-				wg.Done()
-			}(cache.stats, cache.statsFilenames, idx, chunkSize, &waitGroup)
-		}
-		waitGroup.Wait()
+func (cache *WeightedLRU) reIndex() {
+	for curIdx := 0; curIdx < len(cache.stats); curIdx++ {
+		curStatFilename := cache.stats[curIdx].filename
+		cache.statsFilenames[curStatFilename] = curIdx
 	}
 }
 
 func (cache *WeightedLRU) getThreshold() float32 {
 	if len(cache.stats) == 0 {
 		return 0.0
-	}
-
-	if cache.SelUpdateWeightPolicyType == UpdateAllWeights {
-		cache.updateWeights()
-	}
-
-	// Order from the highest weight to the smallest
-	if !sort.IsSorted(ByWeight(cache.stats)) {
-		sort.Sort(ByWeight(cache.stats))
-		// Force to reindex
-		cache.reIndex(numCoRoutines4ReIndex)
 	}
 
 	Q2 := cache.stats[int(math.Floor(float64(0.5*float32(len(cache.stats)))))].weight
@@ -255,12 +203,12 @@ func (cache *WeightedLRU) getThreshold() float32 {
 			Q1 := cache.stats[Q1Idx].weight
 			if Q1 > 2.*Q2 {
 				for idx := 0; idx < Q1Idx; idx++ {
-					cache.statsFilenames.Delete(cache.stats[idx].filename)
+					delete(cache.statsFilenames, cache.stats[idx].filename)
 				}
 				copy(cache.stats, cache.stats[Q1Idx:])
 				cache.stats = cache.stats[:len(cache.stats)-1]
 				// Force to reindex
-				cache.reIndex(numCoRoutines4ReIndex)
+				cache.reIndex()
 			}
 		}
 	}
@@ -269,8 +217,8 @@ func (cache *WeightedLRU) getThreshold() float32 {
 }
 
 func (cache *WeightedLRU) getOrInsertStats(filename string) *WeightedFileStats {
-	var result *WeightedFileStats
-	if _, inStats := cache.statsFilenames.Load(filename); !inStats {
+	idx, inStats := cache.statsFilenames[filename]
+	if !inStats {
 		cache.stats = append(cache.stats, &WeightedFileStats{
 			filename,
 			0.,
@@ -282,22 +230,43 @@ func (cache *WeightedLRU) getOrInsertStats(filename string) *WeightedFileStats {
 			[StatsMemorySize]time.Time{},
 			0,
 		})
-		cache.statsFilenames.Store(filename, len(cache.stats)-1)
-		result = cache.stats[len(cache.stats)-1]
-	} else {
-		guessIndex, _ := cache.statsFilenames.Load(filename)
-		if cache.stats[guessIndex.(int)].filename != filename {
-			for idx := 0; idx < len(cache.stats); idx++ {
-				if cache.stats[idx].filename == filename {
-					cache.statsFilenames.Store(filename, idx)
-					break
-				}
+		cache.statsFilenames[filename] = len(cache.stats) - 1
+		idx = len(cache.stats) - 1
+	}
+	return cache.stats[idx]
+}
+
+func (cache *WeightedLRU) moveStat(stat *WeightedFileStats, curTime time.Time) {
+	curIdx, _ := cache.statsFilenames[stat.filename]
+
+	if curIdx-1 >= 0 { // <--[Check left]
+		for idx := curIdx; idx > 0; idx-- {
+			curStats := cache.stats[idx]
+			prevStats := cache.stats[idx-1]
+			if prevStats.weight < curStats.weight {
+				cache.stats[idx-1] = curStats
+				cache.stats[idx] = prevStats
+				cache.statsFilenames[curStats.filename] = idx - 1
+				cache.statsFilenames[prevStats.filename] = idx
+			} else {
+				break
 			}
 		}
-		guessIndex, _ = cache.statsFilenames.Load(filename)
-		result = cache.stats[guessIndex.(int)]
 	}
-	return result
+	if curIdx+1 < len(cache.stats) { // [Check right]-->
+		for idx := curIdx; idx < len(cache.stats)-1; idx++ {
+			curStats := cache.stats[idx]
+			nextStats := cache.stats[idx+1]
+			if nextStats.weight > curStats.weight {
+				cache.stats[idx+1] = curStats
+				cache.stats[idx] = nextStats
+				cache.statsFilenames[curStats.filename] = idx + 1
+				cache.statsFilenames[nextStats.filename] = idx
+			} else {
+				break
+			}
+		}
+	}
 }
 
 func (cache *WeightedLRU) updatePolicy(filename string, size float32, hit bool) bool {
@@ -308,18 +277,16 @@ func (cache *WeightedLRU) updatePolicy(filename string, size float32, hit bool) 
 	if cache.SelUpdateStatPolicyType == UpdateStatsOnRequest {
 		curStats = cache.getOrInsertStats(filename)
 		curStats.updateStats(hit, size, currentTime)
-		if cache.SelUpdateWeightPolicyType == UpdateSingleWeight {
-			curStats.updateWeight(cache.SelFunctionType, cache.Exp, time.Time{})
-		}
+		curStats.updateWeight(cache.SelFunctionType, cache.Exp, time.Time{})
+		cache.moveStat(curStats, time.Time{})
 	}
 
 	if !hit {
 		if cache.SelUpdateStatPolicyType == UpdateStatsOnMiss {
 			curStats = cache.getOrInsertStats(filename)
 			curStats.updateStats(hit, size, currentTime)
-			if cache.SelUpdateWeightPolicyType == UpdateSingleWeight {
-				curStats.updateWeight(cache.SelFunctionType, cache.Exp, time.Time{})
-			}
+			curStats.updateWeight(cache.SelFunctionType, cache.Exp, time.Time{})
+			cache.moveStat(curStats, time.Time{})
 		}
 
 		var Q2 = cache.getThreshold()

@@ -23,7 +23,6 @@ var servicePort int32
 var weightExp float32
 var weightedFunc string
 var statUpdatePolicy string
-var weightUpdatePolicy string
 var limitStatsPolicy string
 var simRegion string
 var simOutFile string
@@ -58,10 +57,6 @@ func main() {
 	rootCmd.PersistentFlags().StringVar(
 		&statUpdatePolicy, "statUpdatePolicy", "request",
 		"[WeightedLRU] when to update the file stats: ['miss', 'request']. Default: request",
-	)
-	rootCmd.PersistentFlags().StringVar(
-		&weightUpdatePolicy, "weightUpdatePolicy", "single",
-		"[WeightedLRU] how to update the file weight: ['single', 'all']. Default: single",
 	)
 	rootCmd.PersistentFlags().StringVar(
 		&limitStatsPolicy, "limitStatsPolicy", "Q1IsDoubleQ2LimitStats",
@@ -297,7 +292,6 @@ func genCache(cacheType string) cache.Cache {
 
 		var selFunctionType cache.FunctionType
 		var selUpdateStatPolicyType cache.UpdateStatsPolicyType
-		var selUpdateWeightPolicyType cache.UpdateWeightPolicyType
 		var selLimitStatsPolicyType cache.LimitStatsPolicyType
 
 		switch weightedFunc {
@@ -324,16 +318,6 @@ func genCache(cacheType string) cache.Cache {
 			os.Exit(-1)
 		}
 
-		switch weightUpdatePolicy {
-		case "single":
-			selUpdateWeightPolicyType = cache.UpdateSingleWeight
-		case "all":
-			selUpdateWeightPolicyType = cache.UpdateAllWeights
-		default:
-			fmt.Println("ERR: You need to specify a weight function.")
-			os.Exit(-1)
-		}
-
 		switch limitStatsPolicy {
 		case "noLimit":
 			selLimitStatsPolicyType = cache.NoLimitStats
@@ -345,12 +329,11 @@ func genCache(cacheType string) cache.Cache {
 		}
 
 		cacheInstance = &cache.WeightedLRU{
-			MaxSize:                   cacheSize,
-			Exp:                       weightExp,
-			SelFunctionType:           selFunctionType,
-			SelUpdateStatPolicyType:   selUpdateStatPolicyType,
-			SelUpdateWeightPolicyType: selUpdateWeightPolicyType,
-			SelLimitStatsPolicyType:   selLimitStatsPolicyType,
+			MaxSize:                 cacheSize,
+			Exp:                     weightExp,
+			SelFunctionType:         selFunctionType,
+			SelUpdateStatPolicyType: selUpdateStatPolicyType,
+			SelLimitStatsPolicyType: selLimitStatsPolicyType,
 		}
 		cacheInstance.Init()
 	default:

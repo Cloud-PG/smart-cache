@@ -89,8 +89,8 @@ func TestWeightedCacheInsert(t *testing.T) {
 		t.Fatalf("Hit rate error -> Expected %f but got %f", 20., testCache.HitRate())
 	} else if testCache.Size() != 3. {
 		t.Fatalf("Size error -> Expected %f but got %f", 3., testCache.Size())
-	} else if testCache.WrittenData() != 8. {
-		t.Fatalf("Written data error -> Expected %f but got %f", 8., testCache.WrittenData())
+	} else if testCache.WrittenData() != 10. {
+		t.Fatalf("Written data error -> Expected %f but got %f", 10., testCache.WrittenData())
 	} else if testCache.ReadOnHit() != 4. {
 		t.Fatalf("Read on hit error -> Expected %f but got %f", 4., testCache.ReadOnHit())
 	}
