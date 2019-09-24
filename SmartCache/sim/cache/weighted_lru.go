@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"math"
+	"sync"
 	"time"
 
 	pb "./simService"
@@ -184,10 +185,16 @@ func (cache *WeightedLRU) SimGetInfoFilesWeights(_ *empty.Empty, stream pb.SimSe
 }
 
 func (cache *WeightedLRU) reIndex() {
+	wg := sync.WaitGroup{}
 	for curIdx := 0; curIdx < len(cache.stats); curIdx++ {
 		curStatFilename := cache.stats[curIdx].filename
-		cache.statsFilenames[curStatFilename] = curIdx
+		wg.Add(1)
+		go func(index int, filename string, waitGroup *sync.WaitGroup) {
+			cache.statsFilenames[filename] = index
+			waitGroup.Done()
+		}(curIdx, curStatFilename, &wg)
 	}
+	wg.Wait()
 }
 
 func (cache *WeightedLRU) getThreshold() float32 {
@@ -201,7 +208,7 @@ func (cache *WeightedLRU) getThreshold() float32 {
 		if cache.SelLimitStatsPolicyType == Q1IsDoubleQ2LimitStats {
 			Q1Idx := int(math.Floor(float64(0.25 * float32(len(cache.stats)))))
 			Q1 := cache.stats[Q1Idx].weight
-			if Q1 > 1.5*Q2 {
+			if Q1 > 2*Q2 {
 				for idx := 0; idx < Q1Idx; idx++ {
 					delete(cache.statsFilenames, cache.stats[idx].filename)
 				}
