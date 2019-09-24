@@ -83,7 +83,7 @@ func commandServe() *cobra.Command {
 			fmt.Printf("[Register '%s' Cache]\n", cacheType)
 			pb.RegisterSimServiceServer(grpcServer, curCacheInstance)
 
-			fmt.Printf("[Try to liste to %s:%d]\n", serviceHost, servicePort)
+			fmt.Printf("[Try to listen to %s:%d]\n", serviceHost, servicePort)
 			lis, err := net.Listen("tcp", fmt.Sprintf("%s:%d", serviceHost, servicePort))
 			if err != nil {
 				log.Fatalf("ERR: failed to listen on %s:%d -> %v", serviceHost, servicePort, err)
