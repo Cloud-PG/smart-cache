@@ -202,13 +202,11 @@ func (cache *WeightedLRU) getThreshold() float32 {
 			Q1Idx := int(math.Floor(float64(0.25 * float32(len(cache.stats)))))
 			Q1 := cache.stats[Q1Idx].weight
 			if Q1 > 1.5*Q2 {
-				deleteCount := 0
 				for idx := 0; idx < Q1Idx; idx++ {
 					delete(cache.statsFilenames, cache.stats[idx].filename)
-					deleteCount++
 				}
 				copy(cache.stats, cache.stats[Q1Idx:])
-				cache.stats = cache.stats[:len(cache.stats)-deleteCount]
+				cache.stats = cache.stats[:len(cache.stats)-Q1Idx]
 				// Force to reindex
 				cache.reIndex()
 			}
