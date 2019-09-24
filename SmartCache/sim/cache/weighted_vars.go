@@ -2,6 +2,7 @@ package cache
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"time"
 )
@@ -47,16 +48,23 @@ type WeightedFileStats struct {
 }
 
 func (stats WeightedFileStats) dumps() []byte {
-	emp, _ := json.Marshal(stats)
-	outString := "{\"type\": \"STATS\"}->" + string(emp)
+	dumpInfo, _ := json.Marshal(&DumpInfo{Type: "STATS"})
+	dumpStats, _ := json.Marshal(stats)
+	outString := string(DumpInfo) + "->" + string(dumpStats)
 	return []byte(outString)
 }
 
 func (stats *WeightedFileStats) loads(inString string) *WeightedFileStats {
 	parts := strings.Split(inString, "->")
-	if parts[0] == "{\"type\": \"STATS\"}" {
+	var dumpInfo DumpInfo
+	json.Unmarshal([]byte(parts[0]), &dumpInfo)
+
+	if dumpInfo.Type == "STATS" {
 		json.Unmarshal([]byte(parts[1]), &stats)
+	} else {
+		panic(fmt.Printf("Searching for type STATS, instead got %s", dumpInfo.Type))
 	}
+
 	return stats
 }
 

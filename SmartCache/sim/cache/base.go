@@ -7,6 +7,11 @@ import (
 	empty "github.com/golang/protobuf/ptypes/empty"
 )
 
+// DumpInfo collects cache marshall info
+type DumpInfo struct {
+	Type string `json: "type"`
+}
+
 // Cache is the base interface for the cache object
 type Cache interface {
 	check(string) bool
