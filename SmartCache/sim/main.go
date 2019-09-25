@@ -164,6 +164,7 @@ func commandSimulate() *cobra.Command {
 				}
 			}
 
+			var numRecords int
 			for record := range iterator {
 				if strings.Compare(simRegion, "all") != 0 {
 					if strings.Index(strings.ToLower(record.SiteName), fmt.Sprintf("_%s_", strings.ToLower(simRegion))) == -1 {
@@ -192,16 +193,6 @@ func commandSimulate() *cobra.Command {
 
 				sizeInMbytes := record.Size / (1024 * 1024)
 				curCacheInstance.Get(record.Filename, sizeInMbytes)
-				if time.Now().Sub(start).Seconds() >= 1. {
-					fmt.Printf("[Hit Rate %.2f][Capacity %.2f][%d it/s]\r",
-						curCacheInstance.HitRate(),
-						curCacheInstance.Capacity(),
-						numIterations,
-					)
-					numIterations = 0
-					start = time.Now()
-				}
-				numIterations++
 
 				if simGenDataset {
 					switch cacheType {
@@ -227,8 +218,31 @@ func commandSimulate() *cobra.Command {
 						}
 					}
 				}
+
+				numIterations++
+				numRecords++
+
+				if time.Now().Sub(start).Seconds() >= 1. {
+					timeElapsed := time.Now().Sub(simBeginTime)
+					fmt.Printf("[Time elapsed: %02.f:%02.f:%02.f][Num. Record %d][Hit Rate %.2f][Capacity %.2f][%d it/s]\r",
+						timeElapsed.Hours(),
+						timeElapsed.Minutes(),
+						timeElapsed.Seconds(),
+						numRecords,
+						curCacheInstance.HitRate(),
+						curCacheInstance.Capacity(),
+						numIterations,
+					)
+					numIterations = 0
+					start = time.Now()
+				}
 			}
-			fmt.Printf("[Simulation ended][Time elapsed: %f minutes]\n", time.Now().Sub(simBeginTime).Minutes())
+			timeElapsed := time.Now().Sub(simBeginTime)
+			fmt.Printf("[Simulation ended][Time elapsed: %02.f:%02.f:%02.f]\n",
+				timeElapsed.Hours(),
+				timeElapsed.Minutes(),
+				timeElapsed.Seconds(),
+			)
 		},
 		Use:   `simulate cacheType fileOrFolderPath`,
 		Short: "Simulate a session",
