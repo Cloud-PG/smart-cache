@@ -7,9 +7,21 @@ import (
 	empty "github.com/golang/protobuf/ptypes/empty"
 )
 
+// DumpRecord represents a record in the dump file
+type DumpRecord struct {
+	Info string `json: "info"`
+	Data string `json: "data"`
+}
+
 // DumpInfo collects cache marshall info
 type DumpInfo struct {
 	Type string `json: "type"`
+}
+
+// FileDump represents the record of a dumped cache file
+type FileDump struct {
+	Filename string  `json: "filename"`
+	Size     float32 `json: "size"`
 }
 
 // Cache is the base interface for the cache object

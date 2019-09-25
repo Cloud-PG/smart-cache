@@ -1,10 +1,15 @@
 package cache
 
 import (
+	"compress/gzip"
 	"container/list"
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"math"
+	"os"
 	"sync"
 	"time"
 
@@ -36,6 +41,90 @@ func (cache *WeightedLRU) Init(vars ...interface{}) {
 	cache.stats = make([]*WeightedFileStats, 0)
 	cache.statsFilenames = make(map[string]int)
 	cache.queue = list.New()
+}
+
+// Dump the WeightedLRU cache
+func (cache WeightedLRU) Dump(filename string) {
+	outFile, osErr := os.Create(filename)
+	if osErr != nil {
+		panic(fmt.Sprintf("Error dump file creation: %s", osErr))
+	}
+	gwriter := gzip.NewWriter(outFile)
+
+	// Files
+	for filename, size := range cache.files {
+		dumpInfo, _ := json.Marshal(DumpInfo{Type: "FILES"})
+		dumpFile, _ := json.Marshal(FileDump{
+			Filename: filename,
+			Size:     size,
+		})
+		record, _ := json.Marshal(DumpRecord{
+			Info: string(dumpInfo),
+			Data: string(dumpFile),
+		})
+		gwriter.Write(record)
+	}
+	// Stats
+	for _, stats := range cache.stats {
+		dumpInfo, _ := json.Marshal(DumpInfo{Type: "STATS"})
+		dumpStats, _ := json.Marshal(stats)
+		record, _ := json.Marshal(DumpRecord{
+			Info: string(dumpInfo),
+			Data: string(dumpStats),
+		})
+		gwriter.Write(record)
+	}
+	gwriter.Close()
+}
+
+// Load the WeightedLRU cache
+func (cache WeightedLRU) Load(filename string) {
+	inFile, err := os.Open(filename)
+	if err != nil {
+		panic(fmt.Sprintf("Error dump file opening: %s", err))
+	}
+	greader, gzipErr := gzip.NewReader(inFile)
+	if gzipErr != nil {
+		panic(gzipErr)
+	}
+
+	var buffer []byte
+	var charBuffer []byte
+	var curRecord DumpRecord
+	var curRecordInfo DumpInfo
+
+	buffer = make([]byte, 0)
+	charBuffer = make([]byte, 1)
+
+	for {
+		curChar, err := greader.Read(charBuffer)
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			panic(err)
+		}
+		if string(curChar) == "\n" {
+			json.Unmarshal(buffer, &curRecord)
+			json.Unmarshal([]byte(curRecord.Info), &curRecordInfo)
+			switch curRecordInfo.Type {
+			case "FILES":
+				var curFile FileDump
+				json.Unmarshal([]byte(curRecord.Data), &curFile)
+				cache.files[curFile.Filename] = curFile.Size
+			case "STATS":
+				var curStats WeightedFileStats
+				json.Unmarshal([]byte(curRecord.Data), &curStats)
+				cache.stats = append(cache.stats, &curStats)
+			}
+			buffer = buffer[:0]
+		} else {
+			buffer = append(buffer, charBuffer...)
+		}
+	}
+	greader.Close()
+
+	cache.reIndex()
 }
 
 // Clear the WeightedLRU struct

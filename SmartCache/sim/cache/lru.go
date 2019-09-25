@@ -1,9 +1,14 @@
 package cache
 
 import (
+	"compress/gzip"
 	"container/list"
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
+	"os"
 	"time"
 
 	pb "./simService"
@@ -69,6 +74,74 @@ func (cache *LRUCache) Clear() {
 	cache.writtenData = 0.
 	cache.readOnHit = 0.
 	cache.size = 0.
+}
+
+// Dump the LRUCache cache
+func (cache LRUCache) Dump(filename string) {
+	outFile, osErr := os.Create(filename)
+	if osErr != nil {
+		panic(fmt.Sprintf("Error dump file creation: %s", osErr))
+	}
+	gwriter := gzip.NewWriter(outFile)
+
+	// Files
+	for filename, size := range cache.files {
+		dumpInfo, _ := json.Marshal(DumpInfo{Type: "FILES"})
+		dumpFile, _ := json.Marshal(FileDump{
+			Filename: filename,
+			Size:     size,
+		})
+		record, _ := json.Marshal(DumpRecord{
+			Info: string(dumpInfo),
+			Data: string(dumpFile),
+		})
+		gwriter.Write(record)
+	}
+	gwriter.Close()
+}
+
+// Load the LRUCache cache
+func (cache LRUCache) Load(filename string) {
+	inFile, err := os.Open(filename)
+	if err != nil {
+		panic(fmt.Sprintf("Error dump file opening: %s", err))
+	}
+	greader, gzipErr := gzip.NewReader(inFile)
+	if gzipErr != nil {
+		panic(gzipErr)
+	}
+
+	var buffer []byte
+	var charBuffer []byte
+	var curRecord DumpRecord
+	var curRecordInfo DumpInfo
+
+	buffer = make([]byte, 0)
+	charBuffer = make([]byte, 1)
+
+	for {
+		curChar, err := greader.Read(charBuffer)
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			panic(err)
+		}
+		if string(curChar) == "\n" {
+			json.Unmarshal(buffer, &curRecord)
+			json.Unmarshal([]byte(curRecord.Info), &curRecordInfo)
+			switch curRecordInfo.Type {
+			case "FILES":
+				var curFile FileDump
+				json.Unmarshal([]byte(curRecord.Data), &curFile)
+				cache.files[curFile.Filename] = curFile.Size
+			}
+			buffer = buffer[:0]
+		} else {
+			buffer = append(buffer, charBuffer...)
+		}
+	}
+	greader.Close()
 }
 
 // GetFileStats from the cache
