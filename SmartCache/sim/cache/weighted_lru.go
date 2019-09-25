@@ -159,10 +159,10 @@ func (cache *WeightedLRU) GetFileStats(filename string) (*DatasetInput, error) {
 	}
 	stats := cache.stats[index]
 	return &DatasetInput{
-		stats.size,
-		stats.totRequests,
-		stats.nHits,
-		stats.nMiss,
+		stats.Size,
+		stats.TotRequests,
+		stats.NHits,
+		stats.NMiss,
 		stats.getMeanReqTimes(time.Time{}),
 	}, nil
 }
@@ -244,11 +244,11 @@ func (cache *WeightedLRU) SimGetInfoFilesStats(_ *empty.Empty, stream pb.SimServ
 	for idx := 0; idx < len(cache.stats); idx++ {
 		curStats := cache.stats[idx]
 		curFile := &pb.SimFileStats{
-			Filename: curStats.filename,
-			Size:     curStats.size,
-			TotReq:   curStats.totRequests,
-			NHits:    curStats.nHits,
-			NMiss:    curStats.nMiss,
+			Filename: curStats.Filename,
+			Size:     curStats.Size,
+			TotReq:   curStats.TotRequests,
+			NHits:    curStats.NHits,
+			NMiss:    curStats.NMiss,
 		}
 		if err := stream.Send(curFile); err != nil {
 			return err
@@ -262,8 +262,8 @@ func (cache *WeightedLRU) SimGetInfoFilesWeights(_ *empty.Empty, stream pb.SimSe
 	for idx := 0; idx < len(cache.stats); idx++ {
 		stats := cache.stats[idx]
 		curFile := &pb.SimFileWeight{
-			Filename: stats.filename,
-			Weight:   stats.weight,
+			Filename: stats.Filename,
+			Weight:   stats.Weight,
 		}
 		if err := stream.Send(curFile); err != nil {
 			return err
@@ -276,7 +276,7 @@ func (cache *WeightedLRU) SimGetInfoFilesWeights(_ *empty.Empty, stream pb.SimSe
 func (cache *WeightedLRU) reIndex() {
 	wg := sync.WaitGroup{}
 	for curIdx := 0; curIdx < len(cache.stats); curIdx++ {
-		curStatFilename := cache.stats[curIdx].filename
+		curStatFilename := cache.stats[curIdx].Filename
 		wg.Add(1)
 		go func(index int, filename string, waitGroup *sync.WaitGroup) {
 			cache.statsFilenames[filename] = index
@@ -291,15 +291,15 @@ func (cache *WeightedLRU) getThreshold() float32 {
 		return 0.0
 	}
 
-	Q2 := cache.stats[int(math.Floor(float64(0.5*float32(len(cache.stats)))))].weight
+	Q2 := cache.stats[int(math.Floor(float64(0.5*float32(len(cache.stats)))))].Weight
 
 	if cache.Capacity() > 75. {
 		if cache.SelLimitStatsPolicyType == Q1IsDoubleQ2LimitStats {
 			Q1Idx := int(math.Floor(float64(0.25 * float32(len(cache.stats)))))
-			Q1 := cache.stats[Q1Idx].weight
+			Q1 := cache.stats[Q1Idx].Weight
 			if Q1 > 2*Q2 {
 				for idx := 0; idx < Q1Idx; idx++ {
-					delete(cache.statsFilenames, cache.stats[idx].filename)
+					delete(cache.statsFilenames, cache.stats[idx].Filename)
 				}
 				copy(cache.stats, cache.stats[Q1Idx:])
 				cache.stats = cache.stats[:len(cache.stats)-Q1Idx]
@@ -333,17 +333,17 @@ func (cache *WeightedLRU) getOrInsertStats(filename string) *WeightedFileStats {
 }
 
 func (cache *WeightedLRU) moveStat(stat *WeightedFileStats, curTime time.Time) {
-	curIdx, _ := cache.statsFilenames[stat.filename]
+	curIdx, _ := cache.statsFilenames[stat.Filename]
 
 	if curIdx-1 >= 0 { // <--[Check left]
 		for idx := curIdx; idx > 0; idx-- {
 			curStats := cache.stats[idx]
 			prevStats := cache.stats[idx-1]
-			if prevStats.weight < curStats.weight {
+			if prevStats.Weight < curStats.Weight {
 				cache.stats[idx-1] = curStats
 				cache.stats[idx] = prevStats
-				cache.statsFilenames[curStats.filename] = idx - 1
-				cache.statsFilenames[prevStats.filename] = idx
+				cache.statsFilenames[curStats.Filename] = idx - 1
+				cache.statsFilenames[prevStats.Filename] = idx
 			} else {
 				break
 			}
@@ -353,11 +353,11 @@ func (cache *WeightedLRU) moveStat(stat *WeightedFileStats, curTime time.Time) {
 		for idx := curIdx; idx < len(cache.stats)-1; idx++ {
 			curStats := cache.stats[idx]
 			nextStats := cache.stats[idx+1]
-			if nextStats.weight > curStats.weight {
+			if nextStats.Weight > curStats.Weight {
 				cache.stats[idx+1] = curStats
 				cache.stats[idx] = nextStats
-				cache.statsFilenames[curStats.filename] = idx + 1
-				cache.statsFilenames[nextStats.filename] = idx
+				cache.statsFilenames[curStats.Filename] = idx + 1
+				cache.statsFilenames[nextStats.Filename] = idx
 			} else {
 				break
 			}
@@ -387,7 +387,7 @@ func (cache *WeightedLRU) updatePolicy(filename string, size float32, hit bool) 
 
 		var Q2 = cache.getThreshold()
 		// If weight is higher exit and return added = false
-		if curStats.weight > Q2 {
+		if curStats.Weight > Q2 {
 			return added
 		}
 		// Insert with LRU mechanism

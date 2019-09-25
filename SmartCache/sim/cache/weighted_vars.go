@@ -96,7 +96,7 @@ func (stats *WeightedFileStats) updateWeight(functionType FunctionType, exp floa
 		stats.Weight = fileWeightedRequest(
 			stats.Size,
 			stats.TotRequests,
-			stats.GetMeanReqTimes(curTime),
+			stats.getMeanReqTimes(curTime),
 			exp,
 		)
 	}
@@ -127,5 +127,5 @@ type ByWeight []*WeightedFileStats
 func (a ByWeight) Len() int { return len(a) }
 
 // Order from the highest weight to the smallest
-func (a ByWeight) Less(i, j int) bool { return a[i].weight > a[j].weight }
+func (a ByWeight) Less(i, j int) bool { return a[i].Weight > a[j].Weight }
 func (a ByWeight) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }

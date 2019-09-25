@@ -221,10 +221,10 @@ func (cache *WeightedCache) SimGetInfoFilesStats(_ *empty.Empty, stream pb.SimSe
 	for filename, stats := range cache.stats {
 		curFile := &pb.SimFileStats{
 			Filename: filename,
-			Size:     stats.size,
-			TotReq:   stats.totRequests,
-			NHits:    stats.nHits,
-			NMiss:    stats.nMiss,
+			Size:     stats.Size,
+			TotReq:   stats.TotRequests,
+			NHits:    stats.NHits,
+			NMiss:    stats.NMiss,
 		}
 		if err := stream.Send(curFile); err != nil {
 			return err
@@ -238,7 +238,7 @@ func (cache *WeightedCache) SimGetInfoFilesWeights(_ *empty.Empty, stream pb.Sim
 	for filename, stats := range cache.stats {
 		curFile := &pb.SimFileWeight{
 			Filename: filename,
-			Weight:   stats.weight,
+			Weight:   stats.Weight,
 		}
 		if err := stream.Send(curFile); err != nil {
 			return err
@@ -251,7 +251,7 @@ func (cache *WeightedCache) SimGetInfoFilesWeights(_ *empty.Empty, stream pb.Sim
 func (cache *WeightedCache) getQueueSize() float32 {
 	var size float32
 	for _, stats := range cache.queue {
-		size += stats.size
+		size += stats.Size
 	}
 	return size
 }
@@ -299,12 +299,7 @@ func (cache *WeightedCache) updatePolicy(filename string, size float32, hit bool
 			curFileStats.updateWeight(cache.SelFunctionType, cache.Exp, curTime)
 		}
 		// Sort queue
-		sort.Slice(
-			cache.queue,
-			func(i, j int) bool {
-				return cache.queue[i].weight < cache.queue[j].weight
-			},
-		)
+		sort.Sort(ByWeight(cache.queue))
 		// Remove files
 		for {
 			if queueSize <= cache.MaxSize {
@@ -312,14 +307,14 @@ func (cache *WeightedCache) updatePolicy(filename string, size float32, hit bool
 			}
 			elmRemoved := cache.removeLast()
 
-			if elmRemoved.filename == filename {
+			if elmRemoved.Filename == filename {
 				added = false
 			} else {
-				cache.size -= cache.files[elmRemoved.filename]
-				delete(cache.files, elmRemoved.filename)
+				cache.size -= cache.files[elmRemoved.Filename]
+				delete(cache.files, elmRemoved.Filename)
 			}
 
-			queueSize -= cache.stats[elmRemoved.filename].size
+			queueSize -= cache.stats[elmRemoved.Filename].Size
 		}
 	}
 
