@@ -32,6 +32,7 @@ var simDump bool
 var simLoadDump bool
 var simWindowSize uint32
 var simStartFromWindow uint32
+var simColdStart bool
 
 func main() {
 	rootCmd := &cobra.Command{}
@@ -132,7 +133,13 @@ func commandSimulate() *cobra.Command {
 			if simLoadDump {
 				fmt.Println("[Loading cache dump...]")
 				curCacheInstance.Load(dumpFileName)
-				fmt.Println("[Cache dump loaded1]")
+				fmt.Println("[Cache dump loaded!]")
+				if simColdStart {
+					curCacheInstance.ClearFiles()
+					fmt.Println("[Cache Files deleted][COLD START]")
+				} else {
+					fmt.Println("[Cache Files stored][HOT START]")
+				}
 			}
 
 			// Open simulation files
@@ -334,6 +341,11 @@ func commandSimulate() *cobra.Command {
 		&simStartFromWindow, "simStartFromWindow", 0,
 		"number of the window to start with the simulation",
 	)
+	cmd.PersistentFlags().BoolVar(
+		&simColdStart, "simColdStart", true,
+		"indicates if the cache have to be empty after a dump load",
+	)
+
 	return cmd
 }
 

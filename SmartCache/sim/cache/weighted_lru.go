@@ -17,10 +17,6 @@ import (
 	empty "github.com/golang/protobuf/ptypes/empty"
 )
 
-const (
-	numCoRoutines4ReIndex int = 64
-)
-
 // WeightedLRU cache
 type WeightedLRU struct {
 	files                                                 map[string]float32
@@ -43,9 +39,15 @@ func (cache *WeightedLRU) Init(vars ...interface{}) {
 	cache.queue = list.New()
 }
 
+// ClearFiles remove the cache files
+func (cache *WeightedLRU) ClearFiles() {
+	cache.files = make(map[string]float32)
+	cache.size = 0.
+}
+
 // Clear the WeightedLRU struct
 func (cache *WeightedLRU) Clear() {
-	cache.files = make(map[string]float32)
+	cache.ClearFiles()
 	cache.stats = make([]*WeightedFileStats, 0)
 	cache.statsFilenames.Range(
 		func(key interface{}, value interface{}) bool {
@@ -70,11 +72,10 @@ func (cache *WeightedLRU) Clear() {
 	cache.miss = 0.
 	cache.writtenData = 0.
 	cache.readOnHit = 0.
-	cache.size = 0.
 }
 
 // Dump the WeightedLRU cache
-func (cache WeightedLRU) Dump(filename string) {
+func (cache *WeightedLRU) Dump(filename string) {
 	outFile, osErr := os.Create(filename)
 	if osErr != nil {
 		panic(fmt.Sprintf("Error dump file creation: %s", osErr))
@@ -111,7 +112,7 @@ func (cache WeightedLRU) Dump(filename string) {
 }
 
 // Load the WeightedLRU cache
-func (cache WeightedLRU) Load(filename string) {
+func (cache *WeightedLRU) Load(filename string) {
 	inFile, err := os.Open(filename)
 	if err != nil {
 		panic(fmt.Sprintf("Error dump file opening: %s", err))
@@ -145,6 +146,7 @@ func (cache WeightedLRU) Load(filename string) {
 				var curFile FileDump
 				json.Unmarshal([]byte(curRecord.Data), &curFile)
 				cache.files[curFile.Filename] = curFile.Size
+				cache.size += curFile.Size
 			case "STATS":
 				var curStats WeightedFileStats
 				json.Unmarshal([]byte(curRecord.Data), &curStats)
@@ -480,7 +482,7 @@ func (cache *WeightedLRU) Get(filename string, size float32) bool {
 }
 
 // HitRate of the cache
-func (cache WeightedLRU) HitRate() float32 {
+func (cache *WeightedLRU) HitRate() float32 {
 	if cache.hit == 0. {
 		return 0.
 	}
@@ -488,7 +490,7 @@ func (cache WeightedLRU) HitRate() float32 {
 }
 
 // HitOverMiss of the cache
-func (cache WeightedLRU) HitOverMiss() float32 {
+func (cache *WeightedLRU) HitOverMiss() float32 {
 	if cache.hit == 0. || cache.miss == 0. {
 		return 0.
 	}
@@ -496,31 +498,31 @@ func (cache WeightedLRU) HitOverMiss() float32 {
 }
 
 // WeightedHitRate of the cache
-func (cache WeightedLRU) WeightedHitRate() float32 {
+func (cache *WeightedLRU) WeightedHitRate() float32 {
 	return cache.HitRate() * cache.readOnHit
 }
 
 // Size of the cache
-func (cache WeightedLRU) Size() float32 {
+func (cache *WeightedLRU) Size() float32 {
 	return cache.size
 }
 
 // Capacity of the cache
-func (cache WeightedLRU) Capacity() float32 {
+func (cache *WeightedLRU) Capacity() float32 {
 	return (cache.Size() / cache.MaxSize) * 100.
 }
 
 // WrittenData of the cache
-func (cache WeightedLRU) WrittenData() float32 {
+func (cache *WeightedLRU) WrittenData() float32 {
 	return cache.writtenData
 }
 
 // ReadOnHit of the cache
-func (cache WeightedLRU) ReadOnHit() float32 {
+func (cache *WeightedLRU) ReadOnHit() float32 {
 	return cache.readOnHit
 }
 
-func (cache WeightedLRU) check(key string) bool {
+func (cache *WeightedLRU) check(key string) bool {
 	_, ok := cache.files[key]
 	return ok
 }

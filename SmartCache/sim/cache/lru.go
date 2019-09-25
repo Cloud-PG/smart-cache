@@ -53,9 +53,15 @@ func (cache *LRUCache) Init(vars ...interface{}) {
 	cache.queue = list.New()
 }
 
+// ClearFiles remove the cache files
+func (cache *LRUCache) ClearFiles() {
+	cache.files = make(map[string]float32)
+	cache.size = 0.
+}
+
 // Clear the LRU struct
 func (cache *LRUCache) Clear() {
-	cache.files = make(map[string]float32)
+	cache.ClearFiles()
 	cache.stats = make(map[string]*LRUFileStats)
 	tmpVal := cache.queue.Front()
 	for {
@@ -73,7 +79,6 @@ func (cache *LRUCache) Clear() {
 	cache.miss = 0.
 	cache.writtenData = 0.
 	cache.readOnHit = 0.
-	cache.size = 0.
 }
 
 // Dump the LRUCache cache
@@ -135,6 +140,7 @@ func (cache LRUCache) Load(filename string) {
 				var curFile FileDump
 				json.Unmarshal([]byte(curRecord.Data), &curFile)
 				cache.files[curFile.Filename] = curFile.Size
+				cache.size += curFile.Size
 			}
 			buffer = buffer[:0]
 		} else {
