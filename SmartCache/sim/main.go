@@ -191,7 +191,7 @@ func commandSimulate() *cobra.Command {
 			var numRecords int
 			var totIterations uint32
 			var numIterations uint32
-			var windowTickCounter uint32
+			var windowStepCounter uint32
 			var windowCounter uint32
 
 			simBeginTime := time.Now()
@@ -225,7 +225,7 @@ func commandSimulate() *cobra.Command {
 						csvOutput.Flush()
 						curCacheInstance.ClearHitMissStats()
 						latestTime = time.Unix(record.Day, 0.)
-						windowTickCounter++
+						windowStepCounter++
 					}
 				}
 
@@ -262,12 +262,12 @@ func commandSimulate() *cobra.Command {
 
 					if time.Now().Sub(start).Seconds() >= 1. {
 						timeElapsed := time.Now().Sub(simBeginTime)
-						fmt.Printf("[Time elapsed: %02d:%02d:%02d][Window %d: completed steps %d/%d][Num. Record %d][Hit Rate %.2f][Capacity %.2f][%0.0f it/s]\r",
+						fmt.Printf("[Time elapsed: %02d:%02d:%02d][Window %d][Window steps %d/%d][Num. Record %d][Hit Rate %.2f][Capacity %.2f][%0.0f it/s]\r",
 							int(timeElapsed.Hours())%24,
 							int(timeElapsed.Minutes())%60,
 							int(timeElapsed.Seconds())%60,
 							windowCounter,
-							windowTickCounter,
+							windowStepCounter,
 							simWindowSize,
 							numRecords,
 							curCacheInstance.HitRate(),
@@ -279,16 +279,16 @@ func commandSimulate() *cobra.Command {
 						start = time.Now()
 					}
 
-					if windowTickCounter == simWindowSize {
+					if windowStepCounter == simWindowSize {
 						break
 					}
-				} else if windowTickCounter == simWindowSize {
+				} else if windowStepCounter == simWindowSize {
 					fmt.Printf("[Jump %d records of window %d]\n",
 						numRecords,
 						windowCounter,
 					)
 					windowCounter++
-					windowTickCounter = 0
+					windowStepCounter = 0
 					numRecords = 0
 				} else {
 					fmt.Printf("[Jump %d records]\r", numRecords)
