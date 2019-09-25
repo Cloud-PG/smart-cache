@@ -30,6 +30,8 @@ var simGenDataset bool
 var simGenDatasetName string
 var simDump bool
 var simLoadDump bool
+var simWindowSize uint32
+var simStartFromWindow uint32
 
 func main() {
 	rootCmd := &cobra.Command{}
@@ -175,9 +177,15 @@ func commandSimulate() *cobra.Command {
 				}
 			}
 
+			if simDump {
+				defer curCacheInstance.Dump(dumpFileName)
+			}
+
 			var numRecords int
 			var totIterations uint32
 			var numIterations uint32
+			var windowTickCounter uint32
+			var windowCounter uint32
 
 			simBeginTime := time.Now()
 			start := time.Now()
@@ -190,6 +198,8 @@ func commandSimulate() *cobra.Command {
 						continue
 					}
 				}
+
+				numRecords++
 
 				if latestTime.IsZero() {
 					latestTime = time.Unix(record.Day, 0.)
@@ -208,59 +218,75 @@ func commandSimulate() *cobra.Command {
 						csvOutput.Flush()
 						curCacheInstance.ClearHitMissStats()
 						latestTime = time.Unix(record.Day, 0.)
+						windowTickCounter++
 					}
 				}
 
-				sizeInMbytes := record.Size / (1024 * 1024)
-				curCacheInstance.Get(record.Filename, sizeInMbytes)
+				if windowCounter == simStartFromWindow {
+					sizeInMbytes := record.Size / (1024 * 1024)
+					curCacheInstance.Get(record.Filename, sizeInMbytes)
 
-				numIterations++
-				numRecords++
+					numIterations++
 
-				if simGenDataset {
-					switch cacheType {
-					case "weightedLRU":
-						_, latestAddDecision := curCacheInstance.GetLatestDecision()
-						fileStats, err := curCacheInstance.GetFileStats(record.Filename)
-						if err == nil {
-							var curClass string
-							if latestAddDecision {
-								curClass = "1" // STORE
-							} else {
-								curClass = "0" // DISCARD
+					if simGenDataset {
+						switch cacheType {
+						case "weightedLRU":
+							_, latestAddDecision := curCacheInstance.GetLatestDecision()
+							fileStats, err := curCacheInstance.GetFileStats(record.Filename)
+							if err == nil {
+								var curClass string
+								if latestAddDecision {
+									curClass = "1" // STORE
+								} else {
+									curClass = "0" // DISCARD
+								}
+								curRow := []string{
+									fmt.Sprintf("%f", fileStats.Size),
+									fmt.Sprintf("%d", fileStats.TotRequests),
+									fmt.Sprintf("%d", fileStats.NHits),
+									fmt.Sprintf("%d", fileStats.NMiss),
+									fmt.Sprintf("%f", fileStats.MeanTime),
+									curClass,
+								}
+								datasetGzipFile.Write([]byte(strings.Join(curRow, ",") + "\n"))
 							}
-							curRow := []string{
-								fmt.Sprintf("%f", fileStats.Size),
-								fmt.Sprintf("%d", fileStats.TotRequests),
-								fmt.Sprintf("%d", fileStats.NHits),
-								fmt.Sprintf("%d", fileStats.NMiss),
-								fmt.Sprintf("%f", fileStats.MeanTime),
-								curClass,
-							}
-							datasetGzipFile.Write([]byte(strings.Join(curRow, ",") + "\n"))
 						}
 					}
-				}
 
-				if time.Now().Sub(start).Seconds() >= 1. {
-					timeElapsed := time.Now().Sub(simBeginTime)
-					fmt.Printf("[Time elapsed: %02d:%02d:%02d][Num. Record %d][Hit Rate %.2f][Capacity %.2f][%0.0f it/s]\r",
-						int(timeElapsed.Hours())%24,
-						int(timeElapsed.Minutes())%60,
-						int(timeElapsed.Seconds())%60,
+					if time.Now().Sub(start).Seconds() >= 1. {
+						timeElapsed := time.Now().Sub(simBeginTime)
+						fmt.Printf("[Time elapsed: %02d:%02d:%02d][Window %d: completed steps %d/%d][Num. Record %d][Hit Rate %.2f][Capacity %.2f][%0.0f it/s]\r",
+							int(timeElapsed.Hours())%24,
+							int(timeElapsed.Minutes())%60,
+							int(timeElapsed.Seconds())%60,
+							windowCounter,
+							windowTickCounter,
+							simWindowSize,
+							numRecords,
+							curCacheInstance.HitRate(),
+							curCacheInstance.Capacity(),
+							float64(numIterations)/time.Now().Sub(start).Seconds(),
+						)
+						totIterations += numIterations
+						numIterations = 0
+						start = time.Now()
+					}
+
+					if windowTickCounter == simWindowSize {
+						break
+					}
+				} else if windowTickCounter == simWindowSize {
+					fmt.Printf("[Jump %d records of window %d]\n",
 						numRecords,
-						curCacheInstance.HitRate(),
-						curCacheInstance.Capacity(),
-						float64(numIterations)/time.Now().Sub(start).Seconds(),
+						windowCounter,
 					)
-					totIterations += numIterations
-					numIterations = 0
-					start = time.Now()
+					windowCounter++
+					windowTickCounter = 0
+					numRecords = 0
+				} else {
+					fmt.Printf("[Jump %d records]\r", numRecords)
 				}
 
-				if numRecords == 10000 {
-					break
-				}
 			}
 			timeElapsed := time.Now().Sub(simBeginTime)
 			fmt.Printf("\n[Simulation END][Time elapsed: %02d:%02d:%02d][Num. Records: %d][Mean Records/s: %0.0f]\n",
@@ -270,11 +296,6 @@ func commandSimulate() *cobra.Command {
 				numRecords,
 				float64(totIterations)/timeElapsed.Seconds(),
 			)
-
-			if simDump {
-				curCacheInstance.Dump(dumpFileName)
-			}
-
 		},
 		Use:   `simulate cacheType fileOrFolderPath`,
 		Short: "Simulate a session",
@@ -304,6 +325,14 @@ func commandSimulate() *cobra.Command {
 	cmd.PersistentFlags().BoolVar(
 		&simLoadDump, "simLoadDump", false,
 		"indicates if the simulator have to search a dump of previous session",
+	)
+	cmd.PersistentFlags().Uint32Var(
+		&simWindowSize, "simWindowSize", 7,
+		"size of the simulation window",
+	)
+	cmd.PersistentFlags().Uint32Var(
+		&simStartFromWindow, "simStartFromWindow", 0,
+		"number of the window to start with the simulation",
 	)
 	return cmd
 }
