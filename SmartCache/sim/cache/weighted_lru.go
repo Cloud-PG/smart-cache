@@ -43,6 +43,30 @@ func (cache *WeightedLRU) Init(vars ...interface{}) {
 	cache.queue = list.New()
 }
 
+// Clear the WeightedLRU struct
+func (cache *WeightedLRU) Clear() {
+	cache.files = make(map[string]float32)
+	cache.stats = make([]*WeightedFileStats, 0)
+	cache.statsFilenames = make(map[string]int)
+	tmpVal := cache.queue.Front()
+	for {
+		if tmpVal == nil {
+			break
+		} else if tmpVal.Next() == nil {
+			cache.queue.Remove(tmpVal)
+			break
+		}
+		tmpVal = tmpVal.Next()
+		cache.queue.Remove(tmpVal.Prev())
+	}
+	cache.queue = list.New()
+	cache.hit = 0.
+	cache.miss = 0.
+	cache.writtenData = 0.
+	cache.readOnHit = 0.
+	cache.size = 0.
+}
+
 // Dump the WeightedLRU cache
 func (cache WeightedLRU) Dump(filename string) {
 	outFile, osErr := os.Create(filename)
@@ -125,30 +149,6 @@ func (cache WeightedLRU) Load(filename string) {
 	greader.Close()
 
 	cache.reIndex()
-}
-
-// Clear the WeightedLRU struct
-func (cache *WeightedLRU) Clear() {
-	cache.files = make(map[string]float32)
-	cache.stats = make([]*WeightedFileStats, 0)
-	cache.statsFilenames = make(map[string]int)
-	tmpVal := cache.queue.Front()
-	for {
-		if tmpVal == nil {
-			break
-		} else if tmpVal.Next() == nil {
-			cache.queue.Remove(tmpVal)
-			break
-		}
-		tmpVal = tmpVal.Next()
-		cache.queue.Remove(tmpVal.Prev())
-	}
-	cache.queue = list.New()
-	cache.hit = 0.
-	cache.miss = 0.
-	cache.writtenData = 0.
-	cache.readOnHit = 0.
-	cache.size = 0.
 }
 
 // GetFileStats from the cache
