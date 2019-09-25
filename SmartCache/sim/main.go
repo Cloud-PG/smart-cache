@@ -135,11 +135,6 @@ func commandSimulate() *cobra.Command {
 				iterator = cache.OpenSimFolder(curFolder)
 			}
 
-			simBeginTime := time.Now()
-			start := time.Now()
-			var latestTime time.Time
-			var numIterations uint32
-
 			outputFile, _ := os.Create(simOutFile)
 			defer outputFile.Close()
 			csvOutput := csv.NewWriter(outputFile)
@@ -165,12 +160,21 @@ func commandSimulate() *cobra.Command {
 			}
 
 			var numRecords int
+			var totIterations uint32
+			var numIterations uint32
+
+			simBeginTime := time.Now()
+			start := time.Now()
+			var latestTime time.Time
+
+			fmt.Println("[Simulation START]")
 			for record := range iterator {
 				if strings.Compare(simRegion, "all") != 0 {
 					if strings.Index(strings.ToLower(record.SiteName), fmt.Sprintf("_%s_", strings.ToLower(simRegion))) == -1 {
 						continue
 					}
 				}
+
 				if latestTime.IsZero() {
 					latestTime = time.Unix(record.Day, 0.)
 				} else {
@@ -193,6 +197,9 @@ func commandSimulate() *cobra.Command {
 
 				sizeInMbytes := record.Size / (1024 * 1024)
 				curCacheInstance.Get(record.Filename, sizeInMbytes)
+
+				numIterations++
+				numRecords++
 
 				if simGenDataset {
 					switch cacheType {
@@ -219,29 +226,30 @@ func commandSimulate() *cobra.Command {
 					}
 				}
 
-				numIterations++
-				numRecords++
-
 				if time.Now().Sub(start).Seconds() >= 1. {
 					timeElapsed := time.Now().Sub(simBeginTime)
-					fmt.Printf("[Time elapsed: %02.f:%02.f:%02.f][Num. Record %d][Hit Rate %.2f][Capacity %.2f][%d it/s]\r",
-						timeElapsed.Hours(),
-						timeElapsed.Minutes(),
-						timeElapsed.Seconds(),
+					fmt.Printf("[Time elapsed: %02d:%02d:%02d][Num. Record %d][Hit Rate %.2f][Capacity %.2f][%0.0f it/s]\r",
+						int(timeElapsed.Hours())%24,
+						int(timeElapsed.Minutes())%60,
+						int(timeElapsed.Seconds())%60,
 						numRecords,
 						curCacheInstance.HitRate(),
 						curCacheInstance.Capacity(),
-						numIterations,
+						float64(numIterations)/time.Now().Sub(start).Seconds(),
 					)
+					totIterations += numIterations
 					numIterations = 0
 					start = time.Now()
 				}
+
 			}
 			timeElapsed := time.Now().Sub(simBeginTime)
-			fmt.Printf("[Simulation ended][Time elapsed: %02.f:%02.f:%02.f]\n",
-				timeElapsed.Hours(),
-				timeElapsed.Minutes(),
-				timeElapsed.Seconds(),
+			fmt.Printf("[Simulation END][Time elapsed: %02d:%02d:%02d][Num. Records: %d][Mean Records/s: %0.0f]\n",
+				int(timeElapsed.Hours())%24,
+				int(timeElapsed.Minutes())%60,
+				int(timeElapsed.Seconds())%60,
+				numRecords,
+				float64(totIterations)/timeElapsed.Seconds(),
 			)
 		},
 		Use:   `simulate cacheType fileOrFolderPath`,
