@@ -28,6 +28,8 @@ var simRegion string
 var simOutFile string
 var simGenDataset bool
 var simGenDatasetName string
+var simDump bool
+var simLoadDump bool
 
 func main() {
 	rootCmd := &cobra.Command{}
@@ -114,8 +116,22 @@ func commandSimulate() *cobra.Command {
 			copy(args, args[2:])
 			args = args[:len(args)-1]
 
+			var dumpFileName = strings.Join([]string{
+				cacheType,
+				simRegion,
+				fmt.Sprintf("%0.0f", cacheSize),
+			},
+				"_",
+			) + ".json.gz"
+
 			// Create cache
 			curCacheInstance := genCache(cacheType)
+
+			if simLoadDump {
+				fmt.Println("[Loading cache dump...]")
+				curCacheInstance.Load(dumpFileName)
+				fmt.Println("[Cache dump loaded1]")
+			}
 
 			// Open simulation files
 			fileStats, statErr := os.Stat(pathString)
@@ -242,15 +258,23 @@ func commandSimulate() *cobra.Command {
 					start = time.Now()
 				}
 
+				if numRecords == 10000 {
+					break
+				}
 			}
 			timeElapsed := time.Now().Sub(simBeginTime)
-			fmt.Printf("[Simulation END][Time elapsed: %02d:%02d:%02d][Num. Records: %d][Mean Records/s: %0.0f]\n",
+			fmt.Printf("\n[Simulation END][Time elapsed: %02d:%02d:%02d][Num. Records: %d][Mean Records/s: %0.0f]\n",
 				int(timeElapsed.Hours())%24,
 				int(timeElapsed.Minutes())%60,
 				int(timeElapsed.Seconds())%60,
 				numRecords,
 				float64(totIterations)/timeElapsed.Seconds(),
 			)
+
+			if simDump {
+				curCacheInstance.Dump(dumpFileName)
+			}
+
 		},
 		Use:   `simulate cacheType fileOrFolderPath`,
 		Short: "Simulate a session",
@@ -272,6 +296,14 @@ func commandSimulate() *cobra.Command {
 	cmd.PersistentFlags().StringVar(
 		&simGenDatasetName, "simGenDatasetName", "dataset.csv.gz",
 		"the output dataset file name",
+	)
+	cmd.PersistentFlags().BoolVar(
+		&simDump, "simDump", true,
+		"indicates if to dump the cache status after the simulation",
+	)
+	cmd.PersistentFlags().BoolVar(
+		&simLoadDump, "simLoadDump", false,
+		"indicates if the simulator have to search a dump of previous session",
 	)
 	return cmd
 }

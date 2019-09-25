@@ -25,7 +25,7 @@ const (
 type WeightedLRU struct {
 	files                                                 map[string]float32
 	stats                                                 []*WeightedFileStats
-	statsFilenames                                        map[string]int
+	statsFilenames                                        sync.Map
 	queue                                                 *list.List
 	hit, miss, writtenData, readOnHit, size, MaxSize, Exp float32
 	SelFunctionType                                       FunctionType
@@ -39,7 +39,7 @@ type WeightedLRU struct {
 func (cache *WeightedLRU) Init(vars ...interface{}) {
 	cache.files = make(map[string]float32)
 	cache.stats = make([]*WeightedFileStats, 0)
-	cache.statsFilenames = make(map[string]int)
+	cache.statsFilenames = sync.Map{}
 	cache.queue = list.New()
 }
 
@@ -47,7 +47,13 @@ func (cache *WeightedLRU) Init(vars ...interface{}) {
 func (cache *WeightedLRU) Clear() {
 	cache.files = make(map[string]float32)
 	cache.stats = make([]*WeightedFileStats, 0)
-	cache.statsFilenames = make(map[string]int)
+	cache.statsFilenames.Range(
+		func(key interface{}, value interface{}) bool {
+			cache.statsFilenames.Delete(key)
+			return true
+		},
+	)
+	cache.statsFilenames = sync.Map{}
 	tmpVal := cache.queue.Front()
 	for {
 		if tmpVal == nil {
@@ -74,6 +80,7 @@ func (cache WeightedLRU) Dump(filename string) {
 		panic(fmt.Sprintf("Error dump file creation: %s", osErr))
 	}
 	gwriter := gzip.NewWriter(outFile)
+	var newLine = []byte("\n")
 
 	// Files
 	for filename, size := range cache.files {
@@ -87,6 +94,7 @@ func (cache WeightedLRU) Dump(filename string) {
 			Data: string(dumpFile),
 		})
 		gwriter.Write(record)
+		gwriter.Write(newLine)
 	}
 	// Stats
 	for _, stats := range cache.stats {
@@ -97,6 +105,7 @@ func (cache WeightedLRU) Dump(filename string) {
 			Data: string(dumpStats),
 		})
 		gwriter.Write(record)
+		gwriter.Write(newLine)
 	}
 	gwriter.Close()
 }
@@ -121,14 +130,14 @@ func (cache WeightedLRU) Load(filename string) {
 	charBuffer = make([]byte, 1)
 
 	for {
-		curChar, err := greader.Read(charBuffer)
+		_, err := greader.Read(charBuffer)
 		if err != nil {
 			if err == io.EOF {
 				break
 			}
 			panic(err)
 		}
-		if string(curChar) == "\n" {
+		if string(charBuffer) == "\n" {
 			json.Unmarshal(buffer, &curRecord)
 			json.Unmarshal([]byte(curRecord.Info), &curRecordInfo)
 			switch curRecordInfo.Type {
@@ -153,11 +162,11 @@ func (cache WeightedLRU) Load(filename string) {
 
 // GetFileStats from the cache
 func (cache *WeightedLRU) GetFileStats(filename string) (*DatasetInput, error) {
-	index, inStats := cache.statsFilenames[filename]
+	index, inStats := cache.statsFilenames.Load(filename)
 	if !inStats {
 		return nil, errors.New("The file is not in cache stats anymore")
 	}
-	stats := cache.stats[index]
+	stats := cache.stats[index.(int)]
 	return &DatasetInput{
 		stats.Size,
 		stats.TotRequests,
@@ -279,7 +288,7 @@ func (cache *WeightedLRU) reIndex() {
 		curStatFilename := cache.stats[curIdx].Filename
 		wg.Add(1)
 		go func(index int, filename string, waitGroup *sync.WaitGroup) {
-			cache.statsFilenames[filename] = index
+			cache.statsFilenames.Store(filename, index)
 			waitGroup.Done()
 		}(curIdx, curStatFilename, &wg)
 	}
@@ -299,7 +308,7 @@ func (cache *WeightedLRU) getThreshold() float32 {
 			Q1 := cache.stats[Q1Idx].Weight
 			if Q1 > 2*Q2 {
 				for idx := 0; idx < Q1Idx; idx++ {
-					delete(cache.statsFilenames, cache.stats[idx].Filename)
+					cache.statsFilenames.Delete(cache.stats[idx].Filename)
 				}
 				copy(cache.stats, cache.stats[Q1Idx:])
 				cache.stats = cache.stats[:len(cache.stats)-Q1Idx]
@@ -313,7 +322,10 @@ func (cache *WeightedLRU) getThreshold() float32 {
 }
 
 func (cache *WeightedLRU) getOrInsertStats(filename string) *WeightedFileStats {
-	idx, inStats := cache.statsFilenames[filename]
+	var resultIdx int
+
+	idx, inStats := cache.statsFilenames.Load(filename)
+
 	if !inStats {
 		cache.stats = append(cache.stats, &WeightedFileStats{
 			filename,
@@ -326,14 +338,18 @@ func (cache *WeightedLRU) getOrInsertStats(filename string) *WeightedFileStats {
 			[StatsMemorySize]time.Time{},
 			0,
 		})
-		cache.statsFilenames[filename] = len(cache.stats) - 1
-		idx = len(cache.stats) - 1
+		cache.statsFilenames.Store(filename, len(cache.stats)-1)
+		resultIdx = len(cache.stats) - 1
+	} else {
+		resultIdx = idx.(int)
 	}
-	return cache.stats[idx]
+
+	return cache.stats[resultIdx]
 }
 
 func (cache *WeightedLRU) moveStat(stat *WeightedFileStats, curTime time.Time) {
-	curIdx, _ := cache.statsFilenames[stat.Filename]
+	idx, _ := cache.statsFilenames.Load(stat.Filename)
+	curIdx := idx.(int)
 
 	if curIdx-1 >= 0 { // <--[Check left]
 		for idx := curIdx; idx > 0; idx-- {
@@ -342,8 +358,8 @@ func (cache *WeightedLRU) moveStat(stat *WeightedFileStats, curTime time.Time) {
 			if prevStats.Weight < curStats.Weight {
 				cache.stats[idx-1] = curStats
 				cache.stats[idx] = prevStats
-				cache.statsFilenames[curStats.Filename] = idx - 1
-				cache.statsFilenames[prevStats.Filename] = idx
+				cache.statsFilenames.Store(curStats.Filename, idx-1)
+				cache.statsFilenames.Store(prevStats.Filename, idx)
 			} else {
 				break
 			}
@@ -356,8 +372,8 @@ func (cache *WeightedLRU) moveStat(stat *WeightedFileStats, curTime time.Time) {
 			if nextStats.Weight > curStats.Weight {
 				cache.stats[idx+1] = curStats
 				cache.stats[idx] = nextStats
-				cache.statsFilenames[curStats.Filename] = idx + 1
-				cache.statsFilenames[nextStats.Filename] = idx
+				cache.statsFilenames.Store(curStats.Filename, idx+1)
+				cache.statsFilenames.Store(nextStats.Filename, idx)
 			} else {
 				break
 			}
