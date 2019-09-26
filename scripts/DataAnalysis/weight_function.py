@@ -646,7 +646,7 @@ def simulate(cache,
                             cur_written_data = stub_result.writtenData
                             cur_read_on_hit = stub_result.readOnHit
                             cur_size = stub_result.size
-                            stubSimService.SimResetHitMissStats(
+                            stubSimService.SimClearHitMissStats(
                                 google_dot_protobuf_dot_empty__pb2.Empty()
                             )
                         else:

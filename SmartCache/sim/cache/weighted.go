@@ -195,8 +195,8 @@ func (cache *WeightedCache) SimClearFiles(ctx context.Context, _ *empty.Empty) (
 	}, nil
 }
 
-// SimResetHitMissStats deletes all cache content
-func (cache *WeightedCache) SimResetHitMissStats(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
+// SimClearHitMissStats deletes all cache content
+func (cache *WeightedCache) SimClearHitMissStats(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
 	cache.ClearHitMissStats()
 	return &pb.SimCacheStatus{
 		HitRate:         cache.HitRate(),
