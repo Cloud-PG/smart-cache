@@ -34,6 +34,7 @@ var simLoadDump bool
 var simLoadDumpFileName string
 var simWindowSize uint32
 var simStartFromWindow uint32
+var simStopWindow uint32
 var simColdStart bool
 
 func main() {
@@ -245,7 +246,9 @@ func commandSimulate() *cobra.Command {
 					}
 				}
 
-				if windowCounter >= simStartFromWindow {
+				if windowCounter == simStopWindow {
+					break
+				} else if windowCounter >= simStartFromWindow {
 					sizeInMbytes := record.Size / (1024 * 1024)
 					curCacheInstance.Get(record.Filename, sizeInMbytes)
 
@@ -342,7 +345,7 @@ func commandSimulate() *cobra.Command {
 		"the output dataset file name",
 	)
 	cmd.PersistentFlags().BoolVar(
-		&simDump, "simDump", true,
+		&simDump, "simDump", false,
 		"indicates if to dump the cache status after the simulation",
 	)
 	cmd.PersistentFlags().StringVar(
@@ -364,6 +367,10 @@ func commandSimulate() *cobra.Command {
 	cmd.PersistentFlags().Uint32Var(
 		&simStartFromWindow, "simStartFromWindow", 0,
 		"number of the window to start with the simulation",
+	)
+	cmd.PersistentFlags().Uint32Var(
+		&simStopWindow, "simStopWindow", 0,
+		"number of the window to stop with the simulation",
 	)
 	cmd.PersistentFlags().BoolVar(
 		&simColdStart, "simColdStart", true,
