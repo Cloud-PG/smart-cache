@@ -81,13 +81,10 @@ func (cache *LRUCache) Clear() {
 	cache.readOnHit = 0.
 }
 
-// Dump the LRUCache cache
-func (cache LRUCache) Dump(filename string) {
-	outFile, osErr := os.Create(filename)
-	if osErr != nil {
-		panic(fmt.Sprintf("Error dump file creation: %s", osErr))
-	}
-	gwriter := gzip.NewWriter(outFile)
+// Dumps the LRUCache cache
+func (cache *LRUCache) Dumps() *[][]byte {
+	outData := make([][]byte, 0)
+	var newLine = []byte("\n")
 
 	// Files
 	for filename, size := range cache.files {
@@ -100,9 +97,44 @@ func (cache LRUCache) Dump(filename string) {
 			Info: string(dumpInfo),
 			Data: string(dumpFile),
 		})
+		record = append(record, newLine...)
+		outData = append(outData, record)
+	}
+	return &outData
+}
+
+// Dump the LRUCache cache
+func (cache *LRUCache) Dump(filename string) {
+	outFile, osErr := os.Create(filename)
+	if osErr != nil {
+		panic(fmt.Sprintf("Error dump file creation: %s", osErr))
+	}
+	gwriter := gzip.NewWriter(outFile)
+
+	for _, record := range *cache.Dumps() {
 		gwriter.Write(record)
 	}
+
 	gwriter.Close()
+}
+
+// Loads the LRUCache cache
+func (cache *LRUCache) Loads(inputString *[][]byte) {
+	var curRecord DumpRecord
+	var curRecordInfo DumpInfo
+
+	for _, record := range *inputString {
+		buffer := record[:len(record)-1]
+		json.Unmarshal(buffer, &curRecord)
+		json.Unmarshal([]byte(curRecord.Info), &curRecordInfo)
+		switch curRecordInfo.Type {
+		case "FILES":
+			var curFile FileDump
+			json.Unmarshal([]byte(curRecord.Data), &curFile)
+			cache.files[curFile.Filename] = curFile.Size
+			cache.size += curFile.Size
+		}
+	}
 }
 
 // Load the LRUCache cache

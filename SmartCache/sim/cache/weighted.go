@@ -50,13 +50,10 @@ func (cache *WeightedCache) Clear() {
 	cache.readOnHit = 0.
 }
 
-// Dump the WeightedCache cache
-func (cache WeightedCache) Dump(filename string) {
-	outFile, osErr := os.Create(filename)
-	if osErr != nil {
-		panic(fmt.Sprintf("Error dump file creation: %s", osErr))
-	}
-	gwriter := gzip.NewWriter(outFile)
+// Dumps the WeightedCache cache
+func (cache *WeightedCache) Dumps() *[][]byte {
+	outData := make([][]byte, 0)
+	var newLine = []byte("\n")
 
 	// Files
 	for filename, size := range cache.files {
@@ -69,10 +66,11 @@ func (cache WeightedCache) Dump(filename string) {
 			Info: string(dumpInfo),
 			Data: string(dumpFile),
 		})
-		gwriter.Write(record)
+		record = append(record, newLine...)
+		outData = append(outData, record)
 	}
 	// TO DO
-	// // Stats
+	// Stats
 	// for _, stats := range cache.stats {
 	// 	dumpInfo, _ := json.Marshal(DumpInfo{Type: "STATS"})
 	// 	dumpStats, _ := json.Marshal(stats)
@@ -80,9 +78,49 @@ func (cache WeightedCache) Dump(filename string) {
 	// 		Info: string(dumpInfo),
 	// 		Data: string(dumpStats),
 	// 	})
-	// 	gwriter.Write(record)
+	// 	record = append(record, newLine...)
+	// 	outData = append(outData, record)
 	// }
+	return &outData
+}
+
+// Dump the WeightedCache cache
+func (cache *WeightedCache) Dump(filename string) {
+	outFile, osErr := os.Create(filename)
+	if osErr != nil {
+		panic(fmt.Sprintf("Error dump file creation: %s", osErr))
+	}
+	gwriter := gzip.NewWriter(outFile)
+
+	for _, record := range *cache.Dumps() {
+		gwriter.Write(record)
+	}
+
 	gwriter.Close()
+}
+
+// Loads the WeightedCache cache
+func (cache *WeightedCache) Loads(inputString *[][]byte) {
+	var curRecord DumpRecord
+	var curRecordInfo DumpInfo
+
+	for _, record := range *inputString {
+		buffer := record[:len(record)-1]
+		json.Unmarshal(buffer, &curRecord)
+		json.Unmarshal([]byte(curRecord.Info), &curRecordInfo)
+		switch curRecordInfo.Type {
+		case "FILES":
+			var curFile FileDump
+			json.Unmarshal([]byte(curRecord.Data), &curFile)
+			cache.files[curFile.Filename] = curFile.Size
+			cache.size += curFile.Size
+			// TO DO
+			// case "STATS":
+			// 	var curStats WeightedFileStats
+			// 	json.Unmarshal([]byte(curRecord.Data), &curStats)
+			// 	cache.stats = append(cache.stats, &curStats)
+		}
+	}
 }
 
 // Load the WeightedCache cache

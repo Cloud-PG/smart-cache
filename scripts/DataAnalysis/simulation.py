@@ -1,3 +1,6 @@
+import argparse
+import subprocess
+
 from SmartCache.sim import get_simulator_exe
 
 

@@ -31,7 +31,9 @@ type Cache interface {
 
 	Init(...interface{})
 	ClearHitMissStats()
+	Dumps() *[][]byte
 	Dump(filename string)
+	Loads(*[][]byte)
 	Load(filename string)
 	Clear()
 	ClearFiles()
