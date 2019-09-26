@@ -148,10 +148,9 @@ func (cache LRUCache) Load(filename string) {
 		panic(gzipErr)
 	}
 
+	var records [][]byte
 	var buffer []byte
 	var charBuffer []byte
-	var curRecord DumpRecord
-	var curRecordInfo DumpInfo
 
 	buffer = make([]byte, 0)
 	charBuffer = make([]byte, 1)
@@ -165,21 +164,15 @@ func (cache LRUCache) Load(filename string) {
 			panic(err)
 		}
 		if string(curChar) == "\n" {
-			json.Unmarshal(buffer, &curRecord)
-			json.Unmarshal([]byte(curRecord.Info), &curRecordInfo)
-			switch curRecordInfo.Type {
-			case "FILES":
-				var curFile FileDump
-				json.Unmarshal([]byte(curRecord.Data), &curFile)
-				cache.files[curFile.Filename] = curFile.Size
-				cache.size += curFile.Size
-			}
+			records = append(records, buffer)
 			buffer = buffer[:0]
 		} else {
 			buffer = append(buffer, charBuffer...)
 		}
 	}
 	greader.Close()
+
+	cache.Loads(&records)
 }
 
 // GetFileStats from the cache

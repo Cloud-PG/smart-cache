@@ -158,36 +158,23 @@ func (cache *WeightedLRU) Load(filename string) {
 		panic(gzipErr)
 	}
 
+	var records [][]byte
 	var buffer []byte
 	var charBuffer []byte
-	var curRecord DumpRecord
-	var curRecordInfo DumpInfo
 
 	buffer = make([]byte, 0)
 	charBuffer = make([]byte, 1)
 
 	for {
-		_, err := greader.Read(charBuffer)
+		curChar, err := greader.Read(charBuffer)
 		if err != nil {
 			if err == io.EOF {
 				break
 			}
 			panic(err)
 		}
-		if string(charBuffer) == "\n" {
-			json.Unmarshal(buffer, &curRecord)
-			json.Unmarshal([]byte(curRecord.Info), &curRecordInfo)
-			switch curRecordInfo.Type {
-			case "FILES":
-				var curFile FileDump
-				json.Unmarshal([]byte(curRecord.Data), &curFile)
-				cache.files[curFile.Filename] = curFile.Size
-				cache.size += curFile.Size
-			case "STATS":
-				var curStats WeightedFileStats
-				json.Unmarshal([]byte(curRecord.Data), &curStats)
-				cache.stats = append(cache.stats, &curStats)
-			}
+		if string(curChar) == "\n" {
+			records = append(records, buffer)
 			buffer = buffer[:0]
 		} else {
 			buffer = append(buffer, charBuffer...)
@@ -195,7 +182,7 @@ func (cache *WeightedLRU) Load(filename string) {
 	}
 	greader.Close()
 
-	cache.reIndex()
+	cache.Loads(&records)
 }
 
 // GetFileStats from the cache
