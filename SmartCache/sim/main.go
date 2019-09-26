@@ -29,7 +29,9 @@ var simOutFile string
 var simGenDataset bool
 var simGenDatasetName string
 var simDump bool
+var simDumpFileName string
 var simLoadDump bool
+var simLoadDumpFileName string
 var simWindowSize uint32
 var simStartFromWindow uint32
 var simColdStart bool
@@ -132,9 +134,16 @@ func commandSimulate() *cobra.Command {
 			// Create cache
 			curCacheInstance := genCache(cacheType)
 
+			if simDumpFileName == "" {
+				simDumpFileName = dumpFileName
+			}
+			if simLoadDumpFileName == "" {
+				simLoadDumpFileName = dumpFileName
+			}
+
 			if simLoadDump {
 				fmt.Println("[Loading cache dump...]")
-				curCacheInstance.Load(dumpFileName)
+				curCacheInstance.Load(simLoadDumpFileName)
 				fmt.Println("[Cache dump loaded!]")
 				if simColdStart {
 					curCacheInstance.ClearFiles()
@@ -190,7 +199,7 @@ func commandSimulate() *cobra.Command {
 			}
 
 			if simDump {
-				defer curCacheInstance.Dump(dumpFileName)
+				defer curCacheInstance.Dump(simDumpFileName)
 			}
 
 			var numRecords int
@@ -336,9 +345,17 @@ func commandSimulate() *cobra.Command {
 		&simDump, "simDump", true,
 		"indicates if to dump the cache status after the simulation",
 	)
+	cmd.PersistentFlags().StringVar(
+		&simDumpFileName, "simDumpFileName", "",
+		"the dump output file name",
+	)
 	cmd.PersistentFlags().BoolVar(
 		&simLoadDump, "simLoadDump", false,
 		"indicates if the simulator have to search a dump of previous session",
+	)
+	cmd.PersistentFlags().StringVar(
+		&simLoadDumpFileName, "simLoadDumpFileName", "",
+		"the dump input file name",
 	)
 	cmd.PersistentFlags().Uint32Var(
 		&simWindowSize, "simWindowSize", 7,
