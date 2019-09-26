@@ -262,39 +262,37 @@ func (cache *LRUCache) SimGetInfoCacheStatus(ctx context.Context, _ *empty.Empty
 	}, nil
 }
 
-// SimGetInfoCacheFiles returns the content of the cache: filenames and sizes
-func (cache *LRUCache) SimGetInfoCacheFiles(_ *empty.Empty, stream pb.SimService_SimGetInfoCacheFilesServer) error {
-	for key, value := range cache.files {
-		curFile := &pb.SimCommonFile{
-			Filename: key,
-			Size:     value,
+// SimDumps returns the content of the cache
+func (cache *LRUCache) SimDumps(_ *empty.Empty, stream pb.SimService_SimDumpsServer) error {
+	for _, record := range *cache.Dumps() {
+		curRecord := &pb.SimDumpRecord{
+			Raw: record,
 		}
-		if err := stream.Send(curFile); err != nil {
+		if err := stream.Send(curRecord); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// SimGetInfoFilesWeights returns the file weights
-func (cache *LRUCache) SimGetInfoFilesWeights(_ *empty.Empty, stream pb.SimService_SimGetInfoFilesWeightsServer) error {
-	return nil
-}
+// SimLoads loads a cache state
+func (cache *LRUCache) SimLoads(stream pb.SimService_SimLoadsServer) error {
+	var records [][]byte
+	records = make([][]byte, 0)
 
-// SimGetInfoFilesStats returns the content of the file stats
-func (cache *LRUCache) SimGetInfoFilesStats(_ *empty.Empty, stream pb.SimService_SimGetInfoFilesStatsServer) error {
-	for filename, stats := range cache.stats {
-		curFile := &pb.SimFileStats{
-			Filename: filename,
-			Size:     stats.size,
-			TotReq:   stats.totRequests,
-			NHits:    stats.nHits,
-			NMiss:    stats.nMiss,
+	for {
+		record, err := stream.Recv()
+		if err == io.EOF {
+			break
 		}
-		if err := stream.Send(curFile); err != nil {
+		if err != nil {
 			return err
 		}
+		records = append(records, record.Raw)
 	}
+
+	cache.Loads(&records)
+
 	return nil
 }
 

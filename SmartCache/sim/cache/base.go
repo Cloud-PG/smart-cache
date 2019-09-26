@@ -30,13 +30,15 @@ type Cache interface {
 	updatePolicy(filename string, size float32, hit bool) bool
 
 	Init(...interface{})
-	ClearHitMissStats()
+
 	Dumps() *[][]byte
 	Dump(filename string)
 	Loads(*[][]byte)
 	Load(filename string)
+
 	Clear()
 	ClearFiles()
+	ClearHitMissStats()
 
 	HitRate() float32
 	HitOverMiss() float32
@@ -55,9 +57,8 @@ type Cache interface {
 	SimClearFiles(context.Context, *empty.Empty) (*pb.SimCacheStatus, error)
 	SimClearHitMissStats(context.Context, *empty.Empty) (*pb.SimCacheStatus, error)
 	SimGetInfoCacheStatus(context.Context, *empty.Empty) (*pb.SimCacheStatus, error)
-	SimGetInfoCacheFiles(*empty.Empty, pb.SimService_SimGetInfoCacheFilesServer) error
-	SimGetInfoFilesWeights(*empty.Empty, pb.SimService_SimGetInfoFilesWeightsServer) error
-	SimGetInfoFilesStats(*empty.Empty, pb.SimService_SimGetInfoFilesStatsServer) error
+	SimDumps(*empty.Empty, pb.SimService_SimDumpsServer) error
+	SimLoads(pb.SimService_SimLoadsServer) error
 }
 
 // DatasetInput contains file statistics collected by weighted caches

@@ -206,168 +206,85 @@ func (m *SimCommonFile) GetSize() float32 {
 	return 0
 }
 
-type SimFileWeight struct {
-	Filename             string   `protobuf:"bytes,1,opt,name=filename,proto3" json:"filename,omitempty"`
-	Weight               float32  `protobuf:"fixed32,2,opt,name=weight,proto3" json:"weight,omitempty"`
+type SimDumpRecord struct {
+	Raw                  []byte   `protobuf:"bytes,1,opt,name=raw,proto3" json:"raw,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *SimFileWeight) Reset()         { *m = SimFileWeight{} }
-func (m *SimFileWeight) String() string { return proto.CompactTextString(m) }
-func (*SimFileWeight) ProtoMessage()    {}
-func (*SimFileWeight) Descriptor() ([]byte, []int) {
+func (m *SimDumpRecord) Reset()         { *m = SimDumpRecord{} }
+func (m *SimDumpRecord) String() string { return proto.CompactTextString(m) }
+func (*SimDumpRecord) ProtoMessage()    {}
+func (*SimDumpRecord) Descriptor() ([]byte, []int) {
 	return fileDescriptor_20cb65478f01afe7, []int{3}
 }
 
-func (m *SimFileWeight) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_SimFileWeight.Unmarshal(m, b)
+func (m *SimDumpRecord) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_SimDumpRecord.Unmarshal(m, b)
 }
-func (m *SimFileWeight) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_SimFileWeight.Marshal(b, m, deterministic)
+func (m *SimDumpRecord) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_SimDumpRecord.Marshal(b, m, deterministic)
 }
-func (m *SimFileWeight) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SimFileWeight.Merge(m, src)
+func (m *SimDumpRecord) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SimDumpRecord.Merge(m, src)
 }
-func (m *SimFileWeight) XXX_Size() int {
-	return xxx_messageInfo_SimFileWeight.Size(m)
+func (m *SimDumpRecord) XXX_Size() int {
+	return xxx_messageInfo_SimDumpRecord.Size(m)
 }
-func (m *SimFileWeight) XXX_DiscardUnknown() {
-	xxx_messageInfo_SimFileWeight.DiscardUnknown(m)
+func (m *SimDumpRecord) XXX_DiscardUnknown() {
+	xxx_messageInfo_SimDumpRecord.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_SimFileWeight proto.InternalMessageInfo
+var xxx_messageInfo_SimDumpRecord proto.InternalMessageInfo
 
-func (m *SimFileWeight) GetFilename() string {
+func (m *SimDumpRecord) GetRaw() []byte {
 	if m != nil {
-		return m.Filename
+		return m.Raw
 	}
-	return ""
-}
-
-func (m *SimFileWeight) GetWeight() float32 {
-	if m != nil {
-		return m.Weight
-	}
-	return 0
-}
-
-type SimFileStats struct {
-	Filename             string   `protobuf:"bytes,1,opt,name=filename,proto3" json:"filename,omitempty"`
-	Size                 float32  `protobuf:"fixed32,2,opt,name=size,proto3" json:"size,omitempty"`
-	TotReq               uint32   `protobuf:"varint,3,opt,name=totReq,proto3" json:"totReq,omitempty"`
-	NHits                uint32   `protobuf:"varint,4,opt,name=nHits,proto3" json:"nHits,omitempty"`
-	NMiss                uint32   `protobuf:"varint,5,opt,name=nMiss,proto3" json:"nMiss,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *SimFileStats) Reset()         { *m = SimFileStats{} }
-func (m *SimFileStats) String() string { return proto.CompactTextString(m) }
-func (*SimFileStats) ProtoMessage()    {}
-func (*SimFileStats) Descriptor() ([]byte, []int) {
-	return fileDescriptor_20cb65478f01afe7, []int{4}
-}
-
-func (m *SimFileStats) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_SimFileStats.Unmarshal(m, b)
-}
-func (m *SimFileStats) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_SimFileStats.Marshal(b, m, deterministic)
-}
-func (m *SimFileStats) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SimFileStats.Merge(m, src)
-}
-func (m *SimFileStats) XXX_Size() int {
-	return xxx_messageInfo_SimFileStats.Size(m)
-}
-func (m *SimFileStats) XXX_DiscardUnknown() {
-	xxx_messageInfo_SimFileStats.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_SimFileStats proto.InternalMessageInfo
-
-func (m *SimFileStats) GetFilename() string {
-	if m != nil {
-		return m.Filename
-	}
-	return ""
-}
-
-func (m *SimFileStats) GetSize() float32 {
-	if m != nil {
-		return m.Size
-	}
-	return 0
-}
-
-func (m *SimFileStats) GetTotReq() uint32 {
-	if m != nil {
-		return m.TotReq
-	}
-	return 0
-}
-
-func (m *SimFileStats) GetNHits() uint32 {
-	if m != nil {
-		return m.NHits
-	}
-	return 0
-}
-
-func (m *SimFileStats) GetNMiss() uint32 {
-	if m != nil {
-		return m.NMiss
-	}
-	return 0
+	return nil
 }
 
 func init() {
 	proto.RegisterType((*ActionResult)(nil), "simservice.ActionResult")
 	proto.RegisterType((*SimCacheStatus)(nil), "simservice.SimCacheStatus")
 	proto.RegisterType((*SimCommonFile)(nil), "simservice.SimCommonFile")
-	proto.RegisterType((*SimFileWeight)(nil), "simservice.SimFileWeight")
-	proto.RegisterType((*SimFileStats)(nil), "simservice.SimFileStats")
+	proto.RegisterType((*SimDumpRecord)(nil), "simservice.SimDumpRecord")
 }
 
 func init() { proto.RegisterFile("simService/simService.proto", fileDescriptor_20cb65478f01afe7) }
 
 var fileDescriptor_20cb65478f01afe7 = []byte{
-	// 507 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x9c, 0x93, 0xc1, 0x6e, 0x1a, 0x31,
-	0x10, 0x86, 0x59, 0x0a, 0x84, 0x4c, 0x43, 0x23, 0x59, 0x14, 0x39, 0xa4, 0x07, 0xb4, 0x27, 0x4e,
-	0xa6, 0x6a, 0x1f, 0x20, 0x69, 0xd2, 0xb4, 0x54, 0x4a, 0x44, 0xb5, 0x1c, 0x7a, 0x76, 0x96, 0x01,
-	0x2c, 0xed, 0xae, 0xe9, 0x7a, 0x48, 0x94, 0x1e, 0xfb, 0xa6, 0xbd, 0xf4, 0x39, 0x2a, 0xdb, 0x0b,
-	0xbb, 0x45, 0x2d, 0x6a, 0xb9, 0xed, 0xfc, 0x1e, 0x7f, 0xcc, 0xfc, 0xfe, 0x81, 0x73, 0xa3, 0xd2,
-	0x29, 0xe6, 0x0f, 0x2a, 0xc6, 0x51, 0xf9, 0x29, 0x56, 0xb9, 0x26, 0xcd, 0xc0, 0xa8, 0xd4, 0x78,
-	0xa5, 0x7f, 0xbe, 0xd0, 0x7a, 0x91, 0xe0, 0xc8, 0x9d, 0xdc, 0xaf, 0xe7, 0x23, 0x4c, 0x57, 0xf4,
-	0xe4, 0x1b, 0xc3, 0x4b, 0x38, 0x79, 0x17, 0x93, 0xd2, 0x59, 0x84, 0x66, 0x9d, 0x10, 0xeb, 0x43,
-	0x7b, 0xae, 0x12, 0xcc, 0x64, 0x8a, 0x3c, 0x18, 0x04, 0xc3, 0xe3, 0x68, 0x5b, 0xb3, 0x2e, 0x34,
-	0xe5, 0x6c, 0x86, 0x33, 0x5e, 0x1f, 0x04, 0xc3, 0x76, 0xe4, 0x8b, 0xf0, 0x67, 0x00, 0x2f, 0xa6,
-	0x2a, 0xbd, 0x96, 0xf1, 0x12, 0xa7, 0x24, 0x69, 0x6d, 0x18, 0x87, 0xa3, 0xa5, 0xa2, 0x48, 0x92,
-	0x67, 0xd4, 0xa3, 0x4d, 0xc9, 0x86, 0x70, 0xfa, 0x88, 0x6a, 0xb1, 0x24, 0x9c, 0x8d, 0x8b, 0x8e,
-	0xba, 0xeb, 0xd8, 0x95, 0xd9, 0x00, 0x9e, 0x2f, 0x15, 0x4d, 0x1e, 0x30, 0xbf, 0x53, 0xc6, 0xf0,
-	0x67, 0xae, 0xab, 0x2a, 0x31, 0x06, 0x0d, 0xa3, 0xbe, 0x21, 0x6f, 0xb8, 0x23, 0xf7, 0x6d, 0xc7,
-	0x8f, 0xe5, 0x4a, 0xc6, 0x8a, 0x9e, 0x78, 0xd3, 0xe9, 0xdb, 0xda, 0x12, 0x1f, 0x73, 0x45, 0x84,
-	0xd9, 0x7b, 0x49, 0x92, 0xb7, 0x3c, 0xb1, 0x22, 0xb1, 0x57, 0x70, 0x9c, 0xa3, 0x9c, 0x4d, 0xb2,
-	0xb1, 0x22, 0x7e, 0xe4, 0xce, 0x4b, 0x21, 0xbc, 0x80, 0x8e, 0xdd, 0x53, 0xa7, 0xa9, 0xce, 0x3e,
-	0xa8, 0x04, 0xf7, 0x7a, 0xb5, 0x19, 0xae, 0x5e, 0x0e, 0x17, 0x5e, 0x3b, 0x80, 0xbd, 0xfa, 0xc5,
-	0x2d, 0xbb, 0x17, 0xd0, 0x83, 0x96, 0xb7, 0xa4, 0x40, 0x14, 0x55, 0xf8, 0x3d, 0x80, 0x93, 0x82,
-	0x62, 0xdd, 0x36, 0xff, 0x3b, 0x85, 0x05, 0x93, 0xa6, 0x08, 0xbf, 0x3a, 0x4f, 0x3b, 0x51, 0x51,
-	0xd9, 0xd7, 0xb5, 0x6b, 0x1a, 0xe7, 0x67, 0x27, 0xf2, 0x85, 0x53, 0xdd, 0x03, 0x34, 0x0b, 0xd5,
-	0x16, 0x6f, 0x7e, 0x34, 0x00, 0xa6, 0xdb, 0xcc, 0xb1, 0x0b, 0x68, 0x4d, 0x55, 0xfa, 0x11, 0x89,
-	0x9d, 0x89, 0x32, 0x78, 0xe2, 0x37, 0xb7, 0xfa, 0xbc, 0x7a, 0x54, 0xcd, 0x5c, 0x58, 0x63, 0x97,
-	0xd0, 0xb6, 0xcd, 0x09, 0xca, 0x9c, 0xf5, 0x84, 0xcf, 0xab, 0xd8, 0xe4, 0x55, 0xdc, 0xd8, 0xbc,
-	0xf6, 0xfb, 0xbb, 0xe8, 0x32, 0x70, 0x61, 0x8d, 0xdd, 0xf8, 0xc7, 0xb1, 0x04, 0xfb, 0x6b, 0xe6,
-	0x40, 0xcc, 0x2d, 0x74, 0x37, 0x98, 0xb1, 0x22, 0xbb, 0xab, 0x37, 0xf9, 0x30, 0xda, 0x1d, 0xbc,
-	0xf4, 0xbe, 0x7c, 0xca, 0xe6, 0xba, 0xfa, 0x07, 0x39, 0x14, 0xd7, 0xdd, 0xc1, 0xed, 0x5f, 0xf5,
-	0xef, 0x8f, 0x11, 0xd6, 0x5e, 0x07, 0x6c, 0x02, 0xbd, 0x12, 0xe7, 0x48, 0x3e, 0x96, 0xff, 0x0e,
-	0x2c, 0xa3, 0xec, 0x80, 0xb7, 0xd5, 0xf9, 0x1c, 0x70, 0xbf, 0x79, 0xfc, 0x0f, 0x38, 0x77, 0xc3,
-	0xd2, 0xae, 0x04, 0x9c, 0x29, 0x2d, 0x16, 0xf9, 0x2a, 0x16, 0xb1, 0xdd, 0xd5, 0x36, 0x8b, 0xa2,
-	0xfb, 0xea, 0xd4, 0x3b, 0xb3, 0x8d, 0xe0, 0xe7, 0xe0, 0xbe, 0xe5, 0xe8, 0x6f, 0x7f, 0x05, 0x00,
-	0x00, 0xff, 0xff, 0xa2, 0xd5, 0x01, 0x68, 0x18, 0x05, 0x00, 0x00,
+	// 459 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x9c, 0x92, 0xdf, 0x6e, 0xd3, 0x30,
+	0x14, 0xc6, 0x9b, 0x76, 0xeb, 0xba, 0xc3, 0x60, 0xc8, 0x1a, 0x28, 0xcb, 0xb8, 0x28, 0xb9, 0xea,
+	0x95, 0x8b, 0xe0, 0x01, 0xf6, 0x87, 0x0d, 0x8a, 0xb4, 0x69, 0x28, 0x79, 0x02, 0x2f, 0x39, 0x6d,
+	0x8f, 0x94, 0xc4, 0x91, 0xed, 0xae, 0x1a, 0x0f, 0xcc, 0x3b, 0x70, 0x87, 0x6c, 0xb7, 0x4d, 0xa8,
+	0x54, 0x2e, 0x7a, 0xe7, 0x73, 0xce, 0x97, 0x5f, 0x3e, 0xfb, 0x3b, 0x70, 0xa1, 0xa9, 0x4c, 0x51,
+	0x3d, 0x53, 0x86, 0xe3, 0xe6, 0xc8, 0x6b, 0x25, 0x8d, 0x64, 0xa0, 0xa9, 0xd4, 0xbe, 0x13, 0x5d,
+	0xcc, 0xa4, 0x9c, 0x15, 0x38, 0x76, 0x93, 0xa7, 0xc5, 0x74, 0x8c, 0x65, 0x6d, 0x5e, 0xbc, 0x30,
+	0xbe, 0x82, 0x93, 0xeb, 0xcc, 0x90, 0xac, 0x12, 0xd4, 0x8b, 0xc2, 0xb0, 0x08, 0x06, 0x53, 0x2a,
+	0xb0, 0x12, 0x25, 0x86, 0xc1, 0x30, 0x18, 0x1d, 0x27, 0x9b, 0x9a, 0x9d, 0xc1, 0xa1, 0xc8, 0x73,
+	0xcc, 0xc3, 0xee, 0x30, 0x18, 0x0d, 0x12, 0x5f, 0xc4, 0xbf, 0x03, 0x78, 0x93, 0x52, 0xf9, 0x55,
+	0x64, 0x73, 0x4c, 0x8d, 0x30, 0x0b, 0xcd, 0x42, 0x38, 0x9a, 0x93, 0x49, 0x84, 0xf1, 0x8c, 0x6e,
+	0xb2, 0x2e, 0xd9, 0x08, 0x4e, 0x97, 0x48, 0xb3, 0xb9, 0xc1, 0x7c, 0xb2, 0x52, 0x74, 0x9d, 0x62,
+	0xbb, 0xcd, 0x86, 0xf0, 0x6a, 0x4e, 0xe6, 0xf1, 0x19, 0xd5, 0x03, 0x69, 0x1d, 0xf6, 0x9c, 0xaa,
+	0xdd, 0x62, 0x0c, 0x0e, 0x34, 0xfd, 0xc2, 0xf0, 0xc0, 0x8d, 0xdc, 0xd9, 0xda, 0xcf, 0x44, 0x2d,
+	0x32, 0x32, 0x2f, 0xe1, 0xa1, 0xeb, 0x6f, 0x6a, 0x4b, 0x5c, 0x2a, 0x32, 0x06, 0xab, 0x5b, 0x61,
+	0x44, 0xd8, 0xf7, 0xc4, 0x56, 0x8b, 0x7d, 0x80, 0x63, 0x85, 0x22, 0x7f, 0xac, 0x26, 0x64, 0xc2,
+	0x23, 0x37, 0x6f, 0x1a, 0xf1, 0x25, 0xbc, 0xb6, 0xf7, 0x94, 0x65, 0x29, 0xab, 0x6f, 0x54, 0xe0,
+	0x7f, 0xdf, 0x6a, 0x6d, 0xae, 0xdb, 0x98, 0x8b, 0x3f, 0x3a, 0xc0, 0xed, 0xa2, 0xac, 0x13, 0xcc,
+	0xa4, 0xca, 0xd9, 0x5b, 0xe8, 0x29, 0xb1, 0x74, 0xdf, 0x9e, 0x24, 0xf6, 0xf8, 0xf9, 0x4f, 0x0f,
+	0x20, 0xdd, 0x84, 0xc9, 0x2e, 0xa1, 0x9f, 0x52, 0xf9, 0x1d, 0x0d, 0x3b, 0xe7, 0x4d, 0xa2, 0xfc,
+	0x1f, 0x1b, 0x51, 0xd8, 0x1e, 0xb5, 0xc3, 0x8c, 0x3b, 0xec, 0x0a, 0x06, 0x56, 0x5c, 0xa0, 0x50,
+	0xec, 0x3d, 0xf7, 0x8b, 0xc0, 0xd7, 0x8b, 0xc0, 0xef, 0xec, 0x22, 0x44, 0xd1, 0x36, 0xba, 0x49,
+	0x32, 0xee, 0xb0, 0x3b, 0x7f, 0x6b, 0x4b, 0xb0, 0x7f, 0xd3, 0x7b, 0x62, 0xee, 0xe1, 0x6c, 0x8d,
+	0x99, 0x90, 0xb1, 0xf9, 0xd9, 0xd1, 0xbe, 0xb4, 0x07, 0x78, 0xe7, 0xdf, 0xe5, 0x47, 0x35, 0x95,
+	0xed, 0xcd, 0xdb, 0x0f, 0x77, 0xed, 0x5e, 0xc9, 0x06, 0xb3, 0x9b, 0xb0, 0x1d, 0x40, 0x13, 0x63,
+	0xdc, 0xf9, 0x14, 0xac, 0x10, 0xf7, 0x52, 0xe4, 0x9a, 0xed, 0x96, 0x46, 0x3b, 0xe8, 0x71, 0x67,
+	0x14, 0xdc, 0x70, 0x38, 0x27, 0xc9, 0x67, 0xaa, 0xce, 0x78, 0x66, 0xed, 0x59, 0x0a, 0x5f, 0x61,
+	0x6e, 0x4e, 0xbd, 0xe3, 0xcd, 0x6a, 0xfc, 0x0c, 0x9e, 0xfa, 0x8e, 0xf1, 0xe5, 0x6f, 0x00, 0x00,
+	0x00, 0xff, 0xff, 0x8e, 0x74, 0xc6, 0xe5, 0x09, 0x04, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -387,9 +304,8 @@ type SimServiceClient interface {
 	SimClearFiles(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*SimCacheStatus, error)
 	SimClearHitMissStats(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*SimCacheStatus, error)
 	SimGetInfoCacheStatus(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*SimCacheStatus, error)
-	SimGetInfoCacheFiles(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (SimService_SimGetInfoCacheFilesClient, error)
-	SimGetInfoFilesWeights(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (SimService_SimGetInfoFilesWeightsClient, error)
-	SimGetInfoFilesStats(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (SimService_SimGetInfoFilesStatsClient, error)
+	SimDumps(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (SimService_SimDumpsClient, error)
+	SimLoads(ctx context.Context, opts ...grpc.CallOption) (SimService_SimLoadsClient, error)
 }
 
 type simServiceClient struct {
@@ -445,12 +361,12 @@ func (c *simServiceClient) SimGetInfoCacheStatus(ctx context.Context, in *empty.
 	return out, nil
 }
 
-func (c *simServiceClient) SimGetInfoCacheFiles(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (SimService_SimGetInfoCacheFilesClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_SimService_serviceDesc.Streams[0], "/simservice.SimService/SimGetInfoCacheFiles", opts...)
+func (c *simServiceClient) SimDumps(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (SimService_SimDumpsClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_SimService_serviceDesc.Streams[0], "/simservice.SimService/SimDumps", opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &simServiceSimGetInfoCacheFilesClient{stream}
+	x := &simServiceSimDumpsClient{stream}
 	if err := x.ClientStream.SendMsg(in); err != nil {
 		return nil, err
 	}
@@ -460,81 +376,51 @@ func (c *simServiceClient) SimGetInfoCacheFiles(ctx context.Context, in *empty.E
 	return x, nil
 }
 
-type SimService_SimGetInfoCacheFilesClient interface {
-	Recv() (*SimCommonFile, error)
+type SimService_SimDumpsClient interface {
+	Recv() (*SimDumpRecord, error)
 	grpc.ClientStream
 }
 
-type simServiceSimGetInfoCacheFilesClient struct {
+type simServiceSimDumpsClient struct {
 	grpc.ClientStream
 }
 
-func (x *simServiceSimGetInfoCacheFilesClient) Recv() (*SimCommonFile, error) {
-	m := new(SimCommonFile)
+func (x *simServiceSimDumpsClient) Recv() (*SimDumpRecord, error) {
+	m := new(SimDumpRecord)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
 	return m, nil
 }
 
-func (c *simServiceClient) SimGetInfoFilesWeights(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (SimService_SimGetInfoFilesWeightsClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_SimService_serviceDesc.Streams[1], "/simservice.SimService/SimGetInfoFilesWeights", opts...)
+func (c *simServiceClient) SimLoads(ctx context.Context, opts ...grpc.CallOption) (SimService_SimLoadsClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_SimService_serviceDesc.Streams[1], "/simservice.SimService/SimLoads", opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &simServiceSimGetInfoFilesWeightsClient{stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
+	x := &simServiceSimLoadsClient{stream}
 	return x, nil
 }
 
-type SimService_SimGetInfoFilesWeightsClient interface {
-	Recv() (*SimFileWeight, error)
+type SimService_SimLoadsClient interface {
+	Send(*SimDumpRecord) error
+	CloseAndRecv() (*empty.Empty, error)
 	grpc.ClientStream
 }
 
-type simServiceSimGetInfoFilesWeightsClient struct {
+type simServiceSimLoadsClient struct {
 	grpc.ClientStream
 }
 
-func (x *simServiceSimGetInfoFilesWeightsClient) Recv() (*SimFileWeight, error) {
-	m := new(SimFileWeight)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
+func (x *simServiceSimLoadsClient) Send(m *SimDumpRecord) error {
+	return x.ClientStream.SendMsg(m)
 }
 
-func (c *simServiceClient) SimGetInfoFilesStats(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (SimService_SimGetInfoFilesStatsClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_SimService_serviceDesc.Streams[2], "/simservice.SimService/SimGetInfoFilesStats", opts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &simServiceSimGetInfoFilesStatsClient{stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
+func (x *simServiceSimLoadsClient) CloseAndRecv() (*empty.Empty, error) {
 	if err := x.ClientStream.CloseSend(); err != nil {
 		return nil, err
 	}
-	return x, nil
-}
-
-type SimService_SimGetInfoFilesStatsClient interface {
-	Recv() (*SimFileStats, error)
-	grpc.ClientStream
-}
-
-type simServiceSimGetInfoFilesStatsClient struct {
-	grpc.ClientStream
-}
-
-func (x *simServiceSimGetInfoFilesStatsClient) Recv() (*SimFileStats, error) {
-	m := new(SimFileStats)
+	m := new(empty.Empty)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -548,9 +434,8 @@ type SimServiceServer interface {
 	SimClearFiles(context.Context, *empty.Empty) (*SimCacheStatus, error)
 	SimClearHitMissStats(context.Context, *empty.Empty) (*SimCacheStatus, error)
 	SimGetInfoCacheStatus(context.Context, *empty.Empty) (*SimCacheStatus, error)
-	SimGetInfoCacheFiles(*empty.Empty, SimService_SimGetInfoCacheFilesServer) error
-	SimGetInfoFilesWeights(*empty.Empty, SimService_SimGetInfoFilesWeightsServer) error
-	SimGetInfoFilesStats(*empty.Empty, SimService_SimGetInfoFilesStatsServer) error
+	SimDumps(*empty.Empty, SimService_SimDumpsServer) error
+	SimLoads(SimService_SimLoadsServer) error
 }
 
 // UnimplementedSimServiceServer can be embedded to have forward compatible implementations.
@@ -572,14 +457,11 @@ func (*UnimplementedSimServiceServer) SimClearHitMissStats(ctx context.Context, 
 func (*UnimplementedSimServiceServer) SimGetInfoCacheStatus(ctx context.Context, req *empty.Empty) (*SimCacheStatus, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SimGetInfoCacheStatus not implemented")
 }
-func (*UnimplementedSimServiceServer) SimGetInfoCacheFiles(req *empty.Empty, srv SimService_SimGetInfoCacheFilesServer) error {
-	return status.Errorf(codes.Unimplemented, "method SimGetInfoCacheFiles not implemented")
+func (*UnimplementedSimServiceServer) SimDumps(req *empty.Empty, srv SimService_SimDumpsServer) error {
+	return status.Errorf(codes.Unimplemented, "method SimDumps not implemented")
 }
-func (*UnimplementedSimServiceServer) SimGetInfoFilesWeights(req *empty.Empty, srv SimService_SimGetInfoFilesWeightsServer) error {
-	return status.Errorf(codes.Unimplemented, "method SimGetInfoFilesWeights not implemented")
-}
-func (*UnimplementedSimServiceServer) SimGetInfoFilesStats(req *empty.Empty, srv SimService_SimGetInfoFilesStatsServer) error {
-	return status.Errorf(codes.Unimplemented, "method SimGetInfoFilesStats not implemented")
+func (*UnimplementedSimServiceServer) SimLoads(srv SimService_SimLoadsServer) error {
+	return status.Errorf(codes.Unimplemented, "method SimLoads not implemented")
 }
 
 func RegisterSimServiceServer(s *grpc.Server, srv SimServiceServer) {
@@ -676,67 +558,51 @@ func _SimService_SimGetInfoCacheStatus_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SimService_SimGetInfoCacheFiles_Handler(srv interface{}, stream grpc.ServerStream) error {
+func _SimService_SimDumps_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(empty.Empty)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
-	return srv.(SimServiceServer).SimGetInfoCacheFiles(m, &simServiceSimGetInfoCacheFilesServer{stream})
+	return srv.(SimServiceServer).SimDumps(m, &simServiceSimDumpsServer{stream})
 }
 
-type SimService_SimGetInfoCacheFilesServer interface {
-	Send(*SimCommonFile) error
+type SimService_SimDumpsServer interface {
+	Send(*SimDumpRecord) error
 	grpc.ServerStream
 }
 
-type simServiceSimGetInfoCacheFilesServer struct {
+type simServiceSimDumpsServer struct {
 	grpc.ServerStream
 }
 
-func (x *simServiceSimGetInfoCacheFilesServer) Send(m *SimCommonFile) error {
+func (x *simServiceSimDumpsServer) Send(m *SimDumpRecord) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func _SimService_SimGetInfoFilesWeights_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(empty.Empty)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
+func _SimService_SimLoads_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(SimServiceServer).SimLoads(&simServiceSimLoadsServer{stream})
+}
+
+type SimService_SimLoadsServer interface {
+	SendAndClose(*empty.Empty) error
+	Recv() (*SimDumpRecord, error)
+	grpc.ServerStream
+}
+
+type simServiceSimLoadsServer struct {
+	grpc.ServerStream
+}
+
+func (x *simServiceSimLoadsServer) SendAndClose(m *empty.Empty) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *simServiceSimLoadsServer) Recv() (*SimDumpRecord, error) {
+	m := new(SimDumpRecord)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
 	}
-	return srv.(SimServiceServer).SimGetInfoFilesWeights(m, &simServiceSimGetInfoFilesWeightsServer{stream})
-}
-
-type SimService_SimGetInfoFilesWeightsServer interface {
-	Send(*SimFileWeight) error
-	grpc.ServerStream
-}
-
-type simServiceSimGetInfoFilesWeightsServer struct {
-	grpc.ServerStream
-}
-
-func (x *simServiceSimGetInfoFilesWeightsServer) Send(m *SimFileWeight) error {
-	return x.ServerStream.SendMsg(m)
-}
-
-func _SimService_SimGetInfoFilesStats_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(empty.Empty)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
-	}
-	return srv.(SimServiceServer).SimGetInfoFilesStats(m, &simServiceSimGetInfoFilesStatsServer{stream})
-}
-
-type SimService_SimGetInfoFilesStatsServer interface {
-	Send(*SimFileStats) error
-	grpc.ServerStream
-}
-
-type simServiceSimGetInfoFilesStatsServer struct {
-	grpc.ServerStream
-}
-
-func (x *simServiceSimGetInfoFilesStatsServer) Send(m *SimFileStats) error {
-	return x.ServerStream.SendMsg(m)
+	return m, nil
 }
 
 var _SimService_serviceDesc = grpc.ServiceDesc{
@@ -766,19 +632,14 @@ var _SimService_serviceDesc = grpc.ServiceDesc{
 	},
 	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "SimGetInfoCacheFiles",
-			Handler:       _SimService_SimGetInfoCacheFiles_Handler,
+			StreamName:    "SimDumps",
+			Handler:       _SimService_SimDumps_Handler,
 			ServerStreams: true,
 		},
 		{
-			StreamName:    "SimGetInfoFilesWeights",
-			Handler:       _SimService_SimGetInfoFilesWeights_Handler,
-			ServerStreams: true,
-		},
-		{
-			StreamName:    "SimGetInfoFilesStats",
-			Handler:       _SimService_SimGetInfoFilesStats_Handler,
-			ServerStreams: true,
+			StreamName:    "SimLoads",
+			Handler:       _SimService_SimLoads_Handler,
+			ClientStreams: true,
 		},
 	},
 	Metadata: "simService/simService.proto",

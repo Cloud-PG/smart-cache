@@ -40,20 +40,15 @@ class SimServiceStub(object):
         request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
         response_deserializer=simService_dot_simService__pb2.SimCacheStatus.FromString,
         )
-    self.SimGetInfoCacheFiles = channel.unary_stream(
-        '/simservice.SimService/SimGetInfoCacheFiles',
+    self.SimDumps = channel.unary_stream(
+        '/simservice.SimService/SimDumps',
         request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-        response_deserializer=simService_dot_simService__pb2.SimCommonFile.FromString,
+        response_deserializer=simService_dot_simService__pb2.SimDumpRecord.FromString,
         )
-    self.SimGetInfoFilesWeights = channel.unary_stream(
-        '/simservice.SimService/SimGetInfoFilesWeights',
-        request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-        response_deserializer=simService_dot_simService__pb2.SimFileWeight.FromString,
-        )
-    self.SimGetInfoFilesStats = channel.unary_stream(
-        '/simservice.SimService/SimGetInfoFilesStats',
-        request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-        response_deserializer=simService_dot_simService__pb2.SimFileStats.FromString,
+    self.SimLoads = channel.stream_unary(
+        '/simservice.SimService/SimLoads',
+        request_serializer=simService_dot_simService__pb2.SimDumpRecord.SerializeToString,
+        response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
         )
 
 
@@ -96,21 +91,14 @@ class SimServiceServicer(object):
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')
 
-  def SimGetInfoCacheFiles(self, request, context):
+  def SimDumps(self, request, context):
     # missing associated documentation comment in .proto file
     pass
     context.set_code(grpc.StatusCode.UNIMPLEMENTED)
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')
 
-  def SimGetInfoFilesWeights(self, request, context):
-    # missing associated documentation comment in .proto file
-    pass
-    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-    context.set_details('Method not implemented!')
-    raise NotImplementedError('Method not implemented!')
-
-  def SimGetInfoFilesStats(self, request, context):
+  def SimLoads(self, request_iterator, context):
     # missing associated documentation comment in .proto file
     pass
     context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -145,20 +133,15 @@ def add_SimServiceServicer_to_server(servicer, server):
           request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
           response_serializer=simService_dot_simService__pb2.SimCacheStatus.SerializeToString,
       ),
-      'SimGetInfoCacheFiles': grpc.unary_stream_rpc_method_handler(
-          servicer.SimGetInfoCacheFiles,
+      'SimDumps': grpc.unary_stream_rpc_method_handler(
+          servicer.SimDumps,
           request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-          response_serializer=simService_dot_simService__pb2.SimCommonFile.SerializeToString,
+          response_serializer=simService_dot_simService__pb2.SimDumpRecord.SerializeToString,
       ),
-      'SimGetInfoFilesWeights': grpc.unary_stream_rpc_method_handler(
-          servicer.SimGetInfoFilesWeights,
-          request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-          response_serializer=simService_dot_simService__pb2.SimFileWeight.SerializeToString,
-      ),
-      'SimGetInfoFilesStats': grpc.unary_stream_rpc_method_handler(
-          servicer.SimGetInfoFilesStats,
-          request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-          response_serializer=simService_dot_simService__pb2.SimFileStats.SerializeToString,
+      'SimLoads': grpc.stream_unary_rpc_method_handler(
+          servicer.SimLoads,
+          request_deserializer=simService_dot_simService__pb2.SimDumpRecord.FromString,
+          response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
       ),
   }
   generic_handler = grpc.method_handlers_generic_handler(

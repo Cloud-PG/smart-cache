@@ -162,6 +162,7 @@ func (cache *WeightedLRU) Load(filename string) {
 	var buffer []byte
 	var charBuffer []byte
 
+	records = make([][]byte, 0)
 	buffer = make([]byte, 0)
 	charBuffer = make([]byte, 1)
 
@@ -273,50 +274,36 @@ func (cache *WeightedLRU) SimGetInfoCacheStatus(ctx context.Context, _ *empty.Em
 	}, nil
 }
 
-// SimGetInfoCacheFiles returns the content of the cache: filenames and sizes
-func (cache *WeightedLRU) SimGetInfoCacheFiles(_ *empty.Empty, stream pb.SimService_SimGetInfoCacheFilesServer) error {
-	for filename, size := range cache.files {
-		curFile := &pb.SimCommonFile{
-			Filename: filename,
-			Size:     size,
+// SimDumps returns the content of the cache
+func (cache *WeightedLRU) SimDumps(_ *empty.Empty, stream pb.SimService_SimDumpsServer) error {
+	for _, record := range *cache.Dumps() {
+		curRecord := &pb.SimDumpRecord{
+			Raw: record,
 		}
-		if err := stream.Send(curFile); err != nil {
+		if err := stream.Send(curRecord); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// SimGetInfoFilesStats returns the content of the file stats
-func (cache *WeightedLRU) SimGetInfoFilesStats(_ *empty.Empty, stream pb.SimService_SimGetInfoFilesStatsServer) error {
-	for idx := 0; idx < len(cache.stats); idx++ {
-		curStats := cache.stats[idx]
-		curFile := &pb.SimFileStats{
-			Filename: curStats.Filename,
-			Size:     curStats.Size,
-			TotReq:   curStats.TotRequests,
-			NHits:    curStats.NHits,
-			NMiss:    curStats.NMiss,
-		}
-		if err := stream.Send(curFile); err != nil {
-			return err
-		}
-	}
-	return nil
-}
+// SimLoads loads a cache state
+func (cache *WeightedLRU) SimLoads(stream pb.SimService_SimLoadsServer) error {
+	var records [][]byte
+	records = make([][]byte, 0)
 
-// SimGetInfoFilesWeights returns the file weights
-func (cache *WeightedLRU) SimGetInfoFilesWeights(_ *empty.Empty, stream pb.SimService_SimGetInfoFilesWeightsServer) error {
-	for idx := 0; idx < len(cache.stats); idx++ {
-		stats := cache.stats[idx]
-		curFile := &pb.SimFileWeight{
-			Filename: stats.Filename,
-			Weight:   stats.Weight,
+	for {
+		record, err := stream.Recv()
+		if err == io.EOF {
+			break
 		}
-		if err := stream.Send(curFile); err != nil {
+		if err != nil {
 			return err
 		}
+		records = append(records, record.Raw)
 	}
+
+	cache.Loads(&records)
 
 	return nil
 }

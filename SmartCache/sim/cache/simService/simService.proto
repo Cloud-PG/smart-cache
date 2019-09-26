@@ -15,9 +15,8 @@ service SimService {
   rpc SimClearFiles(google.protobuf.Empty) returns (SimCacheStatus) {}
   rpc SimClearHitMissStats(google.protobuf.Empty) returns (SimCacheStatus) {}
   rpc SimGetInfoCacheStatus(google.protobuf.Empty) returns (SimCacheStatus) {}
-  rpc SimGetInfoCacheFiles(google.protobuf.Empty) returns (stream SimCommonFile) {}
-  rpc SimGetInfoFilesWeights(google.protobuf.Empty) returns (stream SimFileWeight) {}
-  rpc SimGetInfoFilesStats(google.protobuf.Empty) returns (stream SimFileStats) {}
+  rpc SimDumps(google.protobuf.Empty) returns (stream SimDumpRecord) {}
+  rpc SimLoads(stream SimDumpRecord) returns (google.protobuf.Empty) {}
 
 }
 
@@ -41,15 +40,6 @@ message SimCommonFile {
   float size = 2;
 }
 
-message SimFileWeight {
-  string filename = 1;
-  float weight = 2;
-}
-
-message SimFileStats {
-  string filename = 1;
-  float size = 2;
-  uint32 totReq = 3;
-  uint32 nHits = 4;
-  uint32 nMiss = 5;
+message SimDumpRecord {
+  bytes raw = 1;
 }
