@@ -119,13 +119,15 @@ func commandSimulate() *cobra.Command {
 			copy(args, args[2:])
 			args = args[:len(args)-1]
 
-			var dumpFileName = strings.Join([]string{
+			baseName := strings.Join([]string{
 				cacheType,
 				simRegion,
 				fmt.Sprintf("%0.0f", cacheSize),
 			},
 				"_",
-			) + ".json.gz"
+			)
+			dumpFileName := baseName + ".json.gz"
+			resultFileName := baseName + "_results.csv"
 
 			// Create cache
 			curCacheInstance := genCache(cacheType)
@@ -160,6 +162,9 @@ func commandSimulate() *cobra.Command {
 				iterator = cache.OpenSimFolder(curFolder)
 			}
 
+			if simOutFile == "" {
+				simOutFile = resultFileName
+			}
 			outputFile, _ := os.Create(simOutFile)
 			defer outputFile.Close()
 			csvOutput := csv.NewWriter(outputFile)
@@ -213,23 +218,25 @@ func commandSimulate() *cobra.Command {
 				} else {
 					curTime := time.Unix(record.Day, 0.)
 					if curTime.Sub(latestTime).Hours() >= 24. {
-						csvOutput.Write([]string{
-							fmt.Sprintf("%s", latestTime),
-							fmt.Sprintf("%0.2f", curCacheInstance.HitRate()),
-							fmt.Sprintf("%0.2f", curCacheInstance.HitOverMiss()),
-							fmt.Sprintf("%0.2f", curCacheInstance.WeightedHitRate()),
-							fmt.Sprintf("%f", curCacheInstance.WrittenData()),
-							fmt.Sprintf("%f", curCacheInstance.ReadOnHit()),
-							fmt.Sprintf("%f", curCacheInstance.Size()),
-						})
-						csvOutput.Flush()
-						curCacheInstance.ClearHitMissStats()
+						if windowCounter >= simStartFromWindow {
+							csvOutput.Write([]string{
+								fmt.Sprintf("%s", latestTime),
+								fmt.Sprintf("%0.2f", curCacheInstance.HitRate()),
+								fmt.Sprintf("%0.2f", curCacheInstance.HitOverMiss()),
+								fmt.Sprintf("%0.2f", curCacheInstance.WeightedHitRate()),
+								fmt.Sprintf("%f", curCacheInstance.WrittenData()),
+								fmt.Sprintf("%f", curCacheInstance.ReadOnHit()),
+								fmt.Sprintf("%f", curCacheInstance.Size()),
+							})
+							csvOutput.Flush()
+							curCacheInstance.ClearHitMissStats()
+						}
 						latestTime = time.Unix(record.Day, 0.)
 						windowStepCounter++
 					}
 				}
 
-				if windowCounter == simStartFromWindow {
+				if windowCounter >= simStartFromWindow {
 					sizeInMbytes := record.Size / (1024 * 1024)
 					curCacheInstance.Get(record.Filename, sizeInMbytes)
 
@@ -314,7 +321,7 @@ func commandSimulate() *cobra.Command {
 		"indicate the filter for record region",
 	)
 	cmd.PersistentFlags().StringVar(
-		&simOutFile, "simOutFile", "result.csv",
+		&simOutFile, "simOutFile", "",
 		"the output file name",
 	)
 	cmd.PersistentFlags().BoolVar(

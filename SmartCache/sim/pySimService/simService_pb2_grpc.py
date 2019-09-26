@@ -20,13 +20,18 @@ class SimServiceStub(object):
         request_serializer=simService_dot_simService__pb2.SimCommonFile.SerializeToString,
         response_deserializer=simService_dot_simService__pb2.ActionResult.FromString,
         )
-    self.SimReset = channel.unary_unary(
-        '/simservice.SimService/SimReset',
+    self.SimClear = channel.unary_unary(
+        '/simservice.SimService/SimClear',
         request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
         response_deserializer=simService_dot_simService__pb2.SimCacheStatus.FromString,
         )
-    self.SimResetHitMissStats = channel.unary_unary(
-        '/simservice.SimService/SimResetHitMissStats',
+    self.SimClearFiles = channel.unary_unary(
+        '/simservice.SimService/SimClearFiles',
+        request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+        response_deserializer=simService_dot_simService__pb2.SimCacheStatus.FromString,
+        )
+    self.SimClearHitMissStats = channel.unary_unary(
+        '/simservice.SimService/SimClearHitMissStats',
         request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
         response_deserializer=simService_dot_simService__pb2.SimCacheStatus.FromString,
         )
@@ -63,14 +68,21 @@ class SimServiceServicer(object):
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')
 
-  def SimReset(self, request, context):
+  def SimClear(self, request, context):
     # missing associated documentation comment in .proto file
     pass
     context.set_code(grpc.StatusCode.UNIMPLEMENTED)
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')
 
-  def SimResetHitMissStats(self, request, context):
+  def SimClearFiles(self, request, context):
+    # missing associated documentation comment in .proto file
+    pass
+    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+    context.set_details('Method not implemented!')
+    raise NotImplementedError('Method not implemented!')
+
+  def SimClearHitMissStats(self, request, context):
     # missing associated documentation comment in .proto file
     pass
     context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -113,13 +125,18 @@ def add_SimServiceServicer_to_server(servicer, server):
           request_deserializer=simService_dot_simService__pb2.SimCommonFile.FromString,
           response_serializer=simService_dot_simService__pb2.ActionResult.SerializeToString,
       ),
-      'SimReset': grpc.unary_unary_rpc_method_handler(
-          servicer.SimReset,
+      'SimClear': grpc.unary_unary_rpc_method_handler(
+          servicer.SimClear,
           request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
           response_serializer=simService_dot_simService__pb2.SimCacheStatus.SerializeToString,
       ),
-      'SimResetHitMissStats': grpc.unary_unary_rpc_method_handler(
-          servicer.SimResetHitMissStats,
+      'SimClearFiles': grpc.unary_unary_rpc_method_handler(
+          servicer.SimClearFiles,
+          request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+          response_serializer=simService_dot_simService__pb2.SimCacheStatus.SerializeToString,
+      ),
+      'SimClearHitMissStats': grpc.unary_unary_rpc_method_handler(
+          servicer.SimClearHitMissStats,
           request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
           response_serializer=simService_dot_simService__pb2.SimCacheStatus.SerializeToString,
       ),

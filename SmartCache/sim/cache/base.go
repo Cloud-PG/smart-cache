@@ -49,8 +49,9 @@ type Cache interface {
 	GetFileStats(string) (*DatasetInput, error)
 
 	SimGet(context.Context, *pb.SimCommonFile) (*pb.ActionResult, error)
-	SimReset(context.Context, *empty.Empty) (*pb.SimCacheStatus, error)
-	SimResetHitMissStats(context.Context, *empty.Empty) (*pb.SimCacheStatus, error)
+	SimClear(context.Context, *empty.Empty) (*pb.SimCacheStatus, error)
+	SimClearFiles(context.Context, *empty.Empty) (*pb.SimCacheStatus, error)
+	SimClearHitMissStats(context.Context, *empty.Empty) (*pb.SimCacheStatus, error)
 	SimGetInfoCacheStatus(context.Context, *empty.Empty) (*pb.SimCacheStatus, error)
 	SimGetInfoCacheFiles(*empty.Empty, pb.SimService_SimGetInfoCacheFilesServer) error
 	SimGetInfoFilesWeights(*empty.Empty, pb.SimService_SimGetInfoFilesWeightsServer) error

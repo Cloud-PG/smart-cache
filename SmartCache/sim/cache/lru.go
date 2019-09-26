@@ -182,9 +182,23 @@ func (cache *LRUCache) SimGet(ctx context.Context, commonFile *pb.SimCommonFile)
 	}, nil
 }
 
-// SimReset deletes all cache content
-func (cache *LRUCache) SimReset(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
+// SimClear deletes all cache content
+func (cache *LRUCache) SimClear(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
 	cache.Clear()
+	return &pb.SimCacheStatus{
+		HitRate:         cache.HitRate(),
+		WeightedHitRate: cache.WeightedHitRate(),
+		HitOverMiss:     cache.HitOverMiss(),
+		Size:            cache.Size(),
+		Capacity:        cache.Capacity(),
+		WrittenData:     cache.WrittenData(),
+		ReadOnHit:       cache.ReadOnHit(),
+	}, nil
+}
+
+// SimClearFiles deletes all cache content
+func (cache *LRUCache) SimClearFiles(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
+	cache.ClearFiles()
 	return &pb.SimCacheStatus{
 		HitRate:         cache.HitRate(),
 		WeightedHitRate: cache.WeightedHitRate(),

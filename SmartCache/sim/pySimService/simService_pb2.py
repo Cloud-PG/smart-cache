@@ -21,7 +21,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='simservice',
   syntax='proto3',
   serialized_options=_b('\n\031io.grpc.cache.sim.serviceB\017CacheSimServiceP\001'),
-  serialized_pb=_b('\n\x1bsimService/simService.proto\x12\nsimservice\x1a\x1bgoogle/protobuf/empty.proto\"/\n\x0c\x41\x63tionResult\x12\x10\n\x08\x66ilename\x18\x01 \x01(\t\x12\r\n\x05\x61\x64\x64\x65\x64\x18\x02 \x01(\x08\"\x97\x01\n\x0eSimCacheStatus\x12\x0f\n\x07hitRate\x18\x01 \x01(\x02\x12\x17\n\x0fweightedHitRate\x18\x02 \x01(\x02\x12\x13\n\x0bhitOverMiss\x18\x03 \x01(\x02\x12\x0c\n\x04size\x18\x04 \x01(\x02\x12\x10\n\x08\x63\x61pacity\x18\x05 \x01(\x02\x12\x13\n\x0bwrittenData\x18\x06 \x01(\x02\x12\x11\n\treadOnHit\x18\x07 \x01(\x02\"/\n\rSimCommonFile\x12\x10\n\x08\x66ilename\x18\x01 \x01(\t\x12\x0c\n\x04size\x18\x02 \x01(\x02\"1\n\rSimFileWeight\x12\x10\n\x08\x66ilename\x18\x01 \x01(\t\x12\x0e\n\x06weight\x18\x02 \x01(\x02\"\\\n\x0cSimFileStats\x12\x10\n\x08\x66ilename\x18\x01 \x01(\t\x12\x0c\n\x04size\x18\x02 \x01(\x02\x12\x0e\n\x06totReq\x18\x03 \x01(\r\x12\r\n\x05nHits\x18\x04 \x01(\r\x12\r\n\x05nMiss\x18\x05 \x01(\r2\x9a\x04\n\nSimService\x12?\n\x06SimGet\x12\x19.simservice.SimCommonFile\x1a\x18.simservice.ActionResult\"\x00\x12@\n\x08SimReset\x12\x16.google.protobuf.Empty\x1a\x1a.simservice.SimCacheStatus\"\x00\x12L\n\x14SimResetHitMissStats\x12\x16.google.protobuf.Empty\x1a\x1a.simservice.SimCacheStatus\"\x00\x12M\n\x15SimGetInfoCacheStatus\x12\x16.google.protobuf.Empty\x1a\x1a.simservice.SimCacheStatus\"\x00\x12M\n\x14SimGetInfoCacheFiles\x12\x16.google.protobuf.Empty\x1a\x19.simservice.SimCommonFile\"\x00\x30\x01\x12O\n\x16SimGetInfoFilesWeights\x12\x16.google.protobuf.Empty\x1a\x19.simservice.SimFileWeight\"\x00\x30\x01\x12L\n\x14SimGetInfoFilesStats\x12\x16.google.protobuf.Empty\x1a\x18.simservice.SimFileStats\"\x00\x30\x01\x42.\n\x19io.grpc.cache.sim.serviceB\x0f\x43\x61\x63heSimServiceP\x01\x62\x06proto3')
+  serialized_pb=_b('\n\x1bsimService/simService.proto\x12\nsimservice\x1a\x1bgoogle/protobuf/empty.proto\"/\n\x0c\x41\x63tionResult\x12\x10\n\x08\x66ilename\x18\x01 \x01(\t\x12\r\n\x05\x61\x64\x64\x65\x64\x18\x02 \x01(\x08\"\x97\x01\n\x0eSimCacheStatus\x12\x0f\n\x07hitRate\x18\x01 \x01(\x02\x12\x17\n\x0fweightedHitRate\x18\x02 \x01(\x02\x12\x13\n\x0bhitOverMiss\x18\x03 \x01(\x02\x12\x0c\n\x04size\x18\x04 \x01(\x02\x12\x10\n\x08\x63\x61pacity\x18\x05 \x01(\x02\x12\x13\n\x0bwrittenData\x18\x06 \x01(\x02\x12\x11\n\treadOnHit\x18\x07 \x01(\x02\"/\n\rSimCommonFile\x12\x10\n\x08\x66ilename\x18\x01 \x01(\t\x12\x0c\n\x04size\x18\x02 \x01(\x02\"1\n\rSimFileWeight\x12\x10\n\x08\x66ilename\x18\x01 \x01(\t\x12\x0e\n\x06weight\x18\x02 \x01(\x02\"\\\n\x0cSimFileStats\x12\x10\n\x08\x66ilename\x18\x01 \x01(\t\x12\x0c\n\x04size\x18\x02 \x01(\x02\x12\x0e\n\x06totReq\x18\x03 \x01(\r\x12\r\n\x05nHits\x18\x04 \x01(\r\x12\r\n\x05nMiss\x18\x05 \x01(\r2\xe1\x04\n\nSimService\x12?\n\x06SimGet\x12\x19.simservice.SimCommonFile\x1a\x18.simservice.ActionResult\"\x00\x12@\n\x08SimClear\x12\x16.google.protobuf.Empty\x1a\x1a.simservice.SimCacheStatus\"\x00\x12\x45\n\rSimClearFiles\x12\x16.google.protobuf.Empty\x1a\x1a.simservice.SimCacheStatus\"\x00\x12L\n\x14SimClearHitMissStats\x12\x16.google.protobuf.Empty\x1a\x1a.simservice.SimCacheStatus\"\x00\x12M\n\x15SimGetInfoCacheStatus\x12\x16.google.protobuf.Empty\x1a\x1a.simservice.SimCacheStatus\"\x00\x12M\n\x14SimGetInfoCacheFiles\x12\x16.google.protobuf.Empty\x1a\x19.simservice.SimCommonFile\"\x00\x30\x01\x12O\n\x16SimGetInfoFilesWeights\x12\x16.google.protobuf.Empty\x1a\x19.simservice.SimFileWeight\"\x00\x30\x01\x12L\n\x14SimGetInfoFilesStats\x12\x16.google.protobuf.Empty\x1a\x18.simservice.SimFileStats\"\x00\x30\x01\x42.\n\x19io.grpc.cache.sim.serviceB\x0f\x43\x61\x63heSimServiceP\x01\x62\x06proto3')
   ,
   dependencies=[google_dot_protobuf_dot_empty__pb2.DESCRIPTOR,])
 
@@ -325,7 +325,7 @@ _SIMSERVICE = _descriptor.ServiceDescriptor(
   index=0,
   serialized_options=None,
   serialized_start=470,
-  serialized_end=1008,
+  serialized_end=1079,
   methods=[
   _descriptor.MethodDescriptor(
     name='SimGet',
@@ -337,8 +337,8 @@ _SIMSERVICE = _descriptor.ServiceDescriptor(
     serialized_options=None,
   ),
   _descriptor.MethodDescriptor(
-    name='SimReset',
-    full_name='simservice.SimService.SimReset',
+    name='SimClear',
+    full_name='simservice.SimService.SimClear',
     index=1,
     containing_service=None,
     input_type=google_dot_protobuf_dot_empty__pb2._EMPTY,
@@ -346,9 +346,18 @@ _SIMSERVICE = _descriptor.ServiceDescriptor(
     serialized_options=None,
   ),
   _descriptor.MethodDescriptor(
-    name='SimResetHitMissStats',
-    full_name='simservice.SimService.SimResetHitMissStats',
+    name='SimClearFiles',
+    full_name='simservice.SimService.SimClearFiles',
     index=2,
+    containing_service=None,
+    input_type=google_dot_protobuf_dot_empty__pb2._EMPTY,
+    output_type=_SIMCACHESTATUS,
+    serialized_options=None,
+  ),
+  _descriptor.MethodDescriptor(
+    name='SimClearHitMissStats',
+    full_name='simservice.SimService.SimClearHitMissStats',
+    index=3,
     containing_service=None,
     input_type=google_dot_protobuf_dot_empty__pb2._EMPTY,
     output_type=_SIMCACHESTATUS,
@@ -357,7 +366,7 @@ _SIMSERVICE = _descriptor.ServiceDescriptor(
   _descriptor.MethodDescriptor(
     name='SimGetInfoCacheStatus',
     full_name='simservice.SimService.SimGetInfoCacheStatus',
-    index=3,
+    index=4,
     containing_service=None,
     input_type=google_dot_protobuf_dot_empty__pb2._EMPTY,
     output_type=_SIMCACHESTATUS,
@@ -366,7 +375,7 @@ _SIMSERVICE = _descriptor.ServiceDescriptor(
   _descriptor.MethodDescriptor(
     name='SimGetInfoCacheFiles',
     full_name='simservice.SimService.SimGetInfoCacheFiles',
-    index=4,
+    index=5,
     containing_service=None,
     input_type=google_dot_protobuf_dot_empty__pb2._EMPTY,
     output_type=_SIMCOMMONFILE,
@@ -375,7 +384,7 @@ _SIMSERVICE = _descriptor.ServiceDescriptor(
   _descriptor.MethodDescriptor(
     name='SimGetInfoFilesWeights',
     full_name='simservice.SimService.SimGetInfoFilesWeights',
-    index=5,
+    index=6,
     containing_service=None,
     input_type=google_dot_protobuf_dot_empty__pb2._EMPTY,
     output_type=_SIMFILEWEIGHT,
@@ -384,7 +393,7 @@ _SIMSERVICE = _descriptor.ServiceDescriptor(
   _descriptor.MethodDescriptor(
     name='SimGetInfoFilesStats',
     full_name='simservice.SimService.SimGetInfoFilesStats',
-    index=6,
+    index=7,
     containing_service=None,
     input_type=google_dot_protobuf_dot_empty__pb2._EMPTY,
     output_type=_SIMFILESTATS,
