@@ -148,7 +148,7 @@ def main():
             working_dir = path.join(
                 pair_run_dir,
                 f"{cache_type}_{int(CACHE_SIZE/1024**2)}T_{REGION}",
-                f"{window_idx}",
+                f"{window_idx+1}",
             )
             dump_dir = path.join(
                 single_window_run_dir,
