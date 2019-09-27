@@ -73,7 +73,7 @@ def main():
         for cache_type in CACHE_TYPES:
             working_dir = path.join(
                 single_window_run_dir,
-                f"{cache_type}_{CACHE_SIZE}_{REGION}",
+                f"{cache_type}_{int(CACHE_SIZE/1024**2)}T_{REGION}",
                 f"{window_idx}",
             )
             os.makedirs(working_dir, exist_ok=True)
@@ -112,7 +112,7 @@ def main():
     for cache_type in CACHE_TYPES:
         working_dir = path.join(
             normal_run_dir,
-            f"{cache_type}_{CACHE_SIZE}_{REGION}"
+            f"{cache_type}_{int(CACHE_SIZE/1024**2)}T_{REGION}"
         )
         os.makedirs(working_dir, exist_ok=True)
         cur_process = subprocess.Popen(
@@ -147,12 +147,12 @@ def main():
         for cache_type in CACHE_TYPES:
             working_dir = path.join(
                 pair_run_dir,
-                f"{cache_type}_{CACHE_SIZE}_{REGION}",
+                f"{cache_type}_{int(CACHE_SIZE/1024**2)}T_{REGION}",
                 f"{window_idx}",
             )
             dump_dir = path.join(
                 single_window_run_dir,
-                f"{cache_type}_{CACHE_SIZE}_{REGION}",
+                f"{cache_type}_{int(CACHE_SIZE/1024**2)}T_{REGION}",
                 f"{window_idx}",
             )
             os.makedirs(working_dir, exist_ok=True)
@@ -190,12 +190,12 @@ def main():
         for cache_type in CACHE_TYPES:
             working_dir = path.join(
                 pair_run_dir,
-                f"{cache_type}_{CACHE_SIZE}_{REGION}",
+                f"{cache_type}_{int(CACHE_SIZE/1024**2)}T_{REGION}",
                 f"{window_idx}",
             )
             dump_dir = path.join(
                 single_window_run_dir,
-                f"{cache_type}_{CACHE_SIZE}_{REGION}",
+                f"{cache_type}_{int(CACHE_SIZE/1024**2)}T_{REGION}",
                 f"{window_idx}",
             )
             os.makedirs(working_dir, exist_ok=True)
