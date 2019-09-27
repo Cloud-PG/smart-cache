@@ -74,7 +74,7 @@ def main():
             working_dir = path.join(
                 single_window_run_dir,
                 f"{cache_type}_{int(CACHE_SIZE/1024**2)}T_{REGION}",
-                f"{window_idx}",
+                f"window_{window_idx}",
             )
             os.makedirs(working_dir, exist_ok=True)
             cur_process = subprocess.Popen(
@@ -137,23 +137,23 @@ def main():
     
     ##
     # Next windows
-    pair_run_dir = working_dir = path.join(
+    nexxt_window_run_dir = working_dir = path.join(
         base_dir,
-        "run_next_windows"
+        "run_next_window"
     )
-    os.makedirs(pair_run_dir, exist_ok=True)
+    os.makedirs(nexxt_window_run_dir, exist_ok=True)
 
     for window_idx in range(START_FROM_WINDOW, STOP_WINDOW):
         for cache_type in CACHE_TYPES:
             working_dir = path.join(
-                pair_run_dir,
+                nexxt_window_run_dir,
                 f"{cache_type}_{int(CACHE_SIZE/1024**2)}T_{REGION}",
-                f"{window_idx+1}",
+                f"window_{window_idx+1}",
             )
             dump_dir = path.join(
                 single_window_run_dir,
                 f"{cache_type}_{int(CACHE_SIZE/1024**2)}T_{REGION}",
-                f"{window_idx}",
+                f"window_{window_idx}",
             )
             os.makedirs(working_dir, exist_ok=True)
             cur_process = subprocess.Popen(
@@ -180,23 +180,23 @@ def main():
     
     ##
     # Next Period
-    pair_run_dir = working_dir = path.join(
+    next_period_run_dir = working_dir = path.join(
         base_dir,
         "run_next_period"
     )
-    os.makedirs(pair_run_dir, exist_ok=True)
+    os.makedirs(next_period_run_dir, exist_ok=True)
 
     for window_idx in range(START_FROM_WINDOW, STOP_WINDOW):
         for cache_type in CACHE_TYPES:
             working_dir = path.join(
-                pair_run_dir,
+                next_period_run_dir,
                 f"{cache_type}_{int(CACHE_SIZE/1024**2)}T_{REGION}",
-                f"{window_idx}",
+                f"windows_{window_idx+1}-{STOP_WINDOW}",
             )
             dump_dir = path.join(
                 single_window_run_dir,
                 f"{cache_type}_{int(CACHE_SIZE/1024**2)}T_{REGION}",
-                f"{window_idx}",
+                f"window_{window_idx}",
             )
             os.makedirs(working_dir, exist_ok=True)
             cur_process = subprocess.Popen(
