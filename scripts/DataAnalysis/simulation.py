@@ -6,8 +6,8 @@ from os import path
 from SmartCache.sim import get_simulator_exe
 
 START_FROM_WINDOW = 0
-STOP_WINDOW = 2
-WINDOW_SIZE = 1
+STOP_WINDOW = 4
+WINDOW_SIZE = 7
 REGION = "it"
 CACHE_SIZE = 10485760
 RESULT_FOLDER = "results_8w_with_sizes_csv"
