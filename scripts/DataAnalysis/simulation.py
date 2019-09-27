@@ -70,7 +70,7 @@ def main():
     os.makedirs(single_window_run_dir, exist_ok=True)
 
     for window_idx in range(START_FROM_WINDOW, STOP_WINDOW):
-        for cache_type in [cache for cache in CACHE_TYPES if cache != 'lru']:
+        for cache_type in CACHE_TYPES:
             working_dir = path.join(
                 single_window_run_dir,
                 f"{cache_type}_{CACHE_SIZE}_{REGION}",
@@ -89,6 +89,7 @@ def main():
                     f"--simStartFromWindow={window_idx}",
                     f"--simStopWindow={window_idx+1}",
                     "--simDump=true",
+                    "--simDumpFileName=dump.json.gz",
                 ]),
                 shell=True,
                 cwd=working_dir,
@@ -135,38 +136,92 @@ def main():
         processes.append(cur_process)
     
     ##
-    # Pair windows
-    normal_run_dir = working_dir = path.join(
+    # Next windows
+    pair_run_dir = working_dir = path.join(
         base_dir,
-        "run_full_normal"
+        "run_next_windows"
     )
-    os.makedirs(normal_run_dir, exist_ok=True)
+    os.makedirs(pair_run_dir, exist_ok=True)
 
-    for cache_type in CACHE_TYPES:
-        working_dir = path.join(
-            normal_run_dir,
-            f"{cache_type}_{CACHE_SIZE}_{REGION}"
-        )
-        os.makedirs(working_dir, exist_ok=True)
-        cur_process = subprocess.Popen(
-            " ".join([
-                simulator_exe,
-                "simulate",
-                cache_type,
-                path.abspath(RESULT_FOLDER),
-                f"--size={CACHE_SIZE}",
-                f"--simRegion={REGION}",
-                f"--simWindowSize={WINDOW_SIZE}",
-                f"--simStartFromWindow={START_FROM_WINDOW}",
-                f"--simStopWindow={STOP_WINDOW}",
-            ]),
-            shell=True,
-            cwd=working_dir,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-        processes.append(cur_process)
+    for window_idx in range(START_FROM_WINDOW, STOP_WINDOW):
+        for cache_type in CACHE_TYPES:
+            working_dir = path.join(
+                pair_run_dir,
+                f"{cache_type}_{CACHE_SIZE}_{REGION}",
+                f"{window_idx}",
+            )
+            dump_dir = path.join(
+                single_window_run_dir,
+                f"{cache_type}_{CACHE_SIZE}_{REGION}",
+                f"{window_idx}",
+            )
+            os.makedirs(working_dir, exist_ok=True)
+            cur_process = subprocess.Popen(
+                " ".join([
+                    simulator_exe,
+                    "simulate",
+                    cache_type,
+                    path.abspath(RESULT_FOLDER),
+                    f"--size={CACHE_SIZE}",
+                    f"--simRegion={REGION}",
+                    f"--simWindowSize={WINDOW_SIZE}",
+                    f"--simStartFromWindow={window_idx+1}",
+                    f"--simStopWindow={window_idx+2}",
+                    "--simLoadDump=true",
+                    f"--simLoadDumpFileName={path.join(dump_dir, 'dump.json.gz')}",
+                ]),
+                shell=True,
+                cwd=working_dir,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            processes.append(cur_process)
+    
+    ##
+    # Next Period
+    pair_run_dir = working_dir = path.join(
+        base_dir,
+        "run_next_period"
+    )
+    os.makedirs(pair_run_dir, exist_ok=True)
+
+    for window_idx in range(START_FROM_WINDOW, STOP_WINDOW):
+        for cache_type in CACHE_TYPES:
+            working_dir = path.join(
+                pair_run_dir,
+                f"{cache_type}_{CACHE_SIZE}_{REGION}",
+                f"{window_idx}",
+            )
+            dump_dir = path.join(
+                single_window_run_dir,
+                f"{cache_type}_{CACHE_SIZE}_{REGION}",
+                f"{window_idx}",
+            )
+            os.makedirs(working_dir, exist_ok=True)
+            cur_process = subprocess.Popen(
+                " ".join([
+                    simulator_exe,
+                    "simulate",
+                    cache_type,
+                    path.abspath(RESULT_FOLDER),
+                    f"--size={CACHE_SIZE}",
+                    f"--simRegion={REGION}",
+                    f"--simWindowSize={WINDOW_SIZE}",
+                    f"--simStartFromWindow={window_idx+1}",
+                    f"--simStopWindow={STOP_WINDOW}",
+                    "--simLoadDump=true",
+                    f"--simLoadDumpFileName={path.join(dump_dir, 'dump.json.gz')}",
+                ]),
+                shell=True,
+                cwd=working_dir,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            processes.append(cur_process)
+    
+    wait_jobs(processes)
 
 
 if __name__ == "__main__":

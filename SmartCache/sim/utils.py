@@ -9,5 +9,5 @@ def get_simulator_exe(force_creation: bool = False) -> str:
     sim_path = path.join(cur_dir, SIM_NAME)
     if force_creation or not path.exists(sim_path) or not path.isfile(sim_path):
         subprocess.check_call(
-            f"go build -o {SIM_NAME} main.go", shell=True, cwd=cur_dir)
+            f"./build_sim.sh", shell=True, cwd=cur_dir)
     return sim_path
