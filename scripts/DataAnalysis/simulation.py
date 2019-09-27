@@ -209,7 +209,7 @@ def main():
                     f"--simRegion={REGION}",
                     f"--simWindowSize={WINDOW_SIZE}",
                     f"--simStartFromWindow={window_idx+1}",
-                    f"--simStopWindow={STOP_WINDOW}",
+                    f"--simStopWindow={STOP_WINDOW+1}",
                     "--simLoadDump=true",
                     f"--simLoadDumpFileName={path.join(dump_dir, 'dump.json.gz')}",
                 ]),
