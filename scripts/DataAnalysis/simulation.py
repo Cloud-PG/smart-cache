@@ -30,7 +30,7 @@ def wait_jobs(processes):
 def read_output_last_line(output):
     buffer = ""
     cur_char = output.read(1).decode("ascii")
-    while cur_char not in ["\r", "\n"]:
+    while cur_char not in ["\r", "\n", '']:
         buffer += cur_char
         cur_char = output.read(1).decode("ascii")
     return buffer
