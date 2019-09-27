@@ -52,7 +52,8 @@ def main():
 
     processes = []
 
-    # Normal run
+    ##
+    # Normal runs
     normal_run_dir = working_dir = path.join(
         base_dir,
         "run_full_normal"
@@ -84,6 +85,43 @@ def main():
             stderr=subprocess.PIPE,
         )
         processes.append(cur_process)
+    
+    ##
+    # Single Window runs
+    single_window_run_dir = working_dir = path.join(
+        base_dir,
+        "run_single_window"
+    )
+    os.makedirs(single_window_run_dir, exist_ok=True)
+    
+    for window_idx in range(START_FROM_WINDOW, STOP_WINDOW):
+        for cache_type in [cache for cache in CACHE_TYPES if cache != 'lru']:
+            working_dir = path.join(
+                single_window_run_dir,
+                f"{cache_type}_{CACHE_SIZE}_{REGION}",
+                f"{window_idx}",
+            )
+            os.makedirs(working_dir, exist_ok=True)
+            cur_process = subprocess.Popen(
+                " ".join([
+                    simulator_exe,
+                    "simulate",
+                    cache_type,
+                    path.abspath(RESULT_FOLDER),
+                    f"--size={CACHE_SIZE}",
+                    f"--simRegion={REGION}",
+                    f"--simWindowSize={WINDOW_SIZE}",
+                    f"--simStartFromWindow={window_idx}",
+                    f"--simStopWindow={window_idx+1}",
+                    "--simDump=true",
+                ]),
+                shell=True,
+                cwd=working_dir,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            processes.append(cur_process)
 
     while job_run(processes):
         for process in processes:

@@ -331,7 +331,10 @@ func commandSimulate() *cobra.Command {
 					windowStepCounter = 0
 					numRecords = 0
 				} else {
-					fmt.Printf("[Jump %d records]\r", numRecords)
+					if time.Now().Sub(start).Seconds() >= 1. {
+						fmt.Printf("[Jump %d records]\r", numRecords)
+						start = time.Now()
+					}
 				}
 
 			}
