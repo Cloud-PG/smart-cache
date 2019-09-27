@@ -69,7 +69,7 @@ func (cache *WeightedCache) Dumps() *[][]byte {
 		record = append(record, newLine...)
 		outData = append(outData, record)
 	}
-	// TO DO
+	// TODO
 	// Stats
 	// for _, stats := range cache.stats {
 	// 	dumpInfo, _ := json.Marshal(DumpInfo{Type: "STATS"})
@@ -114,7 +114,7 @@ func (cache *WeightedCache) Loads(inputString *[][]byte) {
 			json.Unmarshal([]byte(curRecord.Data), &curFile)
 			cache.files[curFile.Filename] = curFile.Size
 			cache.size += curFile.Size
-			// TO DO
+			// TODO
 			// case "STATS":
 			// 	var curStats WeightedFileStats
 			// 	json.Unmarshal([]byte(curRecord.Data), &curStats)

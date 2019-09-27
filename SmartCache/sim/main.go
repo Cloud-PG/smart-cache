@@ -17,31 +17,43 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var cacheSize float32
-var serviceHost string
-var servicePort int32
-var weightExp float32
-var weightedFunc string
-var statUpdatePolicy string
-var limitStatsPolicy string
-var simRegion string
-var simOutFile string
-var simGenDataset bool
-var simGenDatasetName string
-var simDump bool
-var simDumpFileName string
-var simLoadDump bool
-var simLoadDumpFileName string
-var simWindowSize uint32
-var simStartFromWindow uint32
-var simStopWindow uint32
-var simColdStart bool
+var (
+	buildstamp          string
+	githash             string
+	cacheSize           float32
+	serviceHost         string
+	servicePort         int32
+	weightExp           float32
+	weightedFunc        string
+	statUpdatePolicy    string
+	limitStatsPolicy    string
+	simRegion           string
+	simOutFile          string
+	simGenDataset       bool
+	simGenDatasetName   string
+	simDump             bool
+	simDumpFileName     string
+	simLoadDump         bool
+	simLoadDumpFileName string
+	simWindowSize       uint32
+	simStartFromWindow  uint32
+	simStopWindow       uint32
+	simColdStart        bool
+)
 
 func main() {
 	rootCmd := &cobra.Command{}
 	rootCmd.AddCommand(commandServe())
 	rootCmd.AddCommand(commandSimulate())
 
+	rootCmd.AddCommand(&cobra.Command{
+		Use:   "version",
+		Short: "Print the version number",
+		Long:  "Print the version number of the executable",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Printf("Build time:\t%s\nGit hash:\t%s\n", buildstamp, githash)
+		},
+	})
 	rootCmd.PersistentFlags().Float32Var(
 		&cacheSize, "size", 10485760., // 10TB
 		"cache size",
@@ -72,7 +84,7 @@ func main() {
 	)
 
 	if err := rootCmd.Execute(); err != nil {
-		println(err.Error())
+		fmt.Println(err.Error())
 	}
 }
 
@@ -189,8 +201,10 @@ func commandSimulate() *cobra.Command {
 			})
 			csvOutput.Flush()
 
-			var datasetOutFile *os.File
-			var datasetGzipFile *gzip.Writer
+			var (
+				datasetOutFile  *os.File
+				datasetGzipFile *gzip.Writer
+			)
 
 			if simGenDataset {
 				datasetOutFile, _ = os.Create(simGenDatasetName)
@@ -215,11 +229,13 @@ func commandSimulate() *cobra.Command {
 				defer curCacheInstance.Dump(simDumpFileName)
 			}
 
-			var numRecords int
-			var totIterations uint32
-			var numIterations uint32
-			var windowStepCounter uint32
-			var windowCounter uint32
+			var (
+				numRecords        int
+				totIterations     uint32
+				numIterations     uint32
+				windowStepCounter uint32
+				windowCounter     uint32
+			)
 			selectedRegion := fmt.Sprintf("_%s_", strings.ToLower(simRegion))
 
 			simBeginTime := time.Now()
@@ -440,9 +456,11 @@ func genCache(cacheType string) cache.Cache {
 	case "weightedLRU":
 		fmt.Printf("[Create Weighted Cache][Size: %f]\n", cacheSize)
 
-		var selFunctionType cache.FunctionType
-		var selUpdateStatPolicyType cache.UpdateStatsPolicyType
-		var selLimitStatsPolicyType cache.LimitStatsPolicyType
+		var (
+			selFunctionType         cache.FunctionType
+			selUpdateStatPolicyType cache.UpdateStatsPolicyType
+			selLimitStatsPolicyType cache.LimitStatsPolicyType
+		)
 
 		switch weightedFunc {
 		case "FuncFileWeight":

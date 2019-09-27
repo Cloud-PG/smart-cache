@@ -13,12 +13,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var serviceInstance service.XCachePlugin
-var cacheSize float32
-var serviceHost string
-var servicePort int32
-var weightExp float32
-var weightedFunc string
+// FIXME: complete build variables
+var (
+	serviceInstance service.XCachePlugin
+	cacheSize       float32
+	serviceHost     string
+	servicePort     int32
+	weightExp       float32
+	weightedFunc    string
+)
+
+// FIXME: make plugin same version of simulator
 
 func main() {
 	rootCmd := &cobra.Command{}
