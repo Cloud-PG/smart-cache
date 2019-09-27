@@ -124,8 +124,8 @@ func commandSimulate() *cobra.Command {
 
 			baseName := strings.Join([]string{
 				cacheType,
-				simRegion,
 				fmt.Sprintf("%0.0f", cacheSize),
+				simRegion,
 			},
 				"_",
 			)
@@ -180,7 +180,13 @@ func commandSimulate() *cobra.Command {
 			csvOutput := csv.NewWriter(outputFile)
 			defer csvOutput.Flush()
 
-			csvOutput.Write([]string{"date", "hit rate", "hit over miss", "weighted hit rate", "written data", "read on hit", "size"})
+			csvOutput.Write([]string{"date",
+				"hit rate",
+				"hit over miss",
+				"weighted hit rate",
+				"written data",
+				"read on hit", "size",
+			})
 			csvOutput.Flush()
 
 			var datasetOutFile *os.File
@@ -194,7 +200,13 @@ func commandSimulate() *cobra.Command {
 
 				switch cacheType {
 				case "weightedLRU":
-					datasetHeader := []string{"size", "totRequests", "nHits", "nMiss", "meanTime", "class"}
+					datasetHeader := []string{"size",
+						"totRequests",
+						"nHits",
+						"nMiss",
+						"meanTime",
+						"class",
+					}
 					datasetGzipFile.Write([]byte(strings.Join(datasetHeader, ",") + "\n"))
 				}
 			}
@@ -208,6 +220,7 @@ func commandSimulate() *cobra.Command {
 			var numIterations uint32
 			var windowStepCounter uint32
 			var windowCounter uint32
+			selectedRegion := fmt.Sprintf("_%s_", strings.ToLower(simRegion))
 
 			simBeginTime := time.Now()
 			start := time.Now()
@@ -216,7 +229,7 @@ func commandSimulate() *cobra.Command {
 			fmt.Println("[Simulation START]")
 			for record := range iterator {
 				if strings.Compare(simRegion, "all") != 0 {
-					if strings.Index(strings.ToLower(record.SiteName), fmt.Sprintf("_%s_", strings.ToLower(simRegion))) == -1 {
+					if strings.Index(strings.ToLower(record.SiteName), selectedRegion) == -1 {
 						continue
 					}
 				}
@@ -281,25 +294,33 @@ func commandSimulate() *cobra.Command {
 
 					if time.Now().Sub(start).Seconds() >= 1. {
 						timeElapsed := time.Now().Sub(simBeginTime)
-						fmt.Printf("[Time elapsed: %02d:%02d:%02d][Window %d][Window steps %d/%d][Num. Record %d][Hit Rate %.2f][Capacity %.2f][%0.0f it/s]\r",
-							int(timeElapsed.Hours())%24,
-							int(timeElapsed.Minutes())%60,
-							int(timeElapsed.Seconds())%60,
-							windowCounter,
-							windowStepCounter,
-							simWindowSize,
-							numRecords,
-							curCacheInstance.HitRate(),
-							curCacheInstance.Capacity(),
-							float64(numIterations)/time.Now().Sub(start).Seconds(),
+						outString := strings.Join(
+							[]string{
+								fmt.Sprintf("[%s_%0.0f_%s]", cacheType, cacheSize, simRegion),
+								fmt.Sprintf("[Time Elapsed: %02d:%02d:%02d]",
+									int(timeElapsed.Hours())%24,
+									int(timeElapsed.Minutes())%60,
+									int(timeElapsed.Seconds())%60,
+								),
+								fmt.Sprintf("[Window %d]", windowCounter),
+								fmt.Sprintf("[Step %d/%d]", windowStepCounter+1, simWindowSize),
+								fmt.Sprintf("[Num.Records %d]", numRecords),
+								fmt.Sprintf("[HitRate %.2f]", curCacheInstance.HitRate()),
+								fmt.Sprintf("[Capacity %.2f]", curCacheInstance.Capacity()),
+								fmt.Sprintf("[%0.0f it/s]", float64(numIterations)/time.Now().Sub(start).Seconds()),
+								"\r",
+							},
+							"",
 						)
+						fmt.Print(outString)
 						totIterations += numIterations
 						numIterations = 0
 						start = time.Now()
 					}
 
 					if windowStepCounter == simWindowSize {
-						break
+						windowCounter++
+						windowStepCounter = 0
 					}
 				} else if windowStepCounter == simWindowSize {
 					fmt.Printf("[Jump %d records of window %d]\n",
