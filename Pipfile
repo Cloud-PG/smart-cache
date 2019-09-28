@@ -36,6 +36,7 @@ flask = "*"
 bokeh = "*"
 grpcio-tools = "*"
 grpcio = "*"
+pandas-profiling = "*"
 
 [requires]
 python_version = "3"
