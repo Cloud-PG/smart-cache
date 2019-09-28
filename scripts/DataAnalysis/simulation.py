@@ -1,21 +1,15 @@
-# import argparse
+import argparse
 import os
 import subprocess
 from os import path
 
 from SmartCache.sim import get_simulator_exe
 
-START_FROM_WINDOW = 0
-STOP_WINDOW = 4
-WINDOW_SIZE = 7
-REGION = "it"
-CACHE_SIZE = 10485760
-RESULT_FOLDER = "results_8w_with_sizes_csv"
+
 CACHE_TYPES = {
     'lru': {},
     'weightedLRU': {},
 }
-FORCE_CREATION = True
 
 
 def wait_jobs(processes):
@@ -54,7 +48,34 @@ def job_run(processes: list) -> bool:
 
 
 def main():
-    simulator_exe = get_simulator_exe(force_creation=FORCE_CREATION)
+    parser = argparse.ArgumentParser(
+        "simulation", description="Simulation and result plotting")
+    parser.add_argument('source', type=str,
+                        default="./results_8w_with_sizes_csv",
+                        help='The folder where the json results are stored')
+    parser.add_argument('-FEB', '--force-exe-build', type=bool,
+                        default=True,
+                        help='Force to build the simulation executable')
+    parser.add_argument('-CS', '--cache-size', type=int,
+                        default=10485760,
+                        help='Size of the cache to simulate')
+    parser.add_argument('-R', '--region', type=str,
+                        default="all",
+                        help='Region of the data to simulate')
+    parser.add_argument('-WS', '--window-size', type=int,
+                        default=7,
+                        help='Size of the window to simulate')
+    parser.add_argument('-WSTA', '--window-start', type=int,
+                        default=0,
+                        help='Window where to start from')
+    parser.add_argument('-WSTO', '--window-stop', type=int,
+                        default=4,
+                        help='Window where to stop')
+
+    args, _ = parser.parse_known_args()
+
+
+    simulator_exe = get_simulator_exe(force_creation=args.force_exe_build)
 
     base_dir = path.join(path.dirname(
         path.abspath(__file__)), "simulation_results")
@@ -69,11 +90,11 @@ def main():
     )
     os.makedirs(single_window_run_dir, exist_ok=True)
 
-    for window_idx in range(START_FROM_WINDOW, STOP_WINDOW):
+    for window_idx in range(args.window_start, args.window_stop):
         for cache_type in CACHE_TYPES:
             working_dir = path.join(
                 single_window_run_dir,
-                f"{cache_type}_{int(CACHE_SIZE/1024**2)}T_{REGION}",
+                f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}",
                 f"window_{window_idx}",
             )
             os.makedirs(working_dir, exist_ok=True)
@@ -82,10 +103,10 @@ def main():
                     simulator_exe,
                     "simulate",
                     cache_type,
-                    path.abspath(RESULT_FOLDER),
-                    f"--size={CACHE_SIZE}",
-                    f"--simRegion={REGION}",
-                    f"--simWindowSize={WINDOW_SIZE}",
+                    path.abspath(args.source),
+                    f"--size={args.cache_size}",
+                    f"--simRegion={args.region}",
+                    f"--simWindowSize={args.window_size}",
                     f"--simStartFromWindow={window_idx}",
                     f"--simStopWindow={window_idx+1}",
                     "--simDump=true",
@@ -112,7 +133,7 @@ def main():
     for cache_type in CACHE_TYPES:
         working_dir = path.join(
             normal_run_dir,
-            f"{cache_type}_{int(CACHE_SIZE/1024**2)}T_{REGION}"
+            f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}"
         )
         os.makedirs(working_dir, exist_ok=True)
         cur_process = subprocess.Popen(
@@ -120,12 +141,12 @@ def main():
                 simulator_exe,
                 "simulate",
                 cache_type,
-                path.abspath(RESULT_FOLDER),
-                f"--size={CACHE_SIZE}",
-                f"--simRegion={REGION}",
-                f"--simWindowSize={WINDOW_SIZE}",
-                f"--simStartFromWindow={START_FROM_WINDOW}",
-                f"--simStopWindow={STOP_WINDOW}",
+                path.abspath(args.source),
+                f"--size={args.cache_size}",
+                f"--simRegion={args.region}",
+                f"--simWindowSize={args.window_size}",
+                f"--simStartFromWindow={args.window_start}",
+                f"--simStopWindow={args.window_stop}",
             ]),
             shell=True,
             cwd=working_dir,
@@ -134,7 +155,7 @@ def main():
             stderr=subprocess.PIPE,
         )
         processes.append(cur_process)
-    
+
     ##
     # Next windows
     nexxt_window_run_dir = working_dir = path.join(
@@ -143,16 +164,16 @@ def main():
     )
     os.makedirs(nexxt_window_run_dir, exist_ok=True)
 
-    for window_idx in range(START_FROM_WINDOW, STOP_WINDOW):
+    for window_idx in range(args.window_start, args.window_stop):
         for cache_type in CACHE_TYPES:
             working_dir = path.join(
                 nexxt_window_run_dir,
-                f"{cache_type}_{int(CACHE_SIZE/1024**2)}T_{REGION}",
+                f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}",
                 f"window_{window_idx+1}",
             )
             dump_dir = path.join(
                 single_window_run_dir,
-                f"{cache_type}_{int(CACHE_SIZE/1024**2)}T_{REGION}",
+                f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}",
                 f"window_{window_idx}",
             )
             os.makedirs(working_dir, exist_ok=True)
@@ -161,10 +182,10 @@ def main():
                     simulator_exe,
                     "simulate",
                     cache_type,
-                    path.abspath(RESULT_FOLDER),
-                    f"--size={CACHE_SIZE}",
-                    f"--simRegion={REGION}",
-                    f"--simWindowSize={WINDOW_SIZE}",
+                    path.abspath(args.source),
+                    f"--size={args.cache_size}",
+                    f"--simRegion={args.region}",
+                    f"--simWindowSize={args.window_size}",
                     f"--simStartFromWindow={window_idx+1}",
                     f"--simStopWindow={window_idx+2}",
                     "--simLoadDump=true",
@@ -177,7 +198,7 @@ def main():
                 stderr=subprocess.PIPE,
             )
             processes.append(cur_process)
-    
+
     ##
     # Next Period
     next_period_run_dir = working_dir = path.join(
@@ -186,16 +207,16 @@ def main():
     )
     os.makedirs(next_period_run_dir, exist_ok=True)
 
-    for window_idx in range(START_FROM_WINDOW, STOP_WINDOW):
+    for window_idx in range(args.window_start, args.window_stop):
         for cache_type in CACHE_TYPES:
             working_dir = path.join(
                 next_period_run_dir,
-                f"{cache_type}_{int(CACHE_SIZE/1024**2)}T_{REGION}",
-                f"windows_{window_idx+1}-{STOP_WINDOW}",
+                f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}",
+                f"windows_{window_idx+1}-{args.window_stop}",
             )
             dump_dir = path.join(
                 single_window_run_dir,
-                f"{cache_type}_{int(CACHE_SIZE/1024**2)}T_{REGION}",
+                f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}",
                 f"window_{window_idx}",
             )
             os.makedirs(working_dir, exist_ok=True)
@@ -204,12 +225,12 @@ def main():
                     simulator_exe,
                     "simulate",
                     cache_type,
-                    path.abspath(RESULT_FOLDER),
-                    f"--size={CACHE_SIZE}",
-                    f"--simRegion={REGION}",
-                    f"--simWindowSize={WINDOW_SIZE}",
+                    path.abspath(args.source),
+                    f"--size={args.cache_size}",
+                    f"--simRegion={args.region}",
+                    f"--simWindowSize={args.window_size}",
                     f"--simStartFromWindow={window_idx+1}",
-                    f"--simStopWindow={STOP_WINDOW+1}",
+                    f"--simStopWindow={args.window_stop+1}",
                     "--simLoadDump=true",
                     f"--simLoadDumpFileName={path.join(dump_dir, 'dump.json.gz')}",
                 ]),
@@ -220,7 +241,7 @@ def main():
                 stderr=subprocess.PIPE,
             )
             processes.append(cur_process)
-    
+
     wait_jobs(processes)
 
 
