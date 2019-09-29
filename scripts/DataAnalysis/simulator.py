@@ -1,10 +1,16 @@
 import argparse
 import os
 import subprocess
-from os import path
+from itertools import cycle
+from os import path, walk
+
+import numpy as np
+import pandas as pd
+from bokeh.layouts import column, row
+from bokeh.palettes import Category10
+from bokeh.plotting import figure, output_file, save
 
 from SmartCache.sim import get_simulator_exe
-
 
 CACHE_TYPES = {
     'lru': {},
@@ -45,6 +51,141 @@ def job_run(processes: list) -> bool:
     print(f"\x1b[{len(processes)+1}F")
 
     return any(running_processes)
+
+
+def get_result_section(cur_path: str, source_folder: str):
+    head, tail = path.split(cur_path)
+    section = []
+    while head != source_folder:
+        section.append(tail)
+        head, tail = path.split(head)
+    section.append(tail)
+    return section
+
+
+def load_results(folder: str) -> dict:
+    results = {}
+    for root, dirs, files in walk(folder):
+        for file_ in files:
+            _, ext = path.splitext(file_)
+            if ext == ".csv":
+                section = get_result_section(root, folder)
+                cur_section = results
+                while len(section) > 1:
+                    part = section.pop()
+                    if part not in cur_section:
+                        cur_section[part] = {}
+                    cur_section = cur_section[part]
+                last_section = section.pop()
+                file_path = path.join(root, file_)
+                cur_section[last_section] = pd.read_csv(
+                    file_path
+                )
+
+    return results
+
+
+def update_colors(new_name: str, color_table: dict):
+    names = list(color_table.keys()) + [new_name]
+    colors = cycle(Category10[10])
+    for name in sorted(names):
+        cur_color = next(colors)
+        color_table[name] = cur_color
+
+
+def plot_results(folder: str, results: dict):
+    color_table = {}
+    dates = []
+
+    output_file(
+        os.path.join(
+            folder,
+            "results.html"
+        ),
+        "Results",
+        mode="inline"
+    )
+
+    # Update colors
+    for cache_name in results['run_full_normal']:
+        update_colors(cache_name, color_table)
+
+    # Get dates
+    for cache_name, values in results['run_full_normal'].items():
+        if not dates:
+            dates = [
+                elm.split(" ")[0]
+                for elm
+                in values['date'].astype(str)
+            ]
+            break
+
+    figs = []
+    run_full_normal_figs = []
+
+    # Hit Rate plot
+    hit_rate_fig = figure(
+        tools="box_zoom,pan,reset,save",
+        title="Hit Rate",
+        x_axis_label="Day",
+        y_axis_label="Hit rate %",
+        y_range=(0, 100),
+        x_range=dates,
+        plot_width=640,
+        plot_height=480,
+    )
+
+    # Full run Hit Rate
+    for cache_name, values in results['run_full_normal'].items():
+        points = values['hit rate']
+        hit_rate_fig.line(
+            dates,
+            points,
+            legend=cache_name,
+            color=color_table[cache_name],
+            line_width=2.,
+        )
+
+    hit_rate_fig.legend.location = "top_left"
+    hit_rate_fig.legend.click_policy = "hide"
+    hit_rate_fig.xaxis.major_label_orientation = np.pi / 4.
+    run_full_normal_figs.append(hit_rate_fig)
+
+    # Ratio plot
+    ratio_fig = figure(
+        tools="box_zoom,pan,reset,save",
+        title="Ratio",
+        x_axis_label="Day",
+        y_axis_label="Ratio",
+        x_range=dates,
+        plot_width=640,
+        plot_height=480,
+    )
+
+    # Full run Ratio
+    for cache_name, values in results['run_full_normal'].items():
+        written_data = values['written data']
+        read_on_hit = values['read on hit']
+        points = [
+            elm / written_data[idx]
+            for idx, elm in enumerate(read_on_hit)
+        ]
+        ratio_fig.line(
+            dates,
+            points,
+            legend=cache_name,
+            color=color_table[cache_name],
+            line_width=2.,
+        )
+
+    ratio_fig.legend.location = "top_left"
+    ratio_fig.legend.click_policy = "hide"
+    ratio_fig.xaxis.major_label_orientation = np.pi / 4.
+    run_full_normal_figs.append(ratio_fig)
+
+    figs.append(row(*run_full_normal_figs))
+
+    save(column(*figs))
 
 
 def main():
@@ -246,9 +387,11 @@ def main():
                 processes.append(cur_process)
 
         wait_jobs(processes)
+
     elif args.action == "plot":
         # TODO: plot of results
-        pass
+        results = load_results(args.source)
+        plot_results(args.source, results)
 
 
 if __name__ == "__main__":
