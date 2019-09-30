@@ -550,7 +550,7 @@ def plot_windows(windows: list, result_folder: str, dpi: int):
     save(column(fig_num_req_num_files, fig_mean_num_req_num_files))
     export_png(
         column(fig_num_req_num_files, fig_mean_num_req_num_files),
-        filenameos.path.join(result_folder, "statistics.png")
+        filename=os.path.join(result_folder, "statistics.png")
     )
 
     return
