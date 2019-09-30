@@ -37,6 +37,7 @@ bokeh = "*"
 grpcio-tools = "*"
 grpcio = "*"
 pandas-profiling = "*"
+selenium = "*"
 
 [requires]
 python_version = "3"

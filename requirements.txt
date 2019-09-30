@@ -90,7 +90,7 @@ pylint==2.4.1
 pyparsing==2.4.2
 pyrsistent==0.15.4
 pyspark==2.4.4
-pytest==5.1.3
+pytest==5.2.0
 pytest-pylint==0.14.1
 python-dateutil==2.8.0
 python-snappy==0.5.4
@@ -102,9 +102,10 @@ requests==2.22.0
 rope==0.14.0
 scipy==1.3.1
 seaborn==0.9.0
+selenium==4.0.0a1
 Send2Trash==1.5.0
 six==1.12.0
--e git+git@github.com:Cloud-PG/smart-cache.git@2cb16ae24f6c005f51738aac99e5057696675735#egg=SmartCacheTools
+-e git+git@github.com:Cloud-PG/smart-cache.git@a1598f392bf16e48bb4070c9db4092c2812c6fa7#egg=SmartCacheTools
 snakebite==2.11.0
 snowballstemmer==1.9.1
 tb-nightly==1.15.0a20190806
