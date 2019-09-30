@@ -12,9 +12,10 @@ import numpy as np
 import pandas as pd
 import redis
 import urllib3
+from bokeh.io import export_png
 from bokeh.layouts import column, row
 from bokeh.models import ColumnDataSource, FactorRange, LabelSet, Span
-from bokeh.palettes import Category10, Accent
+from bokeh.palettes import Accent, Category10
 from bokeh.plotting import figure, output_file, save
 from bokeh.transform import cumsum, factor_cmap
 from minio import Minio
@@ -547,6 +548,10 @@ def plot_windows(windows: list, result_folder: str, dpi: int):
     fig_mean_num_req_num_files.xgrid.grid_line_color = None
 
     save(column(fig_num_req_num_files, fig_mean_num_req_num_files))
+    export_png(
+        column(fig_num_req_num_files, fig_mean_num_req_num_files),
+        filenameos.path.join(result_folder, "statistics.png")
+    )
 
     return
     ###########################################################################
