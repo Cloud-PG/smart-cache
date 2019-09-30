@@ -6,8 +6,11 @@ from os import path, walk
 
 import numpy as np
 import pandas as pd
+from bokeh.io import export_png
 from bokeh.layouts import column, row
-from bokeh.palettes import Category10
+from bokeh.models import (BoxZoomTool, PanTool, ResetTool, SaveTool,
+                          Span, WheelZoomTool)
+from bokeh.palettes import Category20c
 from bokeh.plotting import figure, output_file, save
 
 from SmartCache.sim import get_simulator_exe
@@ -87,24 +90,50 @@ def load_results(folder: str) -> dict:
 
 def update_colors(new_name: str, color_table: dict):
     names = list(color_table.keys()) + [new_name]
-    colors = cycle(Category10[10])
+    colors = cycle(Category20c[20])
     for name in sorted(names):
         cur_color = next(colors)
         color_table[name] = cur_color
+        single_w_name = f'{name} - single window'
+        cur_color = next(colors)
+        color_table[single_w_name] = cur_color
+        single_w_name = f'{name} - next window'
+        cur_color = next(colors)
+        color_table[single_w_name] = cur_color
+        single_w_name = f'{name} - next period'
+        cur_color = next(colors)
+        color_table[single_w_name] = cur_color
 
 
-def plot_results(folder: str, results: dict):
+def add_window_lines(cur_fig, dates: list, window_size: int):
+    cur_fig.renderers.extend([
+        Span(
+            location=idx+0.5, dimension='height',
+            line_color='black', line_width=0.9
+        )
+        for idx in range(0, len(dates), window_size)
+    ])
+
+
+def plot_results(folder: str, results: dict,
+                 html: bool = True, png: bool = False,
+                 window_size: int = 1):
     color_table = {}
     dates = []
 
-    output_file(
-        os.path.join(
-            folder,
-            "results.html"
-        ),
-        "Results",
-        mode="inline"
-    )
+    if html:
+        output_file(
+            os.path.join(
+                folder,
+                "results.html"
+            ),
+            "Results",
+            mode="inline"
+        )
+
+    # Tools
+    tools = [BoxZoomTool(dimensions='width'), PanTool(
+        dimensions='width'), ResetTool()]
 
     # Update colors
     for cache_name in results['run_full_normal']:
@@ -122,11 +151,13 @@ def plot_results(folder: str, results: dict):
 
     figs = []
     run_full_normal_figs = []
+    run_single_window_figs = []
 
-    # Hit Rate plot
+    ##
+    # Hit Rate plot of full normal run
     hit_rate_fig = figure(
-        tools="box_zoom,pan,reset,save",
-        title="Hit Rate",
+        tools=tools,
+        title="Hit Rate - Full Normal Run",
         x_axis_label="Day",
         y_axis_label="Hit rate %",
         y_range=(0, 100),
@@ -135,7 +166,6 @@ def plot_results(folder: str, results: dict):
         plot_height=480,
     )
 
-    # Full run Hit Rate
     for cache_name, values in results['run_full_normal'].items():
         points = values['hit rate']
         hit_rate_fig.line(
@@ -149,27 +179,24 @@ def plot_results(folder: str, results: dict):
     hit_rate_fig.legend.location = "top_left"
     hit_rate_fig.legend.click_policy = "hide"
     hit_rate_fig.xaxis.major_label_orientation = np.pi / 4.
+    hit_rate_fig.add_tools(SaveTool())
+    add_window_lines(hit_rate_fig, dates, window_size)
     run_full_normal_figs.append(hit_rate_fig)
 
-    # Ratio plot
+    ##
+    # Ratio plot of full normal run
     ratio_fig = figure(
-        tools="box_zoom,pan,reset,save",
-        title="Ratio",
+        tools=tools,
+        title="Ratio - Full Normal Run",
         x_axis_label="Day",
         y_axis_label="Ratio",
-        x_range=dates,
+        x_range=hit_rate_fig.x_range,
         plot_width=640,
         plot_height=480,
     )
 
-    # Full run Ratio
     for cache_name, values in results['run_full_normal'].items():
-        written_data = values['written data']
-        read_on_hit = values['read on hit']
-        points = [
-            elm / written_data[idx]
-            for idx, elm in enumerate(read_on_hit)
-        ]
+        points = values['read on hit'] / values['written data']
         ratio_fig.line(
             dates,
             points,
@@ -181,11 +208,164 @@ def plot_results(folder: str, results: dict):
     ratio_fig.legend.location = "top_left"
     ratio_fig.legend.click_policy = "hide"
     ratio_fig.xaxis.major_label_orientation = np.pi / 4.
+    ratio_fig.add_tools(SaveTool())
+    add_window_lines(ratio_fig, dates, window_size)
     run_full_normal_figs.append(ratio_fig)
 
-    figs.append(row(*run_full_normal_figs))
+    ##
+    # Hit Rate compare plot
+    hit_rate_compare_fig = figure(
+        tools=tools,
+        title="Hit Rate - Compare single and next window",
+        x_axis_label="Day",
+        y_axis_label="Hit rate %",
+        y_range=(0, 100),
+        x_range=hit_rate_fig.x_range,
+        plot_width=640,
+        plot_height=480,
+    )
 
-    save(column(*figs))
+    for cache_name, windows in results['run_single_window'].items():
+        single_window_name = f'{cache_name} - single window'
+        next_window_name = f'{cache_name} - next window'
+        single_windows = pd.concat(
+            [
+                window
+                for name, window in sorted(
+                    windows.items(),
+                    key=lambda elm: elm[0],
+                )
+            ]
+        )
+        next_windows = pd.concat(
+            [
+                window
+                for name, window in sorted(
+                    results['run_next_window'][cache_name].items(),
+                    key=lambda elm: elm[0],
+                )
+            ]
+        )
+        points = single_windows['hit rate']
+        hit_rate_compare_fig.line(
+            dates,
+            points,
+            legend=single_window_name,
+            color=color_table[single_window_name],
+            line_width=2.,
+        )
+        # Merge next windows
+        next_values = pd.merge(
+            single_windows[['date', 'hit rate']],
+            next_windows[['date', 'hit rate']],
+            on=['date'],
+            how='inner'
+        ).sort_values(by=['date']).rename(
+            columns={
+                'hit rate_y': 'hit rate'
+            }
+        )[['date', 'hit rate']]
+        first_part = single_windows[
+            ['date', 'hit rate']
+        ][~single_windows.date.isin(next_values.date)]
+        next_windows = pd.concat([first_part, next_values])
+        points = next_windows['hit rate']
+        hit_rate_compare_fig.line(
+            dates,
+            points,
+            legend=next_window_name,
+            color=color_table[next_window_name],
+            line_width=2.,
+        )
+    hit_rate_compare_fig.legend.location = "top_left"
+    hit_rate_compare_fig.legend.click_policy = "hide"
+    hit_rate_compare_fig.xaxis.major_label_orientation = np.pi / 4.
+    hit_rate_compare_fig.add_tools(SaveTool())
+    add_window_lines(hit_rate_compare_fig, dates, window_size)
+    run_single_window_figs.append(hit_rate_compare_fig)
+
+    ##
+    # Ratio compare plot
+    ratio_compare_fig = figure(
+        tools=tools,
+        title="Ratio - Compare single and next window",
+        x_axis_label="Day",
+        y_axis_label="Ratio",
+        x_range=hit_rate_fig.x_range,
+        plot_width=640,
+        plot_height=480,
+    )
+
+    for cache_name, windows in results['run_single_window'].items():
+        single_window_name = f'{cache_name} - single window'
+        next_window_name = f'{cache_name} - next window'
+        single_windows = pd.concat(
+            [
+                window
+                for name, window in sorted(
+                    windows.items(),
+                    key=lambda elm: elm[0],
+                )
+            ]
+        )
+        next_windows = pd.concat(
+            [
+                window
+                for name, window in sorted(
+                    results['run_next_window'][cache_name].items(),
+                    key=lambda elm: elm[0],
+                )
+            ]
+        )
+        points = single_windows['read on hit'] / single_windows['written data']
+        ratio_compare_fig.line(
+            dates,
+            points,
+            legend=single_window_name,
+            color=color_table[single_window_name],
+            line_width=2.,
+        )
+        # Merge next windows
+        next_values = pd.merge(
+            single_windows[['date', 'read on hit', 'written data']],
+            next_windows[['date', 'read on hit', 'written data']],
+            on=['date'],
+            how='inner'
+        ).sort_values(by=['date']).rename(
+            columns={
+                'read on hit_y': 'read on hit',
+                'written data_y': 'written data'
+            }
+        )[['date', 'read on hit', 'written data']]
+        first_part = single_windows[
+            ['date', 'read on hit', 'written data']
+        ][~single_windows.date.isin(next_values.date)]
+        next_windows = pd.concat([first_part, next_values])
+        points = next_windows['read on hit'] / next_windows['written data']
+        ratio_compare_fig.line(
+            dates,
+            points,
+            legend=next_window_name,
+            color=color_table[next_window_name],
+            line_width=2.,
+        )
+    ratio_compare_fig.legend.location = "top_left"
+    ratio_compare_fig.legend.click_policy = "hide"
+    ratio_compare_fig.xaxis.major_label_orientation = np.pi / 4.
+    ratio_compare_fig.add_tools(SaveTool())
+    add_window_lines(ratio_compare_fig, dates, window_size)
+    run_single_window_figs.append(ratio_compare_fig)
+
+    figs.append(column(
+        row(*run_full_normal_figs),
+        row(*run_single_window_figs)
+    ))
+
+    if html:
+        save(column(*figs))
+    if png:
+        export_png(column(*figs), filename=os.path.join(
+            folder, "results.png"))
 
 
 def main():
@@ -196,25 +376,31 @@ def main():
                         help='Action requested')
     parser.add_argument('source', type=str,
                         default="./results_8w_with_sizes_csv",
-                        help='The folder where the json results are stored')
+                        help='The folder where the json results are stored [DEFAULT: "./results_8w_with_sizes_csv"]')
     parser.add_argument('-FEB', '--force-exe-build', type=bool,
                         default=True,
-                        help='Force to build the simulation executable')
+                        help='Force to build the simulation executable [DEFAULT: True]')
     parser.add_argument('-CS', '--cache-size', type=int,
                         default=10485760,
-                        help='Size of the cache to simulate')
+                        help='Size of the cache to simulate [DEFAULT: 10485760]')
     parser.add_argument('-R', '--region', type=str,
                         default="all",
-                        help='Region of the data to simulate')
+                        help='Region of the data to simulate [DEFAULT: "all"]')
     parser.add_argument('-WS', '--window-size', type=int,
                         default=7,
-                        help='Size of the window to simulate')
+                        help='Size of the window to simulate [DEFAULT: 7]')
     parser.add_argument('-WSTA', '--window-start', type=int,
                         default=0,
-                        help='Window where to start from')
+                        help='Window where to start from [DEFAULT: 0]')
     parser.add_argument('-WSTO', '--window-stop', type=int,
                         default=4,
-                        help='Window where to stop')
+                        help='Window where to stop [DEFAULT: 4]')
+    parser.add_argument('--out-html', type=bool,
+                        default=True,
+                        help='Plot the output as a html [DEFAULT: True]')
+    parser.add_argument('--out-png', type=bool,
+                        default=False,
+                        help='Plot the output as a png (requires phantomjs-prebuilt installed with npm) [DEFAULT: False]')
 
     args, _ = parser.parse_known_args()
 
@@ -391,7 +577,11 @@ def main():
     elif args.action == "plot":
         # TODO: plot of results
         results = load_results(args.source)
-        plot_results(args.source, results)
+        plot_results(
+            args.source, results,
+            window_size=args.window_size,
+            html=args.out_html, png=args.out_png
+        )
 
 
 if __name__ == "__main__":
