@@ -10,7 +10,7 @@ from bokeh.io import export_png
 from bokeh.layouts import column, row
 from bokeh.models import (BoxZoomTool, PanTool, ResetTool, SaveTool,
                           Span, WheelZoomTool)
-from bokeh.palettes import Category20c
+from bokeh.palettes import Set1
 from bokeh.plotting import figure, output_file, save
 
 from SmartCache.sim import get_simulator_exe
@@ -90,19 +90,11 @@ def load_results(folder: str) -> dict:
 
 def update_colors(new_name: str, color_table: dict):
     names = list(color_table.keys()) + [new_name]
-    colors = cycle(Category20c[20])
+    colors = cycle(Set1[9])
     for name in sorted(names):
         cur_color = next(colors)
         color_table[name] = cur_color
         single_w_name = f'{name} - single window'
-        cur_color = next(colors)
-        color_table[single_w_name] = cur_color
-        single_w_name = f'{name} - next window'
-        cur_color = next(colors)
-        color_table[single_w_name] = cur_color
-        single_w_name = f'{name} - next period'
-        cur_color = next(colors)
-        color_table[single_w_name] = cur_color
 
 
 def add_window_lines(cur_fig, dates: list, window_size: int):
@@ -251,7 +243,7 @@ def plot_results(folder: str, results: dict,
             dates,
             points,
             legend=single_window_name,
-            color=color_table[single_window_name],
+            color=color_table[cache_name],
             line_width=2.,
         )
         # Merge next windows
@@ -274,8 +266,10 @@ def plot_results(folder: str, results: dict,
             dates,
             points,
             legend=next_window_name,
-            color=color_table[next_window_name],
+            line_color="red",
+            line_alpha=0.9,
             line_width=2.,
+            line_dash="dashed",
         )
     hit_rate_compare_fig.legend.location = "top_left"
     hit_rate_compare_fig.legend.click_policy = "hide"
@@ -322,7 +316,7 @@ def plot_results(folder: str, results: dict,
             dates,
             points,
             legend=single_window_name,
-            color=color_table[single_window_name],
+            color=color_table[cache_name],
             line_width=2.,
         )
         # Merge next windows
@@ -346,8 +340,10 @@ def plot_results(folder: str, results: dict,
             dates,
             points,
             legend=next_window_name,
-            color=color_table[next_window_name],
+            line_color="red",
+            line_alpha=0.9,
             line_width=2.,
+            line_dash="dashed",
         )
     ratio_compare_fig.legend.location = "top_left"
     ratio_compare_fig.legend.click_policy = "hide"
