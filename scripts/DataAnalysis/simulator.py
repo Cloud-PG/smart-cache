@@ -112,6 +112,7 @@ def plot_results(folder: str, results: dict,
                  window_size: int = 1):
     color_table = {}
     dates = []
+    datetimes = []
 
     if html:
         output_file(
@@ -139,11 +140,13 @@ def plot_results(folder: str, results: dict,
                 for elm
                 in values['date'].astype(str)
             ]
+            datetimes = values['date']
             break
 
     figs = []
     run_full_normal_figs = []
     run_single_window_figs = []
+    run_next_period_figs = []
 
     ##
     # Hit Rate plot of full normal run
@@ -205,8 +208,8 @@ def plot_results(folder: str, results: dict,
     run_full_normal_figs.append(ratio_fig)
 
     ##
-    # Hit Rate compare plot
-    hit_rate_compare_fig = figure(
+    # Hit Rate compare single and next window plot
+    hit_rate_comp_snw_fig = figure(
         tools=tools,
         title="Hit Rate - Compare single and next window",
         x_axis_label="Day",
@@ -239,7 +242,7 @@ def plot_results(folder: str, results: dict,
             ]
         )
         points = single_windows['hit rate']
-        hit_rate_compare_fig.line(
+        hit_rate_comp_snw_fig.line(
             dates,
             points,
             legend=single_window_name,
@@ -262,7 +265,7 @@ def plot_results(folder: str, results: dict,
         ][~single_windows.date.isin(next_values.date)]
         next_windows = pd.concat([first_part, next_values])
         points = next_windows['hit rate']
-        hit_rate_compare_fig.line(
+        hit_rate_comp_snw_fig.line(
             dates,
             points,
             legend=next_window_name,
@@ -271,16 +274,16 @@ def plot_results(folder: str, results: dict,
             line_width=2.,
             line_dash="dashed",
         )
-    hit_rate_compare_fig.legend.location = "top_left"
-    hit_rate_compare_fig.legend.click_policy = "hide"
-    hit_rate_compare_fig.xaxis.major_label_orientation = np.pi / 4.
-    hit_rate_compare_fig.add_tools(SaveTool())
-    add_window_lines(hit_rate_compare_fig, dates, window_size)
-    run_single_window_figs.append(hit_rate_compare_fig)
+    hit_rate_comp_snw_fig.legend.location = "top_left"
+    hit_rate_comp_snw_fig.legend.click_policy = "hide"
+    hit_rate_comp_snw_fig.xaxis.major_label_orientation = np.pi / 4.
+    hit_rate_comp_snw_fig.add_tools(SaveTool())
+    add_window_lines(hit_rate_comp_snw_fig, dates, window_size)
+    run_single_window_figs.append(hit_rate_comp_snw_fig)
 
     ##
-    # Ratio compare plot
-    ratio_compare_fig = figure(
+    # Ratio compare single and next window plot
+    ratio_comp_snw_fig = figure(
         tools=tools,
         title="Ratio - Compare single and next window",
         x_axis_label="Day",
@@ -312,7 +315,7 @@ def plot_results(folder: str, results: dict,
             ]
         )
         points = single_windows['read on hit'] / single_windows['written data']
-        ratio_compare_fig.line(
+        ratio_comp_snw_fig.line(
             dates,
             points,
             legend=single_window_name,
@@ -336,7 +339,7 @@ def plot_results(folder: str, results: dict,
         ][~single_windows.date.isin(next_values.date)]
         next_windows = pd.concat([first_part, next_values])
         points = next_windows['read on hit'] / next_windows['written data']
-        ratio_compare_fig.line(
+        ratio_comp_snw_fig.line(
             dates,
             points,
             legend=next_window_name,
@@ -345,16 +348,107 @@ def plot_results(folder: str, results: dict,
             line_width=2.,
             line_dash="dashed",
         )
-    ratio_compare_fig.legend.location = "top_left"
-    ratio_compare_fig.legend.click_policy = "hide"
-    ratio_compare_fig.xaxis.major_label_orientation = np.pi / 4.
-    ratio_compare_fig.add_tools(SaveTool())
-    add_window_lines(ratio_compare_fig, dates, window_size)
-    run_single_window_figs.append(ratio_compare_fig)
+    ratio_comp_snw_fig.legend.location = "top_left"
+    ratio_comp_snw_fig.legend.click_policy = "hide"
+    ratio_comp_snw_fig.xaxis.major_label_orientation = np.pi / 4.
+    ratio_comp_snw_fig.add_tools(SaveTool())
+    add_window_lines(ratio_comp_snw_fig, dates, window_size)
+    run_single_window_figs.append(ratio_comp_snw_fig)
+
+    ##
+    # Hit Rate compare single window and next period plot
+    hit_rate_comp_swnp_fig = figure(
+        tools=tools,
+        title="Hit Rate - Compare single window and next period",
+        x_axis_label="Day",
+        y_axis_label="Hit rate %",
+        y_range=(0, 100),
+        x_range=hit_rate_fig.x_range,
+        plot_width=640,
+        plot_height=480,
+    )
+
+    for cache_name, windows in results['run_next_period'].items():
+        for period, values in windows.items():
+            cur_period = values[
+                ['date', 'hit rate']
+            ][values.date.isin(datetimes)]
+            cur_period_name = f"{cache_name} - from {period.split('-')[0]}"
+            points = cur_period['hit rate']
+            cur_dates = [
+                elm.split(" ")[0]
+                for elm
+                in cur_period['date'].astype(str)
+            ]
+            cur_dates = [
+                cur_date for cur_date in cur_dates
+                if cur_date in dates
+            ]
+            cur_period = cur_period[~cur_period.date.isin(datetimes)]
+            if len(cur_dates) > 0:
+                hit_rate_comp_swnp_fig.line(
+                    cur_dates,
+                    points,
+                    legend=cur_period_name,
+                    line_color=color_table[cache_name],
+                    line_alpha=0.9,
+                    line_width=2.,
+                )
+    hit_rate_comp_swnp_fig.legend.location = "top_left"
+    hit_rate_comp_swnp_fig.legend.click_policy = "hide"
+    hit_rate_comp_swnp_fig.xaxis.major_label_orientation = np.pi / 4.
+    hit_rate_comp_swnp_fig.add_tools(SaveTool())
+    add_window_lines(hit_rate_comp_swnp_fig, dates, window_size)
+    run_next_period_figs.append(hit_rate_comp_swnp_fig)
+
+    ##
+    # Ratio compare single window and next period plot
+    ratio_comp_swnp_fig = figure(
+        tools=tools,
+        title="Ratio - Compare single window and next period",
+        x_axis_label="Day",
+        y_axis_label="Ratio",
+        x_range=hit_rate_fig.x_range,
+        plot_width=640,
+        plot_height=480,
+    )
+
+    for cache_name, windows in results['run_next_period'].items():
+        for period, values in windows.items():
+            cur_period = values[
+                ['date', 'read on hit', 'written data']
+            ][values.date.isin(datetimes)]
+            cur_period_name = f"{cache_name} - from {period.split('-')[0]}"
+            points = cur_period['read on hit'] / cur_period['written data']
+            cur_dates = [
+                elm.split(" ")[0]
+                for elm
+                in cur_period['date'].astype(str)
+            ]
+            cur_dates = [
+                cur_date for cur_date in cur_dates
+                if cur_date in dates
+            ]
+            if len(cur_dates) > 0:
+                ratio_comp_swnp_fig.line(
+                    cur_dates,
+                    points,
+                    legend=cur_period_name,
+                    line_color=color_table[cache_name],
+                    line_alpha=0.9,
+                    line_width=2.,
+                )
+    ratio_comp_swnp_fig.legend.location = "top_left"
+    ratio_comp_swnp_fig.legend.click_policy = "hide"
+    ratio_comp_swnp_fig.xaxis.major_label_orientation = np.pi / 4.
+    ratio_comp_swnp_fig.add_tools(SaveTool())
+    add_window_lines(ratio_comp_swnp_fig, dates, window_size)
+    run_next_period_figs.append(ratio_comp_swnp_fig)
 
     figs.append(column(
         row(*run_full_normal_figs),
-        row(*run_single_window_figs)
+        row(*run_single_window_figs),
+        row(*run_next_period_figs),
     ))
 
     if html:
