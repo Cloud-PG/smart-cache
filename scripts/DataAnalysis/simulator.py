@@ -472,7 +472,7 @@ def main():
                         help='Force to build the simulation executable [DEFAULT: True]')
     parser.add_argument('-CS', '--cache-size', type=int,
                         default=10485760,
-                        help='Size of the cache to simulate [DEFAULT: 10485760]')
+                        help='Size of the cache to simulate in Mega Bytes [DEFAULT: 10485760]')
     parser.add_argument('-R', '--region', type=str,
                         default="all",
                         help='Region of the data to simulate [DEFAULT: "all"]')
