@@ -107,9 +107,22 @@ def add_window_lines(cur_fig, dates: list, window_size: int):
     ])
 
 
+def filter_results(results: dict, key: str, filters: list):
+    for cache_name, values in results[key].items():
+        if filters:
+            if all([
+                cache_name.find(filter_) != -1
+                for filter_ in filters
+            ]):
+                yield cache_name, values
+        else:
+            yield cache_name, values
+
+
 def plot_results(folder: str, results: dict,
-                 html: bool = True, png: bool = False,
-                 window_size: int = 1):
+                 filters: list = [], window_size: int = 1,
+                 html: bool = True, png: bool = False
+                 ):
     color_table = {}
     dates = []
     datetimes = []
@@ -129,11 +142,15 @@ def plot_results(folder: str, results: dict,
         dimensions='width'), ResetTool()]
 
     # Update colors
-    for cache_name in results['run_full_normal']:
+    for cache_name, _ in filter_results(
+        results, 'run_full_normal', filters
+    ):
         update_colors(cache_name, color_table)
 
     # Get dates
-    for cache_name, values in results['run_full_normal'].items():
+    for cache_name, values in filter_results(
+        results, 'run_full_normal', filters
+    ):
         if not dates:
             dates = [
                 elm.split(" ")[0]
@@ -161,7 +178,9 @@ def plot_results(folder: str, results: dict,
         plot_height=480,
     )
 
-    for cache_name, values in results['run_full_normal'].items():
+    for cache_name, values in filter_results(
+        results, 'run_full_normal', filters
+    ):
         points = values['hit rate']
         hit_rate_fig.line(
             dates,
@@ -190,7 +209,9 @@ def plot_results(folder: str, results: dict,
         plot_height=480,
     )
 
-    for cache_name, values in results['run_full_normal'].items():
+    for cache_name, values in filter_results(
+        results, 'run_full_normal', filters
+    ):
         points = values['read on hit'] / values['written data']
         ratio_fig.line(
             dates,
@@ -220,7 +241,9 @@ def plot_results(folder: str, results: dict,
         plot_height=480,
     )
 
-    for cache_name, windows in results['run_single_window'].items():
+    for cache_name, windows in filter_results(
+        results, 'run_single_window', filters
+    ):
         single_window_name = f'{cache_name} - single window'
         next_window_name = f'{cache_name} - next window'
         single_windows = pd.concat(
@@ -293,7 +316,9 @@ def plot_results(folder: str, results: dict,
         plot_height=480,
     )
 
-    for cache_name, windows in results['run_single_window'].items():
+    for cache_name, windows in filter_results(
+        results, 'run_single_window', filters
+    ):
         single_window_name = f'{cache_name} - single window'
         next_window_name = f'{cache_name} - next window'
         single_windows = pd.concat(
@@ -368,7 +393,9 @@ def plot_results(folder: str, results: dict,
         plot_height=480,
     )
 
-    for cache_name, windows in results['run_next_period'].items():
+    for cache_name, windows in filter_results(
+        results, 'run_next_period', filters
+    ):
         for period, values in windows.items():
             cur_period = values[
                 ['date', 'hit rate']
@@ -413,7 +440,9 @@ def plot_results(folder: str, results: dict,
         plot_height=480,
     )
 
-    for cache_name, windows in results['run_next_period'].items():
+    for cache_name, windows in filter_results(
+        results, 'run_next_period', filters
+    ):
         for period, values in windows.items():
             cur_period = values[
                 ['date', 'read on hit', 'written data']
@@ -491,6 +520,9 @@ def main():
     parser.add_argument('--out-png', type=bool,
                         default=False,
                         help='Plot the output as a png (requires phantomjs-prebuilt installed with npm) [DEFAULT: False]')
+    parser.add_argument('--plot-filters', type=str,
+                        default="",
+                        help='A comma separate string to search as filters')
 
     args, _ = parser.parse_known_args()
 
@@ -666,10 +698,12 @@ def main():
 
     elif args.action == "plot":
         # TODO: plot of results
+        filters = [elm for elm in args.plot_filters.split(",") if elm]
         results = load_results(args.source)
         plot_results(
             args.source, results,
             window_size=args.window_size,
+            filters=filters,
             html=args.out_html, png=args.out_png
         )
 
