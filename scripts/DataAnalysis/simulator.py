@@ -16,7 +16,7 @@ from bokeh.plotting import figure, output_file, save
 from SmartCache.sim import get_simulator_exe
 
 CACHE_TYPES = {
-    # 'lru': {},
+    'lru': {},
     'weightedLRU': {},
 }
 
