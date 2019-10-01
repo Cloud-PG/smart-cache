@@ -26,8 +26,8 @@ func TestLRUCacheBaseMultipleInsert(t *testing.T) {
 		t.Fatalf("Weighted hit rate error -> Expected %f but got %f", 225., testCache.WeightedHitRate())
 	} else if testCache.Size() != 1.0 {
 		t.Fatalf("Size error -> Expected %f but got %f", 1.0, testCache.Size())
-	} else if testCache.WrittenData() != 1.0 {
-		t.Fatalf("Written data error -> Expected %f but got %f", 1.0, testCache.WrittenData())
+	} else if testCache.DataWritten() != 1.0 {
+		t.Fatalf("Written data error -> Expected %f but got %f", 1.0, testCache.DataWritten())
 	}
 }
 
@@ -48,10 +48,10 @@ func TestLRUCacheClear(t *testing.T) {
 		t.Fatalf("Hit rate error -> Expected %f but got %f", 0., testCache.HitRate())
 	} else if testCache.Size() != 0. {
 		t.Fatalf("Size error -> Expected %f but got %f", 0., testCache.Size())
-	} else if testCache.WrittenData() != 0. {
-		t.Fatalf("Written data error -> Expected %f but got %f", 0., testCache.WrittenData())
-	} else if testCache.ReadOnHit() != 0. {
-		t.Fatalf("Read on hit error -> Expected %f but got %f", 0., testCache.ReadOnHit())
+	} else if testCache.DataWritten() != 0. {
+		t.Fatalf("Written data error -> Expected %f but got %f", 0., testCache.DataWritten())
+	} else if testCache.DataReadOnHit() != 0. {
+		t.Fatalf("Read on hit error -> Expected %f but got %f", 0., testCache.DataReadOnHit())
 	} else if testCache.queue.Len() != 0 {
 		t.Fatalf("Queue error -> Expected %d but got %d", 0, testCache.queue.Len())
 	} else if len(testCache.files) != 0 {
@@ -85,10 +85,10 @@ func TestLRUCacheInsert(t *testing.T) {
 		t.Fatalf("Hit rate error -> Expected %f but got %f", 50., testCache.HitRate())
 	} else if testCache.Size() != 5.0 {
 		t.Fatalf("Size error -> Expected %f but got %f", 5.0, testCache.Size())
-	} else if testCache.WrittenData() != 6.0 {
-		t.Fatalf("Written data error -> Expected %f but got %f", 6.0, testCache.WrittenData())
-	} else if testCache.ReadOnHit() != 8. {
-		t.Fatalf("Read on hit error -> Expected %f but got %f", 8., testCache.ReadOnHit())
+	} else if testCache.DataWritten() != 6.0 {
+		t.Fatalf("Written data error -> Expected %f but got %f", 6.0, testCache.DataWritten())
+	} else if testCache.DataReadOnHit() != 8. {
+		t.Fatalf("Read on hit error -> Expected %f but got %f", 8., testCache.DataReadOnHit())
 	} else if testCache.queue.Front().Value.(string) != "/a/b/c/d/file2" {
 		t.Fatalf("Written data error -> Expected %s but got %s", "/a/b/c/d/file2", testCache.queue.Front().Value.(string))
 	} else if testCache.queue.Back().Value.(string) != "/a/b/c/d/file4" {

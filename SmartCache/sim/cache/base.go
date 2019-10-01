@@ -45,8 +45,9 @@ type Cache interface {
 	WeightedHitRate() float32
 	Size() float32
 	Capacity() float32
-	WrittenData() float32
-	ReadOnHit() float32
+	DataWritten() float32
+	DataRead() float32
+	DataReadOnHit() float32
 
 	Get(filename string, size float32) bool
 	GetLatestDecision() (bool, bool)
@@ -59,6 +60,20 @@ type Cache interface {
 	SimGetInfoCacheStatus(context.Context, *empty.Empty) (*pb.SimCacheStatus, error)
 	SimDumps(*empty.Empty, pb.SimService_SimDumpsServer) error
 	SimLoads(pb.SimService_SimLoadsServer) error
+}
+
+// GetSimCacheStatus create a cache status message
+func GetSimCacheStatus(cache Cache) *pb.SimCacheStatus {
+	return &pb.SimCacheStatus{
+		HitRate:         cache.HitRate(),
+		WeightedHitRate: cache.WeightedHitRate(),
+		HitOverMiss:     cache.HitOverMiss(),
+		Size:            cache.Size(),
+		Capacity:        cache.Capacity(),
+		DataWritten:     cache.DataWritten(),
+		DataRead:        cache.DataRead(),
+		DataReadOnHit:   cache.DataReadOnHit(),
+	}
 }
 
 // DatasetInput contains file statistics collected by weighted caches

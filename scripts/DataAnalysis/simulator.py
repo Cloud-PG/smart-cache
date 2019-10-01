@@ -212,7 +212,7 @@ def plot_results(folder: str, results: dict,
     for cache_name, values in filter_results(
         results, 'run_full_normal', filters
     ):
-        points = values['read on hit'] / values['written data']
+        points = values['read data'] / (values['written data'])
         ratio_fig.line(
             dates,
             points,
@@ -339,7 +339,7 @@ def plot_results(folder: str, results: dict,
                 )
             ]
         )
-        points = single_windows['read on hit'] / single_windows['written data']
+        points = single_windows['read data'] / single_windows['written data']
         ratio_comp_snw_fig.line(
             dates,
             points,
@@ -349,21 +349,21 @@ def plot_results(folder: str, results: dict,
         )
         # Merge next windows
         next_values = pd.merge(
-            single_windows[['date', 'read on hit', 'written data']],
-            next_windows[['date', 'read on hit', 'written data']],
+            single_windows[['date', 'read data', 'written data']],
+            next_windows[['date', 'read data', 'written data']],
             on=['date'],
             how='inner'
         ).sort_values(by=['date']).rename(
             columns={
-                'read on hit_y': 'read on hit',
+                'read data_y': 'read data',
                 'written data_y': 'written data'
             }
-        )[['date', 'read on hit', 'written data']]
+        )[['date', 'read data', 'written data']]
         first_part = single_windows[
-            ['date', 'read on hit', 'written data']
+            ['date', 'read data', 'written data']
         ][~single_windows.date.isin(next_values.date)]
         next_windows = pd.concat([first_part, next_values])
-        points = next_windows['read on hit'] / next_windows['written data']
+        points = next_windows['read data'] / next_windows['written data']
         ratio_comp_snw_fig.line(
             dates,
             points,
@@ -445,10 +445,10 @@ def plot_results(folder: str, results: dict,
     ):
         for period, values in windows.items():
             cur_period = values[
-                ['date', 'read on hit', 'written data']
+                ['date', 'read data', 'written data']
             ][values.date.isin(datetimes)]
             cur_period_name = f"{cache_name} - from {period.split('-')[0]}"
-            points = cur_period['read on hit'] / cur_period['written data']
+            points = cur_period['read data'] / cur_period['written data']
             cur_dates = [
                 elm.split(" ")[0]
                 for elm

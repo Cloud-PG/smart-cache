@@ -19,16 +19,17 @@ import (
 
 // WeightedLRU cache
 type WeightedLRU struct {
-	files                                                 map[string]float32
-	stats                                                 []*WeightedFileStats
-	statsFilenames                                        sync.Map
-	queue                                                 *list.List
-	hit, miss, writtenData, readOnHit, size, MaxSize, Exp float32
-	SelFunctionType                                       FunctionType
-	SelUpdateStatPolicyType                               UpdateStatsPolicyType
-	SelLimitStatsPolicyType                               LimitStatsPolicyType
-	latestHitDecision                                     bool
-	latestAddDecision                                     bool
+	files                                map[string]float32
+	stats                                []*WeightedFileStats
+	statsFilenames                       sync.Map
+	queue                                *list.List
+	hit, miss, size, MaxSize, Exp        float32
+	dataWritten, dataRead, dataReadOnHit float32
+	SelFunctionType                      FunctionType
+	SelUpdateStatPolicyType              UpdateStatsPolicyType
+	SelLimitStatsPolicyType              LimitStatsPolicyType
+	latestHitDecision                    bool
+	latestAddDecision                    bool
 }
 
 // Init the WeightedLRU struct
@@ -70,8 +71,18 @@ func (cache *WeightedLRU) Clear() {
 	cache.queue = list.New()
 	cache.hit = 0.
 	cache.miss = 0.
-	cache.writtenData = 0.
-	cache.readOnHit = 0.
+	cache.dataWritten = 0.
+	cache.dataRead = 0.
+	cache.dataReadOnHit = 0.
+}
+
+// ClearHitMissStats the cache stats
+func (cache *WeightedLRU) ClearHitMissStats() {
+	cache.hit = 0.
+	cache.miss = 0.
+	cache.dataWritten = 0.
+	cache.dataRead = 0.
+	cache.dataReadOnHit = 0.
 }
 
 // Dumps the WeightedLRU cache
@@ -202,14 +213,6 @@ func (cache *WeightedLRU) GetFileStats(filename string) (*DatasetInput, error) {
 	}, nil
 }
 
-// ClearHitMissStats the LRU struct
-func (cache *WeightedLRU) ClearHitMissStats() {
-	cache.hit = 0.
-	cache.miss = 0.
-	cache.writtenData = 0.
-	cache.readOnHit = 0.
-}
-
 // SimGet updates the cache from a protobuf message
 func (cache *WeightedLRU) SimGet(ctx context.Context, commonFile *pb.SimCommonFile) (*pb.ActionResult, error) {
 	added := cache.Get(commonFile.Filename, commonFile.Size)
@@ -222,56 +225,28 @@ func (cache *WeightedLRU) SimGet(ctx context.Context, commonFile *pb.SimCommonFi
 // SimClear deletes all cache content
 func (cache *WeightedLRU) SimClear(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
 	cache.Clear()
-	return &pb.SimCacheStatus{
-		HitRate:         cache.HitRate(),
-		WeightedHitRate: cache.WeightedHitRate(),
-		HitOverMiss:     cache.HitOverMiss(),
-		Size:            cache.Size(),
-		Capacity:        cache.Capacity(),
-		WrittenData:     cache.WrittenData(),
-		ReadOnHit:       cache.ReadOnHit(),
-	}, nil
+	curStatus := GetSimCacheStatus(cache)
+	return curStatus, nil
 }
 
 // SimClearFiles deletes all cache content
 func (cache *WeightedLRU) SimClearFiles(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
 	cache.ClearFiles()
-	return &pb.SimCacheStatus{
-		HitRate:         cache.HitRate(),
-		WeightedHitRate: cache.WeightedHitRate(),
-		HitOverMiss:     cache.HitOverMiss(),
-		Size:            cache.Size(),
-		Capacity:        cache.Capacity(),
-		WrittenData:     cache.WrittenData(),
-		ReadOnHit:       cache.ReadOnHit(),
-	}, nil
+	curStatus := GetSimCacheStatus(cache)
+	return curStatus, nil
 }
 
 // SimClearHitMissStats deletes all cache content
 func (cache *WeightedLRU) SimClearHitMissStats(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
 	cache.ClearHitMissStats()
-	return &pb.SimCacheStatus{
-		HitRate:         cache.HitRate(),
-		WeightedHitRate: cache.WeightedHitRate(),
-		HitOverMiss:     cache.HitOverMiss(),
-		Size:            cache.Size(),
-		Capacity:        cache.Capacity(),
-		WrittenData:     cache.WrittenData(),
-		ReadOnHit:       cache.ReadOnHit(),
-	}, nil
+	curStatus := GetSimCacheStatus(cache)
+	return curStatus, nil
 }
 
 // SimGetInfoCacheStatus returns the current simulation status
 func (cache *WeightedLRU) SimGetInfoCacheStatus(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
-	return &pb.SimCacheStatus{
-		HitRate:         cache.HitRate(),
-		WeightedHitRate: cache.WeightedHitRate(),
-		HitOverMiss:     cache.HitOverMiss(),
-		Size:            cache.Size(),
-		Capacity:        cache.Capacity(),
-		WrittenData:     cache.WrittenData(),
-		ReadOnHit:       cache.ReadOnHit(),
-	}, nil
+	curStatus := GetSimCacheStatus(cache)
+	return curStatus, nil
 }
 
 // SimDumps returns the content of the cache
@@ -490,13 +465,17 @@ func (cache *WeightedLRU) Get(filename string, size float32) bool {
 
 	if hit {
 		cache.hit += 1.
-		cache.readOnHit += size
+		cache.dataReadOnHit += size
 	} else {
 		cache.miss += 1.
 	}
 
 	if added {
-		cache.writtenData += size
+		cache.dataWritten += size
+	}
+
+	if added || hit {
+		cache.dataRead += size
 	}
 
 	cache.latestHitDecision = hit
@@ -523,7 +502,7 @@ func (cache *WeightedLRU) HitOverMiss() float32 {
 
 // WeightedHitRate of the cache
 func (cache *WeightedLRU) WeightedHitRate() float32 {
-	return cache.HitRate() * cache.readOnHit
+	return cache.HitRate() * cache.dataReadOnHit
 }
 
 // Size of the cache
@@ -536,14 +515,19 @@ func (cache *WeightedLRU) Capacity() float32 {
 	return (cache.Size() / cache.MaxSize) * 100.
 }
 
-// WrittenData of the cache
-func (cache *WeightedLRU) WrittenData() float32 {
-	return cache.writtenData
+// DataWritten of the cache
+func (cache *WeightedLRU) DataWritten() float32 {
+	return cache.dataWritten
 }
 
-// ReadOnHit of the cache
-func (cache *WeightedLRU) ReadOnHit() float32 {
-	return cache.readOnHit
+// DataRead of the cache
+func (cache *WeightedLRU) DataRead() float32 {
+	return cache.dataRead
+}
+
+// DataReadOnHit of the cache
+func (cache *WeightedLRU) DataReadOnHit() float32 {
+	return cache.dataReadOnHit
 }
 
 func (cache *WeightedLRU) check(key string) bool {

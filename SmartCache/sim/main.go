@@ -193,11 +193,13 @@ func commandSimulate() *cobra.Command {
 			defer csvOutput.Flush()
 
 			csvOutput.Write([]string{"date",
+				"size",
 				"hit rate",
 				"hit over miss",
 				"weighted hit rate",
-				"written data",
-				"read on hit", "size",
+				"writtend data",
+				"read data",
+				"read on hit data",
 			})
 			csvOutput.Flush()
 
@@ -260,12 +262,13 @@ func commandSimulate() *cobra.Command {
 						if windowCounter >= simStartFromWindow {
 							csvOutput.Write([]string{
 								fmt.Sprintf("%s", latestTime),
+								fmt.Sprintf("%f", curCacheInstance.Size()),
 								fmt.Sprintf("%0.2f", curCacheInstance.HitRate()),
 								fmt.Sprintf("%0.2f", curCacheInstance.HitOverMiss()),
 								fmt.Sprintf("%0.2f", curCacheInstance.WeightedHitRate()),
-								fmt.Sprintf("%f", curCacheInstance.WrittenData()),
-								fmt.Sprintf("%f", curCacheInstance.ReadOnHit()),
-								fmt.Sprintf("%f", curCacheInstance.Size()),
+								fmt.Sprintf("%f", curCacheInstance.DataWritten()),
+								fmt.Sprintf("%f", curCacheInstance.DataRead()),
+								fmt.Sprintf("%f", curCacheInstance.DataReadOnHit()),
 							})
 							csvOutput.Flush()
 							curCacheInstance.ClearHitMissStats()

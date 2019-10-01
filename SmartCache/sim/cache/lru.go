@@ -38,12 +38,13 @@ func (stats *LRUFileStats) updateRequests(hit bool, newTime time.Time) {
 
 // LRUCache cache
 type LRUCache struct {
-	files                                            map[string]float32
-	stats                                            map[string]*LRUFileStats
-	queue                                            *list.List
-	hit, miss, writtenData, readOnHit, size, MaxSize float32
-	latestHitDecision                                bool
-	latestAddDecision                                bool
+	files                                map[string]float32
+	stats                                map[string]*LRUFileStats
+	queue                                *list.List
+	hit, miss, size, MaxSize             float32
+	dataWritten, dataRead, dataReadOnHit float32
+	latestHitDecision                    bool
+	latestAddDecision                    bool
 }
 
 // Init the LRU struct
@@ -77,8 +78,18 @@ func (cache *LRUCache) Clear() {
 	cache.queue = list.New()
 	cache.hit = 0.
 	cache.miss = 0.
-	cache.writtenData = 0.
-	cache.readOnHit = 0.
+	cache.dataWritten = 0.
+	cache.dataRead = 0.
+	cache.dataReadOnHit = 0.
+}
+
+// ClearHitMissStats the cache stats
+func (cache *LRUCache) ClearHitMissStats() {
+	cache.hit = 0.
+	cache.miss = 0.
+	cache.dataWritten = 0.
+	cache.dataRead = 0.
+	cache.dataReadOnHit = 0.
 }
 
 // Dumps the LRUCache cache
@@ -190,14 +201,6 @@ func (cache *LRUCache) GetFileStats(filename string) (*DatasetInput, error) {
 	}, nil
 }
 
-// ClearHitMissStats the LRU struct
-func (cache *LRUCache) ClearHitMissStats() {
-	cache.hit = 0.
-	cache.miss = 0.
-	cache.writtenData = 0.
-	cache.readOnHit = 0.
-}
-
 // SimGet updates the cache from a protobuf message
 func (cache *LRUCache) SimGet(ctx context.Context, commonFile *pb.SimCommonFile) (*pb.ActionResult, error) {
 	added := cache.Get(commonFile.Filename, commonFile.Size)
@@ -210,56 +213,28 @@ func (cache *LRUCache) SimGet(ctx context.Context, commonFile *pb.SimCommonFile)
 // SimClear deletes all cache content
 func (cache *LRUCache) SimClear(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
 	cache.Clear()
-	return &pb.SimCacheStatus{
-		HitRate:         cache.HitRate(),
-		WeightedHitRate: cache.WeightedHitRate(),
-		HitOverMiss:     cache.HitOverMiss(),
-		Size:            cache.Size(),
-		Capacity:        cache.Capacity(),
-		WrittenData:     cache.WrittenData(),
-		ReadOnHit:       cache.ReadOnHit(),
-	}, nil
+	curStatus := GetSimCacheStatus(cache)
+	return curStatus, nil
 }
 
 // SimClearFiles deletes all cache content
 func (cache *LRUCache) SimClearFiles(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
 	cache.ClearFiles()
-	return &pb.SimCacheStatus{
-		HitRate:         cache.HitRate(),
-		WeightedHitRate: cache.WeightedHitRate(),
-		HitOverMiss:     cache.HitOverMiss(),
-		Size:            cache.Size(),
-		Capacity:        cache.Capacity(),
-		WrittenData:     cache.WrittenData(),
-		ReadOnHit:       cache.ReadOnHit(),
-	}, nil
+	curStatus := GetSimCacheStatus(cache)
+	return curStatus, nil
 }
 
 // SimClearHitMissStats deletes all cache content
 func (cache *LRUCache) SimClearHitMissStats(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
 	cache.ClearHitMissStats()
-	return &pb.SimCacheStatus{
-		HitRate:         cache.HitRate(),
-		WeightedHitRate: cache.WeightedHitRate(),
-		HitOverMiss:     cache.HitOverMiss(),
-		Size:            cache.Size(),
-		Capacity:        cache.Capacity(),
-		WrittenData:     cache.WrittenData(),
-		ReadOnHit:       cache.ReadOnHit(),
-	}, nil
+	curStatus := GetSimCacheStatus(cache)
+	return curStatus, nil
 }
 
 // SimGetInfoCacheStatus returns the current simulation status
 func (cache *LRUCache) SimGetInfoCacheStatus(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
-	return &pb.SimCacheStatus{
-		HitRate:         cache.HitRate(),
-		WeightedHitRate: cache.WeightedHitRate(),
-		HitOverMiss:     cache.HitOverMiss(),
-		Size:            cache.Size(),
-		Capacity:        cache.Capacity(),
-		WrittenData:     cache.WrittenData(),
-		ReadOnHit:       cache.ReadOnHit(),
-	}, nil
+	curStatus := GetSimCacheStatus(cache)
+	return curStatus, nil
 }
 
 // SimDumps returns the content of the cache
@@ -368,13 +343,19 @@ func (cache *LRUCache) Get(filename string, size float32) bool {
 
 	if hit {
 		cache.hit += 1.
-		cache.readOnHit += size
+		cache.dataReadOnHit += size
 	} else {
 		cache.miss += 1.
 	}
 
+	// Always true because of LRU policy
+	// - added variable is needed just for code consistency
 	if added {
-		cache.writtenData += size
+		cache.dataWritten += size
+	}
+
+	if added || hit {
+		cache.dataRead += size
 	}
 
 	cache.latestHitDecision = hit
@@ -401,7 +382,7 @@ func (cache LRUCache) HitOverMiss() float32 {
 
 // WeightedHitRate of the cache
 func (cache LRUCache) WeightedHitRate() float32 {
-	return cache.HitRate() * cache.readOnHit
+	return cache.HitRate() * cache.dataReadOnHit
 }
 
 // Size of the cache
@@ -414,14 +395,19 @@ func (cache LRUCache) Capacity() float32 {
 	return (cache.Size() / cache.MaxSize) * 100.
 }
 
-// WrittenData of the cache
-func (cache LRUCache) WrittenData() float32 {
-	return cache.writtenData
+// DataWritten of the cache
+func (cache LRUCache) DataWritten() float32 {
+	return cache.dataWritten
 }
 
-// ReadOnHit of the cache
-func (cache LRUCache) ReadOnHit() float32 {
-	return cache.readOnHit
+// DataRead of the cache
+func (cache LRUCache) DataRead() float32 {
+	return cache.dataRead
+}
+
+// DataReadOnHit of the cache
+func (cache LRUCache) DataReadOnHit() float32 {
+	return cache.dataReadOnHit
 }
 
 func (cache LRUCache) check(key string) bool {
