@@ -16,7 +16,7 @@ from bokeh.plotting import figure, output_file, save
 from SmartCache.sim import get_simulator_exe
 
 CACHE_TYPES = {
-    'lru': {},
+    # 'lru': {},
     'weightedLRU': {},
 }
 
@@ -499,6 +499,9 @@ def main():
     parser.add_argument('-FEB', '--force-exe-build', type=bool,
                         default=True,
                         help='Force to build the simulation executable [DEFAULT: True]')
+    parser.add_argument('--gen-dataset', type=bool,
+                        default=False,
+                        help='Generate dataset during single simulation windows [DEFAULT: False]')
     parser.add_argument('-CS', '--cache-size', type=int,
                         default=10485760,
                         help='Size of the cache to simulate in Mega Bytes [DEFAULT: 10485760]')
@@ -550,8 +553,7 @@ def main():
                     f"window_{window_idx}",
                 )
                 os.makedirs(working_dir, exist_ok=True)
-                cur_process = subprocess.Popen(
-                    " ".join([
+                exe_args = [
                         simulator_exe,
                         "simulate",
                         cache_type,
@@ -563,7 +565,14 @@ def main():
                         f"--simStopWindow={window_idx+1}",
                         "--simDump=true",
                         "--simDumpFileName=dump.json.gz",
-                    ]),
+                    ]
+                if args.gen_dataset:
+                    exe_args.append("--simGenDataset=true")
+                    exe_args.append("--simGenDatasetName=dataset.csv.gz")
+
+                print(" ".join(exe_args))
+                cur_process = subprocess.Popen(
+                    " ".join(exe_args),
                     shell=True,
                     cwd=working_dir,
                     stdin=subprocess.PIPE,

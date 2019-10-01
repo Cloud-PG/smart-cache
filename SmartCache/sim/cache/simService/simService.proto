@@ -20,6 +20,8 @@ service SimService {
 
 }
 
+// TODO: add struct and method for remote dataset creation (GetReport -> SimGetReport)
+
 message ActionResult {
   string filename = 1;
   bool added = 2;

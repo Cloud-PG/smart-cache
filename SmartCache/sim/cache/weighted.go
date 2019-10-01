@@ -23,12 +23,13 @@ type WeightedCache struct {
 	hit, miss, size, MaxSize, Exp        float32
 	dataWritten, dataRead, dataReadOnHit float32
 	SelFunctionType                      FunctionType
-	latestHitDecision                    bool
-	latestAddDecision                    bool
+	lastFileHitted                       bool
+	lastFileAdded                        bool
+	lastFileName                         string
 }
 
 // Init the WeightedCache struct
-func (cache *WeightedCache) Init(vars ...interface{}) {
+func (cache *WeightedCache) Init(_ ...interface{}) {
 	cache.files = make(map[string]float32)
 	cache.stats = make(map[string]*WeightedFileStats)
 	cache.queue = make([]*WeightedFileStats, 0)
@@ -172,18 +173,22 @@ func (cache WeightedCache) Load(filename string) {
 	cache.Loads(&records)
 }
 
-// GetFileStats from the cache
-func (cache *WeightedCache) GetFileStats(filename string) (*DatasetInput, error) {
-	stats, inStats := cache.stats[filename]
+// GetReport from the cache
+func (cache *WeightedCache) GetReport() (*DatasetInput, error) {
+	stats, inStats := cache.stats[cache.lastFileName]
 	if !inStats {
 		return nil, errors.New("The file is not in cache stats anymore")
 	}
 	return &DatasetInput{
-		stats.Size,
-		stats.NHits,
-		stats.NMiss,
-		stats.TotRequests,
-		stats.getMeanReqTimes(time.Now()),
+		CacheSize:       cache.size,
+		CacheMaxSize:    cache.MaxSize,
+		FileSize:        stats.Size,
+		FileTotRequests: stats.TotRequests,
+		FileNHits:       stats.NHits,
+		FileNMiss:       stats.NMiss,
+		FileMeanTimeReq: stats.RequestTicksMean,
+		LastFileHitted:  cache.lastFileHitted,
+		LastFileAdded:   cache.lastFileAdded,
 	}, nil
 }
 
@@ -284,6 +289,7 @@ func (cache *WeightedCache) updatePolicy(filename string, size float32, hit bool
 			0,
 			0,
 			curTime,
+			0.,
 			[StatsMemorySize]time.Time{},
 			0,
 		}
@@ -335,13 +341,8 @@ func (cache *WeightedCache) updatePolicy(filename string, size float32, hit bool
 	return added
 }
 
-// GetLatestDecision returns the latest decision of the cache
-func (cache *WeightedCache) GetLatestDecision() (bool, bool) {
-	return cache.latestHitDecision, cache.latestAddDecision
-}
-
 // Get a file from the cache updating the statistics
-func (cache *WeightedCache) Get(filename string, size float32) bool {
+func (cache *WeightedCache) Get(filename string, size float32, vars ...interface{}) bool {
 	hit := cache.check(filename)
 	added := cache.updatePolicy(filename, size, hit)
 
@@ -360,8 +361,9 @@ func (cache *WeightedCache) Get(filename string, size float32) bool {
 		cache.dataRead += size
 	}
 
-	cache.latestHitDecision = hit
-	cache.latestAddDecision = added
+	cache.lastFileHitted = hit
+	cache.lastFileAdded = added
+	cache.lastFileName = filename
 
 	return added
 }

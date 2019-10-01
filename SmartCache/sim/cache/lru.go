@@ -43,12 +43,13 @@ type LRUCache struct {
 	queue                                *list.List
 	hit, miss, size, MaxSize             float32
 	dataWritten, dataRead, dataReadOnHit float32
-	latestHitDecision                    bool
-	latestAddDecision                    bool
+	lastFileHitted                       bool
+	lastFileAdded                        bool
+	lastFileName                         string
 }
 
 // Init the LRU struct
-func (cache *LRUCache) Init(vars ...interface{}) {
+func (cache *LRUCache) Init(_ ...interface{}) {
 	cache.files = make(map[string]float32)
 	cache.stats = make(map[string]*LRUFileStats)
 	cache.queue = list.New()
@@ -186,18 +187,22 @@ func (cache LRUCache) Load(filename string) {
 	cache.Loads(&records)
 }
 
-// GetFileStats from the cache
-func (cache *LRUCache) GetFileStats(filename string) (*DatasetInput, error) {
-	stats, inStats := cache.stats[filename]
+// GetReport from the cache
+func (cache *LRUCache) GetReport() (*DatasetInput, error) {
+	stats, inStats := cache.stats[cache.lastFileName]
 	if !inStats {
 		return nil, errors.New("The file is not in cache stats anymore")
 	}
 	return &DatasetInput{
-		stats.size,
-		stats.nHits,
-		stats.nMiss,
-		stats.totRequests,
-		0.0,
+		CacheSize:       cache.size,
+		CacheMaxSize:    cache.MaxSize,
+		FileSize:        stats.size,
+		FileTotRequests: stats.totRequests,
+		FileNHits:       stats.nHits,
+		FileNMiss:       stats.nMiss,
+		FileMeanTimeReq: 0.,
+		LastFileHitted:  cache.lastFileHitted,
+		LastFileAdded:   cache.lastFileAdded,
 	}, nil
 }
 
@@ -319,13 +324,8 @@ func (cache *LRUCache) updatePolicy(filename string, size float32, hit bool) boo
 	return added
 }
 
-// GetLatestDecision returns the latest decision of the cache
-func (cache *LRUCache) GetLatestDecision() (bool, bool) {
-	return cache.latestHitDecision, cache.latestAddDecision
-}
-
 // Get a file from the cache updating the statistics
-func (cache *LRUCache) Get(filename string, size float32) bool {
+func (cache *LRUCache) Get(filename string, size float32, _ ...interface{}) bool {
 	if _, ok := cache.stats[filename]; !ok {
 		cache.stats[filename] = &LRUFileStats{
 			size,
@@ -358,8 +358,9 @@ func (cache *LRUCache) Get(filename string, size float32) bool {
 		cache.dataRead += size
 	}
 
-	cache.latestHitDecision = hit
-	cache.latestAddDecision = added
+	cache.lastFileHitted = hit
+	cache.lastFileAdded = added
+	cache.lastFileName = filename
 
 	return added
 }

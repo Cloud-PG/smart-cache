@@ -143,6 +143,7 @@ func commandSimulate() *cobra.Command {
 			)
 			dumpFileName := baseName + ".json.gz"
 			resultFileName := baseName + "_results.csv"
+			datasetFileName := baseName + "_dataset.csv"
 
 			// Create cache
 			curCacheInstance := genCache(cacheType)
@@ -152,6 +153,9 @@ func commandSimulate() *cobra.Command {
 			}
 			if simLoadDumpFileName == "" {
 				simLoadDumpFileName = dumpFileName
+			}
+			if simGenDatasetName == "" {
+				simGenDatasetName = datasetFileName
 			}
 
 			if simLoadDump {
@@ -217,10 +221,19 @@ func commandSimulate() *cobra.Command {
 				switch cacheType {
 				case "weightedLRU":
 					datasetHeader := []string{"size",
-						"totRequests",
-						"nHits",
-						"nMiss",
-						"meanTime",
+						"taskID",
+						"jobID",
+						"siteName",
+						"userID",
+						"cacheSize",
+						"cacheMaxSize",
+						"cacheLastFileHit",
+						"fileName",
+						"fileSize",
+						"fileTotRequests",
+						"fileNHits",
+						"fileNMiss",
+						"fileMeanTimeReq",
 						"class",
 					}
 					datasetGzipFile.Write([]byte(strings.Join(datasetHeader, ",") + "\n"))
@@ -289,22 +302,23 @@ func commandSimulate() *cobra.Command {
 					if simGenDataset {
 						switch cacheType {
 						case "weightedLRU":
-							_, latestAddDecision := curCacheInstance.GetLatestDecision()
-							fileStats, err := curCacheInstance.GetFileStats(record.Filename)
+							datasetInputs, err := curCacheInstance.GetReport()
 							if err == nil {
-								var curClass string
-								if latestAddDecision {
-									curClass = "1" // STORE
-								} else {
-									curClass = "0" // DISCARD
-								}
 								curRow := []string{
-									fmt.Sprintf("%f", fileStats.Size),
-									fmt.Sprintf("%d", fileStats.TotRequests),
-									fmt.Sprintf("%d", fileStats.NHits),
-									fmt.Sprintf("%d", fileStats.NMiss),
-									fmt.Sprintf("%f", fileStats.MeanTime),
-									curClass,
+									fmt.Sprintf("%d", record.TaskID),
+									fmt.Sprintf("%d", record.JobID),
+									fmt.Sprintf("%s", record.SiteName),
+									fmt.Sprintf("%d", record.UserID),
+									fmt.Sprintf("%f", datasetInputs.CacheSize),
+									fmt.Sprintf("%f", datasetInputs.CacheMaxSize),
+									fmt.Sprintf("%t", datasetInputs.LastFileHitted),
+									fmt.Sprintf("%s", record.Filename),
+									fmt.Sprintf("%f", datasetInputs.FileSize),
+									fmt.Sprintf("%d", datasetInputs.FileTotRequests),
+									fmt.Sprintf("%d", datasetInputs.FileNHits),
+									fmt.Sprintf("%d", datasetInputs.FileNMiss),
+									fmt.Sprintf("%f", datasetInputs.FileMeanTimeReq),
+									fmt.Sprintf("%t", datasetInputs.LastFileAdded),
 								}
 								datasetGzipFile.Write([]byte(strings.Join(curRow, ",") + "\n"))
 							}
@@ -384,7 +398,7 @@ func commandSimulate() *cobra.Command {
 		"indicates if a dataset have to be generated",
 	)
 	cmd.PersistentFlags().StringVar(
-		&simGenDatasetName, "simGenDatasetName", "dataset.csv.gz",
+		&simGenDatasetName, "simGenDatasetName", "",
 		"the output dataset file name",
 	)
 	cmd.PersistentFlags().BoolVar(

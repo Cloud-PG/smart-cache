@@ -41,6 +41,7 @@ type WeightedFileStats struct {
 	NHits             uint32                     `json:"nHits"`
 	NMiss             uint32                     `json:"nMiss"`
 	LastTimeRequested time.Time                  `json:"lastTimeRequested"`
+	RequestTicksMean  float32                    `json:"requestTicksMean"`
 	RequestTicks      [StatsMemorySize]time.Time `json:"requestTicks"`
 	RequestLastIdx    int                        `json:"requestLastIdx"`
 }
@@ -93,10 +94,11 @@ func (stats *WeightedFileStats) updateWeight(functionType FunctionType, exp floa
 			stats.LastTimeRequested,
 		)
 	case FuncWeightedRequests:
+		stats.RequestTicksMean = stats.getMeanReqTimes(curTime)
 		stats.Weight = fileWeightedRequest(
 			stats.Size,
 			stats.TotRequests,
-			stats.getMeanReqTimes(curTime),
+			stats.RequestTicksMean,
 			exp,
 		)
 	}

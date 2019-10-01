@@ -49,9 +49,8 @@ type Cache interface {
 	DataRead() float32
 	DataReadOnHit() float32
 
-	Get(filename string, size float32) bool
-	GetLatestDecision() (bool, bool)
-	GetFileStats(string) (*DatasetInput, error)
+	Get(filename string, size float32, vars ...interface{}) bool
+	GetReport() (*DatasetInput, error)
 
 	SimGet(context.Context, *pb.SimCommonFile) (*pb.ActionResult, error)
 	SimClear(context.Context, *empty.Empty) (*pb.SimCacheStatus, error)
@@ -78,9 +77,15 @@ func GetSimCacheStatus(cache Cache) *pb.SimCacheStatus {
 
 // DatasetInput contains file statistics collected by weighted caches
 type DatasetInput struct {
-	Size        float32
-	TotRequests uint32
-	NHits       uint32
-	NMiss       uint32
-	MeanTime    float32
+	CacheSize          float32
+	CacheMaxSize       float32
+	CacheLastFileHit   bool
+	CacheLastFileAdded bool
+	FileSize           float32
+	FileTotRequests    uint32
+	FileNHits          uint32
+	FileNMiss          uint32
+	FileMeanTimeReq    float32
+	LastFileHitted     bool
+	LastFileAdded      bool
 }

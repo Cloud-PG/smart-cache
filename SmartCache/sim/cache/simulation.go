@@ -18,13 +18,13 @@ type CSVRecord struct {
 	Filename      string  `json:"filename"`
 	Protocol      string  `json:"protocol"`
 	TaskMonitorID string  `json:"taskMonitorID"`
-	TaskID        string  `json:"taskID"`
-	JobID         string  `json:"jobID"`
+	TaskID        int     `json:"taskID"`
+	JobID         int     `json:"jobID"`
 	SiteName      string  `json:"siteName"`
 	JobSuccess    string  `json:"jobSuccess"`
 	JobLengthH    float32 `json:"jobLengthH"`
 	JobLengthM    float32 `json:"jobLengthM"`
-	User          string  `json:"user"`
+	UserID        int     `json:"user"`
 	CPUTime       float32 `json:"CPUTime"`
 	IOTime        float32 `json:"IOTime"`
 	Size          float32 `json:"size"`
@@ -45,28 +45,31 @@ func recordGenerator(csvReader *csv.Reader, curFile *os.File) chan CSVRecord {
 
 			index, _ := strconv.ParseInt(record[0], 10, 32)
 			day, _ := strconv.ParseFloat(record[1], 64)
+			taskID, _ := strconv.ParseInt(record[5], 10, 32)
+			jobID, _ := strconv.ParseInt(record[6], 10, 32)
 			joblengthh, _ := strconv.ParseFloat(record[9], 32)
 			joblengthm, _ := strconv.ParseFloat(record[10], 32)
+			userID, _ := strconv.ParseInt(record[11], 10, 32)
 			cputime, _ := strconv.ParseFloat(record[12], 32)
 			iotime, _ := strconv.ParseFloat(record[13], 32)
 			size, _ := strconv.ParseFloat(record[14], 32)
 
 			channel <- CSVRecord{
-				int(index),
-				int64(day),
-				record[2],
-				record[3],
-				record[4],
-				record[5],
-				record[6],
-				record[7],
-				record[8],
-				float32(joblengthh),
-				float32(joblengthm),
-				record[11],
-				float32(cputime),
-				float32(iotime),
-				float32(size),
+				Index:         int(index),
+				Day:           int64(day),
+				Filename:      record[2],
+				Protocol:      record[3],
+				TaskMonitorID: record[4],
+				TaskID:        int(taskID),
+				JobID:         int(jobID),
+				SiteName:      record[7],
+				JobSuccess:    record[8],
+				JobLengthH:    float32(joblengthh),
+				JobLengthM:    float32(joblengthm),
+				UserID:        int(userID),
+				CPUTime:       float32(cputime),
+				IOTime:        float32(iotime),
+				Size:          float32(size),
 			}
 		}
 		close(channel)
@@ -108,10 +111,17 @@ func OpenSimFolder(dirPath *os.File) chan CSVRecord {
 	sort.Slice(fileList, func(i, j int) bool { return fileList[i] < fileList[j] })
 
 	go func() {
+		println("HERE")
 		for _, name := range fileList {
-			for record := range OpenSimFile(name) {
-				channel <- record
+			fileExt := path.Ext(name)
+			switch fileExt {
+			case ".csv":
+			case ".gz":
+				for record := range OpenSimFile(name) {
+					channel <- record
+				}
 			}
+
 		}
 		close(channel)
 	}()
