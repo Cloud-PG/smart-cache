@@ -11,7 +11,7 @@ from bokeh.layouts import column, row
 from bokeh.models import (BoxZoomTool, PanTool, ResetTool, SaveTool,
                           Span, WheelZoomTool)
 from bokeh.palettes import Set1
-from bokeh.plotting import figure, output_file, save
+from bokeh.plotting import figure, output_file, save, Figure
 
 from SmartCache.sim import get_simulator_exe
 
@@ -119,6 +119,87 @@ def filter_results(results: dict, key: str, filters: list):
             yield cache_name, values
 
 
+def plot_hit_rate(tools: list,
+                  results: dict,
+                  dates: list,
+                  filters: list,
+                  color_table: dict,
+                  window_size: int,
+                  x_range=None,
+                  title: str = "Hit Rate",
+                  ) -> 'Figure':
+    hit_rate_fig = figure(
+        tools=tools,
+        title=title,
+        x_axis_label="Day",
+        y_axis_label="Hit rate %",
+        y_range=(0, 100),
+        x_range=x_range if x_range else dates,
+        plot_width=640,
+        plot_height=480,
+    )
+
+    for cache_name, values in filter_results(
+        results, 'run_full_normal', filters
+    ):
+        points = values['hit rate']
+        hit_rate_fig.line(
+            dates,
+            points,
+            legend=cache_name,
+            color=color_table[cache_name],
+            line_width=2.,
+        )
+
+    hit_rate_fig.legend.location = "top_left"
+    hit_rate_fig.legend.click_policy = "hide"
+    hit_rate_fig.xaxis.major_label_orientation = np.pi / 4.
+    hit_rate_fig.add_tools(SaveTool())
+    add_window_lines(hit_rate_fig, dates, window_size)
+
+    return hit_rate_fig
+
+
+def plot_read_on_write_data(tools: list,
+                            results: dict,
+                            dates: list,
+                            filters: list,
+                            color_table: dict,
+                            window_size: int,
+                            x_range=None,
+                            title: str = "Read on Write data",
+                            ) -> 'Figure':
+    read_on_write_data_fig = figure(
+        tools=tools,
+        title=title,
+        x_axis_label="Day",
+        y_axis_label="Ratio",
+        x_range=x_range if x_range else dates,
+        plot_width=640,
+        plot_height=480,
+    )
+
+    for cache_name, values in filter_results(
+        results, 'run_full_normal', filters
+    ):
+        points = values['read data'] / (values['written data'])
+        read_on_write_data_fig.line(
+            dates,
+            points,
+            legend=cache_name,
+            color=color_table[cache_name],
+            line_width=2.,
+        )
+
+    read_on_write_data_fig.legend.location = "top_left"
+    read_on_write_data_fig.legend.click_policy = "hide"
+    read_on_write_data_fig.xaxis.major_label_orientation = np.pi / 4.
+    read_on_write_data_fig.add_tools(SaveTool())
+    add_window_lines(read_on_write_data_fig, dates, window_size)
+
+    return read_on_write_data_fig
+
+
 def plot_results(folder: str, results: dict,
                  filters: list = [], window_size: int = 1,
                  html: bool = True, png: bool = False
@@ -165,71 +246,38 @@ def plot_results(folder: str, results: dict,
     run_single_window_figs = []
     run_next_period_figs = []
 
-    ##
+    ############################################################################
     # Hit Rate plot of full normal run
-    hit_rate_fig = figure(
-        tools=tools,
-        title="Hit Rate - Full Normal Run",
-        x_axis_label="Day",
-        y_axis_label="Hit rate %",
-        y_range=(0, 100),
-        x_range=dates,
-        plot_width=640,
-        plot_height=480,
+    ############################################################################
+    hit_rate_fig = plot_hit_rate(
+        tools,
+        results,
+        dates,
+        filters,
+        color_table,
+        window_size,
+        title="Hit Rate - Full Normal Run"
     )
-
-    for cache_name, values in filter_results(
-        results, 'run_full_normal', filters
-    ):
-        points = values['hit rate']
-        hit_rate_fig.line(
-            dates,
-            points,
-            legend=cache_name,
-            color=color_table[cache_name],
-            line_width=2.,
-        )
-
-    hit_rate_fig.legend.location = "top_left"
-    hit_rate_fig.legend.click_policy = "hide"
-    hit_rate_fig.xaxis.major_label_orientation = np.pi / 4.
-    hit_rate_fig.add_tools(SaveTool())
-    add_window_lines(hit_rate_fig, dates, window_size)
     run_full_normal_figs.append(hit_rate_fig)
 
-    ##
-    # Ratio plot of full normal run
-    ratio_fig = figure(
-        tools=tools,
-        title="Ratio - Full Normal Run",
-        x_axis_label="Day",
-        y_axis_label="Ratio",
+    ############################################################################
+    # Read on Write data plot of full normal run
+    ############################################################################
+    read_on_write_data_fig = plot_read_on_write_data(
+        tools,
+        results,
+        dates,
+        filters,
+        color_table,
+        window_size,
         x_range=hit_rate_fig.x_range,
-        plot_width=640,
-        plot_height=480,
+        title="Read on Write data - Full Normal Run"
     )
+    run_full_normal_figs.append(read_on_write_data_fig)
 
-    for cache_name, values in filter_results(
-        results, 'run_full_normal', filters
-    ):
-        points = values['read data'] / (values['written data'])
-        ratio_fig.line(
-            dates,
-            points,
-            legend=cache_name,
-            color=color_table[cache_name],
-            line_width=2.,
-        )
-
-    ratio_fig.legend.location = "top_left"
-    ratio_fig.legend.click_policy = "hide"
-    ratio_fig.xaxis.major_label_orientation = np.pi / 4.
-    ratio_fig.add_tools(SaveTool())
-    add_window_lines(ratio_fig, dates, window_size)
-    run_full_normal_figs.append(ratio_fig)
-
-    ##
+    ############################################################################
     # Hit Rate compare single and next window plot
+    ############################################################################
     hit_rate_comp_snw_fig = figure(
         tools=tools,
         title="Hit Rate - Compare single and next window",
@@ -304,11 +352,12 @@ def plot_results(folder: str, results: dict,
     add_window_lines(hit_rate_comp_snw_fig, dates, window_size)
     run_single_window_figs.append(hit_rate_comp_snw_fig)
 
-    ##
-    # Ratio compare single and next window plot
-    ratio_comp_snw_fig = figure(
+    ############################################################################
+    # Read on Write data data compare single and next window plot
+    ############################################################################
+    ronwdata_comp_snw_fig = figure(
         tools=tools,
-        title="Ratio - Compare single and next window",
+        title="Read on Write data - Compare single and next window",
         x_axis_label="Day",
         y_axis_label="Ratio",
         x_range=hit_rate_fig.x_range,
@@ -340,7 +389,7 @@ def plot_results(folder: str, results: dict,
             ]
         )
         points = single_windows['read data'] / single_windows['written data']
-        ratio_comp_snw_fig.line(
+        ronwdata_comp_snw_fig.line(
             dates,
             points,
             legend=single_window_name,
@@ -364,7 +413,7 @@ def plot_results(folder: str, results: dict,
         ][~single_windows.date.isin(next_values.date)]
         next_windows = pd.concat([first_part, next_values])
         points = next_windows['read data'] / next_windows['written data']
-        ratio_comp_snw_fig.line(
+        ronwdata_comp_snw_fig.line(
             dates,
             points,
             legend=next_window_name,
@@ -373,15 +422,16 @@ def plot_results(folder: str, results: dict,
             line_width=2.,
             line_dash="dashed",
         )
-    ratio_comp_snw_fig.legend.location = "top_left"
-    ratio_comp_snw_fig.legend.click_policy = "hide"
-    ratio_comp_snw_fig.xaxis.major_label_orientation = np.pi / 4.
-    ratio_comp_snw_fig.add_tools(SaveTool())
-    add_window_lines(ratio_comp_snw_fig, dates, window_size)
-    run_single_window_figs.append(ratio_comp_snw_fig)
+    ronwdata_comp_snw_fig.legend.location = "top_left"
+    ronwdata_comp_snw_fig.legend.click_policy = "hide"
+    ronwdata_comp_snw_fig.xaxis.major_label_orientation = np.pi / 4.
+    ronwdata_comp_snw_fig.add_tools(SaveTool())
+    add_window_lines(ronwdata_comp_snw_fig, dates, window_size)
+    run_single_window_figs.append(ronwdata_comp_snw_fig)
 
-    ##
+    ############################################################################
     # Hit Rate compare single window and next period plot
+    ############################################################################
     hit_rate_comp_swnp_fig = figure(
         tools=tools,
         title="Hit Rate - Compare single window and next period",
@@ -428,11 +478,12 @@ def plot_results(folder: str, results: dict,
     add_window_lines(hit_rate_comp_swnp_fig, dates, window_size)
     run_next_period_figs.append(hit_rate_comp_swnp_fig)
 
-    ##
-    # Ratio compare single window and next period plot
-    ratio_comp_swnp_fig = figure(
+    ############################################################################
+    # Read on Write data data compare single window and next period plot
+    ############################################################################
+    ronwdata_comp_swnp_fig = figure(
         tools=tools,
-        title="Ratio - Compare single window and next period",
+        title="Read on Write data - Compare single window and next period",
         x_axis_label="Day",
         y_axis_label="Ratio",
         x_range=hit_rate_fig.x_range,
@@ -459,7 +510,7 @@ def plot_results(folder: str, results: dict,
                 if cur_date in dates
             ]
             if len(cur_dates) > 0:
-                ratio_comp_swnp_fig.line(
+                ronwdata_comp_swnp_fig.line(
                     cur_dates,
                     points,
                     legend=cur_period_name,
@@ -467,12 +518,12 @@ def plot_results(folder: str, results: dict,
                     line_alpha=0.9,
                     line_width=2.,
                 )
-    ratio_comp_swnp_fig.legend.location = "top_left"
-    ratio_comp_swnp_fig.legend.click_policy = "hide"
-    ratio_comp_swnp_fig.xaxis.major_label_orientation = np.pi / 4.
-    ratio_comp_swnp_fig.add_tools(SaveTool())
-    add_window_lines(ratio_comp_swnp_fig, dates, window_size)
-    run_next_period_figs.append(ratio_comp_swnp_fig)
+    ronwdata_comp_swnp_fig.legend.location = "top_left"
+    ronwdata_comp_swnp_fig.legend.click_policy = "hide"
+    ronwdata_comp_swnp_fig.xaxis.major_label_orientation = np.pi / 4.
+    ronwdata_comp_swnp_fig.add_tools(SaveTool())
+    add_window_lines(ronwdata_comp_swnp_fig, dates, window_size)
+    run_next_period_figs.append(ronwdata_comp_swnp_fig)
 
     figs.append(column(
         row(*run_full_normal_figs),
@@ -554,18 +605,18 @@ def main():
                 )
                 os.makedirs(working_dir, exist_ok=True)
                 exe_args = [
-                        simulator_exe,
-                        "simulate",
-                        cache_type,
-                        path.abspath(args.source),
-                        f"--size={args.cache_size}",
-                        f"--simRegion={args.region}",
-                        f"--simWindowSize={args.window_size}",
-                        f"--simStartFromWindow={window_idx}",
-                        f"--simStopWindow={window_idx+1}",
-                        "--simDump=true",
-                        "--simDumpFileName=dump.json.gz",
-                    ]
+                    simulator_exe,
+                    "simulate",
+                    cache_type,
+                    path.abspath(args.source),
+                    f"--size={args.cache_size}",
+                    f"--simRegion={args.region}",
+                    f"--simWindowSize={args.window_size}",
+                    f"--simStartFromWindow={window_idx}",
+                    f"--simStopWindow={window_idx+1}",
+                    "--simDump=true",
+                    "--simDumpFileName=dump.json.gz",
+                ]
                 if args.gen_dataset:
                     exe_args.append("--simGenDataset=true")
                     exe_args.append("--simGenDatasetName=dataset.csv.gz")
