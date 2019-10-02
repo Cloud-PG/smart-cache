@@ -23,7 +23,7 @@ CACHE_TYPES = {
 
 def wait_jobs(processes):
     while job_run(processes):
-        for process in processes:
+        for _, process in processes:
             try:
                 process.wait(timeout=0.1)
             except subprocess.TimeoutExpired:
