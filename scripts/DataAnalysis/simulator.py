@@ -246,9 +246,9 @@ def plot_results(folder: str, results: dict,
     run_single_window_figs = []
     run_next_period_figs = []
 
-    ############################################################################
+    ###########################################################################
     # Hit Rate plot of full normal run
-    ############################################################################
+    ###########################################################################
     hit_rate_fig = plot_hit_rate(
         tools,
         results,
@@ -260,9 +260,9 @@ def plot_results(folder: str, results: dict,
     )
     run_full_normal_figs.append(hit_rate_fig)
 
-    ############################################################################
+    ###########################################################################
     # Read on Write data plot of full normal run
-    ############################################################################
+    ###########################################################################
     read_on_write_data_fig = plot_read_on_write_data(
         tools,
         results,
@@ -275,9 +275,9 @@ def plot_results(folder: str, results: dict,
     )
     run_full_normal_figs.append(read_on_write_data_fig)
 
-    ############################################################################
+    ###########################################################################
     # Hit Rate compare single and next window plot
-    ############################################################################
+    ###########################################################################
     hit_rate_comp_snw_fig = figure(
         tools=tools,
         title="Hit Rate - Compare single and next window",
@@ -352,9 +352,9 @@ def plot_results(folder: str, results: dict,
     add_window_lines(hit_rate_comp_snw_fig, dates, window_size)
     run_single_window_figs.append(hit_rate_comp_snw_fig)
 
-    ############################################################################
+    ###########################################################################
     # Read on Write data data compare single and next window plot
-    ############################################################################
+    ###########################################################################
     ronwdata_comp_snw_fig = figure(
         tools=tools,
         title="Read on Write data - Compare single and next window",
@@ -429,9 +429,9 @@ def plot_results(folder: str, results: dict,
     add_window_lines(ronwdata_comp_snw_fig, dates, window_size)
     run_single_window_figs.append(ronwdata_comp_snw_fig)
 
-    ############################################################################
+    ###########################################################################
     # Hit Rate compare single window and next period plot
-    ############################################################################
+    ###########################################################################
     hit_rate_comp_swnp_fig = figure(
         tools=tools,
         title="Hit Rate - Compare single window and next period",
@@ -478,9 +478,9 @@ def plot_results(folder: str, results: dict,
     add_window_lines(hit_rate_comp_swnp_fig, dates, window_size)
     run_next_period_figs.append(hit_rate_comp_swnp_fig)
 
-    ############################################################################
+    ###########################################################################
     # Read on Write data data compare single window and next period plot
-    ############################################################################
+    ###########################################################################
     ronwdata_comp_swnp_fig = figure(
         tools=tools,
         title="Read on Write data - Compare single window and next period",
