@@ -201,7 +201,7 @@ func commandSimulate() *cobra.Command {
 				"hit rate",
 				"hit over miss",
 				"weighted hit rate",
-				"writtend data",
+				"written data",
 				"read data",
 				"read on hit data",
 			})
