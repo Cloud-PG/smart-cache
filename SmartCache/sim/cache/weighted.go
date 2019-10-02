@@ -356,10 +356,7 @@ func (cache *WeightedCache) Get(filename string, size float32, vars ...interface
 	if added {
 		cache.dataWritten += size
 	}
-
-	if added || hit {
-		cache.dataRead += size
-	}
+	cache.dataRead += size
 
 	cache.lastFileHitted = hit
 	cache.lastFileAdded = added
