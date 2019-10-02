@@ -621,7 +621,6 @@ def main():
                     exe_args.append("--simGenDataset=true")
                     exe_args.append("--simGenDatasetName=dataset.csv.gz")
 
-                print(" ".join(exe_args))
                 cur_process = subprocess.Popen(
                     " ".join(exe_args),
                     shell=True,
