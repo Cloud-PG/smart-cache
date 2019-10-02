@@ -41,15 +41,15 @@ def read_output_last_line(output):
 
 def job_run(processes: list) -> bool:
     running_processes = []
-    for process in processes:
+    for task_name, process in processes:
         running = process.returncode is None
         running_processes.append(running)
         if running:
             print(
-                f"[{process.pid}][RUNNING]{read_output_last_line(process.stdout)}\x1b[0K", flush=True)
+                f"[{process.pid}][RUNNING][{task_name}]{read_output_last_line(process.stdout)}\x1b[0K", flush=True)
         else:
             print(
-                f"[{process.pid}][DONE][Return code -> {process.returncode}]\x1b[0K", flush=True)
+                f"[{process.pid}][DONE][{task_name}][Return code -> {process.returncode}]\x1b[0K", flush=True)
 
     print(f"\x1b[{len(processes)+1}F")
 
@@ -628,7 +628,7 @@ def main():
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                 )
-                processes.append(cur_process)
+                processes.append(("Single Window", cur_process))
 
         wait_jobs(processes)
 
@@ -664,7 +664,7 @@ def main():
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
             )
-            processes.append(cur_process)
+            processes.append(("Full Run", cur_process))
 
         ##
         # Next windows
@@ -707,7 +707,7 @@ def main():
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                 )
-                processes.append(cur_process)
+                processes.append(("Next Window", cur_process))
 
         ##
         # Next Period
@@ -750,7 +750,7 @@ def main():
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                 )
-                processes.append(cur_process)
+                processes.append(("Next Period", cur_process))
 
         wait_jobs(processes)
 
