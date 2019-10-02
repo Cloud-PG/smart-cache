@@ -25,7 +25,7 @@ def wait_jobs(processes):
     while job_run(processes):
         for process in processes:
             try:
-                process.wait(timeout=0.5)
+                process.wait(timeout=0.1)
             except subprocess.TimeoutExpired:
                 pass
 
@@ -46,10 +46,10 @@ def job_run(processes: list) -> bool:
         running_processes.append(running)
         if running:
             print(
-                f"[{process.pid}][RUNNING]{read_output_last_line(process.stdout)}\x1b[0K")
+                f"[{process.pid}][RUNNING]{read_output_last_line(process.stdout)}\x1b[0K", flush=True)
         else:
             print(
-                f"[{process.pid}][DONE][Return code -> {process.returncode}]\x1b[0K")
+                f"[{process.pid}][DONE][Return code -> {process.returncode}]\x1b[0K", flush=True)
 
     print(f"\x1b[{len(processes)+1}F")
 
@@ -256,7 +256,7 @@ def plot_results(folder: str, results: dict,
         filters,
         color_table,
         window_size,
-        title="Hit Rate - Full Normal Run"
+        title="Hit Rate - Full Normal Run",
     )
     run_full_normal_figs.append(hit_rate_fig)
 
@@ -271,7 +271,7 @@ def plot_results(folder: str, results: dict,
         color_table,
         window_size,
         x_range=hit_rate_fig.x_range,
-        title="Read on Write data - Full Normal Run"
+        title="Read on Write data - Full Normal Run",
     )
     run_full_normal_figs.append(read_on_write_data_fig)
 
