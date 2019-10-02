@@ -91,6 +91,7 @@ def load_results(folder: str) -> dict:
 def update_colors(new_name: str, color_table: dict):
     names = list(color_table.keys()) + [new_name]
     colors = cycle(Set1[9])
+    next(colors)
     for name in sorted(names):
         cur_color = next(colors)
         color_table[name] = cur_color
@@ -127,6 +128,10 @@ def plot_hit_rate(tools: list,
                   window_size: int,
                   x_range=None,
                   title: str = "Hit Rate",
+                  run_type: str = "run_full_normal",
+                  datetimes: list = [],
+                  plot_width: int = 1024,
+                  plot_height: int = 768,
                   ) -> 'Figure':
     hit_rate_fig = figure(
         tools=tools,
@@ -135,21 +140,117 @@ def plot_hit_rate(tools: list,
         y_axis_label="Hit rate %",
         y_range=(0, 100),
         x_range=x_range if x_range else dates,
-        plot_width=640,
-        plot_height=480,
+        plot_width=plot_width,
+        plot_height=plot_height,
     )
 
     for cache_name, values in filter_results(
-        results, 'run_full_normal', filters
+        results, run_type, filters
     ):
-        points = values['hit rate']
-        hit_rate_fig.line(
-            dates,
-            points,
-            legend=cache_name,
-            color=color_table[cache_name],
-            line_width=2.,
-        )
+        if run_type == "run_full_normal":
+            points = values['hit rate']
+            hit_rate_fig.line(
+                dates,
+                points,
+                legend=cache_name,
+                color=color_table[cache_name],
+                line_width=2.,
+            )
+        elif run_type == "run_single_window":
+            single_window_name = f'{cache_name} - single window'
+            next_window_name = f'{cache_name} - next window'
+            single_windows = pd.concat(
+                [
+                    window
+                    for name, window in sorted(
+                        values.items(),
+                        key=lambda elm: elm[0],
+                    )
+                ]
+            )
+            points = single_windows.sort_values(by=['date'])['hit rate']
+            hit_rate_fig.line(
+                dates,
+                points,
+                legend=single_window_name,
+                color=color_table[cache_name],
+                line_width=2.,
+            )
+            next_windows = pd.concat(
+                [
+                    window
+                    for name, window in sorted(
+                        results['run_next_window'][cache_name].items(),
+                        key=lambda elm: elm[0],
+                    )
+                ]
+            ).sort_values(by=['date'])
+            points = pd.concat(
+                [
+                    single_windows.loc[
+                        ~single_windows.date.isin(next_windows.date),
+                        ['date', 'hit rate']
+                    ],
+                    next_windows.loc[
+                        next_windows.date.isin(single_windows.date),
+                        ['date', 'hit rate']
+                    ]
+                ]
+            ).sort_values(by=['date'])['hit rate']
+            hit_rate_fig.line(
+                dates,
+                points,
+                legend=next_window_name,
+                line_color="red",
+                line_alpha=0.9,
+                line_width=2.,
+                line_dash="dashed",
+            )
+        elif run_type == "run_next_period":
+            single_window_name = f'{cache_name} - single window'
+            single_windows = pd.concat(
+                [
+                    window
+                    for name, window in sorted(
+                        results['run_single_window'][cache_name].items(),
+                        key=lambda elm: elm[0],
+                    )
+                ]
+            )
+            points = single_windows.sort_values(by=['date'])['hit rate']
+            hit_rate_fig.line(
+                dates,
+                points,
+                legend=single_window_name,
+                color=color_table[cache_name],
+                line_width=2.,
+            )
+            for period, period_values in values.items():
+                cur_period = period_values[
+                    ['date', 'hit rate']
+                ][period_values.date.isin(datetimes)]
+                cur_period_name = f"{cache_name} - from {period.split('-')[0]}"
+                points = cur_period.sort_values(by=['date'])['hit rate']
+                cur_dates = [
+                    elm.split(" ")[0]
+                    for elm
+                    in cur_period['date'].astype(str)
+                ]
+                cur_dates = [
+                    cur_date for cur_date in cur_dates
+                    if cur_date in dates
+                ]
+                cur_period = cur_period[~cur_period.date.isin(datetimes)]
+                if len(cur_dates) > 0:
+                    hit_rate_fig.line(
+                        cur_dates,
+                        points,
+                        legend=cur_period_name,
+                        line_color="red",
+                        line_alpha=0.9,
+                        line_width=2.,
+                        line_dash="dashed",
+                    )
 
     hit_rate_fig.legend.location = "top_left"
     hit_rate_fig.legend.click_policy = "hide"
@@ -168,6 +269,10 @@ def plot_read_on_write_data(tools: list,
                             window_size: int,
                             x_range=None,
                             title: str = "Read on Write data",
+                            run_type: str = "run_full_normal",
+                            datetimes: list = [],
+                            plot_width: int = 1024,
+                            plot_height: int = 768,
                             ) -> 'Figure':
     read_on_write_data_fig = figure(
         tools=tools,
@@ -175,21 +280,99 @@ def plot_read_on_write_data(tools: list,
         x_axis_label="Day",
         y_axis_label="Ratio",
         x_range=x_range if x_range else dates,
-        plot_width=640,
-        plot_height=480,
+        plot_width=plot_width,
+        plot_height=plot_height,
     )
 
     for cache_name, values in filter_results(
-        results, 'run_full_normal', filters
+        results, run_type, filters
     ):
-        points = values['read data'] / (values['written data'])
-        read_on_write_data_fig.line(
-            dates,
-            points,
-            legend=cache_name,
-            color=color_table[cache_name],
-            line_width=2.,
-        )
+        if run_type == "run_full_normal":
+            points = values['read data'] / (values['written data'])
+            read_on_write_data_fig.line(
+                dates,
+                points,
+                legend=cache_name,
+                color=color_table[cache_name],
+                line_width=2.,
+            )
+        elif run_type == "run_single_window":
+            single_window_name = f'{cache_name} - single window'
+            next_window_name = f'{cache_name} - next window'
+            single_windows = pd.concat(
+                [
+                    window
+                    for name, window in sorted(
+                        values.items(),
+                        key=lambda elm: elm[0],
+                    )
+                ]
+            ).sort_values(by=['date'])
+            points = single_windows['read data'] / \
+                single_windows['written data']
+            read_on_write_data_fig.line(
+                dates,
+                points,
+                legend=single_window_name,
+                color=color_table[cache_name],
+                line_width=2.,
+            )
+            next_windows = pd.concat(
+                [
+                    window
+                    for name, window in sorted(
+                        results['run_next_window'][cache_name].items(),
+                        key=lambda elm: elm[0],
+                    )
+                ]
+            ).sort_values(by=['date'])
+            tmp = pd.concat(
+                [
+                    single_windows.loc[
+                        ~single_windows.date.isin(next_windows.date),
+                        ['date', 'read data', 'written data']
+                    ],
+                    next_windows.loc[
+                        next_windows.date.isin(single_windows.date),
+                        ['date', 'read data', 'written data']
+                    ]
+                ]
+            ).sort_values(by=['date'])[['read data', 'written data']]
+            points = tmp['read data'] / tmp['written data']
+            read_on_write_data_fig.line(
+                dates,
+                points,
+                legend=next_window_name,
+                line_color="red",
+                line_alpha=0.9,
+                line_width=2.,
+                line_dash="dashed",
+            )
+        elif run_type == "run_next_period":
+            for period, period_values in values.items():
+                cur_period = period_values[
+                    ['date', 'read data', 'written data']
+                ][period_values.date.isin(datetimes)].sort_values(by=['date'])
+                cur_period_name = f"{cache_name} - from {period.split('-')[0]}"
+                points = cur_period['read data'] / cur_period['written data']
+                cur_dates = [
+                    elm.split(" ")[0]
+                    for elm
+                    in cur_period['date'].astype(str)
+                ]
+                cur_dates = [
+                    cur_date for cur_date in cur_dates
+                    if cur_date in dates
+                ]
+                if len(cur_dates) > 0:
+                    ronwdata_comp_swnp_fig.line(
+                        cur_dates,
+                        points,
+                        legend=cur_period_name,
+                        line_color=color_table[cache_name],
+                        line_alpha=0.9,
+                        line_width=2.,
+                    )
 
     read_on_write_data_fig.legend.location = "top_left"
     read_on_write_data_fig.legend.click_policy = "hide"
@@ -278,251 +461,67 @@ def plot_results(folder: str, results: dict,
     ###########################################################################
     # Hit Rate compare single and next window plot
     ###########################################################################
-    hit_rate_comp_snw_fig = figure(
-        tools=tools,
-        title="Hit Rate - Compare single and next window",
-        x_axis_label="Day",
-        y_axis_label="Hit rate %",
-        y_range=(0, 100),
+    hit_rate_comp_snw_fig = plot_hit_rate(
+        tools,
+        results,
+        dates,
+        filters,
+        color_table,
+        window_size,
         x_range=hit_rate_fig.x_range,
-        plot_width=640,
-        plot_height=480,
+        title="Hit Rate - Compare single and next window",
+        run_type="run_single_window",
     )
-
-    for cache_name, windows in filter_results(
-        results, 'run_single_window', filters
-    ):
-        single_window_name = f'{cache_name} - single window'
-        next_window_name = f'{cache_name} - next window'
-        single_windows = pd.concat(
-            [
-                window
-                for name, window in sorted(
-                    windows.items(),
-                    key=lambda elm: elm[0],
-                )
-            ]
-        )
-        next_windows = pd.concat(
-            [
-                window
-                for name, window in sorted(
-                    results['run_next_window'][cache_name].items(),
-                    key=lambda elm: elm[0],
-                )
-            ]
-        )
-        points = single_windows['hit rate']
-        hit_rate_comp_snw_fig.line(
-            dates,
-            points,
-            legend=single_window_name,
-            color=color_table[cache_name],
-            line_width=2.,
-        )
-        # Merge next windows
-        next_values = pd.merge(
-            single_windows[['date', 'hit rate']],
-            next_windows[['date', 'hit rate']],
-            on=['date'],
-            how='inner'
-        ).sort_values(by=['date']).rename(
-            columns={
-                'hit rate_y': 'hit rate'
-            }
-        )[['date', 'hit rate']]
-        first_part = single_windows[
-            ['date', 'hit rate']
-        ][~single_windows.date.isin(next_values.date)]
-        next_windows = pd.concat([first_part, next_values])
-        points = next_windows['hit rate']
-        hit_rate_comp_snw_fig.line(
-            dates,
-            points,
-            legend=next_window_name,
-            line_color="red",
-            line_alpha=0.9,
-            line_width=2.,
-            line_dash="dashed",
-        )
-    hit_rate_comp_snw_fig.legend.location = "top_left"
-    hit_rate_comp_snw_fig.legend.click_policy = "hide"
-    hit_rate_comp_snw_fig.xaxis.major_label_orientation = np.pi / 4.
-    hit_rate_comp_snw_fig.add_tools(SaveTool())
-    add_window_lines(hit_rate_comp_snw_fig, dates, window_size)
     run_single_window_figs.append(hit_rate_comp_snw_fig)
 
     ###########################################################################
     # Read on Write data data compare single and next window plot
     ###########################################################################
-    ronwdata_comp_snw_fig = figure(
-        tools=tools,
-        title="Read on Write data - Compare single and next window",
-        x_axis_label="Day",
-        y_axis_label="Ratio",
+    ronwdata_comp_snw_fig = plot_read_on_write_data(
+        tools,
+        results,
+        dates,
+        filters,
+        color_table,
+        window_size,
         x_range=hit_rate_fig.x_range,
-        plot_width=640,
-        plot_height=480,
+        title="Read on Write data - Compare single and next window",
+        run_type="run_single_window",
     )
-
-    for cache_name, windows in filter_results(
-        results, 'run_single_window', filters
-    ):
-        single_window_name = f'{cache_name} - single window'
-        next_window_name = f'{cache_name} - next window'
-        single_windows = pd.concat(
-            [
-                window
-                for name, window in sorted(
-                    windows.items(),
-                    key=lambda elm: elm[0],
-                )
-            ]
-        )
-        next_windows = pd.concat(
-            [
-                window
-                for name, window in sorted(
-                    results['run_next_window'][cache_name].items(),
-                    key=lambda elm: elm[0],
-                )
-            ]
-        )
-        points = single_windows['read data'] / single_windows['written data']
-        ronwdata_comp_snw_fig.line(
-            dates,
-            points,
-            legend=single_window_name,
-            color=color_table[cache_name],
-            line_width=2.,
-        )
-        # Merge next windows
-        next_values = pd.merge(
-            single_windows[['date', 'read data', 'written data']],
-            next_windows[['date', 'read data', 'written data']],
-            on=['date'],
-            how='inner'
-        ).sort_values(by=['date']).rename(
-            columns={
-                'read data_y': 'read data',
-                'written data_y': 'written data'
-            }
-        )[['date', 'read data', 'written data']]
-        first_part = single_windows[
-            ['date', 'read data', 'written data']
-        ][~single_windows.date.isin(next_values.date)]
-        next_windows = pd.concat([first_part, next_values])
-        points = next_windows['read data'] / next_windows['written data']
-        ronwdata_comp_snw_fig.line(
-            dates,
-            points,
-            legend=next_window_name,
-            line_color="red",
-            line_alpha=0.9,
-            line_width=2.,
-            line_dash="dashed",
-        )
-    ronwdata_comp_snw_fig.legend.location = "top_left"
-    ronwdata_comp_snw_fig.legend.click_policy = "hide"
-    ronwdata_comp_snw_fig.xaxis.major_label_orientation = np.pi / 4.
-    ronwdata_comp_snw_fig.add_tools(SaveTool())
-    add_window_lines(ronwdata_comp_snw_fig, dates, window_size)
     run_single_window_figs.append(ronwdata_comp_snw_fig)
 
     ###########################################################################
     # Hit Rate compare single window and next period plot
     ###########################################################################
-    hit_rate_comp_swnp_fig = figure(
-        tools=tools,
-        title="Hit Rate - Compare single window and next period",
-        x_axis_label="Day",
-        y_axis_label="Hit rate %",
-        y_range=(0, 100),
+    hit_rate_comp_swnp_fig = plot_hit_rate(
+        tools,
+        results,
+        dates,
+        filters,
+        color_table,
+        window_size,
         x_range=hit_rate_fig.x_range,
-        plot_width=640,
-        plot_height=480,
+        title="Hit Rate - Compare single window and next period",
+        run_type="run_next_period",
+        datetimes=datetimes,
     )
-
-    for cache_name, windows in filter_results(
-        results, 'run_next_period', filters
-    ):
-        for period, values in windows.items():
-            cur_period = values[
-                ['date', 'hit rate']
-            ][values.date.isin(datetimes)]
-            cur_period_name = f"{cache_name} - from {period.split('-')[0]}"
-            points = cur_period['hit rate']
-            cur_dates = [
-                elm.split(" ")[0]
-                for elm
-                in cur_period['date'].astype(str)
-            ]
-            cur_dates = [
-                cur_date for cur_date in cur_dates
-                if cur_date in dates
-            ]
-            cur_period = cur_period[~cur_period.date.isin(datetimes)]
-            if len(cur_dates) > 0:
-                hit_rate_comp_swnp_fig.line(
-                    cur_dates,
-                    points,
-                    legend=cur_period_name,
-                    line_color=color_table[cache_name],
-                    line_alpha=0.9,
-                    line_width=2.,
-                )
-    hit_rate_comp_swnp_fig.legend.location = "top_left"
-    hit_rate_comp_swnp_fig.legend.click_policy = "hide"
-    hit_rate_comp_swnp_fig.xaxis.major_label_orientation = np.pi / 4.
-    hit_rate_comp_swnp_fig.add_tools(SaveTool())
-    add_window_lines(hit_rate_comp_swnp_fig, dates, window_size)
     run_next_period_figs.append(hit_rate_comp_swnp_fig)
 
     ###########################################################################
     # Read on Write data data compare single window and next period plot
     ###########################################################################
-    ronwdata_comp_swnp_fig = figure(
-        tools=tools,
-        title="Read on Write data - Compare single window and next period",
-        x_axis_label="Day",
-        y_axis_label="Ratio",
+    ronwdata_comp_swnp_fig = plot_read_on_write_data(
+        tools,
+        results,
+        dates,
+        filters,
+        color_table,
+        window_size,
         x_range=hit_rate_fig.x_range,
-        plot_width=640,
-        plot_height=480,
+        title="Read on Write data - Compare single window and next period",
+        run_type="run_single_window",
+        datetimes=datetimes,
     )
-
-    for cache_name, windows in filter_results(
-        results, 'run_next_period', filters
-    ):
-        for period, values in windows.items():
-            cur_period = values[
-                ['date', 'read data', 'written data']
-            ][values.date.isin(datetimes)]
-            cur_period_name = f"{cache_name} - from {period.split('-')[0]}"
-            points = cur_period['read data'] / cur_period['written data']
-            cur_dates = [
-                elm.split(" ")[0]
-                for elm
-                in cur_period['date'].astype(str)
-            ]
-            cur_dates = [
-                cur_date for cur_date in cur_dates
-                if cur_date in dates
-            ]
-            if len(cur_dates) > 0:
-                ronwdata_comp_swnp_fig.line(
-                    cur_dates,
-                    points,
-                    legend=cur_period_name,
-                    line_color=color_table[cache_name],
-                    line_alpha=0.9,
-                    line_width=2.,
-                )
-    ronwdata_comp_swnp_fig.legend.location = "top_left"
-    ronwdata_comp_swnp_fig.legend.click_policy = "hide"
-    ronwdata_comp_swnp_fig.xaxis.major_label_orientation = np.pi / 4.
-    ronwdata_comp_swnp_fig.add_tools(SaveTool())
-    add_window_lines(ronwdata_comp_swnp_fig, dates, window_size)
     run_next_period_figs.append(ronwdata_comp_swnp_fig)
 
     figs.append(column(
