@@ -549,7 +549,7 @@ def main():
     parser.add_argument('-FEB', '--force-exe-build', type=bool,
                         default=True,
                         help='Force to build the simulation executable [DEFAULT: True]')
-    parser.add_argument('--only-single-window', type=bool,
+    parser.add_argument('--only-single-window-run', type=bool,
                         default=False,
                         help='Force to run only the single window simulations. Useful to generate datasets [DEFAULT: False]')
     parser.add_argument('--gen-dataset', type=bool,
@@ -635,7 +635,7 @@ def main():
 
         wait_jobs(processes)
         
-        if args.only_single_window:
+        if args.only_single_window_run:
             exit(0)
 
         ##
