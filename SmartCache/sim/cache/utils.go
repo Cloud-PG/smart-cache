@@ -11,10 +11,10 @@ const (
 	hashSize int = 8
 )
 
-// HashString converto a string into an hash string
+// HashHexDigest convert to a string into an hash string
 func HashHexDigest(input string) string {
 	curHash, _ := blake2b.New(hashSize, nil)
-	curHash.Write([]byte("/test/file/0"))
+	curHash.Write([]byte(input))
 	return fmt.Sprintf("%x", curHash.Sum(nil))
 }
 
