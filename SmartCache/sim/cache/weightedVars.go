@@ -72,7 +72,7 @@ func (stats *WeightedFileStats) updateStats(hit bool, size float32, curTime time
 	stats.RequestLastIdx = (stats.RequestLastIdx + 1) % int(StatsMemorySize)
 }
 
-func (stats *WeightedFileStats) updateWeight(functionType FunctionType, exp float32, curTime time.Time) {
+func (stats *WeightedFileStats) updateWeight(functionType FunctionType, exp float32) {
 	switch functionType {
 	case FuncFileWeight:
 		stats.Weight = fileWeight(
@@ -94,7 +94,7 @@ func (stats *WeightedFileStats) updateWeight(functionType FunctionType, exp floa
 			stats.LastTimeRequested,
 		)
 	case FuncWeightedRequests:
-		stats.RequestTicksMean = stats.getMeanReqTimes(curTime)
+		stats.RequestTicksMean = stats.getMeanReqTimes()
 		stats.Weight = fileWeightedRequest(
 			stats.Size,
 			stats.TotRequests,
@@ -104,17 +104,11 @@ func (stats *WeightedFileStats) updateWeight(functionType FunctionType, exp floa
 	}
 }
 
-func (stats WeightedFileStats) getMeanReqTimes(curTime time.Time) float32 {
+func (stats WeightedFileStats) getMeanReqTimes() float32 {
 	var timeDiffSum time.Duration
-	var timeReference time.Time
-	if curTime.IsZero() {
-		timeReference = stats.LastTimeRequested
-	} else {
-		timeReference = curTime
-	}
 	for idx := 0; idx < int(StatsMemorySize); idx++ {
 		if !stats.RequestTicks[idx].IsZero() {
-			timeDiffSum += timeReference.Sub(stats.RequestTicks[idx])
+			timeDiffSum += stats.LastTimeRequested.Sub(stats.RequestTicks[idx])
 		}
 	}
 	if timeDiffSum != 0. {

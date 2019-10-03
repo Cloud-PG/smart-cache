@@ -354,7 +354,7 @@ func (cache *WeightedLRU) getOrInsertStats(filename string) *WeightedFileStats {
 	return cache.stats[resultIdx]
 }
 
-func (cache *WeightedLRU) moveStat(stat *WeightedFileStats, curTime time.Time) {
+func (cache *WeightedLRU) moveStat(stat *WeightedFileStats) {
 	idx, _ := cache.statsFilenames.Load(stat.Filename)
 	curIdx := idx.(int)
 
@@ -396,16 +396,16 @@ func (cache *WeightedLRU) updatePolicy(filename string, size float32, hit bool) 
 	if cache.SelUpdateStatPolicyType == UpdateStatsOnRequest {
 		curStats = cache.getOrInsertStats(filename)
 		curStats.updateStats(hit, size, currentTime)
-		curStats.updateWeight(cache.SelFunctionType, cache.Exp, time.Time{})
-		cache.moveStat(curStats, time.Time{})
+		curStats.updateWeight(cache.SelFunctionType, cache.Exp)
+		cache.moveStat(curStats)
 	}
 
 	if !hit {
 		if cache.SelUpdateStatPolicyType == UpdateStatsOnMiss {
 			curStats = cache.getOrInsertStats(filename)
 			curStats.updateStats(hit, size, currentTime)
-			curStats.updateWeight(cache.SelFunctionType, cache.Exp, time.Time{})
-			cache.moveStat(curStats, time.Time{})
+			curStats.updateWeight(cache.SelFunctionType, cache.Exp)
+			cache.moveStat(curStats)
 		}
 
 		var Q2 = cache.getThreshold()

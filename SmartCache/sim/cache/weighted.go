@@ -311,7 +311,7 @@ func (cache *WeightedCache) updatePolicy(filename string, size float32, hit bool
 	if queueSize > cache.MaxSize {
 		// Update weights
 		for _, curFileStats := range cache.queue {
-			curFileStats.updateWeight(cache.SelFunctionType, cache.Exp, curTime)
+			curFileStats.updateWeight(cache.SelFunctionType, cache.Exp)
 		}
 		// Sort queue
 		sort.Sort(ByWeight(cache.queue))
