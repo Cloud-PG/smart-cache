@@ -130,8 +130,8 @@ def plot_hit_rate(tools: list,
                   title: str = "Hit Rate",
                   run_type: str = "run_full_normal",
                   datetimes: list = [],
-                  plot_width: int = 1024,
-                  plot_height: int = 768,
+                  plot_width: int = 1200,
+                  plot_height: int = 600,
                   ) -> 'Figure':
     hit_rate_fig = figure(
         tools=tools,
@@ -271,14 +271,15 @@ def plot_read_on_write_data(tools: list,
                             title: str = "Read on Write data",
                             run_type: str = "run_full_normal",
                             datetimes: list = [],
-                            plot_width: int = 1024,
-                            plot_height: int = 768,
+                            plot_width: int = 1200,
+                            plot_height: int = 600,
                             ) -> 'Figure':
     read_on_write_data_fig = figure(
         tools=tools,
         title=title,
         x_axis_label="Day",
         y_axis_label="Ratio",
+        y_axis_type="log",
         x_range=x_range if x_range else dates,
         plot_width=plot_width,
         plot_height=plot_height,
@@ -634,7 +635,7 @@ def main():
                 processes.append(("Single Window", cur_process))
 
         wait_jobs(processes)
-        
+
         if args.only_single_window_run:
             exit(0)
 
