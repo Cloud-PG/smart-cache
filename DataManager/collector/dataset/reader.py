@@ -1,12 +1,75 @@
+import gzip
 import json
+from os import path, walk
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 from tqdm import tqdm
 
 from ..datafeatures.extractor import CMSRecordTest0
 from ..datafile.json import JSONDataFileReader
 from .utils import ReadableDictAsAttribute, SupportTable
+from tensorflow.keras.utils import to_categorical
+
+
+class SimulatorDatasetReader(object):
+
+    def __init__(self, folder: str):
+        self._data = []
+        print(f"[Open dataset folder {folder}]")
+        for root, dirs, files in walk(folder):
+            for file_ in files:
+                main_dir, window = path.split(root)
+                cur_cache = path.split(main_dir)[-1]
+                if cur_cache.find("lru") != 0 and file_ == "dataset.csv.gz":
+                    window_num = int(window.split("_")[1])
+                    with gzip.GzipFile(path.join(root, file_), "r") as gzFile:
+                        cur_df = pd.read_csv(gzFile)
+                        del cur_df['siteName']
+                        del cur_df['fileName']
+                        self._data.insert(window_num, cur_df)
+        print("[Dataset loaded...]")
+        self.get_data()
+
+    @staticmethod
+    def _get_data_and_labels(df):
+        # Convert last file hit
+        df['cacheLastFileHit'] = df[
+            'cacheLastFileHit'].astype('category')
+        df['cacheLastFileHit'] = df[
+            'cacheLastFileHit'].cat.rename_categories(
+            range(len(df['cacheLastFileHit'].cat.categories))
+        )
+        # Get labels
+        labels = df['class'].astype('category')
+        labels = labels.cat.rename_categories(
+            range(len(labels.cat.categories))
+        )
+        train_data.append(
+            df.loc[
+                :,
+                df.columns.difference(
+                    ['siteName', 'fileName', 'class']
+                )
+            ].to_numpy()
+        )
+        train_labels.append(to_categorical(y_test, num_classes))
+
+    def get_train_data(self):
+        """Produce train and validation sets using cross validation."""
+        for validation_idx in range(len(self._data)):
+            train_sets = [df for idx, df in enumerate(
+                self._data) if idx != validation_idx]
+            validation_set = self._data[validation_idx]
+
+            validation_data, validation_labels = self._get_data_and_labels(
+                validation_set
+            )
+
+            for train_set in train_sets:
+                data, labels = self._get_data_and_labels(train_set)
+                yield data, labels, validation_data, validation_labels
 
 
 class CMSDatasetTest0Reader(object):

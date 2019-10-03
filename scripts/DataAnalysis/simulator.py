@@ -8,11 +8,12 @@ import numpy as np
 import pandas as pd
 from bokeh.io import export_png
 from bokeh.layouts import column, row
-from bokeh.models import (BoxZoomTool, PanTool, ResetTool, SaveTool,
-                          Span, WheelZoomTool)
+from bokeh.models import (BoxZoomTool, PanTool, ResetTool, SaveTool, Span,
+                          WheelZoomTool)
 from bokeh.palettes import Set1
-from bokeh.plotting import figure, output_file, save, Figure
+from bokeh.plotting import Figure, figure, output_file, save
 
+from DataManager.collector.dataset.reader import SimulatorDatasetReader
 from SmartCache.sim import get_simulator_exe
 
 CACHE_TYPES = {
@@ -541,7 +542,7 @@ def plot_results(folder: str, results: dict,
 def main():
     parser = argparse.ArgumentParser(
         "simulator", description="Simulation and result plotting")
-    parser.add_argument('action', choices=['simulate', 'plot'],
+    parser.add_argument('action', choices=['simulate', 'plot', 'train'],
                         default="simulate",
                         help='Action requested')
     parser.add_argument('source', type=str,
@@ -771,6 +772,10 @@ def main():
             filters=filters,
             html=args.out_html, png=args.out_png
         )
+    elif args.action == "train":
+        dataset = SimulatorDatasetReader(path.join(
+            args.source, "run_single_window"
+        ))
 
 
 if __name__ == "__main__":
