@@ -220,7 +220,7 @@ func commandSimulate() *cobra.Command {
 
 				switch cacheType {
 				case "weightedLRU":
-					datasetHeader := []string{"size",
+					datasetHeader := []string{
 						"taskID",
 						"jobID",
 						"siteName",
