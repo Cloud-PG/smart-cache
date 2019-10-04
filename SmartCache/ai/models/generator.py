@@ -5,7 +5,7 @@ from tensorflow import keras
 
 class DonkeyModel(object):
 
-    def __init__(self, epochs: int = 100, batch_size: int = 64):
+    def __init__(self, epochs: int = 42, batch_size: int = 64):
         self._batch_size = batch_size
         self._epochs = epochs
         self._model = None
