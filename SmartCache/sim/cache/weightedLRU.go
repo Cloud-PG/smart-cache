@@ -335,7 +335,6 @@ func (cache *WeightedLRU) getThreshold() float32 {
 				copy(cache.fileWeights, cache.fileWeights[Q1Idx:])
 				cache.fileWeights = cache.fileWeights[:len(cache.fileWeights)-Q1Idx]
 				// Force to reindex
-				println("FORCE")
 				cache.reIndex()
 			}
 		}
