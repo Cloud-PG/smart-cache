@@ -72,7 +72,7 @@ func (stats *WeightedFileStats) updateStats(hit bool, size float32, curTime time
 	stats.RequestLastIdx = (stats.RequestLastIdx + 1) % int(StatsMemorySize)
 }
 
-func (stats *WeightedFileStats) updateWeight(functionType FunctionType, exp float32) {
+func (stats *WeightedFileStats) updateWeight(functionType FunctionType, exp float32) float32 {
 	switch functionType {
 	case FuncFileWeight:
 		stats.Weight = fileWeight(
@@ -102,6 +102,7 @@ func (stats *WeightedFileStats) updateWeight(functionType FunctionType, exp floa
 			exp,
 		)
 	}
+	return stats.Weight
 }
 
 func (stats WeightedFileStats) getMeanReqTimes() float32 {
