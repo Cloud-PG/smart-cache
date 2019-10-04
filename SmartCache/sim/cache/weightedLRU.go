@@ -316,16 +316,16 @@ func (cache *WeightedLRU) reIndex(ranges ...int) {
 }
 
 func (cache *WeightedLRU) getThreshold() float32 {
-	if len(cache.stats) == 0 {
+	if len(cache.fileWeights) == 0 {
 		return 0.0
 	}
 
-	Q2 := cache.stats[int(math.Floor(float64(0.5*float32(len(cache.stats)))))].Weight
+	Q2 := cache.fileWeights[int(math.Floor(float64(0.5*float32(len(cache.fileWeights)))))]
 
 	if cache.Capacity() > 75. {
 		if cache.SelLimitStatsPolicyType == Q1IsDoubleQ2LimitStats {
-			Q1Idx := int(math.Floor(float64(0.25 * float32(len(cache.stats)))))
-			Q1 := cache.stats[Q1Idx].Weight
+			Q1Idx := int(math.Floor(float64(0.25 * float32(len(cache.fileWeights)))))
+			Q1 := cache.fileWeights[Q1Idx]
 			if Q1 > 2*Q2 {
 				wg := sync.WaitGroup{}
 				for idx := 0; idx < Q1Idx; idx++ {
