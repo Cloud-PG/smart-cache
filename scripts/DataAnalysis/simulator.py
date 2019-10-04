@@ -15,6 +15,7 @@ from bokeh.plotting import Figure, figure, output_file, save
 
 from DataManager.collector.dataset.reader import SimulatorDatasetReader
 from SmartCache.sim import get_simulator_exe
+from SmartCache.ai.models.generator import DonkeyModel
 
 CACHE_TYPES = {
     'lru': {},
@@ -763,7 +764,6 @@ def main():
         wait_jobs(processes)
 
     elif args.action == "plot":
-        # TODO: plot of results
         filters = [elm for elm in args.plot_filters.split(",") if elm]
         results = load_results(args.source)
         plot_results(
@@ -776,6 +776,9 @@ def main():
         dataset = SimulatorDatasetReader(path.join(
             args.source, "run_single_window"
         ))
+        model = DonkeyModel()
+        model.train(dataset)
+        model.save("donkey_model")
 
 
 if __name__ == "__main__":

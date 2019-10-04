@@ -10,12 +10,12 @@ from tqdm import tqdm
 from ..datafeatures.extractor import CMSRecordTest0
 from ..datafile.json import JSONDataFileReader
 from .utils import ReadableDictAsAttribute, SupportTable
-from tensorflow.keras.utils import to_categorical
+from tensorflow import keras
 
 
 class SimulatorDatasetReader(object):
 
-    def __init__(self, folder: str):
+    def __init__(self, folder: str, to_categorical: bool = False):
         self._data = []
         print(f"[Open dataset folder {folder}]")
         for root, dirs, files in walk(folder):
@@ -26,35 +26,70 @@ class SimulatorDatasetReader(object):
                     window_num = int(window.split("_")[1])
                     with gzip.GzipFile(path.join(root, file_), "r") as gzFile:
                         cur_df = pd.read_csv(gzFile)
-                        del cur_df['siteName']
+                        del cur_df['siteNameIntHash']
                         del cur_df['fileName']
-                        self._data.insert(window_num, cur_df)
+                        del cur_df['fileNameIntHash']
+                        # NOTE:too big to be categorized at the moment
+                        del cur_df['taskID']
+                        del cur_df['jobID']
+                        self._data.insert(
+                            window_num,
+                            self._get_data_and_labels(cur_df)
+                        )
         print("[Dataset loaded...]")
-        self.get_data()
 
     @staticmethod
-    def _get_data_and_labels(df):
+    def _get_data_and_labels(df, to_categorical: bool = False) -> ('np.ndarray', 'np.ndarray'):
         # Convert last file hit
-        df['cacheLastFileHit'] = df[
-            'cacheLastFileHit'].astype('category')
+        df['cacheLastFileHit'] = df['cacheLastFileHit'].astype('category')
         df['cacheLastFileHit'] = df[
             'cacheLastFileHit'].cat.rename_categories(
+            # transform true and false to 0 and 1
             range(len(df['cacheLastFileHit'].cat.categories))
         )
+        # TODO: transform category  -> one hot vector into a function
+        # Convert site name
+        df['siteName'] = df['siteName'].astype('category')
+        num_categories = len(df['siteName'].cat.categories)
+        df['siteName'] = df['siteName'].cat.rename_categories(
+            # transform true and false to 0 and 1
+            range(len(df['siteName'].cat.categories))
+        )
+        site_names_df = pd.DataFrame(
+            keras.utils.to_categorical(df['siteName'], 64, dtype='float32'),
+            columns=[f"siteName{idx}" for idx in range(64)]
+        )
+        del df['siteName']
+        df = df.join(site_names_df, how='outer')
+        # Convert user id
+        df['userID'] = df['userID'].astype('category')
+        df['userID'] = df[
+            'userID'].cat.rename_categories(
+            range(len(df['userID'].cat.categories))
+        )
+        user_id_df = pd.DataFrame(
+            keras.utils.to_categorical(df['userID'], 128, dtype='float32'),
+            columns=[f"userID{idx}" for idx in range(128)]
+        )
+        df = df.join(user_id_df, how='outer')
+        data = df.loc[
+            :,
+            df.columns.difference(['class'])
+        ]
+        for column in data.columns:
+            data[column] = pd.to_numeric(data[column], downcast='float')
+        data = data.to_numpy()
         # Get labels
         labels = df['class'].astype('category')
         labels = labels.cat.rename_categories(
             range(len(labels.cat.categories))
         )
-        train_data.append(
-            df.loc[
-                :,
-                df.columns.difference(
-                    ['siteName', 'fileName', 'class']
-                )
-            ].to_numpy()
-        )
-        train_labels.append(to_categorical(y_test, num_classes))
+        if to_categorical:
+            labels = keras.utils.to_categorical(
+                labels, len(labels.cat.categories), dtype='float32')
+        else:
+            labels = labels.to_numpy()
+        return data, labels
 
     def get_train_data(self):
         """Produce train and validation sets using cross validation."""
@@ -63,12 +98,10 @@ class SimulatorDatasetReader(object):
                 self._data) if idx != validation_idx]
             validation_set = self._data[validation_idx]
 
-            validation_data, validation_labels = self._get_data_and_labels(
-                validation_set
-            )
+            validation_data, validation_labels = validation_set
 
             for train_set in train_sets:
-                data, labels = self._get_data_and_labels(train_set)
+                data, labels = train_set
                 yield data, labels, validation_data, validation_labels
 
 

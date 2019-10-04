@@ -111,7 +111,6 @@ func OpenSimFolder(dirPath *os.File) chan CSVRecord {
 	sort.Slice(fileList, func(i, j int) bool { return fileList[i] < fileList[j] })
 
 	go func() {
-		println("HERE")
 		for _, name := range fileList {
 			fileExt := path.Ext(name)
 			switch fileExt {
