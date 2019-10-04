@@ -327,12 +327,18 @@ func (cache *WeightedLRU) getThreshold() float32 {
 			Q1Idx := int(math.Floor(float64(0.25 * float32(len(cache.stats)))))
 			Q1 := cache.stats[Q1Idx].Weight
 			if Q1 > 2*Q2 {
+				wg := sync.WaitGroup{}
 				for idx := 0; idx < Q1Idx; idx++ {
-					cache.statsFilenames.Delete(cache.stats[idx].Filename)
+					wg.Add(1)
+					go func(filename string, waitGroup *sync.WaitGroup) {
+						cache.statsFilenames.Delete(filename)
+						waitGroup.Done()
+					}(cache.stats[idx].Filename, &wg)
 				}
+				wg.Wait()
 				copy(cache.stats, cache.stats[Q1Idx:])
-				cache.stats = cache.stats[:len(cache.stats)-Q1Idx]
 				copy(cache.fileWeights, cache.fileWeights[Q1Idx:])
+				cache.stats = cache.stats[:len(cache.stats)-Q1Idx]
 				cache.fileWeights = cache.fileWeights[:len(cache.fileWeights)-Q1Idx]
 				// Force to reindex
 				cache.reIndex()
