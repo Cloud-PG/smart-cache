@@ -5,7 +5,7 @@ from tensorflow import keras
 
 class DonkeyModel(object):
 
-    def __init__(self, epochs: int = 42, batch_size: int = 64):
+    def __init__(self, epochs: int = 21, batch_size: int = 64):
         self._batch_size = batch_size
         self._epochs = epochs
         self._model = None
@@ -13,11 +13,12 @@ class DonkeyModel(object):
     def __compile_model(self, input_size: int, output_size: int):
         self._model = keras.Sequential([
             keras.layers.Flatten(input_shape=(input_size, )),
-            keras.layers.Dense(1024, activation='sigmoid'),
-            keras.layers.Dense(768, activation='sigmoid'),
-            keras.layers.Dense(512, activation='hard_sigmoid'),
+            keras.layers.Dense(2048, activation='sigmoid'),
+            keras.layers.Dense(1024, activation='hard_sigmoid'),
+            keras.layers.Dense(768, activation='relu'),
+            keras.layers.Dense(512, activation='sigmoid'),
             keras.layers.Dense(256, activation='hard_sigmoid'),
-            keras.layers.Dense(128, activation='hard_sigmoid'),
+            keras.layers.Dense(128, activation='relu'),
             keras.layers.Dense(output_size, activation='softmax')
         ])
         self._model.compile(
