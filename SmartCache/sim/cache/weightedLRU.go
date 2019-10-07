@@ -212,6 +212,7 @@ func (cache *WeightedLRU) GetReport() (*DatasetInput, error) {
 	return &DatasetInput{
 		CacheSize:       cache.size,
 		CacheMaxSize:    cache.MaxSize,
+		CacheCapacity:   cache.Capacity(),
 		FileSize:        stats.Size,
 		FileTotRequests: stats.TotRequests,
 		FileNHits:       stats.NHits,

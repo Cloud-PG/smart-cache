@@ -80,6 +80,7 @@ func GetSimCacheStatus(cache Cache) *pb.SimCacheStatus {
 type DatasetInput struct {
 	CacheSize          float32
 	CacheMaxSize       float32
+	CacheCapacity      float32
 	CacheLastFileHit   bool
 	CacheLastFileAdded bool
 	FileSize           float32
