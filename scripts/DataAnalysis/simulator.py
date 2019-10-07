@@ -778,7 +778,7 @@ def main():
         ))
         dataset.modify_column(
             'cacheCapacity',
-            lambda column: (column / 10.).astype(int)
+            lambda column: (column / 5.).astype(int)
         ).make_converter_for(
             [
                 'cacheLastFileHit',
