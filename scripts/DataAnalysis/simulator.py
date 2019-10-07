@@ -803,8 +803,11 @@ def main():
             'class'
         )
         model = DonkeyModel()
-        model.train(dataset)
-        model.save("donkey_model")
+        for target_dir, data, labels in dataset.get_data():
+            model.train(data, labels)
+            model.save(path.join(
+                target_dir, "donkey_model"  
+            ))
 
 
 if __name__ == "__main__":

@@ -5,7 +5,7 @@ from tensorflow import keras
 
 class DonkeyModel(object):
 
-    def __init__(self, epochs: int = 10, batch_size: int = 64):
+    def __init__(self, epochs: int = 100, batch_size: int = 64):
         self._batch_size = batch_size
         self._epochs = epochs
         self._model = None
@@ -14,37 +14,32 @@ class DonkeyModel(object):
         self._model = keras.Sequential([
             keras.layers.Flatten(input_shape=(input_size, )),
             # keras.layers.Dense(2048, activation='sigmoid'),
-            # keras.layers.Dense(1024, activation='hard_sigmoid'),
-            # keras.layers.Dense(768, activation='relu'),
+            # keras.layers.Dense(1024, activation='sigmoid'),
+            # keras.layers.Dense(768, activation='sigmoid'),
             keras.layers.Dense(512, activation='sigmoid'),
-            keras.layers.Dense(256, activation='hard_sigmoid'),
-            keras.layers.Dense(128, activation='relu'),
+            keras.layers.Dense(256, activation='sigmoid'),
+            keras.layers.Dense(128, activation='sigmoid'),
             keras.layers.Dense(output_size, activation='softmax')
         ])
         self._model.compile(
             optimizer=keras.optimizers.Nadam(),
-            loss='sparse_categorical_crossentropy',
+            loss='categorical_crossentropy',
             metrics=['accuracy']
         )
         self._model.summary()
 
-    def train(
-        self, dataset,
-        normalized: bool = False,
-    ):
-        for data, labels, v_data, v_labels in dataset.get_train_data():
-            if not self._model:
-                self.__compile_model(
-                    data.shape[1],
-                    2
-                )
-            self._model.fit(
-                data,
-                labels,
-                batch_size=self._batch_size,
-                epochs=self._epochs,
-                validation_data=(v_data, v_labels)
-            )
+    def train(self, data, labels, num_classes: int = 2):
+        self.__compile_model(
+            data.shape[1],
+            num_classes,
+        )
+        self._model.fit(
+            data,
+            labels,
+            batch_size=self._batch_size,
+            epochs=self._epochs,
+            validation_split=0.1
+        )
 
     def predict_single(self, data):
         tmp = np.expand_dims(data, 0)

@@ -80,7 +80,7 @@ class SimulatorDatasetReader(object):
             if not label_column:
                 label_column = df.columns[-1]
             if label_column in self._converter:
-                labels = self._converter.get_values(
+                labels = self._converter.get_categories(
                     label_column,
                     df[label_column]
                 )
@@ -106,17 +106,10 @@ class SimulatorDatasetReader(object):
 
         return self
 
-    def get_train_data(self):
+    def get_data(self):
         """Produce train and validation sets using cross validation."""
-        for validation_idx in range(len(self._data)):
-            train_sets = [df for idx, df in enumerate(
-                self._data) if idx != validation_idx]
-            validation_set = self._data[validation_idx]
-
-            validation_data, validation_labels = validation_set
-
-            for data, labels in train_sets:
-                yield data, labels, validation_data, validation_labels
+        for idx, (data, labels) in enumerate(self._data):
+            yield self._target_dirs[idx], data, labels
 
 
 class CMSDatasetTest0Reader(object):
