@@ -779,18 +779,20 @@ def main():
         dataset.make_converter_for(
             [
                 'cacheLastFileHit',
-                'userID',
                 'class',
             ],
             unknown_value=False
         ).make_converter_for(
             [
                 'siteName',
+                'taskID',
+                # 'userID',
             ]
         ).make_data_and_labels(
             [
                 'siteName',
-                'userID',
+                'taskID',
+                # 'userID',
                 'cacheSize',
                 'cacheMaxSize',
                 'cacheLastFileHit',
@@ -801,12 +803,12 @@ def main():
                 'fileMeanTimeReq',
             ],
             'class'
-        )
+        ).save_data_and_labels()
         model = DonkeyModel()
         for target_dir, data, labels in dataset.get_data():
             model.train(data, labels)
             model.save(path.join(
-                target_dir, "donkey_model"  
+                target_dir, "donkey_model"
             ))
 
 

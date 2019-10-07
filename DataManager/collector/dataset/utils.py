@@ -167,9 +167,8 @@ class FeatureConverter(object):
     def __contains__(self, feature_name):
         return feature_name in self._features
 
-    def gen_indexes(self, feature_name: str, unknown_value: bool = True):
-        for idx, value in enumerate(sorted(self._features[feature_name]),
-                                    1 if unknown_value else 0):
+    def gen_indexes(self, feature_name: str):
+        for idx, value in enumerate(sorted(self._features[feature_name])):
             self._indexes[feature_name][value] = idx
 
     def insert(self, feature_name: str):
@@ -182,14 +181,23 @@ class FeatureConverter(object):
         self.insert(feature_name)
         self._features[feature_name] |= set(values)
         if unknown_value:
-            self._features[feature_name] |= set(("UNKNOWN",))
-        self.gen_indexes(feature_name, unknown_value)
+            if isinstance(list(self._features[feature_name])[0], str):
+                self._features[feature_name] |= set(("UNKNOWN",))
+            elif isinstance(list(self._features[feature_name])[0], int):
+                self._features[feature_name] |= set((0,))
+            elif isinstance(list(self._features[feature_name])[0], float):
+                self._features[feature_name] |= set((0.0,))
+        self.gen_indexes(feature_name)
 
     def get_category(self, feature_name: str, value) -> int:
         if value in self._indexes[feature_name]:
             return self._indexes[feature_name][value]
-        elif "UNKNOWN" in self._indexes[feature_name]:
+        elif isinstance(list(self._features[feature_name])[0], str):
             return self._indexes[feature_name]['UNKNOWN']
+        elif isinstance(list(self._features[feature_name])[0], int):
+            return self._indexes[feature_name][0]
+        elif isinstance(list(self._features[feature_name])[0], float):
+            return self._indexes[feature_name][0.0]
         raise KeyError(f'{value} not in {feature_name}')
 
     def get_values(self, feature_name: str, values: list) -> list:
@@ -203,10 +211,9 @@ class FeatureConverter(object):
         categories = []
         for value in values:
             categories.append(self.get_category(feature_name, value))
-
         return keras.utils.to_categorical(
             categories,
-            len(self._features[feature_name]),
+            len(self._indexes[feature_name]),
             dtype='float32'
         )
 
@@ -217,7 +224,7 @@ class FeatureConverter(object):
             categories,
             columns=[
                 f"{feature_name}_{idx}"
-                for idx in range(len(self._features[feature_name]))
+                for idx in range(len(self._indexes[feature_name]))
             ]
         )
 
