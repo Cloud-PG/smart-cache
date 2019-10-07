@@ -785,13 +785,15 @@ def main():
         ).make_converter_for(
             [
                 'siteName',
-                'taskID',
+                # 'taskID',
+                # 'jobID',
                 'userID',
             ]
         ).make_data_and_labels(
             [
                 'siteName',
-                'taskID',
+                # 'taskID',
+                # 'jobID',
                 'userID',
                 'cacheSize',
                 'cacheMaxSize',
