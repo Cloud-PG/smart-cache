@@ -5,91 +5,106 @@ from os import path, walk
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from tensorflow import keras
 from tqdm import tqdm
 
 from ..datafeatures.extractor import CMSRecordTest0
 from ..datafile.json import JSONDataFileReader
-from .utils import ReadableDictAsAttribute, SupportTable
-from tensorflow import keras
+from .utils import FeatureConverter, ReadableDictAsAttribute, SupportTable
+from yaspin import yaspin
+from yaspin.spinners import Spinners
 
 
 class SimulatorDatasetReader(object):
 
-    def __init__(self, folder: str, to_categorical: bool = False):
+    def __init__(self, folder: str = "", to_categorical: bool = False):
+        self._data_frames = []
         self._data = []
-        print(f"[Open dataset folder {folder}]")
-        for root, dirs, files in walk(folder):
-            for file_ in files:
-                main_dir, window = path.split(root)
-                cur_cache = path.split(main_dir)[-1]
-                if cur_cache.find("lru") != 0 and file_ == "dataset.csv.gz":
-                    window_num = int(window.split("_")[1])
-                    with gzip.GzipFile(path.join(root, file_), "r") as gzFile:
-                        cur_df = pd.read_csv(gzFile)
-                        del cur_df['siteNameIntHash']
-                        del cur_df['fileName']
-                        del cur_df['fileNameIntHash']
-                        # NOTE:too big to be categorized at the moment
-                        del cur_df['taskID']
-                        del cur_df['jobID']
-                        self._data.insert(
-                            window_num,
-                            self._get_data_and_labels(cur_df)
-                        )
-        print("[Dataset loaded...]")
+        self._target_dirs = []
+        self._converter = None
+        if folder:
+            self.open_data(folder)
 
-    @staticmethod
-    def _get_data_and_labels(df, to_categorical: bool = False) -> ('np.ndarray', 'np.ndarray'):
-        # Convert last file hit
-        df['cacheLastFileHit'] = df['cacheLastFileHit'].astype('category')
-        df['cacheLastFileHit'] = df[
-            'cacheLastFileHit'].cat.rename_categories(
-            # transform true and false to 0 and 1
-            range(len(df['cacheLastFileHit'].cat.categories))
-        )
-        # TODO: transform category  -> one hot vector into a function
-        # Convert site name
-        df['siteName'] = df['siteName'].astype('category')
-        num_categories = len(df['siteName'].cat.categories)
-        df['siteName'] = df['siteName'].cat.rename_categories(
-            # transform true and false to 0 and 1
-            range(len(df['siteName'].cat.categories))
-        )
-        site_names_df = pd.DataFrame(
-            keras.utils.to_categorical(df['siteName'], 64, dtype='float32'),
-            columns=[f"siteName{idx}" for idx in range(64)]
-        )
-        del df['siteName']
-        df = df.join(site_names_df, how='outer')
-        # Convert user id
-        df['userID'] = df['userID'].astype('category')
-        df['userID'] = df[
-            'userID'].cat.rename_categories(
-            range(len(df['userID'].cat.categories))
-        )
-        user_id_df = pd.DataFrame(
-            keras.utils.to_categorical(df['userID'], 128, dtype='float32'),
-            columns=[f"userID{idx}" for idx in range(128)]
-        )
-        df = df.join(user_id_df, how='outer')
-        data = df.loc[
-            :,
-            df.columns.difference(['class'])
-        ]
-        for column in data.columns:
-            data[column] = pd.to_numeric(data[column], downcast='float')
-        data = data.to_numpy()
-        # Get labels
-        labels = df['class'].astype('category')
-        labels = labels.cat.rename_categories(
-            range(len(labels.cat.categories))
-        )
-        if to_categorical:
-            labels = keras.utils.to_categorical(
-                labels, len(labels.cat.categories), dtype='float32')
-        else:
-            labels = labels.to_numpy()
-        return data, labels
+    def open_data(self, folder: str) -> 'SimulatorDatasetReader':
+        with yaspin(
+            Spinners.bouncingBall,
+            f"[Open dataset folder {folder}]"
+        ) as sp:
+            self._target_dirs = []
+            for root, dirs, files in walk(folder):
+                for file_ in files:
+                    main_dir, window = path.split(root)
+                    cur_cache = path.split(main_dir)[-1]
+                    if cur_cache.find("lru") != 0 and file_ == "dataset.csv.gz":
+                        window_num = int(window.split("_")[1])
+                        self._target_dirs.append(root)
+                        cur_file_path = path.join(root, file_)
+                        sp.text = f"[Open file][{cur_file_path}]"
+                        with gzip.GzipFile(cur_file_path, "r") as gzFile:
+                            cur_df = pd.read_csv(gzFile)
+                            self._data_frames.insert(window_num, cur_df)
+            sp.text = "[Dataset loaded...]"
+        return self
+
+    def make_converter_for(self, columns: list = [],
+                           unknown_value: bool = True
+                           ) -> 'SimulatorDatasetReader':
+        with yaspin(
+            Spinners.bouncingBall,
+            f"[Make converter for (unknown value: {unknown_value})]{columns}"
+        ) as sp:
+            if not self._converter:
+                self._converter = FeatureConverter()
+
+            for df in self._data_frames:
+                for column in columns:
+                    values = df[column].to_list()
+                    self._converter.insert_from_values(
+                        column, values, unknown_value
+                    )
+
+            for idx, _ in enumerate(self._data_frames):
+                self._converter.dump(
+                    path.join(
+                        self._target_dirs[idx],
+                        "featureConverter.dump.pickle"
+                    )
+                )
+
+        return self
+
+    def make_data_and_labels(self, data_columns: list = [],
+                             label_column: str = ""
+                             ) -> 'SimulatorDatasetReader':
+        for idx, df in enumerate(self._data_frames):
+            if not label_column:
+                label_column = df.columns[-1]
+            if label_column in self._converter:
+                labels = self._converter.get_values(
+                    label_column,
+                    df[label_column]
+                )
+            else:
+                labels = df[label_column].to_numpy()
+
+            new_df = None
+            for column in data_columns:
+                if column in self._converter:
+                    cur_data = self._converter.get_column_categories(
+                        column,
+                        df[column]
+                    )
+                else:
+                    cur_data = df[column]
+
+                if new_df is not None:
+                    new_df = new_df.join(cur_data, how='outer')
+                else:
+                    new_df = cur_data
+
+            self._data.insert(idx, (new_df.to_numpy(), labels))
+
+        return self
 
     def get_train_data(self):
         """Produce train and validation sets using cross validation."""
@@ -100,8 +115,7 @@ class SimulatorDatasetReader(object):
 
             validation_data, validation_labels = validation_set
 
-            for train_set in train_sets:
-                data, labels = train_set
+            for data, labels in train_sets:
                 yield data, labels, validation_data, validation_labels
 
 

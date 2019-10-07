@@ -776,6 +776,32 @@ def main():
         dataset = SimulatorDatasetReader(path.join(
             args.source, "run_single_window"
         ))
+        dataset.make_converter_for(
+            [
+                'cacheLastFileHit',
+                'userID',
+                'class',
+            ],
+            unknown_value=False
+        ).make_converter_for(
+            [
+                'siteName',
+            ]
+        ).make_data_and_labels(
+            [
+                'siteName',
+                'userID',
+                'cacheSize',
+                'cacheMaxSize',
+                'cacheLastFileHit',
+                'fileSize',
+                'fileTotRequests',
+                'fileNHits',
+                'fileNMiss',
+                'fileMeanTimeReq',
+            ],
+            'class'
+        )
         model = DonkeyModel()
         model.train(dataset)
         model.save("donkey_model")

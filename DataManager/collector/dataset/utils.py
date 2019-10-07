@@ -1,11 +1,16 @@
 
 import json
+import pickle
 from datetime import date, datetime, timedelta
 from functools import lru_cache
+from io import IOBase
 from multiprocessing import cpu_count
 
 import findspark
+import numpy as np
+import pandas as pd
 from pyspark import SparkConf, SparkContext
+from tensorflow import keras
 from tqdm import tqdm
 
 
@@ -151,6 +156,96 @@ def flush_queue(queue):
     while not queue.empty():
         data.append(queue.get())
     return data
+
+
+class FeatureConverter(object):
+
+    def __init__(self):
+        self._features = {}
+        self._indexes = {}
+
+    def __contains__(self, feature_name):
+        return feature_name in self._features
+
+    def gen_indexes(self, feature_name: str, unknown_value: bool = True):
+        for idx, value in enumerate(sorted(self._features[feature_name]),
+                                    1 if unknown_value else 0):
+            self._indexes[feature_name][value] = idx
+
+    def insert(self, feature_name: str):
+        if feature_name not in self._features:
+            self._features[feature_name] = set()
+            self._indexes[feature_name] = {}
+
+    def insert_from_values(self, feature_name: str, values: list,
+                           unknown_value: bool = True):
+        self.insert(feature_name)
+        self._features[feature_name] |= set(values)
+        if unknown_value:
+            self._features[feature_name] |= set(("UNKNOWN",))
+        self.gen_indexes(feature_name, unknown_value)
+
+    def get_category(self, feature_name: str, value) -> int:
+        if value in self._indexes[feature_name]:
+            return self._indexes[feature_name][value]
+        elif "UNKNOWN" in self._indexes[feature_name]:
+            return self._indexes[feature_name]['UNKNOWN']
+        raise KeyError(f'{value} not in {feature_name}')
+
+    def get_values(self, feature_name: str, values: list) -> list:
+        cat_values = []
+        for value in values:
+            cat_values.append(self.get_category(feature_name, value))
+
+        return np.array(cat_values)
+
+    def get_categories(self, feature_name: str, values: list) -> list:
+        categories = []
+        for value in values:
+            categories.append(self.get_category(feature_name, value))
+
+        return keras.utils.to_categorical(
+            categories,
+            len(self._features[feature_name]),
+            dtype='float32'
+        )
+
+    def get_column_categories(self, feature_name: str,
+                              values: list) -> 'pd.DataFrame':
+        categories = self.get_categories(feature_name, values)
+        return pd.DataFrame(
+            categories,
+            columns=[
+                f"{feature_name}_{idx}"
+                for idx in range(len(self._features[feature_name]))
+            ]
+        )
+
+    def __getstate__(self):
+        return {
+            'features': self._features,
+            'indexes': self._indexes
+        }
+
+    def __setstate__(self, state: dict):
+        self._features = state['features']
+        self._indexes = state['indexes']
+
+    def dump(self, out_file: [IOBase, str]) -> 'FeatureConverter':
+        if isinstance(out_file, str):
+            with open(out_file, "wb") as file_:
+                pickle.dump(self, file_)
+        else:
+            pickle.dump(self, out_file)
+        return self
+
+    def load(self, in_file: [IOBase, str]) -> 'FeatureConverter':
+        if isinstance(in_file, str):
+            with open(in_file, "rb") as file_:
+                pickle.load(self, file_)
+        else:
+            pickle.load(self, in_file)
+        return self
 
 
 class SupportTable(object):
