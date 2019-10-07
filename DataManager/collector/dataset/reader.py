@@ -40,16 +40,17 @@ class SimulatorDatasetReader(object):
                         sp.text = f"[Open file][{cur_file_path}]"
                         with gzip.GzipFile(cur_file_path, "r") as gzFile:
                             cur_df = pd.read_csv(gzFile)
-                            # FIXME: to be removed with new dataset version
-                            cur_df['cacheCapacity'] = ((cur_df['cacheSize'] / \
-                                cur_df['cacheMaxSize']) * 100.) / 10.
-                            cur_df['cacheCapacity'] = cur_df['cacheCapacity'].astype(int)
-                            # END FIXME
                             self._data_frames[window_num] = {
                                 'df': cur_df,
                                 'dir': root
                             }
             sp.text = "[Dataset loaded...]"
+        return self
+
+    def modify_column(self, column, function) -> 'SimulatorDatasetReader':
+        for data in self._data_frames.values():
+            df = data['df']
+            df[column] = function(df[column])
         return self
 
     def make_converter_for(self, columns: list = [],

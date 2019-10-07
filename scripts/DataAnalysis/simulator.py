@@ -776,7 +776,10 @@ def main():
         dataset = SimulatorDatasetReader(path.join(
             args.source, "run_single_window"
         ))
-        dataset.make_converter_for(
+        dataset.modify_column(
+            'cacheCapacity',
+            lambda column: (column / 10.).astype(int)
+        ).make_converter_for(
             [
                 'cacheLastFileHit',
                 'cacheCapacity',
