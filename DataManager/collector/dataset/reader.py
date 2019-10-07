@@ -83,7 +83,7 @@ class SimulatorDatasetReader(object):
 
     def make_data_and_labels(self, data_columns: list = [],
                              label_column: str = "",
-                             for_cnn: bool = True,
+                             for_cnn: bool = False,
                              ) -> 'SimulatorDatasetReader':
         for key in sorted(self._data_frames):
             df = self._data_frames[key]['df']
