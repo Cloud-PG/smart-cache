@@ -786,13 +786,13 @@ def main():
             [
                 'siteName',
                 'taskID',
-                # 'userID',
+                'userID',
             ]
         ).make_data_and_labels(
             [
                 'siteName',
                 'taskID',
-                # 'userID',
+                'userID',
                 'cacheSize',
                 'cacheMaxSize',
                 'cacheLastFileHit',
