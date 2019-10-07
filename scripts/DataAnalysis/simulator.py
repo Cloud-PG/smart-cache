@@ -543,7 +543,7 @@ def plot_results(folder: str, results: dict,
 def main():
     parser = argparse.ArgumentParser(
         "simulator", description="Simulation and result plotting")
-    parser.add_argument('action', choices=['simulate', 'plot', 'train', 'test'],
+    parser.add_argument('action', choices=['simulate', 'plot', 'train', 'predict'],
                         default="simulate",
                         help='Action requested')
     parser.add_argument('source', type=str,
@@ -817,7 +817,7 @@ def main():
             model.save(path.join(
                 target_dir, "donkey_model"
             ))
-    elif args.action == "test":
+    elif args.action == "predict":
         # TODO: use the models to get actions to simulate in the cache
         pass
 
