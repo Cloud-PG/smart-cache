@@ -783,7 +783,6 @@ def main():
             [
                 'cacheLastFileHit',
                 'cacheCapacity',
-                'cacheLastFileHit',
                 'class',
             ],
             unknown_value=False
@@ -793,7 +792,6 @@ def main():
                 # 'taskID',
                 # 'jobID',
                 'userID',
-                'fileSize',
             ]
         ).make_data_and_labels(
             [
