@@ -315,7 +315,7 @@ func commandSimulate() *cobra.Command {
 									fmt.Sprintf("%d", record.UserID),
 									fmt.Sprintf("%f", datasetInputs.CacheSize),
 									fmt.Sprintf("%f", datasetInputs.CacheMaxSize),
-									fmt.Sprintf("%f", datasetInputs.cacheCapacity),
+									fmt.Sprintf("%f", datasetInputs.CacheCapacity),
 									fmt.Sprintf("%t", datasetInputs.LastFileHitted),
 									fmt.Sprintf("%s", record.Filename),
 									fmt.Sprintf("%d", cache.HashInt(record.Filename)),
