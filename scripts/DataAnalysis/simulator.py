@@ -783,6 +783,7 @@ def main():
             [
                 'cacheLastFileHit',
                 'cacheCapacity',
+                'cacheLastFileHit',
                 'class',
             ],
             unknown_value=False
