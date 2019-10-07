@@ -779,6 +779,7 @@ def main():
         dataset.make_converter_for(
             [
                 'cacheLastFileHit',
+                'cacheCapacity',
                 'class',
             ],
             unknown_value=False
@@ -788,6 +789,7 @@ def main():
                 # 'taskID',
                 # 'jobID',
                 'userID',
+                'fileSize',
             ]
         ).make_data_and_labels(
             [
@@ -795,8 +797,7 @@ def main():
                 # 'taskID',
                 # 'jobID',
                 'userID',
-                'cacheSize',
-                'cacheMaxSize',
+                'cacheCapacity',
                 'cacheLastFileHit',
                 'fileSize',
                 'fileTotRequests',
