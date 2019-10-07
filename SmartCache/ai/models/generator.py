@@ -10,27 +10,40 @@ class DonkeyModel(object):
         self._epochs = epochs
         self._model = None
 
-    def __compile_model(self, input_size: int, output_size: int):
-        self._model = keras.Sequential([
-            # keras.layers.Conv1D(
-            #     filters=64,
-            #     kernel_size=64,
-            #     activation='sigmoid',
-            #     # input_shape=input_shape
-            #     input_shape=(input_size, 1)
-            # ),
-            # # layers.BatchNormalization(),
-            # keras.layers.MaxPooling1D(pool_size=8),
-            # keras.layers.Dropout(0.5),
-            # keras.layers.Conv1D(32, 16, activation='sigmoid'),
-            # keras.layers.MaxPooling1D(pool_size=4),
-            # keras.layers.Dropout(0.5),
-            # keras.layers.Flatten(),
-            keras.layers.Dense(512, activation='sigmoid', input_shape=(input_size, )),
-            keras.layers.Dense(256, activation='sigmoid'),
-            keras.layers.Dense(128, activation='sigmoid'),
-            keras.layers.Dense(output_size, activation='softmax')
-        ])
+    def __compile_model(self, input_size: int, output_size: int,
+                        cnn: bool = False
+                        ):
+        if cnn:
+            self._model = keras.Sequential([
+                keras.layers.Conv1D(
+                    filters=64,
+                    kernel_size=64,
+                    activation='sigmoid',
+                    # input_shape=input_shape
+                    input_shape=(input_size, 1)
+                ),
+                # layers.BatchNormalization(),
+                keras.layers.MaxPooling1D(pool_size=8),
+                keras.layers.Dropout(0.5),
+                keras.layers.Conv1D(32, 16, activation='sigmoid'),
+                keras.layers.MaxPooling1D(pool_size=4),
+                keras.layers.Dropout(0.5),
+                keras.layers.Flatten(),
+                keras.layers.Dense(512, activation='sigmoid'),
+                keras.layers.Dense(256, activation='sigmoid'),
+                keras.layers.Dense(128, activation='sigmoid'),
+                keras.layers.Dense(output_size, activation='softmax')
+            ])
+        else:
+            self._model = keras.Sequential([
+                keras.layers.Dense(512, activation='sigmoid',
+                                   input_shape=(input_size, )),
+                keras.layers.Dense(256, activation='sigmoid'),
+                keras.layers.Dense(256, activation='sigmoid'),
+                keras.layers.Dense(128, activation='sigmoid'),
+                keras.layers.Dense(64, activation='sigmoid'),
+                keras.layers.Dense(output_size, activation='softmax')
+            ])
         self._model.compile(
             optimizer=keras.optimizers.Nadam(),
             loss='categorical_crossentropy',
