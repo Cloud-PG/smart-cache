@@ -13,7 +13,7 @@ class DonkeyModel(object):
     def __compile_model(self, input_size: int, output_size: int):
         self._model = keras.Sequential([
             keras.layers.Conv1D(
-                filters=128,
+                filters=64,
                 kernel_size=512,
                 activation='sigmoid',
                 # input_shape=input_shape
@@ -22,7 +22,7 @@ class DonkeyModel(object):
             # layers.BatchNormalization(),
             keras.layers.MaxPooling1D(pool_size=8),
             keras.layers.Dropout(0.5),
-            keras.layers.Conv1D(128, 64, activation='sigmoid'),
+            keras.layers.Conv1D(32, 128, activation='sigmoid'),
             keras.layers.MaxPooling1D(pool_size=8),
             keras.layers.Dropout(0.5),
             keras.layers.Flatten(),
