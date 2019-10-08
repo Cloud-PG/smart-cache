@@ -8,14 +8,22 @@ option java_outer_classname = "CacheSimService";
 
 package simservice;
 
+// Service to interact with the simulated cache
 service SimService {
 
+  // Requeste a file to the simulated cache
   rpc SimGet(SimCommonFile) returns (ActionResult) {}
+  // Clear the cache, files, statistics and so on.
   rpc SimClear(google.protobuf.Empty) returns (SimCacheStatus) {}
+  // Clear only the files in the cache
   rpc SimClearFiles(google.protobuf.Empty) returns (SimCacheStatus) {}
+  // Reset only the statistics of the simulated cache
   rpc SimClearHitMissStats(google.protobuf.Empty) returns (SimCacheStatus) {}
+  // Retrieve the simulated cache status
   rpc SimGetInfoCacheStatus(google.protobuf.Empty) returns (SimCacheStatus) {}
+  // Save the state of the current simulated cache
   rpc SimDumps(google.protobuf.Empty) returns (stream SimDumpRecord) {}
+  // Load a previuos saved state of the cache
   rpc SimLoads(stream SimDumpRecord) returns (google.protobuf.Empty) {}
 
 }

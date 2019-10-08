@@ -6,8 +6,8 @@ from . import simService_pb2 as simService_dot_simService__pb2
 
 
 class SimServiceStub(object):
-  # missing associated documentation comment in .proto file
-  pass
+  """Service to interact with the simulated cache
+  """
 
   def __init__(self, channel):
     """Constructor.
@@ -53,54 +53,54 @@ class SimServiceStub(object):
 
 
 class SimServiceServicer(object):
-  # missing associated documentation comment in .proto file
-  pass
+  """Service to interact with the simulated cache
+  """
 
   def SimGet(self, request, context):
-    # missing associated documentation comment in .proto file
-    pass
+    """Requeste a file to the simulated cache
+    """
     context.set_code(grpc.StatusCode.UNIMPLEMENTED)
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')
 
   def SimClear(self, request, context):
-    # missing associated documentation comment in .proto file
-    pass
+    """Clear the cache, files, statistics and so on.
+    """
     context.set_code(grpc.StatusCode.UNIMPLEMENTED)
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')
 
   def SimClearFiles(self, request, context):
-    # missing associated documentation comment in .proto file
-    pass
+    """Clear only the files in the cache
+    """
     context.set_code(grpc.StatusCode.UNIMPLEMENTED)
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')
 
   def SimClearHitMissStats(self, request, context):
-    # missing associated documentation comment in .proto file
-    pass
+    """Reset only the statistics of the simulated cache
+    """
     context.set_code(grpc.StatusCode.UNIMPLEMENTED)
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')
 
   def SimGetInfoCacheStatus(self, request, context):
-    # missing associated documentation comment in .proto file
-    pass
+    """Retrieve the simulated cache status
+    """
     context.set_code(grpc.StatusCode.UNIMPLEMENTED)
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')
 
   def SimDumps(self, request, context):
-    # missing associated documentation comment in .proto file
-    pass
+    """Save the state of the current simulated cache
+    """
     context.set_code(grpc.StatusCode.UNIMPLEMENTED)
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')
 
   def SimLoads(self, request_iterator, context):
-    # missing associated documentation comment in .proto file
-    pass
+    """Load a previuos saved state of the cache
+    """
     context.set_code(grpc.StatusCode.UNIMPLEMENTED)
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')

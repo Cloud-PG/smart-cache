@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "io.grpc.cache.ai.service";
+option java_outer_classname = "CacheAIService";
+
+package aiservice;
+
+// Service to interact with the AI model
+service AIService {
+
+  // Make 1 prediction only
+  rpc AIPredictOne(AIInput) returns (StorePrediction) {}
+
+}
+
+message AIInput {
+  repeated float features = 1;
+}
+
+message StorePrediction {
+  bool store = 1;
+}

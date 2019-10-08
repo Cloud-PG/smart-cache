@@ -308,12 +308,19 @@ const _ = grpc.SupportPackageIsVersion4
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type SimServiceClient interface {
+	// Requeste a file to the simulated cache
 	SimGet(ctx context.Context, in *SimCommonFile, opts ...grpc.CallOption) (*ActionResult, error)
+	// Clear the cache, files, statistics and so on.
 	SimClear(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*SimCacheStatus, error)
+	// Clear only the files in the cache
 	SimClearFiles(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*SimCacheStatus, error)
+	// Reset only the statistics of the simulated cache
 	SimClearHitMissStats(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*SimCacheStatus, error)
+	// Retrieve the simulated cache status
 	SimGetInfoCacheStatus(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*SimCacheStatus, error)
+	// Save the state of the current simulated cache
 	SimDumps(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (SimService_SimDumpsClient, error)
+	// Load a previuos saved state of the cache
 	SimLoads(ctx context.Context, opts ...grpc.CallOption) (SimService_SimLoadsClient, error)
 }
 
@@ -438,12 +445,19 @@ func (x *simServiceSimLoadsClient) CloseAndRecv() (*empty.Empty, error) {
 
 // SimServiceServer is the server API for SimService service.
 type SimServiceServer interface {
+	// Requeste a file to the simulated cache
 	SimGet(context.Context, *SimCommonFile) (*ActionResult, error)
+	// Clear the cache, files, statistics and so on.
 	SimClear(context.Context, *empty.Empty) (*SimCacheStatus, error)
+	// Clear only the files in the cache
 	SimClearFiles(context.Context, *empty.Empty) (*SimCacheStatus, error)
+	// Reset only the statistics of the simulated cache
 	SimClearHitMissStats(context.Context, *empty.Empty) (*SimCacheStatus, error)
+	// Retrieve the simulated cache status
 	SimGetInfoCacheStatus(context.Context, *empty.Empty) (*SimCacheStatus, error)
+	// Save the state of the current simulated cache
 	SimDumps(*empty.Empty, SimService_SimDumpsServer) error
+	// Load a previuos saved state of the cache
 	SimLoads(SimService_SimLoadsServer) error
 }
 

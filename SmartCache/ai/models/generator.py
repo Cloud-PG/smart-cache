@@ -1,14 +1,20 @@
+from concurrent import futures
+
+import grpc
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 
+from ..service import ai_pb2_grpc, ai_pb2
 
-class DonkeyModel(object):
+
+class DonkeyModel(ai_pb2_grpc.AIServiceServicer):
 
     def __init__(self, epochs: int = 100, batch_size: int = 64):
         self._batch_size = batch_size
         self._epochs = epochs
         self._model = None
+        self._server = None
 
     def __compile_model(self, input_size: int, output_size: int,
                         cnn: bool = False
@@ -66,7 +72,15 @@ class DonkeyModel(object):
             validation_split=0.1
         )
 
-    def predict_single(self, data):
+    def AIPredictOne(self, request, context) -> 'ai_pb2.StorePrediction':
+        # missing associated documentation comment in .proto file
+        prediction = self.predict_one(request.features)
+        response = ai_pb2.StorePrediction(
+            store=True if prediction == 1 else False
+        )
+        return response
+
+    def predict_one(self, data):
         tmp = np.expand_dims(data, 0)
         prediction = self._model.predict(tmp)
         return np.argmax(prediction[0])
@@ -80,6 +94,13 @@ class DonkeyModel(object):
 
     def load(self, filename: str):
         self._model = keras.models.load_model("{}.h5".format(filename))
+
+    def serve(self, port: int = 4242) -> 'grpc.Server':
+        self._server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+        ai_pb2_grpc.add_RouteGuideServicer_to_server(
+            AIServiceServicer(), self._server)
+        self._server.add_insecure_port(f'[::]:{port}')
+        return self._server
 
 
 class CMSTest0ModelGenerator(object):
