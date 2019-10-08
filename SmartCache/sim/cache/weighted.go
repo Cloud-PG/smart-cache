@@ -276,7 +276,7 @@ func (cache *WeightedCache) removeLast() *WeightedFileStats {
 	return removedElm
 }
 
-func (cache *WeightedCache) updatePolicy(filename string, size float32, hit bool) bool {
+func (cache *WeightedCache) updatePolicy(filename string, size float32, hit bool, _ ...interface{}) bool {
 	var added = false
 	curTime := time.Now()
 

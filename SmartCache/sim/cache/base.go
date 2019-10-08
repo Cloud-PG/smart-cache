@@ -28,7 +28,6 @@ type FileDump struct {
 // Cache is the base interface for the cache object
 type Cache interface {
 	check(string) bool
-	updatePolicy(filename string, size float32, hit bool) bool
 
 	Init(...interface{})
 
@@ -50,6 +49,7 @@ type Cache interface {
 	DataRead() float32
 	DataReadOnHit() float32
 
+	updatePolicy(filename string, size float32, hit bool, vars ...interface{}) bool
 	Get(filename string, size float32, vars ...interface{}) bool
 	GetReport() (*DatasetInput, error)
 

@@ -17,11 +17,6 @@ from DataManager.collector.dataset.reader import SimulatorDatasetReader
 from SmartCache.sim import get_simulator_exe
 from SmartCache.ai.models.generator import DonkeyModel
 
-CACHE_TYPES = {
-    'lru': {},
-    'weightedLRU': {},
-}
-
 
 def wait_jobs(processes):
     while job_run(processes):
@@ -368,7 +363,7 @@ def plot_read_on_write_data(tools: list,
                     if cur_date in dates
                 ]
                 if len(cur_dates) > 0:
-                    ronwdata_comp_swnp_fig.line(
+                    read_on_write_data_fig.line(
                         cur_dates,
                         points,
                         legend=cur_period_name,
@@ -543,9 +538,12 @@ def plot_results(folder: str, results: dict,
 def main():
     parser = argparse.ArgumentParser(
         "simulator", description="Simulation and result plotting")
-    parser.add_argument('action', choices=['simulate', 'plot', 'train', 'predict'],
+    parser.add_argument('action', choices=['simulate', 'plot', 'train'],
                         default="simulate",
                         help='Action requested')
+    parser.add_argument('cacheTypes', type=str,
+                        default="lru,weightedLRU",
+                        help='Comma separated list of cache to simulate [DEFAULT: "lru,weightedLRU"]')
     parser.add_argument('source', type=str,
                         default="./results_8w_with_sizes_csv",
                         help='The folder where the json results are stored [DEFAULT: "./results_8w_with_sizes_csv"]')
@@ -587,6 +585,7 @@ def main():
 
     if args.action == "simulate":
         simulator_exe = get_simulator_exe(force_creation=args.force_exe_build)
+        cache_types = args.cacheTypes.split(",")
 
         base_dir = path.join(path.dirname(
             path.abspath(__file__)), "simulation_results")
@@ -601,8 +600,28 @@ def main():
         )
         os.makedirs(single_window_run_dir, exist_ok=True)
 
+        model_processes = []
+
         for window_idx in range(args.window_start, args.window_stop):
-            for cache_type in CACHE_TYPES:
+            print(window_idx)
+            for cache_type in cache_types:
+                if cache_type == 'aiLRU':
+                    model_path = path.join(
+                        single_window_run_dir,
+                        f"weightedLRU_{int(args.cache_size/1024**2)}T_{args.region}",
+                        f"window_{window_idx}",
+                    )
+                    cur_model = DonkeyModel()
+                    cur_model.load(
+                        path.join(model_path, "donkey_model")
+                    )
+                    cur_model.add_feature_converter(
+                        path.join(model_path, "featureConverter.dump.pickle")
+                    )
+                    cur_model_port = 4200+window_idx
+                    cur_model.serve(port=cur_model_port)
+                    model_processes.append((cur_model, cur_model))
+
                 working_dir = path.join(
                     single_window_run_dir,
                     f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}",
@@ -611,7 +630,7 @@ def main():
                 os.makedirs(working_dir, exist_ok=True)
                 exe_args = [
                     simulator_exe,
-                    "simulate",
+                    "simulate" if cache_type != 'aiLRU' else "testAI",
                     cache_type,
                     path.abspath(args.source),
                     f"--size={args.cache_size}",
@@ -625,6 +644,9 @@ def main():
                 if args.gen_dataset:
                     exe_args.append("--simGenDataset=true")
                     exe_args.append("--simGenDatasetName=dataset.csv.gz")
+                if cache_type == 'aiLRU':
+                    exe_args.append("--aiHost=127.0.0.1")
+                    exe_args.append(f"--aiPort={cur_model_port}")
 
                 cur_process = subprocess.Popen(
                     " ".join(exe_args),
@@ -649,7 +671,7 @@ def main():
         )
         os.makedirs(normal_run_dir, exist_ok=True)
 
-        for cache_type in CACHE_TYPES:
+        for cache_type in cache_types:
             working_dir = path.join(
                 normal_run_dir,
                 f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}"
@@ -658,7 +680,7 @@ def main():
             cur_process = subprocess.Popen(
                 " ".join([
                     simulator_exe,
-                    "simulate",
+                    "simulate" if cache_type != 'aiLRU' else "testAI",
                     cache_type,
                     path.abspath(args.source),
                     f"--size={args.cache_size}",
@@ -673,6 +695,9 @@ def main():
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
             )
+            if cache_type == 'aiLRU':
+                exe_args.append("--aiHost=127.0.0.1")
+                exe_args.append(f"--aiPort={cur_model_port}")
             processes.append(("Full Run", cur_process))
 
         ##
@@ -684,7 +709,7 @@ def main():
         os.makedirs(nexxt_window_run_dir, exist_ok=True)
 
         for window_idx in range(args.window_start, args.window_stop):
-            for cache_type in CACHE_TYPES:
+            for cache_type in cache_types:
                 working_dir = path.join(
                     nexxt_window_run_dir,
                     f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}",
@@ -699,7 +724,7 @@ def main():
                 cur_process = subprocess.Popen(
                     " ".join([
                         simulator_exe,
-                        "simulate",
+                        "simulate" if cache_type != 'aiLRU' else "testAI",
                         cache_type,
                         path.abspath(args.source),
                         f"--size={args.cache_size}",
@@ -716,6 +741,9 @@ def main():
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                 )
+                if cache_type == 'aiLRU':
+                    exe_args.append("--aiHost=127.0.0.1")
+                    exe_args.append(f"--aiPort={cur_model_port}")
                 processes.append(("Next Window", cur_process))
 
         ##
@@ -727,7 +755,7 @@ def main():
         os.makedirs(next_period_run_dir, exist_ok=True)
 
         for window_idx in range(args.window_start, args.window_stop):
-            for cache_type in CACHE_TYPES:
+            for cache_type in cache_types:
                 working_dir = path.join(
                     next_period_run_dir,
                     f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}",
@@ -742,7 +770,7 @@ def main():
                 cur_process = subprocess.Popen(
                     " ".join([
                         simulator_exe,
-                        "simulate",
+                        "simulate" if cache_type != 'aiLRU' else "testAI",
                         cache_type,
                         path.abspath(args.source),
                         f"--size={args.cache_size}",
@@ -759,6 +787,9 @@ def main():
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                 )
+                if cache_type == 'aiLRU':
+                    exe_args.append("--aiHost=127.0.0.1")
+                    exe_args.append(f"--aiPort={cur_model_port}")
                 processes.append(("Next Period", cur_process))
 
         wait_jobs(processes)
@@ -815,9 +846,6 @@ def main():
             model.save(path.join(
                 target_dir, "donkey_model"
             ))
-    elif args.action == "predict":
-        # TODO: use the models to get actions to simulate in the cache
-        pass
 
 
 if __name__ == "__main__":

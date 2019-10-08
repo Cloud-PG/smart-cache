@@ -276,7 +276,7 @@ func (cache *LRUCache) SimLoads(stream pb.SimService_SimLoadsServer) error {
 	return nil
 }
 
-func (cache *LRUCache) updatePolicy(filename string, size float32, hit bool) bool {
+func (cache *LRUCache) updatePolicy(filename string, size float32, hit bool, _ ...interface{}) bool {
 	var added = false
 	if !hit {
 		if cache.Size()+size > cache.MaxSize {

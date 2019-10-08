@@ -6,6 +6,7 @@ import tensorflow as tf
 from tensorflow import keras
 
 from ..service import ai_pb2_grpc, ai_pb2
+from DataManager.collector.dataset.utils import FeatureConverter
 
 
 class DonkeyModel(ai_pb2_grpc.AIServiceServicer):
@@ -15,6 +16,7 @@ class DonkeyModel(ai_pb2_grpc.AIServiceServicer):
         self._epochs = epochs
         self._model = None
         self._server = None
+        self._feature_converter = None
 
     def __compile_model(self, input_size: int, output_size: int,
                         cnn: bool = False
@@ -59,6 +61,10 @@ class DonkeyModel(ai_pb2_grpc.AIServiceServicer):
         )
         self._model.summary()
 
+    def add_feature_converter(self, fc_path) -> 'DonkeyModel':
+        self._feature_converter = FeatureConverter().load(fc_path)
+        return self
+
     def train(self, data, labels, num_classes: int = 2):
         self.__compile_model(
             data.shape[1],
@@ -73,8 +79,23 @@ class DonkeyModel(ai_pb2_grpc.AIServiceServicer):
         )
 
     def AIPredictOne(self, request, context) -> 'ai_pb2.StorePrediction':
-        # missing associated documentation comment in .proto file
-        prediction = self.predict_one(request.features)
+        features = []
+        capacity = int(request.cacheCapacity / 5.)
+        for feature in ['siteName', 'userID', 'cacheCapacity', 'cacheLastFileHit']:
+            target = getattr(request, feature)
+            if feature == 'cacheCapacity':
+                target = capacity
+            for value in self._feature_converter.get_category_vector(
+                    feature, target):
+                features.append(value)
+
+        features.append(request.fileSize)
+        features.append(request.fileTotRequests)
+        features.append(request.fileNHits)
+        features.append(request.fileNMiss)
+        features.append(request.fileMeanTimeReq)
+
+        prediction = self.predict_one(np.array(features))
         response = ai_pb2.StorePrediction(
             store=True if prediction == 1 else False
         )
@@ -95,12 +116,18 @@ class DonkeyModel(ai_pb2_grpc.AIServiceServicer):
     def load(self, filename: str):
         self._model = keras.models.load_model("{}.h5".format(filename))
 
-    def serve(self, port: int = 4242) -> 'grpc.Server':
+    def serve(self, host: str = "127.0.0.1",
+              port: int = 4242
+              ) -> 'DonkeyModel':
         self._server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-        ai_pb2_grpc.add_RouteGuideServicer_to_server(
-            AIServiceServicer(), self._server)
-        self._server.add_insecure_port(f'[::]:{port}')
-        return self._server
+        ai_pb2_grpc.add_AIServiceServicer_to_server(self, self._server)
+        self._server.add_insecure_port(f'{host}:{port}')
+        self._server.start()
+        return self
+
+    def __del__(self):
+        self._server.stop(False)
+        self._server.wait_for_termination()
 
 
 class CMSTest0ModelGenerator(object):

@@ -39,12 +39,15 @@ var (
 	simStartFromWindow  uint32
 	simStopWindow       uint32
 	simColdStart        bool
+	aiHost              string
+	aiPort              string
 )
 
 func main() {
 	rootCmd := &cobra.Command{}
 	rootCmd.AddCommand(commandServe())
 	rootCmd.AddCommand(commandSimulate())
+	rootCmd.AddCommand(testAI())
 
 	rootCmd.AddCommand(&cobra.Command{
 		Use:   "version",
@@ -122,7 +125,70 @@ func commandServe() *cobra.Command {
 	return cmd
 }
 
-func commandSimulate() *cobra.Command {
+func addSimFlags(cmd *cobra.Command) {
+	cmd.PersistentFlags().StringVar(
+		&simRegion, "simRegion", "all",
+		"indicate the filter for record region",
+	)
+	cmd.PersistentFlags().StringVar(
+		&simOutFile, "simOutFile", "",
+		"the output file name",
+	)
+	cmd.PersistentFlags().BoolVar(
+		&simGenDataset, "simGenDataset", false,
+		"indicates if a dataset have to be generated",
+	)
+	cmd.PersistentFlags().StringVar(
+		&simGenDatasetName, "simGenDatasetName", "",
+		"the output dataset file name",
+	)
+	cmd.PersistentFlags().BoolVar(
+		&simDump, "simDump", false,
+		"indicates if to dump the cache status after the simulation",
+	)
+	cmd.PersistentFlags().StringVar(
+		&simDumpFileName, "simDumpFileName", "",
+		"the dump output file name",
+	)
+	cmd.PersistentFlags().BoolVar(
+		&simLoadDump, "simLoadDump", false,
+		"indicates if the simulator have to search a dump of previous session",
+	)
+	cmd.PersistentFlags().StringVar(
+		&simLoadDumpFileName, "simLoadDumpFileName", "",
+		"the dump input file name",
+	)
+	cmd.PersistentFlags().Uint32Var(
+		&simWindowSize, "simWindowSize", 7,
+		"size of the simulation window",
+	)
+	cmd.PersistentFlags().Uint32Var(
+		&simStartFromWindow, "simStartFromWindow", 0,
+		"number of the window to start with the simulation",
+	)
+	cmd.PersistentFlags().Uint32Var(
+		&simStopWindow, "simStopWindow", 0,
+		"number of the window to stop with the simulation",
+	)
+	cmd.PersistentFlags().BoolVar(
+		&simColdStart, "simColdStart", true,
+		"indicates if the cache have to be empty after a dump load",
+	)
+}
+
+func simulationCmd(testAISimulation bool) *cobra.Command {
+	var useDesc, shortDesc, longDesc string
+
+	if testAISimulation {
+		useDesc = `testAI cacheType fileOrFolderPath`
+		shortDesc = "Simulate a session with AI"
+		longDesc = "Simulate a session from data input using an AI model"
+	} else {
+		useDesc = `simulate cacheType fileOrFolderPath`
+		shortDesc = "Simulate a session"
+		longDesc = "Simulate a session from data input"
+	}
+
 	cmd := &cobra.Command{
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 2 {
@@ -147,6 +213,9 @@ func commandSimulate() *cobra.Command {
 
 			// Create cache
 			curCacheInstance := genCache(cacheType)
+			if testAISimulation {
+				curCacheInstance.Init(aiHost, aiPort)
+			}
 
 			if simDumpFileName == "" {
 				simDumpFileName = dumpFileName
@@ -297,8 +366,13 @@ func commandSimulate() *cobra.Command {
 				if windowCounter == simStopWindow {
 					break
 				} else if windowCounter >= simStartFromWindow {
+					// TODO: make size measure a parameter: [K, M, G, P]
 					sizeInMbytes := record.Size / (1024 * 1024)
-					curCacheInstance.Get(record.Filename, sizeInMbytes)
+					if testAISimulation {
+						curCacheInstance.Get(record.Filename, sizeInMbytes, record.SiteName, record.UserID)
+					} else {
+						curCacheInstance.Get(record.Filename, sizeInMbytes)
+					}
 
 					numIterations++
 
@@ -386,61 +460,31 @@ func commandSimulate() *cobra.Command {
 				float64(totIterations)/timeElapsed.Seconds(),
 			)
 		},
-		Use:   `simulate cacheType fileOrFolderPath`,
-		Short: "Simulate a session",
-		Long:  "Simulate a session from data input",
+		Use:   useDesc,
+		Short: shortDesc,
+		Long:  longDesc,
 		Args:  cobra.MaximumNArgs(2),
 	}
-	cmd.PersistentFlags().StringVar(
-		&simRegion, "simRegion", "all",
-		"indicate the filter for record region",
-	)
-	cmd.PersistentFlags().StringVar(
-		&simOutFile, "simOutFile", "",
-		"the output file name",
-	)
-	cmd.PersistentFlags().BoolVar(
-		&simGenDataset, "simGenDataset", false,
-		"indicates if a dataset have to be generated",
-	)
-	cmd.PersistentFlags().StringVar(
-		&simGenDatasetName, "simGenDatasetName", "",
-		"the output dataset file name",
-	)
-	cmd.PersistentFlags().BoolVar(
-		&simDump, "simDump", false,
-		"indicates if to dump the cache status after the simulation",
-	)
-	cmd.PersistentFlags().StringVar(
-		&simDumpFileName, "simDumpFileName", "",
-		"the dump output file name",
-	)
-	cmd.PersistentFlags().BoolVar(
-		&simLoadDump, "simLoadDump", false,
-		"indicates if the simulator have to search a dump of previous session",
-	)
-	cmd.PersistentFlags().StringVar(
-		&simLoadDumpFileName, "simLoadDumpFileName", "",
-		"the dump input file name",
-	)
-	cmd.PersistentFlags().Uint32Var(
-		&simWindowSize, "simWindowSize", 7,
-		"size of the simulation window",
-	)
-	cmd.PersistentFlags().Uint32Var(
-		&simStartFromWindow, "simStartFromWindow", 0,
-		"number of the window to start with the simulation",
-	)
-	cmd.PersistentFlags().Uint32Var(
-		&simStopWindow, "simStopWindow", 0,
-		"number of the window to stop with the simulation",
-	)
-	cmd.PersistentFlags().BoolVar(
-		&simColdStart, "simColdStart", true,
-		"indicates if the cache have to be empty after a dump load",
-	)
-
+	addSimFlags(cmd)
+	if testAISimulation {
+		cmd.PersistentFlags().StringVar(
+			&aiHost, "aiHost", "localhost",
+			"indicate the filter for record region",
+		)
+		cmd.PersistentFlags().StringVar(
+			&aiPort, "aiPort", "4242",
+			"indicate the filter for record region",
+		)
+	}
 	return cmd
+}
+
+func commandSimulate() *cobra.Command {
+	return simulationCmd(false)
+}
+
+func testAI() *cobra.Command {
+	return simulationCmd(true)
 }
 
 func genCache(cacheType string) cache.Cache {
@@ -452,6 +496,11 @@ func genCache(cacheType string) cache.Cache {
 			MaxSize: cacheSize,
 		}
 		cacheInstance.Init()
+	case "aiLRU":
+		fmt.Printf("[Create aiLRU Cache][Size: %f]\n", cacheSize)
+		cacheInstance = &cache.AILRU{
+			MaxSize: cacheSize,
+		}
 	case "weighted":
 		fmt.Printf("[Create Weighted Cache][Size: %f]\n", cacheSize)
 

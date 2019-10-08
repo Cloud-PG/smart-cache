@@ -8,51 +8,67 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math"
+	"log"
 	"os"
 	"sync"
 	"time"
 
+	aiPb "./aiService"
 	pb "./simService"
 	empty "github.com/golang/protobuf/ptypes/empty"
+	"google.golang.org/grpc"
 )
 
-// WeightedLRU cache
-type WeightedLRU struct {
+// AILRU cache
+type AILRU struct {
 	files                                map[string]float32
-	fileWeights                          []float32
 	stats                                []*WeightedFileStats
 	statsFilenames                       sync.Map
 	queue                                *list.List
 	hit, miss, size, MaxSize, Exp        float32
 	dataWritten, dataRead, dataReadOnHit float32
-	SelFunctionType                      FunctionType
-	SelUpdateStatPolicyType              UpdateStatsPolicyType
-	SelLimitStatsPolicyType              LimitStatsPolicyType
 	lastFileHitted                       bool
 	lastFileAdded                        bool
 	lastFileName                         string
+	aiClientHost                         string
+	aiClientPort                         string
+	aiClient                             aiPb.AIServiceClient
+	grpcConn                             *grpc.ClientConn
 }
 
-// Init the WeightedLRU struct
-func (cache *WeightedLRU) Init(_ ...interface{}) {
+// Init the AILRU struct
+func (cache *AILRU) Init(args ...interface{}) {
 	cache.files = make(map[string]float32)
-	cache.fileWeights = make([]float32, 0)
+	cache.queue = list.New()
 	cache.stats = make([]*WeightedFileStats, 0)
 	cache.statsFilenames = sync.Map{}
-	cache.queue = list.New()
+
+	cache.aiClientHost = args[0].(string)
+	cache.aiClientPort = args[1].(string)
+
+	var opts []grpc.DialOption
+	opts = append(opts, grpc.WithInsecure())
+	conn, err := grpc.Dial(fmt.Sprintf("%s:%s",
+		cache.aiClientHost, cache.aiClientPort,
+	), opts...)
+
+	cache.grpcConn = conn
+	if err != nil {
+		log.Fatalf("ERROR: Fail to dial wit AI Client: %v", err)
+	}
+
+	cache.aiClient = aiPb.NewAIServiceClient(cache.grpcConn)
 }
 
 // ClearFiles remove the cache files
-func (cache *WeightedLRU) ClearFiles() {
+func (cache *AILRU) ClearFiles() {
 	cache.files = make(map[string]float32)
 	cache.size = 0.
 }
 
-// Clear the WeightedLRU struct
-func (cache *WeightedLRU) Clear() {
+// Clear the AILRU struct
+func (cache *AILRU) Clear() {
 	cache.ClearFiles()
-	cache.fileWeights = make([]float32, 0)
 	cache.stats = make([]*WeightedFileStats, 0)
 	cache.statsFilenames.Range(
 		func(key interface{}, value interface{}) bool {
@@ -81,7 +97,7 @@ func (cache *WeightedLRU) Clear() {
 }
 
 // ClearHitMissStats the cache stats
-func (cache *WeightedLRU) ClearHitMissStats() {
+func (cache *AILRU) ClearHitMissStats() {
 	cache.hit = 0.
 	cache.miss = 0.
 	cache.dataWritten = 0.
@@ -89,8 +105,8 @@ func (cache *WeightedLRU) ClearHitMissStats() {
 	cache.dataReadOnHit = 0.
 }
 
-// Dumps the WeightedLRU cache
-func (cache *WeightedLRU) Dumps() *[][]byte {
+// Dumps the AILRU cache
+func (cache *AILRU) Dumps() *[][]byte {
 	outData := make([][]byte, 0)
 	var newLine = []byte("\n")
 
@@ -122,8 +138,8 @@ func (cache *WeightedLRU) Dumps() *[][]byte {
 	return &outData
 }
 
-// Dump the WeightedLRU cache
-func (cache *WeightedLRU) Dump(filename string) {
+// Dump the AILRU cache
+func (cache *AILRU) Dump(filename string) {
 	outFile, osErr := os.Create(filename)
 	if osErr != nil {
 		panic(fmt.Sprintf("Error dump file creation: %s", osErr))
@@ -137,8 +153,8 @@ func (cache *WeightedLRU) Dump(filename string) {
 	gwriter.Close()
 }
 
-// Loads the WeightedLRU cache
-func (cache *WeightedLRU) Loads(inputString *[][]byte) {
+// Loads the AILRU cache
+func (cache *AILRU) Loads(inputString *[][]byte) {
 	var curRecord DumpRecord
 	var curRecordInfo DumpInfo
 
@@ -155,16 +171,13 @@ func (cache *WeightedLRU) Loads(inputString *[][]byte) {
 		case "STATS":
 			var curStats WeightedFileStats
 			json.Unmarshal([]byte(curRecord.Data), &curStats)
-			cache.fileWeights = append(cache.fileWeights, curStats.Weight)
 			cache.stats = append(cache.stats, &curStats)
 		}
 	}
-
-	cache.reIndex()
 }
 
-// Load the WeightedLRU cache
-func (cache *WeightedLRU) Load(filename string) {
+// Load the AILRU cache
+func (cache *AILRU) Load(filename string) {
 	inFile, err := os.Open(filename)
 	if err != nil {
 		panic(fmt.Sprintf("Error dump file opening: %s", err))
@@ -203,7 +216,7 @@ func (cache *WeightedLRU) Load(filename string) {
 }
 
 // GetReport from the cache
-func (cache *WeightedLRU) GetReport() (*DatasetInput, error) {
+func (cache *AILRU) GetReport() (*DatasetInput, error) {
 	index, inStats := cache.statsFilenames.Load(cache.lastFileName)
 	if !inStats {
 		return nil, errors.New("The file is not in cache stats anymore")
@@ -224,7 +237,7 @@ func (cache *WeightedLRU) GetReport() (*DatasetInput, error) {
 }
 
 // SimGet updates the cache from a protobuf message
-func (cache *WeightedLRU) SimGet(ctx context.Context, commonFile *pb.SimCommonFile) (*pb.ActionResult, error) {
+func (cache *AILRU) SimGet(ctx context.Context, commonFile *pb.SimCommonFile) (*pb.ActionResult, error) {
 	added := cache.Get(commonFile.Filename, commonFile.Size)
 	return &pb.ActionResult{
 		Filename: commonFile.Filename,
@@ -233,34 +246,34 @@ func (cache *WeightedLRU) SimGet(ctx context.Context, commonFile *pb.SimCommonFi
 }
 
 // SimClear deletes all cache content
-func (cache *WeightedLRU) SimClear(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
+func (cache *AILRU) SimClear(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
 	cache.Clear()
 	curStatus := GetSimCacheStatus(cache)
 	return curStatus, nil
 }
 
 // SimClearFiles deletes all cache content
-func (cache *WeightedLRU) SimClearFiles(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
+func (cache *AILRU) SimClearFiles(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
 	cache.ClearFiles()
 	curStatus := GetSimCacheStatus(cache)
 	return curStatus, nil
 }
 
 // SimClearHitMissStats deletes all cache content
-func (cache *WeightedLRU) SimClearHitMissStats(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
+func (cache *AILRU) SimClearHitMissStats(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
 	cache.ClearHitMissStats()
 	curStatus := GetSimCacheStatus(cache)
 	return curStatus, nil
 }
 
 // SimGetInfoCacheStatus returns the current simulation status
-func (cache *WeightedLRU) SimGetInfoCacheStatus(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
+func (cache *AILRU) SimGetInfoCacheStatus(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
 	curStatus := GetSimCacheStatus(cache)
 	return curStatus, nil
 }
 
 // SimDumps returns the content of the cache
-func (cache *WeightedLRU) SimDumps(_ *empty.Empty, stream pb.SimService_SimDumpsServer) error {
+func (cache *AILRU) SimDumps(_ *empty.Empty, stream pb.SimService_SimDumpsServer) error {
 	for _, record := range *cache.Dumps() {
 		curRecord := &pb.SimDumpRecord{
 			Raw: record,
@@ -273,7 +286,7 @@ func (cache *WeightedLRU) SimDumps(_ *empty.Empty, stream pb.SimService_SimDumps
 }
 
 // SimLoads loads a cache state
-func (cache *WeightedLRU) SimLoads(stream pb.SimService_SimLoadsServer) error {
+func (cache *AILRU) SimLoads(stream pb.SimService_SimLoadsServer) error {
 	var records [][]byte
 	records = make([][]byte, 0)
 
@@ -293,64 +306,7 @@ func (cache *WeightedLRU) SimLoads(stream pb.SimService_SimLoadsServer) error {
 	return nil
 }
 
-func (cache *WeightedLRU) reIndex(ranges ...int) {
-	var (
-		start = 0
-		stop  = len(cache.stats)
-	)
-	if len(ranges) == 1 {
-		start = ranges[0]
-	} else if len(ranges) == 2 {
-		start = ranges[0]
-		stop = ranges[1] + 1
-	}
-	wg := sync.WaitGroup{}
-	for curIdx := start; curIdx < stop; curIdx++ {
-		curStatFilename := cache.stats[curIdx].Filename
-		wg.Add(1)
-		go func(index int, filename string, waitGroup *sync.WaitGroup) {
-			cache.statsFilenames.Store(filename, index)
-			waitGroup.Done()
-		}(curIdx, curStatFilename, &wg)
-	}
-	wg.Wait()
-}
-
-func (cache *WeightedLRU) getThreshold() float32 {
-	if len(cache.fileWeights) == 0 {
-		return 0.0
-	}
-
-	Q2 := cache.fileWeights[int(math.Floor(float64(0.5*float32(len(cache.fileWeights)))))]
-
-	if cache.Capacity() > 75. {
-		if cache.SelLimitStatsPolicyType == Q1IsDoubleQ2LimitStats {
-			Q1Idx := int(math.Floor(float64(0.25 * float32(len(cache.fileWeights)))))
-			Q1 := cache.fileWeights[Q1Idx]
-			if Q1 > 2*Q2 {
-				wg := sync.WaitGroup{}
-				for idx := 0; idx < Q1Idx; idx++ {
-					wg.Add(1)
-					go func(filename string, waitGroup *sync.WaitGroup) {
-						cache.statsFilenames.Delete(filename)
-						waitGroup.Done()
-					}(cache.stats[idx].Filename, &wg)
-				}
-				wg.Wait()
-				copy(cache.stats, cache.stats[Q1Idx:])
-				copy(cache.fileWeights, cache.fileWeights[Q1Idx:])
-				cache.stats = cache.stats[:len(cache.stats)-Q1Idx]
-				cache.fileWeights = cache.fileWeights[:len(cache.fileWeights)-Q1Idx]
-				// Force to reindex
-				cache.reIndex()
-			}
-		}
-	}
-
-	return Q2
-}
-
-func (cache *WeightedLRU) getOrInsertStats(filename string) (int, *WeightedFileStats) {
+func (cache *AILRU) getOrInsertStats(filename string) (int, *WeightedFileStats) {
 	var (
 		resultIdx int
 		stats     *WeightedFileStats
@@ -373,7 +329,6 @@ func (cache *WeightedLRU) getOrInsertStats(filename string) (int, *WeightedFileS
 		})
 		resultIdx = len(cache.stats) - 1
 		stats = cache.stats[resultIdx]
-		cache.fileWeights = append(cache.fileWeights, stats.Weight)
 		cache.statsFilenames.Store(filename, resultIdx)
 	} else {
 		resultIdx = idx.(int)
@@ -383,83 +338,36 @@ func (cache *WeightedLRU) getOrInsertStats(filename string) (int, *WeightedFileS
 	return resultIdx, stats
 }
 
-func (cache *WeightedLRU) moveStat(stat *WeightedFileStats) {
-	idx, _ := cache.statsFilenames.Load(stat.Filename)
-	curIdx := idx.(int)
-	curStats := cache.stats[curIdx]
-	curWeight := cache.fileWeights[curIdx]
-	var targetIdx int
+func (cache *AILRU) updatePolicy(filename string, size float32, hit bool, vars ...interface{}) bool {
+	var added = false
 
-	if curIdx-1 >= 0 { // <--[Check left]
-		targetIdx = -1
-		for idx := curIdx - 1; idx >= 0; idx-- {
-			targetWeight := cache.fileWeights[idx]
-			if targetWeight < curWeight {
-				targetIdx = idx
-				continue
-			} else {
-				break
-			}
-		}
-		if targetIdx != -1 {
-			copy(cache.stats[targetIdx+1:curIdx+1], cache.stats[targetIdx:curIdx])
-			copy(cache.fileWeights[targetIdx+1:curIdx+1], cache.fileWeights[targetIdx:curIdx])
-			cache.stats[targetIdx] = curStats
-			cache.fileWeights[targetIdx] = curWeight
-			cache.reIndex(targetIdx, curIdx)
-		}
-	}
-	if curIdx+1 < len(cache.stats) { // [Check right]-->
-		targetIdx = len(cache.stats)
-		for idx := curIdx + 1; idx < len(cache.stats); idx++ {
-			targetWeight := cache.fileWeights[idx]
-			if targetWeight > curWeight {
-				targetIdx = idx
-				continue
-			} else {
-				break
-			}
-		}
-
-		if targetIdx != len(cache.stats) {
-			copy(cache.stats[curIdx:targetIdx], cache.stats[curIdx+1:targetIdx+1])
-			copy(cache.fileWeights[curIdx:targetIdx], cache.fileWeights[curIdx+1:targetIdx+1])
-			cache.stats[targetIdx] = curStats
-			cache.fileWeights[targetIdx] = curWeight
-			cache.reIndex(curIdx, targetIdx)
-		}
-	}
-
-}
-
-func (cache *WeightedLRU) updatePolicy(filename string, size float32, hit bool, _ ...interface{}) bool {
-	var (
-		added       = false
-		currentTime = time.Now()
-		curStats    *WeightedFileStats
-		statsIdx    int
-	)
-
-	if cache.SelUpdateStatPolicyType == UpdateStatsOnRequest {
-		statsIdx, curStats = cache.getOrInsertStats(filename)
-		curStats.updateStats(hit, size, currentTime)
-		newWeight := curStats.updateWeight(cache.SelFunctionType, cache.Exp)
-		cache.fileWeights[statsIdx] = newWeight
-		cache.moveStat(curStats)
-	}
+	currentTime := time.Now()
+	_, curStats := cache.getOrInsertStats(filename)
+	curStats.updateStats(hit, size, currentTime)
 
 	if !hit {
-		if cache.SelUpdateStatPolicyType == UpdateStatsOnMiss {
-			statsIdx, curStats = cache.getOrInsertStats(filename)
-			curStats.updateStats(hit, size, currentTime)
-			newWeight := curStats.updateWeight(cache.SelFunctionType, cache.Exp)
-			cache.fileWeights[statsIdx] = newWeight
-			cache.moveStat(curStats)
-		}
+		siteName := vars[0].(string)
+		userID := vars[1].(int)
 
-		var Q2 = cache.getThreshold()
-		// If weight is higher exit and return added = false
-		if curStats.Weight > Q2 {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		result, err := cache.aiClient.AIPredictOne(ctx,
+			&aiPb.AIInput{
+				Filename:         filename,
+				FileSize:         size,
+				SiteName:         siteName,
+				UserID:           uint32(userID),
+				CacheCapacity:    cache.Capacity(),
+				CacheLastFileHit: hit,
+				FileTotRequests:  curStats.TotRequests,
+				FileNHits:        curStats.NHits,
+				FileNMiss:        curStats.NMiss,
+				FileMeanTimeReq:  curStats.RequestTicksMean,
+			})
+		if err != nil {
+			log.Fatalf("ERROR: %v.AIPredictOne(_) = _, %v", cache.aiClient, err)
+		}
+		if result.Store == false {
 			return added
 		}
 		// Insert with LRU mechanism
@@ -509,9 +417,12 @@ func (cache *WeightedLRU) updatePolicy(filename string, size float32, hit bool, 
 }
 
 // Get a file from the cache updating the statistics
-func (cache *WeightedLRU) Get(filename string, size float32, vars ...interface{}) bool {
+func (cache *AILRU) Get(filename string, size float32, vars ...interface{}) bool {
 	hit := cache.check(filename)
-	added := cache.updatePolicy(filename, size, hit)
+	siteName := vars[0].(string)
+	userID := vars[1].(int)
+
+	added := cache.updatePolicy(filename, size, hit, siteName, userID)
 
 	if hit {
 		cache.hit += 1.
@@ -533,7 +444,7 @@ func (cache *WeightedLRU) Get(filename string, size float32, vars ...interface{}
 }
 
 // HitRate of the cache
-func (cache *WeightedLRU) HitRate() float32 {
+func (cache *AILRU) HitRate() float32 {
 	if cache.hit == 0. {
 		return 0.
 	}
@@ -541,7 +452,7 @@ func (cache *WeightedLRU) HitRate() float32 {
 }
 
 // HitOverMiss of the cache
-func (cache *WeightedLRU) HitOverMiss() float32 {
+func (cache *AILRU) HitOverMiss() float32 {
 	if cache.hit == 0. || cache.miss == 0. {
 		return 0.
 	}
@@ -549,36 +460,36 @@ func (cache *WeightedLRU) HitOverMiss() float32 {
 }
 
 // WeightedHitRate of the cache
-func (cache *WeightedLRU) WeightedHitRate() float32 {
+func (cache *AILRU) WeightedHitRate() float32 {
 	return cache.HitRate() * cache.dataReadOnHit
 }
 
 // Size of the cache
-func (cache *WeightedLRU) Size() float32 {
+func (cache *AILRU) Size() float32 {
 	return cache.size
 }
 
 // Capacity of the cache
-func (cache *WeightedLRU) Capacity() float32 {
+func (cache *AILRU) Capacity() float32 {
 	return (cache.Size() / cache.MaxSize) * 100.
 }
 
 // DataWritten of the cache
-func (cache *WeightedLRU) DataWritten() float32 {
+func (cache *AILRU) DataWritten() float32 {
 	return cache.dataWritten
 }
 
 // DataRead of the cache
-func (cache *WeightedLRU) DataRead() float32 {
+func (cache *AILRU) DataRead() float32 {
 	return cache.dataRead
 }
 
 // DataReadOnHit of the cache
-func (cache *WeightedLRU) DataReadOnHit() float32 {
+func (cache *AILRU) DataReadOnHit() float32 {
 	return cache.dataReadOnHit
 }
 
-func (cache *WeightedLRU) check(key string) bool {
+func (cache *AILRU) check(key string) bool {
 	_, ok := cache.files[key]
 	return ok
 }

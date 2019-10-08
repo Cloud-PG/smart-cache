@@ -189,7 +189,15 @@ class FeatureConverter(object):
                 self._features[feature_name] |= set((0.0,))
         self.gen_indexes(feature_name)
 
-    def get_category(self, feature_name: str, value) -> int:
+    def get_category_vector(self, feature_name: str, value) -> list:
+        idx = self.get_category_idx(feature_name, value)
+        return keras.utils.to_categorical(
+            [idx],
+            len(self._indexes[feature_name]),
+            dtype='float32'
+        ).tolist().pop()
+
+    def get_category_idx(self, feature_name: str, value) -> int:
         if value in self._indexes[feature_name]:
             return self._indexes[feature_name][value]
         elif isinstance(list(self._features[feature_name])[0], str):
@@ -203,14 +211,14 @@ class FeatureConverter(object):
     def get_values(self, feature_name: str, values: list) -> list:
         cat_values = []
         for value in values:
-            cat_values.append(self.get_category(feature_name, value))
+            cat_values.append(self.get_category_idx(feature_name, value))
 
         return np.array(cat_values)
 
     def get_categories(self, feature_name: str, values: list) -> list:
         categories = []
         for value in values:
-            categories.append(self.get_category(feature_name, value))
+            categories.append(self.get_category_idx(feature_name, value))
         return keras.utils.to_categorical(
             categories,
             len(self._indexes[feature_name]),
@@ -249,10 +257,10 @@ class FeatureConverter(object):
     def load(self, in_file: [IOBase, str]) -> 'FeatureConverter':
         if isinstance(in_file, str):
             with open(in_file, "rb") as file_:
-                pickle.load(self, file_)
+                obj = pickle.load(file_)
         else:
-            pickle.load(self, in_file)
-        return self
+            obj = pickle.load(in_file)
+        return obj
 
 
 class SupportTable(object):
