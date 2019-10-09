@@ -583,8 +583,14 @@ def main():
     parser.add_argument('--plot-filters', type=str,
                         default="",
                         help='A comma separate string to search as filters')
+    parser.add_argument('--only-CPU', type=bool,
+                        default=True,
+                        help='Force to use only CPU with TensorFlow [DEFAULT: True]')
 
     args, _ = parser.parse_known_args()
+
+    if args.only_CPU:
+        os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
     if args.action == "simulate":
         simulator_exe = get_simulator_exe(force_creation=args.force_exe_build)
