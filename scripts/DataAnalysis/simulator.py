@@ -599,7 +599,7 @@ def main():
 
         with open(path.join(base_dir, "simulator.version"), "w") as ver_file:
             output = subprocess.check_output(
-                [simulator_exe, 'version'],
+                " ".join([simulator_exe, 'version']),
                 shell=True,
             )
             ver_file.write(output.decode('ascii'))
