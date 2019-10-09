@@ -602,7 +602,7 @@ def main():
                 [simulator_exe, 'version'],
                 shell=True,
             )
-            ver_file.write(output)
+            ver_file.write(output.decode('ascii'))
 
         processes = []
 
