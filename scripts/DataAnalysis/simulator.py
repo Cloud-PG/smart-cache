@@ -553,12 +553,6 @@ def main():
     parser.add_argument('-FEB', '--force-exe-build', type=bool,
                         default=True,
                         help='Force to build the simulation executable [DEFAULT: True]')
-    parser.add_argument('--only-single-window-run', type=bool,
-                        default=False,
-                        help='Force to run only the single window simulations. Useful to generate datasets [DEFAULT: False]')
-    parser.add_argument('--gen-dataset', type=bool,
-                        default=False,
-                        help='Generate dataset during single simulation windows [DEFAULT: False]')
     parser.add_argument('-CS', '--cache-size', type=int,
                         default=10485760,
                         help='Size of the cache to simulate in Mega Bytes [DEFAULT: 10485760]')
@@ -649,9 +643,6 @@ def main():
                     "--simDump=true",
                     "--simDumpFileName=dump.json.gz",
                 ]
-                if args.gen_dataset:
-                    exe_args.append("--simGenDataset=true")
-                    exe_args.append("--simGenDatasetName=dataset.csv.gz")
                 if cache_type == 'aiLRU':
                     exe_args.append("--aiHost=127.0.0.1")
                     exe_args.append(f"--aiPort={cur_model_port}")
@@ -667,9 +658,6 @@ def main():
                 processes.append(("Single Window", cur_process))
 
         wait_jobs(processes)
-
-        if args.only_single_window_run:
-            exit(0)
 
         ##
         # Normal runs

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"compress/gzip"
 	"encoding/csv"
 	"fmt"
 	"log"
@@ -29,8 +28,6 @@ var (
 	limitStatsPolicy    string
 	simRegion           string
 	simOutFile          string
-	simGenDataset       bool
-	simGenDatasetName   string
 	simDump             bool
 	simDumpFileName     string
 	simLoadDump         bool
@@ -135,14 +132,6 @@ func addSimFlags(cmd *cobra.Command) {
 		"the output file name",
 	)
 	cmd.PersistentFlags().BoolVar(
-		&simGenDataset, "simGenDataset", false,
-		"indicates if a dataset have to be generated",
-	)
-	cmd.PersistentFlags().StringVar(
-		&simGenDatasetName, "simGenDatasetName", "",
-		"the output dataset file name",
-	)
-	cmd.PersistentFlags().BoolVar(
 		&simDump, "simDump", false,
 		"indicates if to dump the cache status after the simulation",
 	)
@@ -209,7 +198,6 @@ func simulationCmd(testAISimulation bool) *cobra.Command {
 			)
 			dumpFileName := baseName + ".json.gz"
 			resultFileName := baseName + "_results.csv"
-			datasetFileName := baseName + "_dataset.csv"
 
 			// Create cache
 			curCacheInstance := genCache(cacheType)
@@ -222,9 +210,6 @@ func simulationCmd(testAISimulation bool) *cobra.Command {
 			}
 			if simLoadDumpFileName == "" {
 				simLoadDumpFileName = dumpFileName
-			}
-			if simGenDatasetName == "" {
-				simGenDatasetName = datasetFileName
 			}
 
 			if simLoadDump {
@@ -275,42 +260,6 @@ func simulationCmd(testAISimulation bool) *cobra.Command {
 				"read on hit data",
 			})
 			csvOutput.Flush()
-
-			var (
-				datasetOutFile  *os.File
-				datasetGzipFile *gzip.Writer
-			)
-
-			if simGenDataset {
-				datasetOutFile, _ = os.Create(simGenDatasetName)
-				datasetGzipFile = gzip.NewWriter(datasetOutFile)
-				defer datasetOutFile.Close()
-				defer datasetGzipFile.Close()
-
-				switch cacheType {
-				case "weightedLRU":
-					datasetHeader := []string{
-						"taskID",
-						"jobID",
-						"siteName",
-						"siteNameIntHash",
-						"userID",
-						"cacheSize",
-						"cacheMaxSize",
-						"cacheCapacity",
-						"cacheLastFileHit",
-						"fileName",
-						"fileNameIntHash",
-						"fileSize",
-						"fileTotRequests",
-						"fileNHits",
-						"fileNMiss",
-						"fileMeanTimeReq",
-						"class",
-					}
-					datasetGzipFile.Write([]byte(strings.Join(datasetHeader, ",") + "\n"))
-				}
-			}
 
 			if simDump {
 				defer curCacheInstance.Dump(simDumpFileName)
@@ -375,35 +324,6 @@ func simulationCmd(testAISimulation bool) *cobra.Command {
 					}
 
 					numIterations++
-
-					if simGenDataset {
-						switch cacheType {
-						case "weightedLRU":
-							datasetInputs, err := curCacheInstance.GetReport()
-							if err == nil {
-								curRow := []string{
-									fmt.Sprintf("%d", record.TaskID),
-									fmt.Sprintf("%d", record.JobID),
-									fmt.Sprintf("%s", record.SiteName),
-									fmt.Sprintf("%d", cache.HashInt(record.SiteName)),
-									fmt.Sprintf("%d", record.UserID),
-									fmt.Sprintf("%f", datasetInputs.CacheSize),
-									fmt.Sprintf("%f", datasetInputs.CacheMaxSize),
-									fmt.Sprintf("%f", datasetInputs.CacheCapacity),
-									fmt.Sprintf("%t", datasetInputs.LastFileHitted),
-									fmt.Sprintf("%s", record.Filename),
-									fmt.Sprintf("%d", cache.HashInt(record.Filename)),
-									fmt.Sprintf("%f", datasetInputs.FileSize),
-									fmt.Sprintf("%d", datasetInputs.FileTotRequests),
-									fmt.Sprintf("%d", datasetInputs.FileNHits),
-									fmt.Sprintf("%d", datasetInputs.FileNMiss),
-									fmt.Sprintf("%f", datasetInputs.FileMeanTimeReq),
-									fmt.Sprintf("%t", datasetInputs.LastFileAdded),
-								}
-								datasetGzipFile.Write([]byte(strings.Join(curRow, ",") + "\n"))
-							}
-						}
-					}
 
 					if time.Now().Sub(start).Seconds() >= 1. {
 						timeElapsed := time.Now().Sub(simBeginTime)
