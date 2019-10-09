@@ -191,7 +191,7 @@ func simulationCmd(testAISimulation bool) *cobra.Command {
 
 			baseName := strings.Join([]string{
 				cacheType,
-				fmt.Sprintf("%0.0f", cacheSize),
+				fmt.Sprintf("%0.0fT", cacheSize/(1024.*1024.)),
 				simRegion,
 			},
 				"_",
