@@ -677,27 +677,29 @@ def main():
                 f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}"
             )
             os.makedirs(working_dir, exist_ok=True)
+            exe_args = [
+                simulator_exe,
+                "simulate" if cache_type != 'aiLRU' else "testAI",
+                cache_type,
+                path.abspath(args.source),
+                f"--size={args.cache_size}",
+                f"--simRegion={args.region}",
+                f"--simWindowSize={args.window_size}",
+                f"--simStartFromWindow={args.window_start}",
+                f"--simStopWindow={args.window_stop}",
+            ]
+            if cache_type == 'aiLRU':
+                cur_model_port = 4200
+                exe_args.append("--aiHost=127.0.0.1")
+                exe_args.append(f"--aiPort={cur_model_port}")
             cur_process = subprocess.Popen(
-                " ".join([
-                    simulator_exe,
-                    "simulate" if cache_type != 'aiLRU' else "testAI",
-                    cache_type,
-                    path.abspath(args.source),
-                    f"--size={args.cache_size}",
-                    f"--simRegion={args.region}",
-                    f"--simWindowSize={args.window_size}",
-                    f"--simStartFromWindow={args.window_start}",
-                    f"--simStopWindow={args.window_stop}",
-                ]),
+                " ".join(exe_args),
                 shell=True,
                 cwd=working_dir,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
             )
-            if cache_type == 'aiLRU':
-                exe_args.append("--aiHost=127.0.0.1")
-                exe_args.append(f"--aiPort={cur_model_port}")
             processes.append(("Full Run", cur_process))
 
         ##
@@ -721,29 +723,31 @@ def main():
                     f"window_{window_idx}",
                 )
                 os.makedirs(working_dir, exist_ok=True)
+                exe_args = [
+                    simulator_exe,
+                    "simulate" if cache_type != 'aiLRU' else "testAI",
+                    cache_type,
+                    path.abspath(args.source),
+                    f"--size={args.cache_size}",
+                    f"--simRegion={args.region}",
+                    f"--simWindowSize={args.window_size}",
+                    f"--simStartFromWindow={window_idx+1}",
+                    f"--simStopWindow={window_idx+2}",
+                    "--simLoadDump=true",
+                    f"--simLoadDumpFileName={path.join(dump_dir, 'dump.json.gz')}",
+                ]
+                if cache_type == 'aiLRU':
+                    cur_model_port = 4200+window_idx
+                    exe_args.append("--aiHost=127.0.0.1")
+                    exe_args.append(f"--aiPort={cur_model_port}")
                 cur_process = subprocess.Popen(
-                    " ".join([
-                        simulator_exe,
-                        "simulate" if cache_type != 'aiLRU' else "testAI",
-                        cache_type,
-                        path.abspath(args.source),
-                        f"--size={args.cache_size}",
-                        f"--simRegion={args.region}",
-                        f"--simWindowSize={args.window_size}",
-                        f"--simStartFromWindow={window_idx+1}",
-                        f"--simStopWindow={window_idx+2}",
-                        "--simLoadDump=true",
-                        f"--simLoadDumpFileName={path.join(dump_dir, 'dump.json.gz')}",
-                    ]),
+                    " ".join(exe_args),
                     shell=True,
                     cwd=working_dir,
                     stdin=subprocess.PIPE,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                 )
-                if cache_type == 'aiLRU':
-                    exe_args.append("--aiHost=127.0.0.1")
-                    exe_args.append(f"--aiPort={cur_model_port}")
                 processes.append(("Next Window", cur_process))
 
         ##
@@ -767,20 +771,25 @@ def main():
                     f"window_{window_idx}",
                 )
                 os.makedirs(working_dir, exist_ok=True)
+                exe_args = [
+                    simulator_exe,
+                    "simulate" if cache_type != 'aiLRU' else "testAI",
+                    cache_type,
+                    path.abspath(args.source),
+                    f"--size={args.cache_size}",
+                    f"--simRegion={args.region}",
+                    f"--simWindowSize={args.window_size}",
+                    f"--simStartFromWindow={window_idx+1}",
+                    f"--simStopWindow={args.window_stop+1}",
+                    "--simLoadDump=true",
+                    f"--simLoadDumpFileName={path.join(dump_dir, 'dump.json.gz')}",
+                ]
+                if cache_type == 'aiLRU':
+                    cur_model_port = 4200+window_idx
+                    exe_args.append("--aiHost=127.0.0.1")
+                    exe_args.append(f"--aiPort={cur_model_port}")
                 cur_process = subprocess.Popen(
-                    " ".join([
-                        simulator_exe,
-                        "simulate" if cache_type != 'aiLRU' else "testAI",
-                        cache_type,
-                        path.abspath(args.source),
-                        f"--size={args.cache_size}",
-                        f"--simRegion={args.region}",
-                        f"--simWindowSize={args.window_size}",
-                        f"--simStartFromWindow={window_idx+1}",
-                        f"--simStopWindow={args.window_stop+1}",
-                        "--simLoadDump=true",
-                        f"--simLoadDumpFileName={path.join(dump_dir, 'dump.json.gz')}",
-                    ]),
+                    " ".join(exe_args),
                     shell=True,
                     cwd=working_dir,
                     stdin=subprocess.PIPE,
