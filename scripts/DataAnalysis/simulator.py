@@ -47,6 +47,9 @@ def job_run(processes: list) -> bool:
         else:
             print(
                 f"[{process.pid}][DONE][{task_name}][Return code -> {process.returncode}]\x1b[0K", flush=True)
+            if process.returncode != 0:
+                print(
+                    f"[{process.pid}][DONE][{task_name}][Return code -> {process.returncode}]\n{process.stderr}\x1b[0K", flush=True)
 
     print(f"\x1b[{len(processes)+1}F")
 
@@ -603,7 +606,6 @@ def main():
         model_processes = []
 
         for window_idx in range(args.window_start, args.window_stop):
-            print(window_idx)
             for cache_type in cache_types:
                 if cache_type == 'aiLRU':
                     model_path = path.join(
