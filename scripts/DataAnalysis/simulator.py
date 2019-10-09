@@ -595,6 +595,7 @@ def main():
 
         base_dir = path.join(path.dirname(
             path.abspath(__file__)), args.out_folder)
+        os.makedirs(base_dir, exist_ok=True)
 
         with open(path.join(base_dir, "simulator.version"), "w") as ver_file:
             output = subprocess.check_output(
