@@ -4,7 +4,6 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -171,25 +170,6 @@ func (cache WeightedCache) Load(filename string) {
 	greader.Close()
 
 	cache.Loads(&records)
-}
-
-// GetReport from the cache
-func (cache *WeightedCache) GetReport() (*DatasetInput, error) {
-	stats, inStats := cache.stats[cache.lastFileName]
-	if !inStats {
-		return nil, errors.New("The file is not in cache stats anymore")
-	}
-	return &DatasetInput{
-		CacheSize:       cache.size,
-		CacheMaxSize:    cache.MaxSize,
-		FileSize:        stats.Size,
-		FileTotRequests: stats.TotRequests,
-		FileNHits:       stats.NHits,
-		FileNMiss:       stats.NMiss,
-		FileMeanTimeReq: stats.RequestTicksMean,
-		LastFileHitted:  cache.lastFileHitted,
-		LastFileAdded:   cache.lastFileAdded,
-	}, nil
 }
 
 // SimGet updates the cache from a protobuf message

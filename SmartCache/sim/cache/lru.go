@@ -5,7 +5,6 @@ import (
 	"container/list"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -185,25 +184,6 @@ func (cache LRUCache) Load(filename string) {
 	greader.Close()
 
 	cache.Loads(&records)
-}
-
-// GetReport from the cache
-func (cache *LRUCache) GetReport() (*DatasetInput, error) {
-	stats, inStats := cache.stats[cache.lastFileName]
-	if !inStats {
-		return nil, errors.New("The file is not in cache stats anymore")
-	}
-	return &DatasetInput{
-		CacheSize:       cache.size,
-		CacheMaxSize:    cache.MaxSize,
-		FileSize:        stats.size,
-		FileTotRequests: stats.totRequests,
-		FileNHits:       stats.nHits,
-		FileNMiss:       stats.nMiss,
-		FileMeanTimeReq: 0.,
-		LastFileHitted:  cache.lastFileHitted,
-		LastFileAdded:   cache.lastFileAdded,
-	}, nil
 }
 
 // SimGet updates the cache from a protobuf message
