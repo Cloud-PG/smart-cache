@@ -550,6 +550,9 @@ def main():
     parser.add_argument('source', type=str,
                         default="./results_8w_with_sizes_csv",
                         help='The folder where the json results are stored [DEFAULT: "./results_8w_with_sizes_csv"]')
+    parser.add_argument('--out-folder', type=str,
+                        default="simulation_results",
+                        help='The folder where the simulation results will be stored [DEFAULT: "simulation_results"]')
     parser.add_argument('-FEB', '--force-exe-build', type=bool,
                         default=True,
                         help='Force to build the simulation executable [DEFAULT: True]')
@@ -591,7 +594,7 @@ def main():
         cache_types = args.cacheTypes.split(",")
 
         base_dir = path.join(path.dirname(
-            path.abspath(__file__)), "simulation_results")
+            path.abspath(__file__)), args.out_folder)
 
         with open(path.join(base_dir, "simulator.version"), "w") as ver_file:
             output = subprocess.check_output(
