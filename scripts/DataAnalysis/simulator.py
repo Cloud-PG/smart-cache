@@ -1,7 +1,9 @@
 import argparse
+import gzip
 import os
 import subprocess
 from itertools import cycle
+from math import isnan
 from os import path, walk
 
 import numpy as np
@@ -12,10 +14,14 @@ from bokeh.models import (BoxZoomTool, PanTool, ResetTool, SaveTool, Span,
                           WheelZoomTool)
 from bokeh.palettes import Set1
 from bokeh.plotting import Figure, figure, output_file, save
+from tqdm import tqdm
+from yaspin import yaspin
+from yaspin.spinners import Spinners
 
 from DataManager.collector.dataset.reader import SimulatorDatasetReader
-from SmartCache.sim import get_simulator_exe
 from SmartCache.ai.models.generator import DonkeyModel
+from SmartCache.sim import get_simulator_exe
+from random import randint
 
 
 def wait_jobs(processes):
@@ -538,18 +544,44 @@ def plot_results(folder: str, results: dict,
             folder, "results.png"))
 
 
+def get_one_solution(dataframe, cache_size: float):
+    individual = np.random.randint(2, size=dataframe.shape[0], dtype=bool)
+    cur_series = pd.Series(individual, name='bools')
+    cur_size = sum(dataframe[cur_series]['size'])
+    with yaspin(
+        Spinners.bouncingBall,
+        f"[Searching for a valid indiviaul]"
+    ) as sp:
+        while cur_size > cache_size:
+            nonzero = np.nonzero(individual)[0]
+            diff_capacity = int((cur_size / cache_size)*100.)
+            n_delete = randint(diff_capacity, (len(nonzero) % diff_capacity)+diff_capacity+1)
+            for idx in range(n_delete):
+                individual[nonzero[-1-idx]] = False
+            cur_series = pd.Series(individual, name='bools')
+            cur_size = sum(dataframe[cur_series]['size'])
+            sp.text = f"[Searching for a valid indiviaul][Distance from target: {cur_size-cache_size}]"
+    print(f"[Found individual][Num. Files: {np.count_nonzero(individual == True)}][Cache capacity: {(cur_size / cache_size)*100.:0.2f}][Value: {sum(dataframe[cur_series]['value'])}]")
+    return individual
+
+
+def get_best_configuration(dataframe, cache_size: float):
+    for _ in range(100):
+        get_one_solution(dataframe, cache_size)
+
+
 def main():
     parser = argparse.ArgumentParser(
         "simulator", description="Simulation and result plotting")
-    parser.add_argument('action', choices=['simulate', 'plot', 'train'],
+    parser.add_argument('action', choices=['simulate', 'plot', 'train', 'create_dataset'],
                         default="simulate",
                         help='Action requested')
-    parser.add_argument('cacheTypes', type=str,
-                        default="lru,weightedLRU",
-                        help='Comma separated list of cache to simulate [DEFAULT: "lru,weightedLRU"]')
     parser.add_argument('source', type=str,
                         default="./results_8w_with_sizes_csv",
                         help='The folder where the json results are stored [DEFAULT: "./results_8w_with_sizes_csv"]')
+    parser.add_argument('--cacheTypes', type=str,
+                        default="lru,weightedLRU",
+                        help='Comma separated list of cache to simulate [DEFAULT: "lru,weightedLRU"]')
     parser.add_argument('--out-folder', type=str,
                         default="simulation_results",
                         help='The folder where the simulation results will be stored [DEFAULT: "simulation_results"]')
@@ -862,6 +894,81 @@ def main():
             model.save(path.join(
                 target_dir, "donkey_model"
             ))
+    elif args.action == "create_dataset":
+        day_files = []
+        for root, dirs, files in walk(args.source):
+            for file_ in tqdm(sorted(files), desc="Search files", ascii=True):
+                head, tail = path.splitext(file_)
+                if tail == ".gz":
+                    _, tail = path.splitext(head)
+                    if tail == ".csv" or tail == ".feather":
+                        day_files.append(
+                            path.join(
+                                root, file_
+                            )
+                        )
+
+        windows = []
+        cur_window = []
+        for file_ in day_files:
+            if len(cur_window) < args.window_size:
+                cur_window.append(file_)
+            else:
+                windows.append(cur_window)
+                cur_window = []
+        else:
+            if len(cur_window):
+                windows.append(cur_window)
+                cur_window = []
+
+        windows_requests = []
+        windows_files = []
+        for idx, window in enumerate(windows):
+            list_df = []
+            files = {}
+            for file_ in tqdm(window, desc=f"Create window {idx} dataframe", ascii=True):
+                head, _ = path.splitext(file_)
+                _, tail = path.splitext(head)
+                with gzip.GzipFile(file_, "rb") as cur_file:
+                    if tail == ".csv":
+                        df = pd.read_csv(cur_file)
+                    elif tail == ".feather":
+                        df = pd.read_feather(cur_file)
+                    else:
+                        raise Exception(
+                            f"Error: extension '{tail}' not supported...")
+                list_df.append(df)
+            cur_df = pd.concat(list_df, ignore_index=True)
+            # print(cur_df.shape)
+            windows_requests.append(cur_df)
+            for row in tqdm(cur_df.itertuples(), total=cur_df.shape[0],
+                            desc=f"Parse window {idx} dataframe", ascii=True):
+                cur_filename = row.filename
+                cur_size = row.size
+                if not isnan(cur_size):
+                    if cur_filename not in files:
+                        files[cur_filename] = {'size': cur_size, 'totReq': 0}
+                    files[cur_filename]['totReq'] += 1
+                    assert files[cur_filename]['size'] == cur_size, f"{files[cur_filename]['size']} != {cur_size}"
+            files_df = pd.DataFrame(
+                data={
+                    'filename': [filename
+                                 for filename in files],
+                    'size': [files[filename]['size']
+                             for filename in files],
+                    'totReq': [files[filename]['totReq']
+                               for filename in files],
+                }
+            )
+            # print(files_df.shape)
+            # TO Megabytes
+            files_df['size'] = files_df['size'] / 1024**2
+            files_df['value'] = files_df['size'] * files_df['totReq']
+            files_df = files_df.sort_values(by=['value'], ascending=False)
+            files_df = files_df.reset_index(drop=True)
+            windows_files.append(files_df)
+            print(files_df)
+            get_best_configuration(windows_files[-1], args.cache_size)
 
 
 if __name__ == "__main__":
