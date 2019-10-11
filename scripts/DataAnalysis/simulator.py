@@ -12,7 +12,7 @@ from bokeh.io import export_png
 from bokeh.layouts import column, row
 from bokeh.models import (BoxZoomTool, PanTool, ResetTool, SaveTool, Span,
                           WheelZoomTool)
-from bokeh.palettes import Set1
+from bokeh.palettes import Accent
 from bokeh.plotting import Figure, figure, output_file, save
 from tqdm import tqdm
 from yaspin import yaspin
@@ -96,8 +96,7 @@ def load_results(folder: str) -> dict:
 
 def update_colors(new_name: str, color_table: dict):
     names = list(color_table.keys()) + [new_name]
-    colors = cycle(Set1[9])
-    next(colors)
+    colors = cycle(Accent[8])
     for name in sorted(names):
         cur_color = next(colors)
         color_table[name] = cur_color
@@ -160,7 +159,7 @@ def plot_hit_rate(tools: list,
                 points,
                 legend=cache_name,
                 color=color_table[cache_name],
-                line_width=2.,
+                line_width=3.,
             )
         elif run_type == "run_single_window":
             single_window_name = f'{cache_name} - single window'
@@ -180,7 +179,7 @@ def plot_hit_rate(tools: list,
                 points,
                 legend=single_window_name,
                 color=color_table[cache_name],
-                line_width=2.,
+                line_width=3.,
             )
             next_windows = pd.concat(
                 [
@@ -209,7 +208,7 @@ def plot_hit_rate(tools: list,
                 legend=next_window_name,
                 line_color="red",
                 line_alpha=0.9,
-                line_width=2.,
+                line_width=3.,
                 line_dash="dashed",
             )
         elif run_type == "run_next_period":
@@ -229,7 +228,7 @@ def plot_hit_rate(tools: list,
                 points,
                 legend=single_window_name,
                 color=color_table[cache_name],
-                line_width=2.,
+                line_width=3.,
             )
             line_styles = cycle([
                 'solid',
@@ -262,7 +261,7 @@ def plot_hit_rate(tools: list,
                         legend=cur_period_name,
                         line_color="red",
                         line_alpha=0.9,
-                        line_width=2.,
+                        line_width=3.,
                         line_dash=cur_line_style,
                     )
 
@@ -309,7 +308,7 @@ def plot_read_on_write_data(tools: list,
                 points,
                 legend=cache_name,
                 color=color_table[cache_name],
-                line_width=2.,
+                line_width=3.,
             )
         elif run_type == "run_single_window":
             single_window_name = f'{cache_name} - single window'
@@ -330,7 +329,7 @@ def plot_read_on_write_data(tools: list,
                 points,
                 legend=single_window_name,
                 color=color_table[cache_name],
-                line_width=2.,
+                line_width=3.,
             )
             next_windows = pd.concat(
                 [
@@ -360,7 +359,7 @@ def plot_read_on_write_data(tools: list,
                 legend=next_window_name,
                 line_color="red",
                 line_alpha=0.9,
-                line_width=2.,
+                line_width=3.,
                 line_dash="dashed",
             )
         elif run_type == "run_next_period":
@@ -381,7 +380,7 @@ def plot_read_on_write_data(tools: list,
                 points,
                 legend=single_window_name,
                 color=color_table[cache_name],
-                line_width=2.,
+                line_width=3.,
             )
             line_styles = cycle([
                 'solid',
@@ -413,7 +412,7 @@ def plot_read_on_write_data(tools: list,
                         legend=cur_period_name,
                         line_color="red",
                         line_alpha=0.9,
-                        line_width=2.,
+                        line_width=3.,
                         line_dash=cur_line_style,
                     )
 
