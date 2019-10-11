@@ -639,7 +639,7 @@ def get_one_solution(dataframe, cache_size: float):
 
 
 def get_best_configuration(dataframe, cache_size: float,
-                           num_generation: int = 1000,
+                           num_generation: int = 10000,
                            population_size=10):
     population = []
     for _ in tqdm(range(population_size), desc="Create Population",
@@ -685,8 +685,10 @@ def generation(gen_input):
     return (new_individual, new_fitness)
 
 
-def evolve_with_genetic_algorithm(population, dataframe, cache_size: float,
-                                  num_generation: int = 10000):
+def evolve_with_genetic_algorithm(population, dataframe,
+                                  cache_size: float,
+                                  num_generation: int
+                                  ):
     cur_population = population
     new_population = []
     pool = Pool()
