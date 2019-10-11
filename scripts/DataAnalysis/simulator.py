@@ -668,7 +668,7 @@ def mutation(individual) -> 'np.Array':
     flip_bits = np.random.rand(len(individual))
     mutant = []
     for idx, flip in enumerate(flip_bits):
-        if flip >= 0.75:
+        if flip > 0.75:
             mutant.append(not individual[idx])
         else:
             mutant.append(individual[idx])
