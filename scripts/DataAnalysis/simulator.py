@@ -136,8 +136,8 @@ def plot_hit_rate(tools: list,
                   title: str = "Hit Rate",
                   run_type: str = "run_full_normal",
                   datetimes: list = [],
-                  plot_width: int = 1200,
-                  plot_height: int = 600,
+                  plot_width: int = 640,
+                  plot_height: int = 480,
                   ) -> 'Figure':
     hit_rate_fig = figure(
         tools=tools,
@@ -231,6 +231,13 @@ def plot_hit_rate(tools: list,
                 color=color_table[cache_name],
                 line_width=2.,
             )
+            line_styles = cycle([
+                'solid',
+                'dashed',
+                'dotted',
+                'dotdash',
+                'dashdot',
+            ])
             for period, period_values in values.items():
                 cur_period = period_values[
                     ['date', 'hit rate']
@@ -248,6 +255,7 @@ def plot_hit_rate(tools: list,
                 ]
                 cur_period = cur_period[~cur_period.date.isin(datetimes)]
                 if len(cur_dates) > 0:
+                    cur_line_style = next(line_styles)
                     hit_rate_fig.line(
                         cur_dates,
                         points,
@@ -255,7 +263,7 @@ def plot_hit_rate(tools: list,
                         line_color="red",
                         line_alpha=0.9,
                         line_width=2.,
-                        line_dash="dashed",
+                        line_dash=cur_line_style,
                     )
 
     hit_rate_fig.legend.location = "top_left"
@@ -277,8 +285,8 @@ def plot_read_on_write_data(tools: list,
                             title: str = "Read on Write data",
                             run_type: str = "run_full_normal",
                             datetimes: list = [],
-                            plot_width: int = 1200,
-                            plot_height: int = 600,
+                            plot_width: int = 640,
+                            plot_height: int = 480,
                             ) -> 'Figure':
     read_on_write_data_fig = figure(
         tools=tools,
@@ -295,7 +303,7 @@ def plot_read_on_write_data(tools: list,
         results, run_type, filters
     ):
         if run_type == "run_full_normal":
-            points = values['read data'] / (values['written data'])
+            points = values['read data'] / values['written data']
             read_on_write_data_fig.line(
                 dates,
                 points,
@@ -356,6 +364,32 @@ def plot_read_on_write_data(tools: list,
                 line_dash="dashed",
             )
         elif run_type == "run_next_period":
+            single_window_name = f'{cache_name} - single window'
+            single_windows = pd.concat(
+                [
+                    window
+                    for name, window in sorted(
+                        results['run_single_window'][cache_name].items(),
+                        key=lambda elm: elm[0],
+                    )
+                ]
+            )
+            points = single_windows.sort_values(by=['date'])
+            points = points['read data'] / points['written data']
+            read_on_write_data_fig.line(
+                dates,
+                points,
+                legend=single_window_name,
+                color=color_table[cache_name],
+                line_width=2.,
+            )
+            line_styles = cycle([
+                'solid',
+                'dashed',
+                'dotted',
+                'dotdash',
+                'dashdot',
+            ])
             for period, period_values in values.items():
                 cur_period = period_values[
                     ['date', 'read data', 'written data']
@@ -372,13 +406,15 @@ def plot_read_on_write_data(tools: list,
                     if cur_date in dates
                 ]
                 if len(cur_dates) > 0:
+                    cur_line_style = next(line_styles)
                     read_on_write_data_fig.line(
                         cur_dates,
                         points,
                         legend=cur_period_name,
-                        line_color=color_table[cache_name],
+                        line_color="red",
                         line_alpha=0.9,
                         line_width=2.,
+                        line_dash=cur_line_style,
                     )
 
     read_on_write_data_fig.legend.location = "top_left"
@@ -392,7 +428,9 @@ def plot_read_on_write_data(tools: list,
 
 def plot_results(folder: str, results: dict,
                  filters: list = [], window_size: int = 1,
-                 html: bool = True, png: bool = False
+                 html: bool = True, png: bool = False,
+                 plot_width: int = 640,
+                 plot_height: int = 480,
                  ):
     color_table = {}
     dates = []
@@ -436,6 +474,8 @@ def plot_results(folder: str, results: dict,
     run_single_window_figs = []
     run_next_period_figs = []
 
+    pbar = tqdm(total=6, desc="Plot results", ascii=True)
+
     ###########################################################################
     # Hit Rate plot of full normal run
     ###########################################################################
@@ -447,8 +487,11 @@ def plot_results(folder: str, results: dict,
         color_table,
         window_size,
         title="Hit Rate - Full Normal Run",
+        plot_width=plot_width,
+        plot_height=plot_height,
     )
     run_full_normal_figs.append(hit_rate_fig)
+    pbar.update(1)
 
     ###########################################################################
     # Read on Write data plot of full normal run
@@ -462,8 +505,11 @@ def plot_results(folder: str, results: dict,
         window_size,
         x_range=hit_rate_fig.x_range,
         title="Read on Write data - Full Normal Run",
+        plot_width=plot_width,
+        plot_height=plot_height,
     )
     run_full_normal_figs.append(read_on_write_data_fig)
+    pbar.update(1)
 
     ###########################################################################
     # Hit Rate compare single and next window plot
@@ -478,8 +524,11 @@ def plot_results(folder: str, results: dict,
         x_range=hit_rate_fig.x_range,
         title="Hit Rate - Compare single and next window",
         run_type="run_single_window",
+        plot_width=plot_width,
+        plot_height=plot_height,
     )
     run_single_window_figs.append(hit_rate_comp_snw_fig)
+    pbar.update(1)
 
     ###########################################################################
     # Read on Write data data compare single and next window plot
@@ -494,8 +543,11 @@ def plot_results(folder: str, results: dict,
         x_range=hit_rate_fig.x_range,
         title="Read on Write data - Compare single and next window",
         run_type="run_single_window",
+        plot_width=plot_width,
+        plot_height=plot_height,
     )
     run_single_window_figs.append(ronwdata_comp_snw_fig)
+    pbar.update(1)
 
     ###########################################################################
     # Hit Rate compare single window and next period plot
@@ -511,8 +563,11 @@ def plot_results(folder: str, results: dict,
         title="Hit Rate - Compare single window and next period",
         run_type="run_next_period",
         datetimes=datetimes,
+        plot_width=plot_width,
+        plot_height=plot_height,
     )
     run_next_period_figs.append(hit_rate_comp_swnp_fig)
+    pbar.update(1)
 
     ###########################################################################
     # Read on Write data data compare single window and next period plot
@@ -526,10 +581,13 @@ def plot_results(folder: str, results: dict,
         window_size,
         x_range=hit_rate_fig.x_range,
         title="Read on Write data - Compare single window and next period",
-        run_type="run_single_window",
+        run_type="run_next_period",
         datetimes=datetimes,
+        plot_width=plot_width,
+        plot_height=plot_height,
     )
     run_next_period_figs.append(ronwdata_comp_swnp_fig)
+    pbar.update(1)
 
     figs.append(column(
         row(*run_full_normal_figs),
@@ -543,6 +601,8 @@ def plot_results(folder: str, results: dict,
         export_png(column(*figs), filename=os.path.join(
             folder, "results.png"))
 
+    pbar.close()
+
 
 def get_one_solution(dataframe, cache_size: float):
     individual = np.random.randint(2, size=dataframe.shape[0], dtype=bool)
@@ -555,13 +615,15 @@ def get_one_solution(dataframe, cache_size: float):
         while cur_size > cache_size:
             nonzero = np.nonzero(individual)[0]
             diff_capacity = int((cur_size / cache_size)*100.)
-            n_delete = randint(diff_capacity, (len(nonzero) % diff_capacity)+diff_capacity+1)
+            n_delete = randint(diff_capacity, (len(nonzero) %
+                                               diff_capacity)+diff_capacity+1)
             for idx in range(n_delete):
                 individual[nonzero[-1-idx]] = False
             cur_series = pd.Series(individual, name='bools')
             cur_size = sum(dataframe[cur_series]['size'])
             sp.text = f"[Searching for a valid indiviaul][Distance from target: {cur_size-cache_size}]"
-    print(f"[Found individual][Num. Files: {np.count_nonzero(individual == True)}][Cache capacity: {(cur_size / cache_size)*100.:0.2f}][Value: {sum(dataframe[cur_series]['value'])}]")
+    print(
+        f"[Found individual][Num. Files: {np.count_nonzero(individual == True)}][Cache capacity: {(cur_size / cache_size)*100.:0.2f}][Value: {sum(dataframe[cur_series]['value'])}]")
     return individual
 
 
@@ -615,6 +677,9 @@ def main():
     parser.add_argument('--only-CPU', type=bool,
                         default=True,
                         help='Force to use only CPU with TensorFlow [DEFAULT: True]')
+    parser.add_argument('--plot-resolution', type=str,
+                        default="640,480",
+                        help='A comma separate string representing the target resolution of each plot [DEFAULT: 640,480]')
 
     args, _ = parser.parse_known_args()
 
@@ -845,11 +910,18 @@ def main():
     elif args.action == "plot":
         filters = [elm for elm in args.plot_filters.split(",") if elm]
         results = load_results(args.source)
+        plot_width, plot_height = [
+            int(elm) for elm in args.plot_resolution.split(",")
+            if elm
+        ]
         plot_results(
             args.source, results,
             window_size=args.window_size,
             filters=filters,
-            html=args.out_html, png=args.out_png
+            html=args.out_html,
+            png=args.out_png,
+            plot_width=plot_width,
+            plot_height=plot_height,
         )
     elif args.action == "train":
         dataset = SimulatorDatasetReader(path.join(
