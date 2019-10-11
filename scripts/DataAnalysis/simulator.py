@@ -627,8 +627,9 @@ def make_it_valid(individual, dataframe, cache_size: float):
     nonzero = np.nonzero(individual)[0]
     cur_idx = len(nonzero) - 1
     while not valid_individual(individual, dataframe, cache_size):
-        individual[nonzero[cur_idx]] = False
-        cur_idx -= 1
+        for _ in range(randint(1, len(cur_idx))):
+            individual[nonzero[cur_idx]] = False
+            cur_idx -= 1
     return individual
 
 
