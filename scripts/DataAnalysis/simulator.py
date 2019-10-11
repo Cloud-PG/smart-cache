@@ -4,7 +4,9 @@ import os
 import subprocess
 from itertools import cycle
 from math import isnan
+from multiprocessing import Pool
 from os import path, walk
+from random import randint, seed
 
 import numpy as np
 import pandas as pd
@@ -21,7 +23,9 @@ from yaspin.spinners import Spinners
 from DataManager.collector.dataset.reader import SimulatorDatasetReader
 from SmartCache.ai.models.generator import DonkeyModel
 from SmartCache.sim import get_simulator_exe
-from random import randint
+
+# Set seed
+seed(42)
 
 
 def wait_jobs(processes):
@@ -603,32 +607,126 @@ def plot_results(folder: str, results: dict,
     pbar.close()
 
 
-def get_one_solution(dataframe, cache_size: float):
-    individual = np.random.randint(2, size=dataframe.shape[0], dtype=bool)
+def valid_individual(individual, dataframe, cache_size: float) -> bool:
+    return indivudual_size(individual, dataframe) <= cache_size
+
+
+def indivudual_size(individual, dataframe) -> float:
     cur_series = pd.Series(individual, name='bools')
     cur_size = sum(dataframe[cur_series]['size'])
-    with yaspin(
-        Spinners.bouncingBall,
-        f"[Searching for a valid indiviaul]"
-    ) as sp:
-        while cur_size > cache_size:
-            nonzero = np.nonzero(individual)[0]
-            diff_capacity = int((cur_size / cache_size)*100.)
-            n_delete = randint(diff_capacity, (len(nonzero) %
-                                               diff_capacity)+diff_capacity+1)
-            for idx in range(n_delete):
-                individual[nonzero[-1-idx]] = False
-            cur_series = pd.Series(individual, name='bools')
-            cur_size = sum(dataframe[cur_series]['size'])
-            sp.text = f"[Searching for a valid indiviaul][Distance from target: {cur_size-cache_size}]"
-    print(
-        f"[Found individual][Num. Files: {np.count_nonzero(individual == True)}][Cache capacity: {(cur_size / cache_size)*100.:0.2f}][Value: {sum(dataframe[cur_series]['value'])}]")
+    return cur_size
+
+
+def indivudual_fitness(individual, dataframe) -> float:
+    cur_series = pd.Series(individual, name='bools')
+    cur_size = sum(dataframe[cur_series]['value'])
+    return cur_size
+
+
+def make_it_valid(individual, dataframe, cache_size: float):
+    while not valid_individual(individual, dataframe, cache_size):
+        nonzero = np.nonzero(individual)[0]
+        n_delete = randint(1, len(nonzero)+1)
+        for idx in range(n_delete):
+            individual[nonzero[-1-idx]] = False
     return individual
 
 
-def get_best_configuration(dataframe, cache_size: float):
-    for _ in range(100):
-        get_one_solution(dataframe, cache_size)
+def get_one_solution(dataframe, cache_size: float):
+    individual = np.random.randint(2, size=dataframe.shape[0], dtype=bool)
+    individual = make_it_valid(individual, dataframe, cache_size)
+    return individual
+
+
+def get_best_configuration(dataframe, cache_size: float,
+                           num_generation: int = 1000,
+                           population_size=100):
+    population = []
+    for _ in tqdm(range(population_size), desc="Create Population",
+                  total=population_size, ascii=True):
+        population.append(get_one_solution(dataframe, cache_size))
+
+    evolve_with_genetic_algorithm(
+        population, dataframe, cache_size, num_generation
+    )
+
+
+def crossover(parent_a, parent_b) -> 'np.Array':
+    """Perform and uniform corssover."""
+    uniform_crossover = np.random.rand(len(parent_a))
+    child = []
+    for idx, cross in enumerate(uniform_crossover):
+        if cross > 0.75:
+            child.append(parent_b[idx])
+        else:
+            child.append(parent_a[idx])
+    return np.array(child, dtype=bool)
+
+
+def mutation(individual) -> 'np.Array':
+    """Bit Flip mutation."""
+    flip_bits = np.random.rand(len(individual))
+    mutant = []
+    for idx, flip in enumerate(flip_bits):
+        if flip >= 0.75:
+            mutant.append(not individual[idx])
+        else:
+            mutant.append(individual[idx])
+    return np.array(mutant, dtype=bool)
+
+
+def generation(gen_input):
+    best, individual, dataframe, cache_size = gen_input
+    new_individual = crossover(best, individual)
+    new_individual = mutation(new_individual)
+    new_individual = make_it_valid(
+        new_individual, dataframe, cache_size)
+    new_fitness = indivudual_fitness(new_individual, dataframe)
+    return (new_individual, new_fitness)
+
+
+def evolve_with_genetic_algorithm(population, dataframe, cache_size: float,
+                                  num_generation: int = 1000):
+    cur_population = population
+    new_population = []
+    pool = Pool()
+
+    for _ in tqdm(
+        range(num_generation),
+        desc="Evolution", ascii=True,
+        position=0
+    ):
+        cur_fitness = []
+        for indivudual in population:
+            cur_fitness.append(indivudual_fitness(indivudual, dataframe))
+
+        idx_best = np.argmax(cur_fitness)
+        best = cur_population[idx_best]
+        mean = sum(cur_fitness) / len(cur_fitness)
+        for cur_idx, (new_individual, new_fitness) in tqdm(
+                enumerate(
+                    pool.imap(
+                        generation,
+                        [
+                            (best, individual, dataframe, cache_size)
+                            for individual in cur_population
+                        ]
+                    )
+                ),
+                desc=f"Make new generation [Best: {cur_fitness[idx_best]:0.0f}][Mean: {mean:0.0f}]",
+                ascii=True, position=1, leave=False,
+                total=len(cur_population),
+        ):
+            if new_fitness > cur_fitness[cur_idx]:
+                new_population.append(new_individual)
+                continue
+            new_population.append(cur_population[cur_idx])
+        else:
+            cur_population = [individual for individual in new_population]
+            new_population = []
+
+    idx_best = np.argmax(cur_fitness)
+    return cur_population[idx_best]
 
 
 def main():
@@ -905,7 +1003,6 @@ def main():
                 processes.append(("Next Period", cur_process))
 
         wait_jobs(processes)
-
     elif args.action == "plot":
         filters = [elm for elm in args.plot_filters.split(",") if elm]
         results = load_results(args.source)
@@ -966,6 +1063,9 @@ def main():
                 target_dir, "donkey_model"
             ))
     elif args.action == "create_dataset":
+        base_dir = path.join(path.dirname(path.abspath(__file__)), "datasets")
+        os.makedirs(base_dir, exist_ok=True)
+
         day_files = []
         for root, dirs, files in walk(args.source):
             for file_ in tqdm(sorted(files), desc="Search files", ascii=True):
@@ -993,7 +1093,7 @@ def main():
                 cur_window = []
 
         windows_requests = []
-        windows_files = []
+
         for idx, window in enumerate(windows):
             list_df = []
             files = {}
@@ -1012,10 +1112,10 @@ def main():
             cur_df = pd.concat(list_df, ignore_index=True)
             # print(cur_df.shape)
             windows_requests.append(cur_df)
-            for row in tqdm(cur_df.itertuples(), total=cur_df.shape[0],
-                            desc=f"Parse window {idx} dataframe", ascii=True):
-                cur_filename = row.filename
-                cur_size = row.size
+            for cur_row in tqdm(cur_df.itertuples(), total=cur_df.shape[0],
+                                desc=f"Parse window {idx} dataframe", ascii=True):
+                cur_filename = cur_row.filename
+                cur_size = cur_row.size
                 if not isnan(cur_size):
                     if cur_filename not in files:
                         files[cur_filename] = {'size': cur_size, 'totReq': 0}
@@ -1031,15 +1131,25 @@ def main():
                                for filename in files],
                 }
             )
-            # print(files_df.shape)
+            # Remove 1 request files
+            files_df = files_df.drop(files_df[files_df.totReq == 1].index)
             # TO Megabytes
             files_df['size'] = files_df['size'] / 1024**2
+            # Remove low value files
             files_df['value'] = files_df['size'] * files_df['totReq']
+            q1 = files_df.value.describe().quantile(0.25)
+            files_df = files_df.drop(files_df[files_df.value < q1].index)
+            # Sort and reset indexes
             files_df = files_df.sort_values(by=['value'], ascending=False)
             files_df = files_df.reset_index(drop=True)
-            windows_files.append(files_df)
-            print(files_df)
-            get_best_configuration(windows_files[-1], args.cache_size)
+            # print(files_df)
+            best_files = get_best_configuration(files_df, args.cache_size)
+
+            files_df['class'] = best_files
+            files_df.to_feather(path.join(
+                base_dir,
+                f"dataset_window_{idx:02d}.feather"
+            ))
 
 
 if __name__ == "__main__":
