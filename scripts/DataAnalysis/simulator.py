@@ -640,7 +640,7 @@ def get_one_solution(dataframe, cache_size: float):
 
 
 def get_best_configuration(dataframe, cache_size: float,
-                           num_generation: int = 1000,
+                           num_generation: int = 100,
                            population_size=100):
     population = []
     for _ in tqdm(range(population_size), desc="Create Population",
@@ -669,7 +669,7 @@ def mutation(individual) -> 'np.Array':
     flip_bits = np.random.rand(len(individual))
     mutant = []
     for idx, flip in enumerate(flip_bits):
-        if flip > 0.9:
+        if flip > 0.75:
             mutant.append(not individual[idx])
         else:
             mutant.append(individual[idx])
@@ -690,7 +690,7 @@ def evolve_with_genetic_algorithm(population, dataframe,
                                   cache_size: float,
                                   num_generation: int
                                   ):
-    cur_population = population
+    cur_population = [elm for elm in population]
     new_population = []
     pool = Pool()
 
@@ -700,7 +700,7 @@ def evolve_with_genetic_algorithm(population, dataframe,
         position=0
     ):
         cur_fitness = []
-        for indivudual in population:
+        for indivudual in cur_population:
             cur_fitness.append(indivudual_fitness(indivudual, dataframe))
 
         idx_best = np.argmax(cur_fitness)
@@ -720,6 +720,9 @@ def evolve_with_genetic_algorithm(population, dataframe,
                 ascii=True, position=1, leave=False,
                 total=len(cur_population),
         ):
+            if new_fitness > cur_fitness[cur_idx]:
+                new_population.append(new_individual)
+                continue
             new_population.append(cur_population[cur_idx])
         else:
             cur_population = [individual for individual in new_population]
