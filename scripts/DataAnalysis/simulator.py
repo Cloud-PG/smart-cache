@@ -669,7 +669,7 @@ def mutation(individual) -> 'np.Array':
     flip_bits = np.random.rand(len(individual))
     mutant = []
     for idx, flip in enumerate(flip_bits):
-        if flip > 0.75:
+        if flip > 0.9:
             mutant.append(not individual[idx])
         else:
             mutant.append(individual[idx])
@@ -720,9 +720,6 @@ def evolve_with_genetic_algorithm(population, dataframe,
                 ascii=True, position=1, leave=False,
                 total=len(cur_population),
         ):
-            if new_fitness > cur_fitness[cur_idx]:
-                new_population.append(new_individual)
-                continue
             new_population.append(cur_population[cur_idx])
         else:
             cur_population = [individual for individual in new_population]
