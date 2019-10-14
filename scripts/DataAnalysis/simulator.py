@@ -659,7 +659,7 @@ def crossover(parent_a, parent_b) -> 'np.Array':
     uniform_crossover = np.random.rand(len(parent_a))
     child = []
     for idx, cross in enumerate(uniform_crossover):
-        if cross >= 0.9:
+        if cross > 0.5:
             child.append(parent_b[idx])
         else:
             child.append(parent_a[idx])
@@ -671,7 +671,7 @@ def mutation(individual) -> 'np.Array':
     flip_bits = np.random.rand(len(individual))
     mutant = []
     for idx, flip in enumerate(flip_bits):
-        if flip >= 0.6:
+        if flip > 0.75:
             mutant.append(not individual[idx])
         else:
             mutant.append(individual[idx])
