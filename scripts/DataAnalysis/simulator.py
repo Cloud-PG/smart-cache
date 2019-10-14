@@ -1149,10 +1149,13 @@ def main():
             best_files = get_best_configuration(files_df, args.cache_size)
 
             files_df['class'] = best_files
-            files_df.to_feather(path.join(
+            datest_out_file = path.join(
                 base_dir,
                 f"dataset_window_{idx:02d}.feather"
-            ))
+            )
+
+            with yaspin(Spinners.bouncingBall, text=f"[Store dataset][{datest_out_file}]") as sp:
+                files_df.to_feather(datest_out_file)
 
 
 if __name__ == "__main__":
