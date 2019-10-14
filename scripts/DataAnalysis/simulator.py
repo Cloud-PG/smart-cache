@@ -59,7 +59,7 @@ def job_run(processes: list) -> bool:
                 f"[{process.pid}][DONE][{task_name}][Return code -> {process.returncode}]\x1b[0K", flush=True)
             if process.returncode != 0:
                 print(
-                    f"[{process.pid}][DONE][{task_name}][Return code -> {process.returncode.read().decode('ascii')}]\n{process.stderr}\x1b[0K", flush=True)
+                    f"[{process.pid}][DONE][{task_name}][Return code -> {process.returncode}]\n{process.stderr.read().decode('ascii')}\x1b[0K", flush=True)
 
     print(f"\x1b[{len(processes)+1}F")
 
