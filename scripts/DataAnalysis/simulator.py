@@ -165,6 +165,12 @@ def plot_hit_rate(tools: list,
                 color=color_table[cache_name],
                 line_width=3.,
             )
+            mean_point = sum(points) / len(points)
+            hline = Span(
+                location=mean_point, dimension='width', line_dash="dashdot",
+                line_color=color_table[cache_name], line_width=2.1
+            )
+            hit_rate_fig.renderers.extend([hline])
         elif run_type == "run_single_window":
             single_window_name = f'{cache_name} - single window'
             next_window_name = f'{cache_name} - next window'
@@ -194,20 +200,14 @@ def plot_hit_rate(tools: list,
                     )
                 ]
             ).sort_values(by=['date'])
-            points = pd.concat(
-                [
-                    single_windows.loc[
-                        ~single_windows.date.isin(next_windows.date),
-                        ['date', 'hit rate']
-                    ],
-                    next_windows.loc[
-                        next_windows.date.isin(single_windows.date),
-                        ['date', 'hit rate']
-                    ]
-                ]
-            ).sort_values(by=['date'])['hit rate']
+            cur_dates = [
+                elm.split(" ")[0]
+                for elm
+                in next_windows['date'].astype(str)
+            ]
+            points = next_windows['hit rate']
             hit_rate_fig.line(
-                dates,
+                cur_dates,
                 points,
                 legend=next_window_name,
                 line_color="red",
@@ -215,6 +215,12 @@ def plot_hit_rate(tools: list,
                 line_width=3.,
                 line_dash="dashed",
             )
+            mean_point = sum(points) / len(points)
+            next_hline = Span(
+                location=mean_point, dimension='width', line_dash="dashed",
+                line_color=color_table[cache_name], line_width=2.1
+            )
+            hit_rate_fig.renderers.extend([next_hline])
         elif run_type == "run_next_period":
             single_window_name = f'{cache_name} - single window'
             single_windows = pd.concat(
@@ -268,6 +274,13 @@ def plot_hit_rate(tools: list,
                         line_width=3.,
                         line_dash=cur_line_style,
                     )
+                    mean_point = sum(points) / len(points)
+                    next_period_hline = Span(
+                        location=mean_point, dimension='width',
+                        line_dash=cur_line_style,
+                        line_color=color_table[cache_name], line_width=2.1
+                    )
+                    hit_rate_fig.renderers.extend([next_period_hline])
 
     hit_rate_fig.legend.location = "top_left"
     hit_rate_fig.legend.click_policy = "hide"
@@ -295,12 +308,20 @@ def plot_read_on_write_data(tools: list,
         tools=tools,
         title=title,
         x_axis_label="Day",
-        y_axis_label="Ratio",
+        y_axis_label="Ratio (Read/Write)",
         y_axis_type="log",
         x_range=x_range if x_range else dates,
+        y_range=(0.8, 100),
         plot_width=plot_width,
         plot_height=plot_height,
     )
+
+    read_on_write_data_fig.xaxis.major_label_overrides = {1: 'A', 2: 'B', 3: 'C'}
+    hline_1 = Span(
+        location=1.0, dimension='width', line_dash="dashed",
+        line_color="black", line_width=3.,
+    )
+    read_on_write_data_fig.renderers.extend([hline_1])
 
     for cache_name, values in filter_results(
         results, run_type, filters
@@ -314,6 +335,12 @@ def plot_read_on_write_data(tools: list,
                 color=color_table[cache_name],
                 line_width=3.,
             )
+            mean_point = sum(points) / len(points)
+            hline = Span(
+                location=mean_point, dimension='width', line_dash="dashdot",
+                line_color=color_table[cache_name], line_width=2.1
+            )
+            read_on_write_data_fig.renderers.extend([hline])
         elif run_type == "run_single_window":
             single_window_name = f'{cache_name} - single window'
             next_window_name = f'{cache_name} - next window'
@@ -344,21 +371,14 @@ def plot_read_on_write_data(tools: list,
                     )
                 ]
             ).sort_values(by=['date'])
-            tmp = pd.concat(
-                [
-                    single_windows.loc[
-                        ~single_windows.date.isin(next_windows.date),
-                        ['date', 'read data', 'written data']
-                    ],
-                    next_windows.loc[
-                        next_windows.date.isin(single_windows.date),
-                        ['date', 'read data', 'written data']
-                    ]
-                ]
-            ).sort_values(by=['date'])[['read data', 'written data']]
-            points = tmp['read data'] / tmp['written data']
+            cur_dates = [
+                elm.split(" ")[0]
+                for elm
+                in next_windows['date'].astype(str)
+            ]
+            points = next_windows['read data'] / next_windows['written data']
             read_on_write_data_fig.line(
-                dates,
+                cur_dates,
                 points,
                 legend=next_window_name,
                 line_color="red",
@@ -366,6 +386,12 @@ def plot_read_on_write_data(tools: list,
                 line_width=3.,
                 line_dash="dashed",
             )
+            mean_point = sum(points) / len(points)
+            next_hline = Span(
+                location=mean_point, dimension='width', line_dash="dashdot",
+                line_color=color_table[cache_name], line_width=2.1
+            )
+            read_on_write_data_fig.renderers.extend([next_hline])
         elif run_type == "run_next_period":
             single_window_name = f'{cache_name} - single window'
             single_windows = pd.concat(
@@ -419,6 +445,14 @@ def plot_read_on_write_data(tools: list,
                         line_width=3.,
                         line_dash=cur_line_style,
                     )
+                    mean_point = sum(points) / len(points)
+                    next_period_hline = Span(
+                        location=mean_point, dimension='width',
+                        line_dash=cur_line_style,
+                        line_color=color_table[cache_name], line_width=2.1
+                    )
+                    read_on_write_data_fig.renderers.extend(
+                        [next_period_hline])
 
     read_on_write_data_fig.legend.location = "top_left"
     read_on_write_data_fig.legend.click_policy = "hide"
