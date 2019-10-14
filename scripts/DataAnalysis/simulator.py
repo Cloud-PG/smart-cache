@@ -783,7 +783,7 @@ def main():
     parser.add_argument('source', type=str,
                         default="./results_8w_with_sizes_csv",
                         help='The folder where the json results are stored [DEFAULT: "./results_8w_with_sizes_csv"]')
-    parser.add_argument('--cacheTypes', type=str,
+    parser.add_argument('--cache-types', type=str,
                         default="lru,weightedLRU",
                         help='Comma separated list of cache to simulate [DEFAULT: "lru,weightedLRU"]')
     parser.add_argument('--out-folder', type=str,
@@ -883,8 +883,8 @@ def main():
                 exe_args = [
                     simulator_exe,
                     "simulate" if cache_type != 'aiLRU' else "testAI",
-                    cache_type,
                     path.abspath(args.source),
+                    f"--cache-types={cache_type}",
                     f"--size={args.cache_size}",
                     f"--simRegion={args.region}",
                     f"--simWindowSize={args.window_size}",
@@ -926,8 +926,8 @@ def main():
             exe_args = [
                 simulator_exe,
                 "simulate" if cache_type != 'aiLRU' else "testAI",
-                cache_type,
                 path.abspath(args.source),
+                f"--cache-types={cache_type}",
                 f"--size={args.cache_size}",
                 f"--simRegion={args.region}",
                 f"--simWindowSize={args.window_size}",
@@ -972,8 +972,8 @@ def main():
                 exe_args = [
                     simulator_exe,
                     "simulate" if cache_type != 'aiLRU' else "testAI",
-                    cache_type,
                     path.abspath(args.source),
+                    f"--cache-types={cache_type}",
                     f"--size={args.cache_size}",
                     f"--simRegion={args.region}",
                     f"--simWindowSize={args.window_size}",
@@ -1020,8 +1020,8 @@ def main():
                 exe_args = [
                     simulator_exe,
                     "simulate" if cache_type != 'aiLRU' else "testAI",
-                    cache_type,
                     path.abspath(args.source),
+                    f"--cache-types={cache_type}",
                     f"--size={args.cache_size}",
                     f"--simRegion={args.region}",
                     f"--simWindowSize={args.window_size}",
