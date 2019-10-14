@@ -728,7 +728,9 @@ def evolve_with_genetic_algorithm(population, dataframe,
             cur_population = [individual for individual in new_population]
             new_population = []
 
+    pool.close()
     pool.join()
+
     idx_best = np.argmax(cur_fitness)
     return cur_population[idx_best]
 
