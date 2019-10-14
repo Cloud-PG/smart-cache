@@ -625,7 +625,7 @@ def indivudual_fitness(individual, dataframe) -> float:
 
 def make_it_valid(individual, dataframe, cache_size: float):
     nonzero = np.nonzero(individual)[0]
-    cur_idx = len(nonzero) - 1
+    cur_idx = int(len(nonzero) / 3.)
     while not valid_individual(individual, dataframe, cache_size):
         for _ in range(randint(1, cur_idx)):
             individual[nonzero[cur_idx]] = False
@@ -641,7 +641,7 @@ def get_one_solution(dataframe, cache_size: float):
 
 def get_best_configuration(dataframe, cache_size: float,
                            num_generation: int = 100,
-                           population_size=10):
+                           population_size=16):
     population = []
     for _ in tqdm(range(population_size), desc="Create Population",
                   total=population_size, ascii=True):
