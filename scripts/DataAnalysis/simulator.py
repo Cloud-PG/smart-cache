@@ -624,11 +624,13 @@ def indivudual_fitness(individual, dataframe) -> float:
 
 
 def make_it_valid(individual, dataframe, cache_size: float):
-    nonzero = np.nonzero(individual)[0]
-    cur_idx = int(len(nonzero) / 3.)
-    while not valid_individual(individual, dataframe, cache_size):
-        for _ in range(randint(0, cur_idx)):
+    cur_size = indivudual_size(individual, dataframe)
+    if cur_size > cur_size:
+        nonzero = np.nonzero(individual)[0]
+        cur_idx = -1
+        while cur_size > cache_size:
             individual[nonzero[cur_idx]] = False
+            cur_size -= dataframe[nonzero[cur_idx]].size
             cur_idx -= 1
     return individual
 
@@ -657,7 +659,7 @@ def crossover(parent_a, parent_b) -> 'np.Array':
     uniform_crossover = np.random.rand(len(parent_a))
     child = []
     for idx, cross in enumerate(uniform_crossover):
-        if cross > 0.75:
+        if cross >= 0.9:
             child.append(parent_b[idx])
         else:
             child.append(parent_a[idx])
@@ -669,7 +671,7 @@ def mutation(individual) -> 'np.Array':
     flip_bits = np.random.rand(len(individual))
     mutant = []
     for idx, flip in enumerate(flip_bits):
-        if flip > 0.75:
+        if flip >= 0.8:
             mutant.append(not individual[idx])
         else:
             mutant.append(individual[idx])
