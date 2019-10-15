@@ -882,8 +882,8 @@ def main():
                 exe_args = [
                     simulator_exe,
                     "simulate" if cache_type != 'aiLRU' else "testAI",
+                    cache_type,
                     path.abspath(args.source),
-                    f"--cache-types={cache_type}",
                     f"--size={args.cache_size}",
                     f"--simRegion={args.region}",
                     f"--simWindowSize={args.window_size}",
@@ -925,8 +925,8 @@ def main():
             exe_args = [
                 simulator_exe,
                 "simulate" if cache_type != 'aiLRU' else "testAI",
+                cache_type,
                 path.abspath(args.source),
-                f"--cache-types={cache_type}",
                 f"--size={args.cache_size}",
                 f"--simRegion={args.region}",
                 f"--simWindowSize={args.window_size}",
@@ -973,8 +973,8 @@ def main():
                 exe_args = [
                     simulator_exe,
                     "simulate" if cache_type != 'aiLRU' else "testAI",
+                    cache_type,
                     path.abspath(args.source),
-                    f"--cache-types={cache_type}",
                     f"--size={args.cache_size}",
                     f"--simRegion={args.region}",
                     f"--simWindowSize={args.window_size}",
@@ -1023,8 +1023,8 @@ def main():
                 exe_args = [
                     simulator_exe,
                     "simulate" if cache_type != 'aiLRU' else "testAI",
+                    cache_type,
                     path.abspath(args.source),
-                    f"--cache-types={cache_type}",
                     f"--size={args.cache_size}",
                     f"--simRegion={args.region}",
                     f"--simWindowSize={args.window_size}",
