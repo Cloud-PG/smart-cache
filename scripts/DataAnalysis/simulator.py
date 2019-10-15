@@ -319,7 +319,6 @@ def plot_read_on_write_data(tools: list,
         plot_height=plot_height,
     )
 
-    read_on_write_data_fig.xaxis.major_label_overrides = {1: 'A', 2: 'B', 3: 'C'}
     hline_1 = Span(
         location=1.0, dimension='width', line_dash="dashed",
         line_color="black", line_width=3.,
@@ -948,6 +947,8 @@ def main():
             )
             processes.append(("Full Run", cur_process))
 
+        wait_jobs(processes)
+
         ##
         # Next windows
         nexxt_window_run_dir = working_dir = path.join(
@@ -995,6 +996,8 @@ def main():
                     stderr=subprocess.PIPE,
                 )
                 processes.append(("Next Window", cur_process))
+
+        wait_jobs(processes)
 
         ##
         # Next Period
