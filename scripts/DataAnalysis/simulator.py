@@ -829,7 +829,7 @@ def main():
 
     if args.action == "simulate":
         simulator_exe = get_simulator_exe(force_creation=args.force_exe_build)
-        cache_types = args.cacheTypes.split(",")
+        cache_types = args.cache_types.split(",")
 
         base_dir = path.join(path.dirname(
             path.abspath(__file__)), args.out_folder)
