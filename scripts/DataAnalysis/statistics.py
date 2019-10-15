@@ -548,10 +548,11 @@ def plot_windows(windows: list, result_folder: str, dpi: int):
     fig_mean_num_req_num_files.xgrid.grid_line_color = None
 
     save(column(fig_num_req_num_files, fig_mean_num_req_num_files))
-    export_png(
-        column(fig_num_req_num_files, fig_mean_num_req_num_files),
-        filename=os.path.join(result_folder, "statistics.png")
-    )
+    # TODO: add png export
+    # export_png(
+    #     column(fig_num_req_num_files, fig_mean_num_req_num_files),
+    #     filename=os.path.join(result_folder, "statistics.png")
+    # )
 
     return
     ###########################################################################
@@ -1090,10 +1091,21 @@ def make_dataframe_stats(data: list, window_index: int = 0,
 
     df = []
     for filename in data:
-        with gzip.GzipFile(
-            filename, mode="rb"
-        ) as stats_file:
-            df.append(pd.read_feather(stats_file))
+        head, tail = os.path.splitext(filename)
+        if tail in [".gz", ".gzip"]:
+            with gzip.GzipFile(
+                filename, mode="rb"
+            ) as data_file:
+                _, tail = os.path.splitext(head)
+                if tail == ".feather":
+                    df.append(pd.read_feather(data_file))
+                elif tail == ".csv":
+                    print(filename)
+                    df.append(pd.read_csv(data_file))
+                else:
+                    raise Exception(f"Unmanaged format '{tail}'")
+        else:
+            raise Exception(f"Unmanaged format '{tail}'")
         pbar.update(1)
 
     df = pd.concat(df)
@@ -1319,10 +1331,8 @@ def main():
                         help="A string date: \"2019 5 5\"")
     parser.add_argument('--plot-dpi', type=int, default=300,
                         help="DPI for plot output")
-    parser.add_argument('--window-size', '-ws', type=int,
-                        help="Num. of days to extract")
-    parser.add_argument('--plot-window-size', '-pws', type=int, default=7,
-                        help="Num. of days to plot")
+    parser.add_argument('--window-size', '-ws', type=int, default=7,
+                        help="Num. of days of a window")
     parser.add_argument('--minio-config', '-mcfg', type=str,
                         help='MinIO configuration in the form: "url key secret bucket"')
     parser.add_argument('--result-folder', type=str, default="./results",
@@ -1383,11 +1393,11 @@ def main():
             head, tail1 = os.path.splitext(head)
 
             if head.find("results_") == 0 and tail0 == ".gz"\
-                    and tail1 == ".feather":
+                    and tail1 in [".csv", ".feather"]:
                 cur_file = os.path.join(args.result_folder, file_)
                 data_frames.append(cur_file)
 
-            if len(data_frames) == args.plot_window_size:
+            if len(data_frames) == args.window_size:
                 windows.append((
                     data_frames,
                     counter,
