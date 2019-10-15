@@ -484,7 +484,7 @@ def plot_windows(windows: list, result_folder: str, dpi: int):
 
     fig_num_req_num_files = figure(
         x_range=FactorRange(*p0_x),
-        plot_height=320,
+        plot_height=480,
         title="Req. and file counts",
         tools="box_zoom,pan,reset,save",
     )
@@ -511,8 +511,10 @@ def plot_windows(windows: list, result_folder: str, dpi: int):
     p1_cur_types = ['Num. Request x file', 'Num. Request x file (req > 1)']
     p1_cur_data = {
         'windows': cur_windows,
-        'Num. Request x file': [window['mean_num_req_x_file'] for window in windows],
-        'Num. Request x file (req > 1)': [window['mean_num_req_x_file_gmin'] for window in windows],
+        'Num. Request x file': [window['mean_num_req_x_file']
+                                for window in windows],
+        'Num. Request x file (req > 1)': [window['mean_num_req_x_file_gmin']
+                                          for window in windows],
     }
     p1_cur_palette = [next(COLORS) for _ in range(len(p1_cur_types))]
 
@@ -527,7 +529,7 @@ def plot_windows(windows: list, result_folder: str, dpi: int):
 
     fig_mean_num_req_num_files = figure(
         x_range=FactorRange(*p1_x),
-        plot_height=320,
+        plot_height=480,
         title="Mean Req. and file counts",
         tools="box_zoom,pan,reset,save",
     )
@@ -547,7 +549,61 @@ def plot_windows(windows: list, result_folder: str, dpi: int):
     fig_mean_num_req_num_files.xaxis.major_label_orientation = 1
     fig_mean_num_req_num_files.xgrid.grid_line_color = None
 
-    save(column(fig_num_req_num_files, fig_mean_num_req_num_files))
+    ###########################################################################
+    # Mean num req and num files
+    ###########################################################################
+
+    p2_cur_types = [
+        'Mean Num. File x Job',
+        'Mean Num. File x Task',
+        'Mean Num. File x User'
+    ]
+    p2_cur_data = {
+        'windows': cur_windows,
+        'Mean Num. File x Job': [window['mean_num_files_x_job']
+                                 for window in windows],
+        'Mean Num. File x Task': [window['mean_num_files_x_task']
+                                  for window in windows],
+        'Mean Num. File x User': [window['mean_num_files_x_user']
+                                  for window in windows],
+    }
+    p2_cur_palette = [next(COLORS) for _ in range(len(p2_cur_types))]
+
+    p2_x = [
+        (window, type_)
+        for window in cur_windows
+        for type_ in p2_cur_types
+    ]
+    p2_counts = sum(zip(*[p2_cur_data[name] for name in p2_cur_types]), ())
+
+    p2_source = ColumnDataSource(data=dict(x=p2_x, counts=p2_counts))
+
+    fig_file_stats = figure(
+        x_range=FactorRange(*p2_x),
+        plot_height=480,
+        title="Request file stats",
+        tools="box_zoom,pan,reset,save",
+    )
+
+    fig_file_stats.vbar(
+        x='x', top='counts', width=1.0,
+        source=p2_source, line_color="white",
+        fill_color=factor_cmap(
+            'x', palette=p2_cur_palette,
+            factors=p2_cur_types,
+            start=1,
+            end=2
+        ))
+
+    fig_file_stats.y_range.start = 0
+    fig_file_stats.x_range.range_padding = 0.1
+    fig_file_stats.xaxis.major_label_orientation = 1
+    fig_file_stats.xgrid.grid_line_color = None
+
+    save(column(
+        fig_num_req_num_files, fig_mean_num_req_num_files, fig_file_stats
+    ))
+
     # TODO: add png export
     # export_png(
     #     column(fig_num_req_num_files, fig_mean_num_req_num_files),
@@ -1109,6 +1165,9 @@ def make_dataframe_stats(data: list, window_index: int = 0,
         pbar.update(1)
 
     df = pd.concat(df)
+    # FIXME: just for test
+    df = df[:10000]
+
     pbar.update(1)
 
     # Num requests and num files
@@ -1134,73 +1193,73 @@ def make_dataframe_stats(data: list, window_index: int = 0,
         [key * value for key, value in num_req_x_file_frequencies.items()])
     pbar.update(1)
 
-    # # Size files with 1 request and greater than 1 request
-    # size_by_filename = df[['filename', 'size']].dropna().drop_duplicates(
-    #     subset='filename')
-    # file_1req_list = num_req_x_file[
-    #     num_req_x_file <= num_req_x_file.min()
-    # ].keys().to_list()
-    # file_g1req_list = num_req_x_file[
-    #     num_req_x_file > num_req_x_file.min()
-    # ].keys().to_list()
-    # size_1req_files = size_by_filename[size_by_filename['filename'].isin(
-    #     file_1req_list)]['size'].sum() / 1024. ** 3
-    # size_g1req_files = size_by_filename[size_by_filename['filename'].isin(
-    #     file_g1req_list)]['size'].sum() / 1024. ** 3
-    # desc_file_sizes = size_by_filename['size'].apply(
-    #     transform_sizes).value_counts().sort_index().to_dict()
-    # pbar.update(1)
+    # Size files with 1 request and greater than 1 request
+    size_by_filename = df[['filename', 'size']].dropna().drop_duplicates(
+        subset='filename')
+    file_1req_list = num_req_x_file[
+        num_req_x_file <= num_req_x_file.min()
+    ].keys().to_list()
+    file_g1req_list = num_req_x_file[
+        num_req_x_file > num_req_x_file.min()
+    ].keys().to_list()
+    size_1req_files = size_by_filename[size_by_filename['filename'].isin(
+        file_1req_list)]['size'].sum() / 1024. ** 3
+    size_g1req_files = size_by_filename[size_by_filename['filename'].isin(
+        file_g1req_list)]['size'].sum() / 1024. ** 3
+    desc_file_sizes = size_by_filename['size'].apply(
+        transform_sizes).value_counts().sort_index().to_dict()
+    pbar.update(1)
 
-    # sizes_x_min_num_requests = {}
-    # for min_num_request in range(1, 21):
-    #     num_request_filter = num_req_x_file[
-    #         num_req_x_file >= min_num_request
-    #     ].keys().to_list()
-    #     sizes_x_min_num_requests[min_num_request] = size_by_filename[
-    #         size_by_filename['filename'].isin(
-    #             num_request_filter)]['size'].sum() / 1024. ** 3
-    #     pbar.update(1)
+    sizes_x_min_num_requests = {}
+    for min_num_request in range(1, 21):
+        num_request_filter = num_req_x_file[
+            num_req_x_file >= min_num_request
+        ].keys().to_list()
+        sizes_x_min_num_requests[min_num_request] = size_by_filename[
+            size_by_filename['filename'].isin(
+                num_request_filter)]['size'].sum() / 1024. ** 3
+        pbar.update(1)
 
-    # # Task and job stats
-    # num_users = df['user'].unique().shape[0]
-    # num_sites = df['site_name'].unique().shape[0]
-    # num_tasks = df['task_id'].unique().shape[0]
-    # num_jobs = df['job_id'].unique().shape[0]
-    # protocols = df['protocol'].value_counts().to_dict()
-    # all_cpu_time = df['cpu_time'].sum()
-    # all_io_time = df['io_time'].sum()
-    # local_cpu_time = df['cpu_time'][
-    #     df.protocol == 'Local'
-    # ].sum()
-    # local_io_time = df['io_time'][
-    #     df.protocol == 'Local'
-    # ].sum()
-    # remote_cpu_time = df['cpu_time'][
-    #     df.protocol == 'Remote'
-    # ].sum()
-    # remote_io_time = df['io_time'][
-    #     df.protocol == 'Remote'
-    # ].sum()
-    # pbar.update(1)
+    # Task and job stats
+    num_users = df['user'].unique().shape[0]
+    num_sites = df['site_name'].unique().shape[0]
+    num_tasks = df['task_id'].unique().shape[0]
+    num_jobs = df['job_id'].unique().shape[0]
+    protocols = df['protocol'].value_counts().to_dict()
+    all_cpu_time = df['cpu_time'].sum()
+    all_io_time = df['io_time'].sum()
+    local_cpu_time = df['cpu_time'][
+        df.protocol == 'Local'
+    ].sum()
+    local_io_time = df['io_time'][
+        df.protocol == 'Local'
+    ].sum()
+    remote_cpu_time = df['cpu_time'][
+        df.protocol == 'Remote'
+    ].sum()
+    remote_io_time = df['io_time'][
+        df.protocol == 'Remote'
+    ].sum()
+    pbar.update(1)
 
-    # mean_num_files_x_job = df[['job_id', 'filename']].groupby(
-    #     'job_id')['filename'].nunique().mean()
-    # pbar.update(1)
-    # mean_num_files_x_task = df[['task_id', 'filename']].groupby(
-    #     'task_id')['filename'].nunique().mean()
-    # pbar.update(1)
-    # mean_num_files_x_user = df[['user', 'filename']].groupby(
-    #     'user')['filename'].nunique().mean()
-    # pbar.update(1)
-    # mean_num_jobs_x_task = df[['job_id', 'task_id']].groupby(
-    #     'task_id')['job_id'].nunique().mean()
-    # pbar.update(1)
-    # mean_num_jobs_x_user = df[['job_id', 'user']].groupby(
-    #     'user')['job_id'].nunique().mean()
-    # pbar.update(1)
-    # mean_num_tasks_x_user = df[['task_id', 'user']].groupby(
-    #     'user')['task_id'].nunique().mean()
-    # pbar.update(1)
+    mean_num_files_x_job = df[['job_id', 'filename']].groupby(
+        'job_id')['filename'].nunique().mean()
+    pbar.update(1)
+    mean_num_files_x_task = df[['task_id', 'filename']].groupby(
+        'task_id')['filename'].nunique().mean()
+    pbar.update(1)
+    mean_num_files_x_user = df[['user', 'filename']].groupby(
+        'user')['filename'].nunique().mean()
+    pbar.update(1)
+    mean_num_jobs_x_task = df[['job_id', 'task_id']].groupby(
+        'task_id')['job_id'].nunique().mean()
+    pbar.update(1)
+    mean_num_jobs_x_user = df[['job_id', 'user']].groupby(
+        'user')['job_id'].nunique().mean()
+    pbar.update(1)
+    mean_num_tasks_x_user = df[['task_id', 'user']].groupby(
+        'user')['task_id'].nunique().mean()
+    pbar.update(1)
 
     pbar.close()
 
@@ -1213,30 +1272,30 @@ def make_dataframe_stats(data: list, window_index: int = 0,
 
         'num_req_x_file_frequencies': num_req_x_file_frequencies,
 
-        # 'size_all_files': size_all_files,
-        # 'size_file_1req': size_1req_files,
-        # 'size_file_g1req': size_g1req_files,
-        # 'desc_file_sizes': desc_file_sizes,
-        # 'sizes_x_min_num_requests': sizes_x_min_num_requests,
+        'size_all_files': size_all_files,
+        'size_file_1req': size_1req_files,
+        'size_file_g1req': size_g1req_files,
+        'desc_file_sizes': desc_file_sizes,
+        'sizes_x_min_num_requests': sizes_x_min_num_requests,
 
-        # 'num_users': num_users,
-        # 'num_sites': num_sites,
-        # 'num_tasks': num_tasks,
-        # 'num_jobs': num_jobs,
-        # 'protocols': protocols,
-        # 'all_cpu_time': all_cpu_time,
-        # 'all_io_time': all_io_time,
-        # 'local_cpu_time': local_cpu_time,
-        # 'local_io_time': local_io_time,
-        # 'remote_cpu_time': remote_cpu_time,
-        # 'remote_io_time': remote_io_time,
+        'num_users': num_users,
+        'num_sites': num_sites,
+        'num_tasks': num_tasks,
+        'num_jobs': num_jobs,
+        'protocols': protocols,
+        'all_cpu_time': all_cpu_time,
+        'all_io_time': all_io_time,
+        'local_cpu_time': local_cpu_time,
+        'local_io_time': local_io_time,
+        'remote_cpu_time': remote_cpu_time,
+        'remote_io_time': remote_io_time,
 
-        # 'mean_num_files_x_job': mean_num_files_x_job,
-        # 'mean_num_files_x_task': mean_num_files_x_task,
-        # 'mean_num_files_x_user': mean_num_files_x_user,
-        # 'mean_num_jobs_x_task': mean_num_jobs_x_task,
-        # 'mean_num_jobs_x_user': mean_num_jobs_x_user,
-        # 'mean_num_tasks_x_user': mean_num_tasks_x_user,
+        'mean_num_files_x_job': mean_num_files_x_job,
+        'mean_num_files_x_task': mean_num_files_x_task,
+        'mean_num_files_x_user': mean_num_files_x_user,
+        'mean_num_jobs_x_task': mean_num_jobs_x_task,
+        'mean_num_jobs_x_user': mean_num_jobs_x_user,
+        'mean_num_tasks_x_user': mean_num_tasks_x_user,
     }
 
 
