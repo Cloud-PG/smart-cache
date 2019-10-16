@@ -648,13 +648,13 @@ def valid_individual(individual, dataframe, cache_size: float) -> bool:
 
 
 def indivudual_size(individual, dataframe) -> float:
-    cur_series = pd.Series(individual, name='bools')
+    cur_series = pd.Series(individual)
     cur_size = sum(dataframe[cur_series]['size'])
     return cur_size
 
 
 def indivudual_fitness(individual, dataframe) -> float:
-    cur_series = pd.Series(individual, name='bools')
+    cur_series = pd.Series(individual)
     cur_size = sum(dataframe[cur_series]['value'])
     return cur_size
 
@@ -662,12 +662,14 @@ def indivudual_fitness(individual, dataframe) -> float:
 def make_it_valid(individual, dataframe, cache_size: float):
     individual_size = indivudual_size(individual, dataframe)
     if individual_size > cache_size:
-        nonzero = np.nonzero(individual)[0].tolist()
-        for cur_idx in reversed(nonzero):
+        nonzero = np.nonzero(individual)[0]
+        sizes = dataframe.loc[nonzero]['size']
+        for cur_idx in reversed(nonzero.tolist()):
             if individual_size <= cache_size:
                 break
             individual[cur_idx] = False
-            individual_size -= dataframe.loc[cur_idx].size
+            individual_size -= sizes.loc[cur_idx]
+    individual_size = indivudual_size(individual, dataframe)
     return individual
 
 
