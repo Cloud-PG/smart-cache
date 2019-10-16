@@ -679,8 +679,8 @@ def get_one_solution(dataframe, cache_size: float):
 
 
 def get_best_configuration(dataframe, cache_size: float,
-                           num_generation: int = 100,
-                           population_size=10):
+                           num_generation: int = 200,
+                           population_size=100):
     population = []
     for _ in tqdm(range(population_size), desc="Create Population",
                   total=population_size, ascii=True):
