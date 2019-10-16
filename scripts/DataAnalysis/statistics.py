@@ -1051,7 +1051,6 @@ def make_dataframe_stats(data: list, window_index: int = 0,
                 if tail == ".feather":
                     df.append(pd.read_feather(data_file))
                 elif tail == ".csv":
-                    print(filename)
                     df.append(pd.read_csv(data_file))
                 else:
                     raise Exception(f"Unmanaged format '{tail}'")
@@ -1060,8 +1059,8 @@ def make_dataframe_stats(data: list, window_index: int = 0,
         pbar.update(1)
 
     df = pd.concat(df)
-    # FIXME: just for test
-    df = df[:10000]
+    # TO TEST
+    # df = df[:10000]
 
     pbar.update(1)
 
@@ -1363,8 +1362,8 @@ def main():
             # TO TEST
             # if file_idx == 0:
             #     break
-            if len(windows) == 2:
-                break
+            # if len(windows) == 4:
+            #     break
 
         if len(data_frames) > 0:
             windows.append((
