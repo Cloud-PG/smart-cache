@@ -662,12 +662,12 @@ def indivudual_fitness(individual, dataframe) -> float:
 def make_it_valid(individual, dataframe, cache_size: float):
     individual_size = indivudual_size(individual, dataframe)
     if individual_size > cache_size:
-        nonzero = np.nonzero(individual)[0]
-        cur_idx = -1
-        while individual_size > cache_size:
-            individual[nonzero[cur_idx]] = False
-            individual_size -= dataframe[nonzero[cur_idx]].size
-            cur_idx -= 1
+        nonzero = np.nonzero(individual)[0].tolist()
+        for cur_idx in reversed(nonzero):
+            if individual_size <= cache_size:
+                break
+            individual[cur_idx] = False
+            individual_size -= dataframe[cur_idx].size
     return individual
 
 
