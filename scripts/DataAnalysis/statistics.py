@@ -5,6 +5,7 @@ import sqlite3
 from datetime import datetime, timedelta
 from functools import wraps
 from itertools import cycle
+from math import pi
 from multiprocessing import Pool
 
 import matplotlib.pyplot as plt
@@ -501,7 +502,7 @@ def plot_windows(windows: list, result_folder: str, dpi: int):
 
     fig_num_req_num_files.y_range.start = 0
     fig_num_req_num_files.x_range.range_padding = 0.1
-    fig_num_req_num_files.xaxis.major_label_orientation = 1
+    fig_num_req_num_files.xaxis.major_label_orientation = pi / 4.
     fig_num_req_num_files.xgrid.grid_line_color = None
 
     ###########################################################################
@@ -546,7 +547,7 @@ def plot_windows(windows: list, result_folder: str, dpi: int):
 
     fig_mean_num_req_num_files.y_range.start = 0
     fig_mean_num_req_num_files.x_range.range_padding = 0.1
-    fig_mean_num_req_num_files.xaxis.major_label_orientation = 1
+    fig_mean_num_req_num_files.xaxis.major_label_orientation = pi / 4.
     fig_mean_num_req_num_files.xgrid.grid_line_color = None
 
     ###########################################################################
@@ -600,7 +601,7 @@ def plot_windows(windows: list, result_folder: str, dpi: int):
 
     fig_file_stats.y_range.start = 0
     fig_file_stats.x_range.range_padding = 0.1
-    fig_file_stats.xaxis.major_label_orientation = 1
+    fig_file_stats.xaxis.major_label_orientation = pi / 4.
     fig_file_stats.xgrid.grid_line_color = None
 
     ###########################################################################
@@ -654,7 +655,7 @@ def plot_windows(windows: list, result_folder: str, dpi: int):
 
     fig_user_task_stats.y_range.start = 0
     fig_user_task_stats.x_range.range_padding = 0.1
-    fig_user_task_stats.xaxis.major_label_orientation = 1
+    fig_user_task_stats.xaxis.major_label_orientation = pi / 4.
     fig_user_task_stats.xgrid.grid_line_color = None
 
     ###########################################################################
@@ -690,7 +691,7 @@ def plot_windows(windows: list, result_folder: str, dpi: int):
         x_range=FactorRange(*p4_x),
         y_axis_type="log",
         plot_height=480,
-        title="Mean sizes",
+        title="Sizes",
         tools="box_zoom,pan,reset,save",
     )
 
@@ -708,7 +709,7 @@ def plot_windows(windows: list, result_folder: str, dpi: int):
 
     fig_file_sizes.y_range.start = 0
     fig_file_sizes.x_range.range_padding = 0.1
-    fig_file_sizes.xaxis.major_label_orientation = 1
+    fig_file_sizes.xaxis.major_label_orientation = pi / 4.
     fig_file_sizes.xgrid.grid_line_color = None
 
     ###########################################################################
@@ -765,7 +766,7 @@ def plot_windows(windows: list, result_folder: str, dpi: int):
 
     fig_window_stats.y_range.start = 0
     fig_window_stats.x_range.range_padding = 0.1
-    fig_window_stats.xaxis.major_label_orientation = 1
+    fig_window_stats.xaxis.major_label_orientation = pi / 4.
     fig_window_stats.xgrid.grid_line_color = None
 
     save(column(
@@ -1068,7 +1069,7 @@ def make_dataframe_stats(data: list, window_index: int = 0,
     num_requests = df.shape[0]
     num_files = len(df['filename'].unique().tolist())
     size_all_files = df[['filename', 'size']].dropna().drop_duplicates(
-        subset='filename')['size'].sum() / 1024. ** 3.
+        subset='filename')['size'].sum() / (1024. ** 3.)
     pbar.update(1)
 
     # Mean num. request x file and
@@ -1097,9 +1098,9 @@ def make_dataframe_stats(data: list, window_index: int = 0,
         num_req_x_file > num_req_x_file.min()
     ].keys().to_list()
     size_1req_files = size_by_filename[size_by_filename['filename'].isin(
-        file_1req_list)]['size'].sum() / 1024. ** 3
+        file_1req_list)]['size'].sum() / (1024. ** 3)
     size_g1req_files = size_by_filename[size_by_filename['filename'].isin(
-        file_g1req_list)]['size'].sum() / 1024. ** 3
+        file_g1req_list)]['size'].sum() / (1024. ** 3)
     desc_file_sizes = size_by_filename['size'].apply(
         transform_sizes).value_counts().sort_index().to_dict()
     pbar.update(1)
