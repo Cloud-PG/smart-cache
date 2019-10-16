@@ -685,9 +685,11 @@ def get_best_configuration(dataframe, cache_size: float,
                   total=population_size, ascii=True):
         population.append(get_one_solution(dataframe, cache_size))
 
-    evolve_with_genetic_algorithm(
+    best = evolve_with_genetic_algorithm(
         population, dataframe, cache_size, num_generation
     )
+
+    return best
 
 
 def crossover(parent_a, parent_b) -> 'np.Array':
@@ -771,6 +773,25 @@ def evolve_with_genetic_algorithm(population, dataframe,
 
     idx_best = np.argmax(cur_fitness)
     return cur_population[idx_best]
+
+
+def compare_greedy_solution(dataframe, cache_size):
+    cur_size = 0.
+    cur_score = 0.
+
+    for cur_row in dataframe.itertuples():
+        file_size = cur_row.size
+        if cur_size + file_size <= cache_size:
+            cur_size += file_size
+            cur_score += cur_row.value
+        else:
+            break
+
+    ga_size = sum(dataframe[dataframe['class']]['size'].to_list())
+    ga_score = sum(dataframe[dataframe['class']]['value'].to_list())
+
+    print(f"[Greedy size: {ga_score:0.2f}][GA size: {ga_size:0.2f}]")
+    print(f"[Greedy: {cur_score:0.2f}][GA: {ga_score:0.2f}]")
 
 
 def main():
@@ -1166,9 +1187,14 @@ def main():
                 cur_size = cur_row.size
                 if not isnan(cur_size):
                     if cur_filename not in files:
-                        files[cur_filename] = {'size': cur_size, 'totReq': 0}
+                        files[cur_filename] = {
+                            'size': cur_size,
+                            'totReq': 0,
+                            'days': set([])
+                        }
                     files[cur_filename]['totReq'] += 1
                     assert files[cur_filename]['size'] == cur_size, f"{files[cur_filename]['size']} != {cur_size}"
+                    files[cur_filename]['days'] |= set((cur_row.day, ))
             files_df = pd.DataFrame(
                 data={
                     'filename': [filename
@@ -1177,6 +1203,8 @@ def main():
                              for filename in files],
                     'totReq': [files[filename]['totReq']
                                for filename in files],
+                    'days': [len(files[filename]['days'])
+                             for filename in files],
                 }
             )
             # Remove 1 request files
@@ -1184,23 +1212,29 @@ def main():
             # TO Megabytes
             files_df['size'] = files_df['size'] / 1024**2
             # Remove low value files
-            files_df['value'] = files_df['size'] * files_df['totReq']
+            files_df['value'] = (files_df['size'] *
+                                 files_df['totReq']) / files_df['days']
             q1 = files_df.value.describe().quantile(0.25)
             files_df = files_df.drop(files_df[files_df.value < q1].index)
             # Sort and reset indexes
             files_df = files_df.sort_values(by=['value'], ascending=False)
             files_df = files_df.reset_index(drop=True)
             # print(files_df)
-            best_files = get_best_configuration(files_df, args.cache_size)
+            best_files = get_best_configuration(
+                files_df, args.cache_size
+            )
 
             files_df['class'] = best_files
             datest_out_file = path.join(
                 base_dir,
-                f"dataset_window_{idx:02d}.feather"
+                f"dataset_window_{idx:02d}.feather.gz"
             )
 
+            compare_greedy_solution(files_df, args.cache_size)
+
             with yaspin(Spinners.bouncingBall, text=f"[Store dataset][{datest_out_file}]") as sp:
-                files_df.to_feather(datest_out_file)
+                with gzip.GzipFile(datest_out_file, "wb") as out_file:
+                    files_df.to_feather(out_file)
 
 
 if __name__ == "__main__":
