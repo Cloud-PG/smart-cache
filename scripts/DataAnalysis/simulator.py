@@ -790,6 +790,7 @@ def compare_greedy_solution(dataframe, cache_size):
     ga_size = sum(dataframe[dataframe['class']]['size'].to_list())
     ga_score = sum(dataframe[dataframe['class']]['value'].to_list())
 
+    print("[Results]...")
     print(f"[Size: \t{cur_size:0.2f}][Score: \t{cur_score:0.2f}][Greedy]")
     print(f"[Size: \t{ga_size:0.2f}][Score: \t{ga_score:0.2f}][GA]")
 
