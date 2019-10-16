@@ -590,7 +590,7 @@ def plot_windows(windows: list, result_folder: str, dpi: int):
         x='x', top='counts', width=1.0,
         source=p2_source, line_color="white",
         # FIX to have log vbar: https://github.com/bokeh/bokeh/issues/6671
-        bottom=0.99,
+        bottom=1,
         fill_color=factor_cmap(
             'x', palette=p2_cur_palette,
             factors=p2_cur_types,
@@ -644,7 +644,7 @@ def plot_windows(windows: list, result_folder: str, dpi: int):
         x='x', top='counts', width=1.0,
         source=p3_source, line_color="white",
         # FIX to have log vbar: https://github.com/bokeh/bokeh/issues/6671
-        bottom=0.99,
+        bottom=1,
         fill_color=factor_cmap(
             'x', palette=p3_cur_palette,
             factors=p3_cur_types,
@@ -657,11 +657,124 @@ def plot_windows(windows: list, result_folder: str, dpi: int):
     fig_user_task_stats.xaxis.major_label_orientation = 1
     fig_user_task_stats.xgrid.grid_line_color = None
 
+    ###########################################################################
+    # Sizes
+    ###########################################################################
+
+    p4_cur_types = [
+        'Size all files',
+        'Size files with 1 req',
+        'Size files with req > 1',
+    ]
+    p4_cur_data = {
+        'windows': cur_windows,
+        'Size all files': [window['size_all_files']
+                           for window in windows],
+        'Size files with 1 req': [window['size_file_1req']
+                                  for window in windows],
+        'Size files with req > 1': [window['size_file_g1req']
+                                    for window in windows],
+    }
+    p4_cur_palette = [next(COLORS) for _ in range(len(p4_cur_types))]
+
+    p4_x = [
+        (window, type_)
+        for window in cur_windows
+        for type_ in p4_cur_types
+    ]
+    p4_counts = sum(zip(*[p4_cur_data[name] for name in p4_cur_types]), ())
+
+    p4_source = ColumnDataSource(data=dict(x=p4_x, counts=p4_counts))
+
+    fig_file_sizes = figure(
+        x_range=FactorRange(*p4_x),
+        y_axis_type="log",
+        plot_height=480,
+        title="Mean sizes",
+        tools="box_zoom,pan,reset,save",
+    )
+
+    fig_file_sizes.vbar(
+        x='x', top='counts', width=1.0,
+        source=p4_source, line_color="white",
+        # FIX to have log vbar: https://github.com/bokeh/bokeh/issues/6671
+        bottom=1,
+        fill_color=factor_cmap(
+            'x', palette=p4_cur_palette,
+            factors=p4_cur_types,
+            start=1,
+            end=2
+        ))
+
+    fig_file_sizes.y_range.start = 0
+    fig_file_sizes.x_range.range_padding = 0.1
+    fig_file_sizes.xaxis.major_label_orientation = 1
+    fig_file_sizes.xgrid.grid_line_color = None
+
+    ###########################################################################
+    # Window stats
+    ###########################################################################
+
+    p5_cur_types = [
+        'Num. users',
+        'Num. sites',
+        'Num. tasks',
+        'Num. jobs',
+    ]
+    p5_cur_data = {
+        'windows': cur_windows,
+        'Num. users': [window['num_users']
+                       for window in windows],
+        'Num. sites': [window['num_sites']
+                       for window in windows],
+        'Num. tasks': [window['num_tasks']
+                       for window in windows],
+        'Num. jobs': [window['num_jobs']
+                      for window in windows],
+    }
+    p5_cur_palette = [next(COLORS) for _ in range(len(p5_cur_types))]
+
+    p5_x = [
+        (window, type_)
+        for window in cur_windows
+        for type_ in p5_cur_types
+    ]
+    p5_counts = sum(zip(*[p5_cur_data[name] for name in p5_cur_types]), ())
+
+    p5_source = ColumnDataSource(data=dict(x=p5_x, counts=p5_counts))
+
+    fig_window_stats = figure(
+        x_range=FactorRange(*p5_x),
+        y_axis_type="log",
+        plot_height=480,
+        title="Window stats",
+        tools="box_zoom,pan,reset,save",
+    )
+
+    fig_window_stats.vbar(
+        x='x', top='counts', width=1.0,
+        source=p5_source, line_color="white",
+        # FIX to have log vbar: https://github.com/bokeh/bokeh/issues/6671
+        bottom=1,
+        fill_color=factor_cmap(
+            'x', palette=p5_cur_palette,
+            factors=p5_cur_types,
+            start=1,
+            end=2
+        ))
+
+    fig_window_stats.y_range.start = 0
+    fig_window_stats.x_range.range_padding = 0.1
+    fig_window_stats.xaxis.major_label_orientation = 1
+    fig_window_stats.xgrid.grid_line_color = None
+
     save(column(
         fig_num_req_num_files,
         fig_mean_num_req_num_files,
         fig_file_stats,
         fig_user_task_stats,
+        fig_file_sizes,
+        fig_window_stats,
     ))
 
     # TODO: add png export
@@ -722,57 +835,6 @@ def plot_windows(windows: list, result_folder: str, dpi: int):
     #     dpi=dpi
     # )
     # pbar.update(1)
-
-    # ###########################################################################
-    # # window_size_stats
-    # ###########################################################################
-    # plt.clf()
-    # grid = plt.GridSpec(24, len(windows), wspace=2.42, hspace=5.)
-
-    # axes = plt.subplot(grid[0:9, 0:])
-    # axes.bar(
-    #     [
-    #         idx - (bar_width + bar_width / 2.)
-    #         for idx, _ in enumerate(windows)
-    #     ],
-    #     [
-    #         record['size_all_files']
-    #         for record in windows
-    #     ],
-    #     width=bar_width,
-    #     label="Size all files (GB)"
-    # )
-    # axes.bar(
-    #     [
-    #         idx - (bar_width / 2.)
-    #         for idx, _ in enumerate(windows)
-    #     ],
-    #     [
-    #         record['size_file_1req']
-    #         for record in windows
-    #     ],
-    #     width=bar_width,
-    #     label="Size files with 1 request (GB)"
-    # )
-    # axes.bar(
-    #     [
-    #         idx + (bar_width / 2.)
-    #         for idx, _ in enumerate(windows)
-    #     ],
-    #     [
-    #         record['size_file_g1req']
-    #         for record in windows
-    #     ],
-    #     width=bar_width,
-    #     label="Size files with more than 1 req. (GB)"
-    # )
-    # axes.set_xticks(range(len(windows)))
-    # axes.set_xticklabels(
-    #     [str(idx) for idx in range(len(windows))]
-    # )
-    # axes.grid()
-    # axes.legend()
-    # axes.set_xlabel("Window")
 
     # for win_idx, window in enumerate(windows):
     #     axes = plt.subplot(grid[12:18, win_idx])
@@ -858,70 +920,6 @@ def plot_windows(windows: list, result_folder: str, dpi: int):
     #     bbox_inches='tight'
     # )
     # pbar.update(1)
-
-    # ###########################################################################
-    # # window_task_stats
-    # ###########################################################################
-    # plt.clf()
-    # grid = plt.GridSpec(18, len(windows)*2, wspace=1, hspace=1.)
-
-    # axes = plt.subplot(grid[0:5, 0:])
-    # cur_bar_width = bar_width / 2.
-    # axes.bar(
-    #     [
-    #         idx - cur_bar_width * 2
-    #         for idx, _ in enumerate(windows)
-    #     ],
-    #     [
-    #         record['num_users']
-    #         for record in windows
-    #     ],
-    #     width=cur_bar_width,
-    #     label="Num. users"
-    # )
-    # axes.bar(
-    #     [
-    #         idx - cur_bar_width
-    #         for idx, _ in enumerate(windows)
-    #     ],
-    #     [
-    #         record['num_sites']
-    #         for record in windows
-    #     ],
-    #     width=cur_bar_width,
-    #     label="Num. sites"
-    # )
-    # axes.bar(
-    #     [
-    #         idx
-    #         for idx, _ in enumerate(windows)
-    #     ],
-    #     [
-    #         record['num_tasks']
-    #         for record in windows
-    #     ],
-    #     width=cur_bar_width,
-    #     label="Num. tasks"
-    # )
-    # axes.bar(
-    #     [
-    #         idx + cur_bar_width
-    #         for idx, _ in enumerate(windows)
-    #     ],
-    #     [
-    #         record['num_jobs']
-    #         for record in windows
-    #     ],
-    #     width=cur_bar_width,
-    #     label="Num. jobs"
-    # )
-    # axes.set_yscale('log')
-    # axes.set_xticks(range(len(windows)))
-    # axes.set_xticklabels(
-    #     [str(idx) for idx in range(len(windows))]
-    # )
-    # axes.grid()
-    # legend = axes.legend(bbox_to_anchor=(0.32, 2.3))
 
     # for win_idx, window in enumerate(windows):
     #     axes = plt.subplot(grid[6:8, win_idx*2:win_idx*2+2])
