@@ -502,7 +502,7 @@ def plot_windows(windows: list, result_folder: str, dpi: int):
 
     fig_num_req_num_files.y_range.start = 0
     fig_num_req_num_files.x_range.range_padding = 0.1
-    fig_num_req_num_files.xaxis.major_label_orientation = pi / 4.
+    fig_num_req_num_files.xaxis.major_label_orientation = pi / 2.
     fig_num_req_num_files.xgrid.grid_line_color = None
 
     ###########################################################################
@@ -547,7 +547,7 @@ def plot_windows(windows: list, result_folder: str, dpi: int):
 
     fig_mean_num_req_num_files.y_range.start = 0
     fig_mean_num_req_num_files.x_range.range_padding = 0.1
-    fig_mean_num_req_num_files.xaxis.major_label_orientation = pi / 4.
+    fig_mean_num_req_num_files.xaxis.major_label_orientation = pi / 2.
     fig_mean_num_req_num_files.xgrid.grid_line_color = None
 
     ###########################################################################
@@ -601,7 +601,7 @@ def plot_windows(windows: list, result_folder: str, dpi: int):
 
     fig_file_stats.y_range.start = 0
     fig_file_stats.x_range.range_padding = 0.1
-    fig_file_stats.xaxis.major_label_orientation = pi / 4.
+    fig_file_stats.xaxis.major_label_orientation = pi / 2.
     fig_file_stats.xgrid.grid_line_color = None
 
     ###########################################################################
@@ -655,7 +655,7 @@ def plot_windows(windows: list, result_folder: str, dpi: int):
 
     fig_user_task_stats.y_range.start = 0
     fig_user_task_stats.x_range.range_padding = 0.1
-    fig_user_task_stats.xaxis.major_label_orientation = pi / 4.
+    fig_user_task_stats.xaxis.major_label_orientation = pi / 2.
     fig_user_task_stats.xgrid.grid_line_color = None
 
     ###########################################################################
@@ -709,7 +709,7 @@ def plot_windows(windows: list, result_folder: str, dpi: int):
 
     fig_file_sizes.y_range.start = 0
     fig_file_sizes.x_range.range_padding = 0.1
-    fig_file_sizes.xaxis.major_label_orientation = pi / 4.
+    fig_file_sizes.xaxis.major_label_orientation = pi / 2.
     fig_file_sizes.xgrid.grid_line_color = None
 
     ###########################################################################
@@ -766,7 +766,7 @@ def plot_windows(windows: list, result_folder: str, dpi: int):
 
     fig_window_stats.y_range.start = 0
     fig_window_stats.x_range.range_padding = 0.1
-    fig_window_stats.xaxis.major_label_orientation = pi / 4.
+    fig_window_stats.xaxis.major_label_orientation = pi / 2.
     fig_window_stats.xgrid.grid_line_color = None
 
     save(column(
