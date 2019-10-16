@@ -550,21 +550,21 @@ def plot_windows(windows: list, result_folder: str, dpi: int):
     fig_mean_num_req_num_files.xgrid.grid_line_color = None
 
     ###########################################################################
-    # Mean num req and num files
+    # File stats
     ###########################################################################
 
     p2_cur_types = [
-        'Mean Num. File x Job',
-        'Mean Num. File x Task',
-        'Mean Num. File x User'
+        'Mean Num. Files x User',
+        'Mean Num. Files x Task',
+        'Mean Num. Files x Job',
     ]
     p2_cur_data = {
         'windows': cur_windows,
-        'Mean Num. File x Job': [window['mean_num_files_x_job']
-                                 for window in windows],
-        'Mean Num. File x Task': [window['mean_num_files_x_task']
-                                  for window in windows],
-        'Mean Num. File x User': [window['mean_num_files_x_user']
+        'Mean Num. Files x User': [window['mean_num_files_x_user']
+                                   for window in windows],
+        'Mean Num. Files x Task': [window['mean_num_files_x_task']
+                                   for window in windows],
+        'Mean Num. Files x Job': [window['mean_num_files_x_job']
                                   for window in windows],
     }
     p2_cur_palette = [next(COLORS) for _ in range(len(p2_cur_types))]
@@ -580,6 +580,7 @@ def plot_windows(windows: list, result_folder: str, dpi: int):
 
     fig_file_stats = figure(
         x_range=FactorRange(*p2_x),
+        y_axis_type="log",
         plot_height=480,
         title="Request file stats",
         tools="box_zoom,pan,reset,save",
@@ -588,6 +589,8 @@ def plot_windows(windows: list, result_folder: str, dpi: int):
     fig_file_stats.vbar(
         x='x', top='counts', width=1.0,
         source=p2_source, line_color="white",
+        # FIX to have log vbar: https://github.com/bokeh/bokeh/issues/6671
+        bottom=0.99,
         fill_color=factor_cmap(
             'x', palette=p2_cur_palette,
             factors=p2_cur_types,
@@ -600,8 +603,65 @@ def plot_windows(windows: list, result_folder: str, dpi: int):
     fig_file_stats.xaxis.major_label_orientation = 1
     fig_file_stats.xgrid.grid_line_color = None
 
+    ###########################################################################
+    # User and task stats
+    ###########################################################################
+
+    p3_cur_types = [
+        'Mean Num. Jobs x User',
+        'Mean Num. Tasks x User',
+        'Mean Num. Jobs x Task',
+    ]
+    p3_cur_data = {
+        'windows': cur_windows,
+        'Mean Num. Jobs x User': [window['mean_num_jobs_x_user']
+                                  for window in windows],
+        'Mean Num. Tasks x User': [window['mean_num_tasks_x_user']
+                                   for window in windows],
+        'Mean Num. Jobs x Task': [window['mean_num_jobs_x_task']
+                                  for window in windows],
+    }
+    p3_cur_palette = [next(COLORS) for _ in range(len(p3_cur_types))]
+
+    p3_x = [
+        (window, type_)
+        for window in cur_windows
+        for type_ in p3_cur_types
+    ]
+    p3_counts = sum(zip(*[p3_cur_data[name] for name in p3_cur_types]), ())
+
+    p3_source = ColumnDataSource(data=dict(x=p3_x, counts=p3_counts))
+
+    fig_user_task_stats = figure(
+        x_range=FactorRange(*p3_x),
+        y_axis_type="log",
+        plot_height=480,
+        title="User and task stats",
+        tools="box_zoom,pan,reset,save",
+    )
+
+    fig_user_task_stats.vbar(
+        x='x', top='counts', width=1.0,
+        source=p3_source, line_color="white",
+        # FIX to have log vbar: https://github.com/bokeh/bokeh/issues/6671
+        bottom=0.99,
+        fill_color=factor_cmap(
+            'x', palette=p3_cur_palette,
+            factors=p3_cur_types,
+            start=1,
+            end=2
+        ))
+
+    fig_user_task_stats.y_range.start = 0
+    fig_user_task_stats.x_range.range_padding = 0.1
+    fig_user_task_stats.xaxis.major_label_orientation = 1
+    fig_user_task_stats.xgrid.grid_line_color = None
+
     save(column(
-        fig_num_req_num_files, fig_mean_num_req_num_files, fig_file_stats
+        fig_num_req_num_files,
+        fig_mean_num_req_num_files,
+        fig_file_stats,
+        fig_user_task_stats,
     ))
 
     # TODO: add png export
@@ -611,169 +671,6 @@ def plot_windows(windows: list, result_folder: str, dpi: int):
     # )
 
     return
-    ###########################################################################
-    # window_request_stats
-    ###########################################################################
-    plt.clf()
-    grid = plt.GridSpec(24, len(windows), wspace=2.42, hspace=4.33)
-
-    axes = plt.subplot(grid[0:7, 0:])
-    axes.bar(
-        [
-            idx - bar_width / 2.
-            for idx, _ in enumerate(windows)
-        ],
-        [
-            record['num_requests']
-            for record in windows
-        ],
-        width=bar_width,
-        label="Num. Requests"
-    )
-    axes.bar(
-        [
-            idx + bar_width / 2.
-            for idx, _ in enumerate(windows)
-        ],
-        [
-            record['num_files']
-            for record in windows
-        ],
-        width=bar_width,
-        label="Num. Files"
-    )
-    axes.set_xticks(range(len(windows)))
-    axes.set_xticklabels(
-        [str(idx) for idx in range(len(windows))]
-    )
-    axes.grid()
-    axes.legend()
-    axes.set_xlabel("Window")
-
-    axes = plt.subplot(grid[8:15, :])
-    axes.bar(
-        [
-            idx - bar_width / 2.
-            for idx, _ in enumerate(windows)
-        ],
-        [
-            record['mean_num_req_x_file']
-            for record in windows
-        ],
-        width=bar_width,
-        label="Mean Num. Requests"
-    )
-    axes.bar(
-        [
-            idx + bar_width / 2.
-            for idx, _ in enumerate(windows)
-        ],
-        [
-            record['mean_num_req_x_file_gmin']
-            for record in windows
-        ],
-        width=bar_width,
-        label="Mean Num. Requests > min"
-    )
-    axes.set_xticks(range(len(windows)))
-    axes.set_xticklabels(
-        [str(idx) for idx in range(len(windows))]
-    )
-    axes.grid()
-    axes.legend()
-    axes.set_xlabel("Window")
-
-    axes = plt.subplot(grid[16:24, :])
-    cur_bar_width = bar_width / 4.
-    axes.bar(
-        [
-            idx - cur_bar_width * 3
-            for idx, _ in enumerate(windows)
-        ],
-        [
-            record['mean_num_files_x_job']
-            for record in windows
-        ],
-        width=cur_bar_width,
-        label="Mean Num. Files x Job"
-    )
-    axes.bar(
-        [
-            idx - cur_bar_width * 2
-            for idx, _ in enumerate(windows)
-        ],
-        [
-            record['mean_num_files_x_task']
-            for record in windows
-        ],
-        width=cur_bar_width,
-        label="Mean Num. Files x Task"
-    )
-    axes.bar(
-        [
-            idx - cur_bar_width
-            for idx, _ in enumerate(windows)
-        ],
-        [
-            record['mean_num_files_x_user']
-            for record in windows
-        ],
-        width=cur_bar_width,
-        label="Mean Num. Files x User"
-    )
-    axes.bar(
-        [
-            idx
-            for idx, _ in enumerate(windows)
-        ],
-        [
-            record['mean_num_jobs_x_task']
-            for record in windows
-        ],
-        width=cur_bar_width,
-        label="Mean Num. Jobs x Task"
-    )
-    axes.bar(
-        [
-            idx + cur_bar_width
-            for idx, _ in enumerate(windows)
-        ],
-        [
-            record['mean_num_jobs_x_user']
-            for record in windows
-        ],
-        width=cur_bar_width,
-        label="Mean Num. Jobs x User"
-    )
-    axes.bar(
-        [
-            idx + cur_bar_width * 2
-            for idx, _ in enumerate(windows)
-        ],
-        [
-            record['mean_num_tasks_x_user']
-            for record in windows
-        ],
-        width=cur_bar_width,
-        label="Mean Num. Tasks x User"
-    )
-    axes.set_yscale('log')
-    axes.set_xticks(range(len(windows)))
-    axes.set_xticklabels(
-        [str(idx) for idx in range(len(windows))]
-    )
-    axes.grid()
-    legend = axes.legend(bbox_to_anchor=(0.36, -1.8))
-    axes.set_xlabel("Window")
-    pbar.update(1)
-
-    plt.savefig(
-        os.path.join(result_folder, "stats_window-requests.png"),
-        dpi=dpi,
-        bbox_extra_artists=(legend, ),
-        bbox_inches='tight'
-    )
-    pbar.update(1)
 
     ###########################################################################
     # window_frequency_stats
