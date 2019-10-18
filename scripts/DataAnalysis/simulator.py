@@ -682,11 +682,14 @@ def make_it_valid(individual, dataframe, cache_size: float):
     if individual_size > cache_size:
         nonzero = np.nonzero(individual)[0]
         sizes = dataframe.loc[nonzero]['size']
+        to_false = []
         for cur_idx in reversed(nonzero.tolist()):
             if individual_size <= cache_size:
                 break
-            individual[cur_idx] = False
+            to_false.append(cur_idx)
             individual_size -= sizes[cur_idx]
+        if to_false:
+            individual[to_false] = False
     return individual
 
 
@@ -750,21 +753,21 @@ def evolve_with_genetic_algorithm(population, dataframe,
                                   num_generation: int
                                   ):
     cur_population = [elm for elm in population]
-    new_population = []
     pool = Pool()
+
+    cur_fitness = []
+    for indivudual in cur_population:
+        cur_fitness.append(indivudual_fitness(indivudual, dataframe))
 
     for _ in tqdm(
         range(num_generation),
         desc="Evolution", ascii=True,
         position=0
     ):
-        cur_fitness = []
-        for indivudual in cur_population:
-            cur_fitness.append(indivudual_fitness(indivudual, dataframe))
-
         idx_best = np.argmax(cur_fitness)
         best = cur_population[idx_best]
         mean = sum(cur_fitness) / len(cur_fitness)
+
         for cur_idx, (new_individual, new_fitness) in tqdm(
                 enumerate(
                     pool.imap(
@@ -780,12 +783,9 @@ def evolve_with_genetic_algorithm(population, dataframe,
                 total=len(cur_population),
         ):
             if new_fitness > cur_fitness[cur_idx]:
-                new_population.append(new_individual)
+                cur_population[cur_idx] = new_individual
+                cur_fitness[cur_idx] = new_fitness
                 continue
-            new_population.append(cur_population[cur_idx])
-        else:
-            cur_population = [individual for individual in new_population]
-            new_population = []
 
     pool.close()
     pool.join()
