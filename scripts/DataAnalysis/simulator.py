@@ -750,7 +750,7 @@ def crossover(parent_a, parent_b) -> 'np.Array':
     """Perform and uniform corssover."""
     new_individual = np.zeros(len(parent_a)).astype(bool)
     uniform_crossover = np.random.rand(len(parent_a))
-    cross_selection = V_CROSS(uniform_crossover, 0.5).astype(bool)
+    cross_selection = V_CROSS(uniform_crossover, 0.42).astype(bool)
     new_individual[cross_selection] = parent_b[cross_selection]
     cross_selection = ~cross_selection
     new_individual[cross_selection] = parent_a[cross_selection]
@@ -760,7 +760,7 @@ def crossover(parent_a, parent_b) -> 'np.Array':
 def mutation(individual) -> 'np.Array':
     """Bit Flip mutation."""
     flip_bits = np.random.rand(len(individual))
-    mutant_selection = V_MUTATE(flip_bits, 0.6).astype(bool)
+    mutant_selection = V_MUTATE(flip_bits, 0.75).astype(bool)
     individual[mutant_selection] = ~ individual[mutant_selection]
     return individual
 
