@@ -3,7 +3,6 @@ import gzip
 import os
 import subprocess
 from itertools import cycle
-from math import isnan
 from multiprocessing import Pool
 from os import path, walk
 from random import randint, seed
@@ -703,7 +702,7 @@ def get_one_solution(gen_input):
 
 def get_best_configuration(dataframe, cache_size: float,
                            num_generation: int = 200,
-                           population_size=42):
+                           population_size=8):
     population = []
     pool = Pool()
     for _, individual in tqdm(enumerate(
@@ -760,7 +759,7 @@ def crossover(parent_a, parent_b) -> 'np.Array':
 def mutation(individual) -> 'np.Array':
     """Bit Flip mutation."""
     flip_bits = np.random.rand(len(individual))
-    mutant_selection = V_MUTATE(flip_bits, 0.9).astype(bool)
+    mutant_selection = V_MUTATE(flip_bits, 0.75).astype(bool)
     individual[mutant_selection] = ~ individual[mutant_selection]
     return individual
 
@@ -1208,8 +1207,6 @@ def main():
                 windows.append(cur_window)
                 cur_window = []
 
-        windows_requests = []
-
         for idx, window in enumerate(windows):
             list_df = []
             files = {}
@@ -1225,23 +1222,54 @@ def main():
                         raise Exception(
                             f"Error: extension '{tail}' not supported...")
                 list_df.append(df)
-            cur_df = pd.concat(list_df, ignore_index=True)
+            cur_df = pd.concat(list_df, ignore_index=True).dropna()
             # print(cur_df.shape)
-            windows_requests.append(cur_df)
+
+            tick_counter = 1
+            stat_avg_time = []
+            stat_num_req = []
             for cur_row in tqdm(cur_df.itertuples(), total=cur_df.shape[0],
                                 desc=f"Parse window {idx} dataframe", ascii=True):
                 cur_filename = cur_row.filename
                 cur_size = cur_row.size
-                if not isnan(cur_size):
-                    if cur_filename not in files:
-                        files[cur_filename] = {
-                            'size': cur_size,
-                            'totReq': 0,
-                            'days': set([])
-                        }
-                    files[cur_filename]['totReq'] += 1
-                    assert files[cur_filename]['size'] == cur_size, f"{files[cur_filename]['size']} != {cur_size}"
-                    files[cur_filename]['days'] |= set((cur_row.day, ))
+                if cur_filename not in files:
+                    data_type, _, _, file_type = cur_filename.split(
+                        "/")[2:6]
+                    files[cur_filename] = {
+                        'size': cur_size,
+                        'totReq': 0,
+                        'days': set([]),
+                        'siteName': cur_row.site_name,
+                        'userID': cur_row.user,
+                        'reqHistory': [0, 0, 0, 0, 0, 0, 0, 0],
+                        'lastReq': 0,
+                        'fileType': file_type,
+                        'dataType': data_type
+                    }
+                files[cur_filename]['totReq'] += 1
+                files[cur_filename]['lastReq'] = tick_counter
+                files[cur_filename]['reqHistory'].pop()
+                files[cur_filename]['reqHistory'].append(tick_counter)
+
+                assert len(files[cur_filename]['reqHistory']
+                            ) == 8, f"History do not have len 8 but {len(files[cur_filename]['reqHistory'])}"
+                assert files[cur_filename]['size'] == cur_size, f"{files[cur_filename]['size']} != {cur_size}"
+
+                files[cur_filename]['days'] |= set((cur_row.day, ))
+
+                stat_num_req.append(files[cur_filename]['totReq'])
+                stat_avg_time.append(
+                    sum([
+                        files[cur_filename]['lastReq'] - elm
+                        for elm in files[cur_filename]['reqHistory']
+                    ]) / len(files[cur_filename]['reqHistory'])  # len = 8
+                )
+
+                tick_counter += 1
+
+            cur_df['avg_time'] = stat_avg_time
+            cur_df['num_req'] = stat_num_req
+
             files_df = pd.DataFrame(
                 data={
                     'filename': [filename
@@ -1280,9 +1308,35 @@ def main():
 
             compare_greedy_solution(files_df, args.cache_size)
 
+            dataset_data = []
+            len_dataset = int(len(cur_df) * 0.2)
+
+            for cur_row in tqdm(cur_df.sample(len_dataset).itertuples(),
+                                total=len_dataset,
+                                desc=f"Create dataset {idx}", ascii=True):
+                filename = cur_row.filename
+                dataset_data.append(
+                    [
+                        files[filename]['siteName'],
+                        files[filename]['userID'],
+                        cur_row.num_req,
+                        cur_row.avg_time,
+                        files[filename]['size'],
+                        files[filename]['fileType'],
+                        files[filename]['dataType'],
+                    ]
+                )
+
+            dataset_df = pd.DataFrame(
+                dataset_data, columns=(
+                    'siteName', 'userID', 'numReq', 'avgTime', 'size',
+                    'fileType', 'dataType'
+                )
+            )
+
             with yaspin(Spinners.bouncingBall, text=f"[Store dataset][{datest_out_file}]") as sp:
                 with gzip.GzipFile(datest_out_file, "wb") as out_file:
-                    files_df.to_feather(out_file)
+                    dataset_df.to_feather(out_file)
 
 
 if __name__ == "__main__":
