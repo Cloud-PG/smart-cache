@@ -1252,7 +1252,7 @@ def main():
                 files[cur_filename]['reqHistory'].append(tick_counter)
 
                 assert len(files[cur_filename]['reqHistory']
-                            ) == 8, f"History do not have len 8 but {len(files[cur_filename]['reqHistory'])}"
+                           ) == 8, f"History do not have len 8 but {len(files[cur_filename]['reqHistory'])}"
                 assert files[cur_filename]['size'] == cur_size, f"{files[cur_filename]['size']} != {cur_size}"
 
                 files[cur_filename]['days'] |= set((cur_row.day, ))
@@ -1324,13 +1324,15 @@ def main():
                         files[filename]['size'],
                         files[filename]['fileType'],
                         files[filename]['dataType'],
+                        files_df.loc[files_df.filename ==
+                                     filename, 'class'].to_list().pop(),
                     ]
                 )
 
             dataset_df = pd.DataFrame(
                 dataset_data, columns=(
-                    'siteName', 'userID', 'numReq', 'avgTime', 'size',
-                    'fileType', 'dataType'
+                    'siteName', 'userID', 'numReq', 'avgTime',
+                    'size', 'fileType', 'dataType', 'class'
                 )
             )
 
