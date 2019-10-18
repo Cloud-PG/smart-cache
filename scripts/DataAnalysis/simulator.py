@@ -702,8 +702,8 @@ def get_one_solution(gen_input):
 
 
 def get_best_configuration(dataframe, cache_size: float,
-                           num_generation: int = 200,
-                           population_size=8):
+                           num_generation: int = 100,
+                           population_size=16):
     population = []
     pool = Pool()
     for _, individual in tqdm(enumerate(
@@ -760,7 +760,7 @@ def crossover(parent_a, parent_b) -> 'np.Array':
 def mutation(individual) -> 'np.Array':
     """Bit Flip mutation."""
     flip_bits = np.random.rand(len(individual))
-    mutant_selection = V_MUTATE(flip_bits, 0.75).astype(bool)
+    mutant_selection = V_MUTATE(flip_bits, 0.6).astype(bool)
     individual[mutant_selection] = ~ individual[mutant_selection]
     return individual
 
