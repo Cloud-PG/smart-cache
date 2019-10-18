@@ -701,8 +701,8 @@ def get_one_solution(gen_input):
 
 
 def get_best_configuration(dataframe, cache_size: float,
-                           num_generation: int = 400,
-                           population_size=16):
+                           num_generation: int = 100,
+                           population_size=10):
     population = []
     pool = Pool()
     for _, individual in tqdm(enumerate(
@@ -727,28 +727,41 @@ def get_best_configuration(dataframe, cache_size: float,
     return best
 
 
+def cross(element, factor):
+    if element > factor:
+        return 1
+    return 0
+
+
+V_CROSS = np.vectorize(cross)
+
+
+def mutate(element, factor):
+    if element > factor:
+        return 1
+    return 0
+
+
+V_MUTATE = np.vectorize(mutate)
+
+
 def crossover(parent_a, parent_b) -> 'np.Array':
     """Perform and uniform corssover."""
+    new_individual = np.zeros(len(parent_a)).astype(bool)
     uniform_crossover = np.random.rand(len(parent_a))
-    child = []
-    for idx, cross in enumerate(uniform_crossover):
-        if cross > 0.5:
-            child.append(parent_b[idx])
-        else:
-            child.append(parent_a[idx])
-    return np.array(child, dtype=bool)
+    cross_selection = V_CROSS(uniform_crossover, 0.5).astype(bool)
+    new_individual[cross_selection] = parent_b[cross_selection]
+    cross_selection = ~cross_selection
+    new_individual[cross_selection] = parent_a[cross_selection]
+    return new_individual
 
 
 def mutation(individual) -> 'np.Array':
     """Bit Flip mutation."""
     flip_bits = np.random.rand(len(individual))
-    mutant = []
-    for idx, flip in enumerate(flip_bits):
-        if flip > 0.75:
-            mutant.append(not individual[idx])
-        else:
-            mutant.append(individual[idx])
-    return np.array(mutant, dtype=bool)
+    mutant_selection = V_MUTATE(flip_bits, 0.75).astype(bool)
+    individual[mutant_selection] = ~ individual[mutant_selection]
+    return individual
 
 
 def generation(gen_input):
