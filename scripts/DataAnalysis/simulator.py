@@ -686,7 +686,7 @@ def make_it_valid(individual, dataframe, cache_size: float):
             if individual_size <= cache_size:
                 break
             individual[cur_idx] = False
-            individual_size -= sizes.loc[cur_idx]
+            individual_size -= sizes[cur_idx]
     return individual
 
 
