@@ -26,6 +26,7 @@ from SmartCache.sim import get_simulator_exe
 
 # Set seed
 seed(42)
+np.random.seed(42)
 
 
 def wait_jobs(processes):
