@@ -693,7 +693,8 @@ def make_it_valid(individual, dataframe, cache_size: float):
     return individual
 
 
-def get_one_solution(dataframe, cache_size: float):
+def get_one_solution(gen_input):
+    dataframe, cache_size = gen_input
     individual = np.random.randint(2, size=dataframe.shape[0], dtype=bool)
     individual = make_it_valid(individual, dataframe, cache_size)
     return individual
@@ -703,9 +704,21 @@ def get_best_configuration(dataframe, cache_size: float,
                            num_generation: int = 200,
                            population_size=100):
     population = []
-    for _ in tqdm(range(population_size), desc="Create Population",
-                  total=population_size, ascii=True):
-        population.append(get_one_solution(dataframe, cache_size))
+    pool = Pool()
+    for _, individual in tqdm(enumerate(
+        pool.imap(
+            get_one_solution,
+            [
+                (dataframe, cache_size)
+                for _ in range(population_size)
+            ]
+        )
+    ), desc="Create Population",
+            total=population_size, ascii=True):
+        population.append(individual)
+
+    pool.close()
+    pool.join()
 
     best = evolve_with_genetic_algorithm(
         population, dataframe, cache_size, num_generation
