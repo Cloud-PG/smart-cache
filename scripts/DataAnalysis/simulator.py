@@ -107,7 +107,6 @@ def update_colors(new_name: str, color_table: dict):
     for name in sorted(names):
         cur_color = next(colors)
         color_table[name] = cur_color
-        single_w_name = f'{name} - single window'
 
 
 def add_window_lines(cur_fig, dates: list, window_size: int):
@@ -701,8 +700,8 @@ def get_one_solution(gen_input):
 
 
 def get_best_configuration(dataframe, cache_size: float,
-                           num_generation: int = 100,
-                           population_size=100):
+                           num_generations: int = 200,
+                           population_size: int = 100):
     population = []
     pool = Pool()
     for _, individual in tqdm(enumerate(
@@ -721,7 +720,7 @@ def get_best_configuration(dataframe, cache_size: float,
     pool.join()
 
     best = evolve_with_genetic_algorithm(
-        population, dataframe, cache_size, num_generation
+        population, dataframe, cache_size, num_generations
     )
 
     return best
@@ -759,7 +758,7 @@ def crossover(parent_a, parent_b) -> 'np.Array':
 def mutation(individual) -> 'np.Array':
     """Bit Flip mutation."""
     flip_bits = np.random.rand(len(individual))
-    mutant_selection = V_MUTATE(flip_bits, 0.75).astype(bool)
+    mutant_selection = V_MUTATE(flip_bits, 0.6).astype(bool)
     individual[mutant_selection] = ~ individual[mutant_selection]
     return individual
 
@@ -776,7 +775,7 @@ def generation(gen_input):
 
 def evolve_with_genetic_algorithm(population, dataframe,
                                   cache_size: float,
-                                  num_generation: int
+                                  num_generations: int
                                   ):
     cur_population = [elm for elm in population]
     pool = Pool()
@@ -786,7 +785,7 @@ def evolve_with_genetic_algorithm(population, dataframe,
         cur_fitness.append(indivudual_fitness(indivudual, dataframe))
 
     for _ in tqdm(
-        range(num_generation),
+        range(num_generations),
         desc="Evolution", ascii=True,
         position=0
     ):
@@ -873,6 +872,12 @@ def main():
     parser.add_argument('-WSTO', '--window-stop', type=int,
                         default=4,
                         help='Window where to stop [DEFAULT: 4]')
+    parser.add_argument('--population-size', type=int,
+                        default=100,
+                        help='Num. of individuals in the GA [DEFAULT: 100]')
+    parser.add_argument('--num-generations', type=int,
+                        default=200,
+                        help='Num. of generations of GA [DEFAULT: 200]')
     parser.add_argument('--out-html', type=bool,
                         default=True,
                         help='Plot the output as a html [DEFAULT: True]')
@@ -1297,7 +1302,9 @@ def main():
             files_df = files_df.reset_index(drop=True)
             # print(files_df)
             best_files = get_best_configuration(
-                files_df, args.cache_size
+                files_df, args.cache_size,
+                population_size=args.population_size,
+                num_generations=args.num_generations,
             )
 
             files_df['class'] = best_files
@@ -1315,6 +1322,11 @@ def main():
                                 total=len_dataset,
                                 desc=f"Create dataset {idx}", ascii=True):
                 filename = cur_row.filename
+                try:
+                    cur_class = files_df.loc[files_df.filename ==
+                                             filename, 'class'].to_list().pop()
+                except IndexError:
+                    cur_class = False
                 dataset_data.append(
                     [
                         files[filename]['siteName'],
@@ -1324,8 +1336,7 @@ def main():
                         files[filename]['size'],
                         files[filename]['fileType'],
                         files[filename]['dataType'],
-                        files_df.loc[files_df.filename ==
-                                     filename, 'class'].to_list().pop(),
+                        cur_class,
                     ]
                 )
 
