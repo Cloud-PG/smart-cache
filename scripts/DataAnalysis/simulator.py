@@ -1229,6 +1229,11 @@ def main():
                 list_df.append(df)
             cur_df = pd.concat(list_df, ignore_index=True).dropna()
             # print(cur_df.shape)
+            if args.region != 'all':
+                cur_df = cur_df[cur_df['site_name'].str.contains(
+                    f"_{args.region}_", case=False)
+                ]
+            # print(cur_df.shape)
 
             tick_counter = 1
             stat_avg_time = []
