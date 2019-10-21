@@ -670,7 +670,7 @@ def indivudual_size(individual, dataframe) -> float:
     return cur_size
 
 
-def indivudual_fitness(individual, dataframe) -> float:
+def individual_fitness(individual, dataframe) -> float:
     cur_series = pd.Series(individual)
     cur_size = sum(dataframe[cur_series]['value'])
     return cur_size
@@ -709,15 +709,32 @@ def get_best_configuration(dataframe, cache_size: float,
             get_one_solution,
             [
                 (dataframe, cache_size)
-                for _ in range(population_size)
+                for _ in range(population_size - 1)
             ]
         )
     ), desc="Create Population",
-            total=population_size, ascii=True):
+            total=population_size-1, ascii=True):
         population.append(individual)
 
     pool.close()
     pool.join()
+
+    print("[Create best individual with greedy method]")
+    # Create 1 best individual with greedy method
+    best_greedy = np.zeros(dataframe.shape[0], dtype=bool)
+    cur_size = 0.
+    cur_score = 0.
+
+    for idx, cur_row in enumerate(dataframe.itertuples()):
+        file_size = cur_row.size
+        if cur_size + file_size <= cache_size:
+            cur_size += file_size
+            cur_score += cur_row.value
+            best_greedy[idx] = True
+        else:
+            break
+
+    population.append(best_greedy)
 
     best = evolve_with_genetic_algorithm(
         population, dataframe, cache_size, num_generations
@@ -758,7 +775,7 @@ def crossover(parent_a, parent_b) -> 'np.Array':
 def mutation(individual) -> 'np.Array':
     """Bit Flip mutation."""
     flip_bits = np.random.rand(len(individual))
-    mutant_selection = V_MUTATE(flip_bits, 0.6).astype(bool)
+    mutant_selection = V_MUTATE(flip_bits, 0.75).astype(bool)
     individual[mutant_selection] = ~ individual[mutant_selection]
     return individual
 
@@ -769,7 +786,7 @@ def generation(gen_input):
     new_individual = mutation(new_individual)
     new_individual = make_it_valid(
         new_individual, dataframe, cache_size)
-    new_fitness = indivudual_fitness(new_individual, dataframe)
+    new_fitness = individual_fitness(new_individual, dataframe)
     return (new_individual, new_fitness)
 
 
@@ -782,7 +799,7 @@ def evolve_with_genetic_algorithm(population, dataframe,
 
     cur_fitness = []
     for indivudual in cur_population:
-        cur_fitness.append(indivudual_fitness(indivudual, dataframe))
+        cur_fitness.append(individual_fitness(indivudual, dataframe))
 
     for _ in tqdm(
         range(num_generations),
@@ -792,14 +809,22 @@ def evolve_with_genetic_algorithm(population, dataframe,
         idx_best = np.argmax(cur_fitness)
         best = cur_population[idx_best]
         mean = sum(cur_fitness) / len(cur_fitness)
+        parent_selection = np.random.randint(len(population) - 1,
+                                             size=len(cur_population))
 
         for cur_idx, (new_individual, new_fitness) in tqdm(
                 enumerate(
                     pool.imap(
                         generation,
                         [
-                            (best, individual, dataframe, cache_size)
-                            for individual in cur_population
+                            (
+                                cur_population[parent_selection[sel_idx]],
+                                individual,
+                                dataframe,
+                                cache_size
+                            )
+                            for sel_idx, individual
+                            in enumerate(cur_population)
                         ]
                     )
                 ),
