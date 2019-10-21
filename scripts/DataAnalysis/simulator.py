@@ -1165,48 +1165,49 @@ def main():
             plot_height=plot_height,
         )
     elif args.action == "train":
-        dataset = SimulatorDatasetReader(path.join(
-            args.source, "run_single_window"
-        ))
+        dataset = SimulatorDatasetReader(args.source)
         dataset.modify_column(
-            'cacheCapacity',
-            lambda column: (column / 5.).astype(int)
+            'size',
+            lambda column: (column / 1024**2)
+        ).modify_column(
+            'size',
+            lambda column: (column / 1000).astype(int)
+        ).modify_column(
+            'avgTime',
+            lambda column: (column / 100).astype(int)
         ).make_converter_for(
             [
-                'cacheLastFileHit',
-                'cacheCapacity',
+                'size',
+                'avgTime',
                 'class',
             ],
             unknown_value=False
         ).make_converter_for(
             [
                 'siteName',
-                # 'taskID',
-                # 'jobID',
                 'userID',
+                'fileType',
+                'dataType'
             ]
         ).make_data_and_labels(
             [
                 'siteName',
-                # 'taskID',
-                # 'jobID',
                 'userID',
-                'cacheCapacity',
-                'cacheLastFileHit',
-                'fileSize',
-                'fileTotRequests',
-                'fileNHits',
-                'fileNMiss',
-                'fileMeanTimeReq',
+                'fileType',
+                'dataType',
+                'numReq',
+                'avgTime',
+                'size',
             ],
             'class'
         ).save_data_and_labels()
         model = DonkeyModel()
-        for target_dir, data, labels in dataset.get_data():
-            model.train(data, labels)
-            model.save(path.join(
-                target_dir, "donkey_model"
-            ))
+        data, labels = dataset.data
+        # print(data.shape)
+        model.train(data, labels)
+        model.save(path.join(
+            target_dir, "donkey_model"
+        ))
     elif args.action == "create_dataset":
         base_dir = path.join(path.dirname(path.abspath(__file__)), "datasets")
         os.makedirs(base_dir, exist_ok=True)
@@ -1377,7 +1378,9 @@ def main():
                 )
             )
 
-            with yaspin(Spinners.bouncingBall, text=f"[Store dataset][{datest_out_file}]") as sp:
+            with yaspin(Spinners.bouncingBall,
+                        text=f"[Store dataset][{datest_out_file}]"
+                        ):
                 with gzip.GzipFile(datest_out_file, "wb") as out_file:
                     dataset_df.to_feather(out_file)
 

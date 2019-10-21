@@ -17,40 +17,35 @@ from yaspin.spinners import Spinners
 
 class SimulatorDatasetReader(object):
 
-    def __init__(self, folder: str = "", to_categorical: bool = False):
-        self._data_frames = {}
-        self._data = []
+    def __init__(self, filename: str = "", to_categorical: bool = False):
+        self._df = None
+        self._data = (None, None)
+        self._data_dir = None
         self._converter = None
-        if folder:
-            self.open_data(folder)
 
-    def open_data(self, folder: str) -> 'SimulatorDatasetReader':
         with yaspin(
             Spinners.bouncingBall,
-            f"[Open dataset folder {folder}]"
+            f"[Open dataset {filename}]"
         ) as sp:
-            self._target_dirs = []
-            for root, dirs, files in walk(folder):
-                for file_ in sorted(files):
-                    main_dir, window = path.split(root)
-                    cur_cache = path.split(main_dir)[-1]
-                    if cur_cache.find("lru") != 0 and file_ == "dataset.csv.gz":
-                        window_num = int(window.split("_")[1])
-                        cur_file_path = path.join(root, file_)
-                        sp.text = f"[Open file][{cur_file_path}]"
-                        with gzip.GzipFile(cur_file_path, "r") as gzFile:
-                            cur_df = pd.read_csv(gzFile)
-                            self._data_frames[window_num] = {
-                                'df': cur_df,
-                                'dir': root
-                            }
+            head, tail = path.splitext(filename)
+            if tail in [".gzip", ".gz"]:
+                head, tail = path.splitext(head)
+                with gzip.GzipFile(filename, "rb") as cur_file:
+                    if tail == ".feather":
+                        self._df = pd.read_feather(cur_file)
+                        self._data_dir = path.dirname(path.abspath(filename))
+                    else:
+                        raise Exception(f"Unknow extension '{tail}'")
+            else:
+                raise Exception(f"Unknow extension '{tail}'")
             sp.text = "[Dataset loaded...]"
-        return self
+
+    @property
+    def data(self):
+        return self._data
 
     def modify_column(self, column, function) -> 'SimulatorDatasetReader':
-        for data in self._data_frames.values():
-            df = data['df']
-            df[column] = function(df[column])
+        self._df[column] = function(self._df[column])
         return self
 
     def make_converter_for(self, columns: list = [],
@@ -59,25 +54,22 @@ class SimulatorDatasetReader(object):
         with yaspin(
             Spinners.bouncingBall,
             f"[Make converter for (unknown value: {unknown_value})]{columns}"
-        ) as sp:
+        ):
             if not self._converter:
                 self._converter = FeatureConverter()
 
-            for data in self._data_frames.values():
-                df = data['df']
-                for column in columns:
-                    values = df[column].to_list()
-                    self._converter.insert_from_values(
-                        column, values, unknown_value
-                    )
-
-            for data in self._data_frames.values():
-                self._converter.dump(
-                    path.join(
-                        data['dir'],
-                        "featureConverter.dump.pickle"
-                    )
+            for column in columns:
+                values = self._df[column].to_list()
+                self._converter.insert_from_values(
+                    column, values, unknown_value
                 )
+
+            self._converter.dump(
+                path.join(
+                    self._data_dir,
+                    "featureConverter.dump.pickle"
+                )
+            )
 
         return self
 
@@ -85,62 +77,62 @@ class SimulatorDatasetReader(object):
                              label_column: str = "",
                              for_cnn: bool = False,
                              ) -> 'SimulatorDatasetReader':
-        for key in sorted(self._data_frames):
-            df = self._data_frames[key]['df']
-            with yaspin(
-                Spinners.bouncingBall,
-                f"[Make data and labels][{self._data_frames[key]['dir']}]"
-            ) as sp:
-                if not label_column:
-                    label_column = df.columns[-1]
-                if label_column in self._converter:
-                    labels = self._converter.get_categories(
-                        label_column,
-                        df[label_column]
+        df = self._df
+        with yaspin(
+            Spinners.bouncingBall,
+            "[Make data and labels]]"
+        ):
+            if not label_column:
+                label_column = df.columns[-1]
+            if label_column in self._converter:
+                labels = self._converter.get_categories(
+                    label_column,
+                    df[label_column]
+                )
+            else:
+                labels = df[label_column].to_numpy()
+
+            new_df = None
+            for column in data_columns:
+                if column in self._converter:
+                    cur_data = self._converter.get_column_categories(
+                        column,
+                        df[column]
                     )
                 else:
-                    labels = df[label_column].to_numpy()
+                    cur_data = df[column]
 
-                new_df = None
-                for column in data_columns:
-                    if column in self._converter:
-                        cur_data = self._converter.get_column_categories(
-                            column,
-                            df[column]
-                        )
-                    else:
-                        cur_data = df[column]
-
-                    if new_df is not None:
-                        new_df = new_df.join(cur_data, how='outer')
-                    else:
-                        new_df = cur_data
-
-                if for_cnn:
-                    new_df = new_df.to_numpy()
-                    new_df = new_df.reshape(
-                        new_df.shape[0], new_df.shape[1], 1
-                    )
+                if new_df is not None:
+                    new_df = new_df.join(cur_data, how='outer')
                 else:
-                    new_df = new_df.to_numpy()
+                    new_df = cur_data
 
-                self._data.insert(key, (new_df, labels))
+            if for_cnn:
+                new_df = new_df.to_numpy()
+                new_df = new_df.reshape(
+                    new_df.shape[0], new_df.shape[1], 1
+                )
+            else:
+                new_df = new_df.to_numpy()
+
+            self._data = (new_df, labels)
 
         return self
 
     def save_data_and_labels(self,
                              out_name: str = "dataset.converted"
                              ) -> 'SimulatorDatasetReader':
-        for dest_dir, data, labels in self.get_data():
-            with yaspin(
-                Spinners.bouncingBall,
-                f"[Save data and labels][{path.join(dest_dir, out_name)}.npz]"
-            ) as sp:
-                np.savez(
-                    path.join(dest_dir, out_name),
-                    data=data,
-                    labels=labels,
-                )
+        data, labels = self.data
+        dest = path.join(self._data_dir, out_name)
+        with yaspin(
+            Spinners.bouncingBall,
+            f"[Save data and labels][{dest}.npz]"
+        ):
+            np.savez(
+                dest,
+                data=data,
+                labels=labels,
+            )
         return self
 
     def load_data_and_labels(self,
@@ -149,17 +141,12 @@ class SimulatorDatasetReader(object):
         with yaspin(
             Spinners.bouncingBall,
             f"[Load data and labels][{in_name}]"
-        ) as sp:
+        ):
             npzfiles = np.load(in_name)
             cur_dir = path.dirname(path.abspath(in_name))
-            self._target_dirs.append(cur_dir)
-            self._data.append((npzfiles['data'], npzfiles['labels']))
+            self._data_dir = cur_dir
+            self._data = (npzfiles['data'], npzfiles['labels'])
         return self
-
-    def get_data(self):
-        """Produce train and validation sets using cross validation."""
-        for idx, (data, labels) in enumerate(self._data):
-            yield self._data_frames[idx]['dir'], data, labels
 
 
 class CMSDatasetTest0Reader(object):

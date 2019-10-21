@@ -38,8 +38,6 @@ class DonkeyModel(ai_pb2_grpc.AIServiceServicer):
                 keras.layers.Dropout(0.5),
                 keras.layers.Flatten(),
                 keras.layers.Dense(512, activation='sigmoid'),
-                keras.layers.Dense(256, activation='sigmoid'),
-                keras.layers.Dense(128, activation='sigmoid'),
                 keras.layers.Dense(output_size, activation='softmax')
             ])
         else:
@@ -48,10 +46,6 @@ class DonkeyModel(ai_pb2_grpc.AIServiceServicer):
                                    input_shape=(input_size, )),
                 keras.layers.Dense(512, activation='sigmoid'),
                 keras.layers.Dense(256, activation='sigmoid'),
-                keras.layers.Dense(128, activation='sigmoid'),
-                keras.layers.Dense(64, activation='sigmoid'),
-                keras.layers.Dense(32, activation='sigmoid'),
-                keras.layers.Dense(16, activation='sigmoid'),
                 keras.layers.Dense(output_size, activation='softmax')
             ])
         self._model.compile(
@@ -126,8 +120,9 @@ class DonkeyModel(ai_pb2_grpc.AIServiceServicer):
         return self
 
     def __del__(self):
-        self._server.stop(False)
-        self._server.wait_for_termination()
+        if self._server:
+            self._server.stop(False)
+            self._server.wait_for_termination()
 
 
 class CMSTest0ModelGenerator(object):
