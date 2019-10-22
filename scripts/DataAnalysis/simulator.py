@@ -1319,7 +1319,7 @@ def main():
         # print(data.shape)
         model.train(data, labels)
         model.save(path.join(
-            args.source, "donkey_model"
+            path.dirname(args.source), "donkey_model"
         ))
     elif args.action == "create_dataset":
         base_dir = path.join(path.dirname(path.abspath(__file__)), "datasets")
