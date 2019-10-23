@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"runtime/pprof"
 	"strings"
 	"time"
 
@@ -17,27 +18,29 @@ import (
 )
 
 var (
+	aiHost              string
+	aiPort              string
 	buildstamp          string
-	githash             string
 	cacheSize           float32
+	cpuprofile          string
+	githash             string
+	limitStatsPolicy    string
+	memprofile          string
 	serviceHost         string
 	servicePort         int32
-	weightExp           float32
-	weightedFunc        string
-	statUpdatePolicy    string
-	limitStatsPolicy    string
-	simRegion           string
-	simOutFile          string
+	simColdStart        bool
 	simDump             bool
 	simDumpFileName     string
 	simLoadDump         bool
 	simLoadDumpFileName string
-	simWindowSize       uint32
+	simOutFile          string
+	simRegion           string
 	simStartFromWindow  uint32
 	simStopWindow       uint32
-	simColdStart        bool
-	aiHost              string
-	aiPort              string
+	simWindowSize       uint32
+	statUpdatePolicy    string
+	weightedFunc        string
+	weightExp           float32
 )
 
 func main() {
@@ -54,25 +57,33 @@ func main() {
 			fmt.Printf("Build time:\t%s\nGit hash:\t%s\n", buildstamp, githash)
 		},
 	})
+	rootCmd.PersistentFlags().StringVar(
+		&cpuprofile, "cpuprofile", "",
+		"[Profiling] Profile the CPU during the simulation. If a file is specified the CPU will be profiled on that file",
+	)
+	rootCmd.PersistentFlags().StringVar(
+		&memprofile, "memprofile", "",
+		"[Profiling] Profile the Memory during the simulation. If a file is specified the Memory will be profiled on that file. Note that memprofile will stop the simulation after 1 iteration.",
+	)
 	rootCmd.PersistentFlags().Float32Var(
 		&cacheSize, "size", 10485760., // 10TB
-		"cache size",
+		"[Simulation] cache size",
 	)
 	rootCmd.PersistentFlags().StringVar(
 		&serviceHost, "host", "localhost",
-		"Ip to listen to",
+		"[Simulation] Ip to listen to",
 	)
 	rootCmd.PersistentFlags().Int32Var(
 		&servicePort, "port", 5432,
-		"cache sim service port",
+		"[Simulation] cache sim service port",
 	)
 	rootCmd.PersistentFlags().StringVar(
 		&weightedFunc, "weightFunction", "FuncWeightedRequests",
-		"[WeightedLRU]function to use with weighted cache",
+		"[WeightedLRU] function to use with weighted cache",
 	)
 	rootCmd.PersistentFlags().Float32Var(
 		&weightExp, "weightExp", 2.0,
-		"Exponential to use with weighted cache function",
+		"[Simulation] Exponential to use with weighted cache function",
 	)
 	rootCmd.PersistentFlags().StringVar(
 		&statUpdatePolicy, "statUpdatePolicy", "request",
@@ -278,6 +289,16 @@ func simulationCmd(testAISimulation bool) *cobra.Command {
 			start := time.Now()
 			var latestTime time.Time
 
+			if cpuprofile != "" {
+				profileOut, err := os.Create(cpuprofile)
+				if err != nil {
+					fmt.Printf("ERR: Can not create CPU profile file %s.\n", err)
+					os.Exit(-1)
+				}
+				pprof.StartCPUProfile(profileOut)
+				defer pprof.StopCPUProfile()
+			}
+
 			fmt.Println("[Simulation START]")
 			for record := range iterator {
 				if strings.Compare(simRegion, "all") != 0 {
@@ -368,6 +389,17 @@ func simulationCmd(testAISimulation bool) *cobra.Command {
 						fmt.Printf("[Jump %d records]\r", numRecords)
 						start = time.Now()
 					}
+				}
+
+				if memprofile != "" {
+					profileOut, err := os.Create(memprofile)
+					if err != nil {
+						fmt.Printf("ERR: Can not create Memory profile file %s.\n", err)
+						os.Exit(-1)
+					}
+					pprof.WriteHeapProfile(profileOut)
+					profileOut.Close()
+					return
 				}
 
 			}
