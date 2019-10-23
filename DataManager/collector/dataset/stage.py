@@ -169,8 +169,8 @@ class CMSRecordTest0Stage(Stage):
                 tmp[new_record.record_id] += new_record
 
             # Limit processing for test
-            if len(tmp) >= 100:
-                break
+            # if len(tmp) >= 100:
+            #     break
 
         if queue:
             for record in tmp.values():
