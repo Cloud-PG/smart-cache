@@ -12,7 +12,7 @@ import pandas as pd
 from bokeh.io import export_png
 from bokeh.layouts import column, row
 from bokeh.models import (BasicTickFormatter, BoxZoomTool, Legend, PanTool,
-                          ResetTool, SaveTool, Span, WheelZoomTool)
+                          Range1d, ResetTool, SaveTool, Span, WheelZoomTool)
 from bokeh.palettes import Accent
 from bokeh.plotting import Figure, figure, output_file, save
 from tqdm import tqdm
@@ -134,29 +134,32 @@ def filter_results(results: dict, key: str, filters: list):
             yield cache_name, values
 
 
-def plot_hit_rate(tools: list,
+def plot_column(tools: list,
                   results: dict,
                   dates: list,
                   filters: list,
                   color_table: dict,
                   window_size: int,
                   x_range=None,
+                  column: str: "hit rate",
                   title: str = "Hit Rate",
                   run_type: str = "run_full_normal",
                   datetimes: list = [],
                   plot_width: int = 640,
                   plot_height: int = 480,
                   ) -> 'Figure':
-    hit_rate_fig = figure(
+    cur_fig = figure(
         tools=tools,
         title=title,
         x_axis_label="Day",
         y_axis_label="Hit rate %",
-        y_range=(0, 100),
         x_range=x_range if x_range else dates,
         plot_width=plot_width,
         plot_height=plot_height,
     )
+
+    if column == "hit rate":
+        cur_fig.y_range = Range1d(0, 100)
 
     legend_items = []
 
@@ -164,8 +167,8 @@ def plot_hit_rate(tools: list,
         results, run_type, filters
     ):
         if run_type == "run_full_normal":
-            points = values['hit rate']
-            cur_line = hit_rate_fig.line(
+            points = values[column]
+            cur_line = cur_fig.line(
                 dates,
                 points,
                 color=color_table[cache_name],
@@ -173,7 +176,7 @@ def plot_hit_rate(tools: list,
             )
             legend_items.append((cache_name, [cur_line]))
             mean_point = sum(points) / len(points)
-            cur_line = hit_rate_fig.line(
+            cur_line = cur_fig.line(
                 dates,
                 [mean_point for _ in range(len(dates))],
                 line_color=color_table[cache_name],
@@ -184,8 +187,8 @@ def plot_hit_rate(tools: list,
                 (f"Mean {cache_name} -> {mean_point:0.2f}", [cur_line])
             )
         elif run_type == "run_single_window":
-            points = results['run_full_normal'][cache_name]['hit rate']
-            cur_line = hit_rate_fig.line(
+            points = results['run_full_normal'][cache_name][column]
+            cur_line = cur_fig.line(
                 dates,
                 points,
                 color=color_table[cache_name],
@@ -193,7 +196,7 @@ def plot_hit_rate(tools: list,
             )
             legend_items.append((cache_name, [cur_line]))
             mean_point = sum(points) / len(points)
-            cur_line = hit_rate_fig.line(
+            cur_line = cur_fig.line(
                 dates,
                 [mean_point for _ in range(len(dates))],
                 line_color=color_table[cache_name],
@@ -214,8 +217,8 @@ def plot_hit_rate(tools: list,
                     )
                 ]
             )
-            points = single_windows.sort_values(by=['date'])['hit rate']
-            cur_line = hit_rate_fig.line(
+            points = single_windows.sort_values(by=['date'])[column]
+            cur_line = cur_fig.line(
                 dates,
                 points,
                 color=color_table[f'{cache_name}_single'],
@@ -236,8 +239,8 @@ def plot_hit_rate(tools: list,
                 for elm
                 in next_windows['date'].astype(str)
             ]
-            points = next_windows['hit rate']
-            cur_line = hit_rate_fig.line(
+            points = next_windows[column]
+            cur_line = cur_fig.line(
                 cur_dates,
                 points,
                 line_color="red",
@@ -247,7 +250,7 @@ def plot_hit_rate(tools: list,
             )
             legend_items.append((next_window_name, [cur_line]))
             mean_point = sum(points) / len(points)
-            cur_line = hit_rate_fig.line(
+            cur_line = cur_fig.line(
                 cur_dates,
                 [mean_point for _ in range(len(cur_dates))],
                 line_color="red",
@@ -258,8 +261,8 @@ def plot_hit_rate(tools: list,
                 (f"Mean {cache_name} -> {mean_point:0.2f}", [cur_line])
             )
         elif run_type == "run_next_period":
-            points = results['run_full_normal'][cache_name]['hit rate']
-            cur_line = hit_rate_fig.line(
+            points = results['run_full_normal'][cache_name][column]
+            cur_line = cur_fig.line(
                 dates,
                 points,
                 legend=cache_name,
@@ -268,7 +271,7 @@ def plot_hit_rate(tools: list,
             )
             legend_items.append((cache_name, [cur_line]))
             mean_point = sum(points) / len(points)
-            cur_line = hit_rate_fig.line(
+            cur_line = cur_fig.line(
                 dates,
                 [mean_point for _ in range(len(dates))],
                 line_color=color_table[cache_name],
@@ -288,8 +291,8 @@ def plot_hit_rate(tools: list,
                     )
                 ]
             )
-            points = single_windows.sort_values(by=['date'])['hit rate']
-            cur_line = hit_rate_fig.line(
+            points = single_windows.sort_values(by=['date'])[column]
+            cur_line = cur_fig.line(
                 dates,
                 points,
                 color=color_table[f'{cache_name}_single'],
@@ -305,10 +308,10 @@ def plot_hit_rate(tools: list,
             ])
             for period, period_values in values.items():
                 cur_period = period_values[
-                    ['date', 'hit rate']
+                    ['date', column]
                 ][period_values.date.isin(datetimes)]
                 cur_period_name = f"{cache_name} - from {period.split('-')[0]}"
-                points = cur_period.sort_values(by=['date'])['hit rate']
+                points = cur_period.sort_values(by=['date'])[column]
                 cur_dates = [
                     elm.split(" ")[0]
                     for elm
@@ -321,7 +324,7 @@ def plot_hit_rate(tools: list,
                 cur_period = cur_period[~cur_period.date.isin(datetimes)]
                 if len(cur_dates) > 0:
                     cur_line_style = next(line_styles)
-                    cur_line = hit_rate_fig.line(
+                    cur_line = cur_fig.line(
                         cur_dates,
                         points,
                         line_color="red",
@@ -331,7 +334,7 @@ def plot_hit_rate(tools: list,
                     )
                     legend_items.append((cur_period_name, [cur_line]))
                     mean_point = sum(points) / len(points)
-                    cur_line = hit_rate_fig.line(
+                    cur_line = cur_fig.line(
                         cur_dates,
                         [mean_point for _ in range(len(cur_dates))],
                         line_color="red",
@@ -345,13 +348,13 @@ def plot_hit_rate(tools: list,
     legend = Legend(items=legend_items, location=(0, 0))
     legend.location = "top_right"
     legend.click_policy = "hide"
-    hit_rate_fig.add_layout(legend, 'right')
-    hit_rate_fig.yaxis.formatter = BasicTickFormatter(use_scientific=False)
-    hit_rate_fig.xaxis.major_label_orientation = np.pi / 4.
-    hit_rate_fig.add_tools(SaveTool())
-    add_window_lines(hit_rate_fig, dates, window_size)
+    cur_fig.add_layout(legend, 'right')
+    cur_fig.yaxis.formatter = BasicTickFormatter(use_scientific=False)
+    cur_fig.xaxis.major_label_orientation = np.pi / 4.
+    cur_fig.add_tools(SaveTool())
+    add_window_lines(cur_fig, dates, window_size)
 
-    return hit_rate_fig
+    return cur_fig
 
 
 def plot_read_on_write_data(tools: list,
@@ -641,13 +644,14 @@ def plot_results(folder: str, results: dict,
     ###########################################################################
     # Hit Rate plot of full normal run
     ###########################################################################
-    hit_rate_fig = plot_hit_rate(
+    hit_rate_fig = plot_column(
         tools,
         results,
         dates,
         filters,
         color_table,
         window_size,
+        column="hit rate",
         title="Hit Rate - Full Normal Run",
         plot_width=plot_width,
         plot_height=plot_height,
@@ -677,7 +681,7 @@ def plot_results(folder: str, results: dict,
     ###########################################################################
     # Hit Rate compare single and next window plot
     ###########################################################################
-    hit_rate_comp_snw_fig = plot_hit_rate(
+    hit_rate_comp_snw_fig = plot_column(
         tools,
         results,
         dates,
@@ -685,6 +689,7 @@ def plot_results(folder: str, results: dict,
         color_table,
         window_size,
         x_range=hit_rate_fig.x_range,
+        column="hit rate",
         title="Hit Rate - Compare single and next window",
         run_type="run_single_window",
         plot_width=plot_width,
@@ -716,7 +721,7 @@ def plot_results(folder: str, results: dict,
     ###########################################################################
     # Hit Rate compare single window and next period plot
     ###########################################################################
-    hit_rate_comp_swnp_fig = plot_hit_rate(
+    hit_rate_comp_swnp_fig = plot_column(
         tools,
         results,
         dates,
@@ -724,6 +729,7 @@ def plot_results(folder: str, results: dict,
         color_table,
         window_size,
         x_range=hit_rate_fig.x_range,
+        column="hit rate",
         title="Hit Rate - Compare single window and next period",
         run_type="run_next_period",
         datetimes=datetimes,
