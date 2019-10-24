@@ -9,7 +9,6 @@ import (
 	"io"
 	"math"
 	"os"
-	"sync"
 	"time"
 
 	pb "./simService"
@@ -21,7 +20,7 @@ type WeightedLRU struct {
 	files                                map[string]float32
 	fileWeights                          []float32
 	stats                                []*WeightedFileStats
-	statsFilenames                       sync.Map
+	statsFilenames                       map[string]int
 	queue                                *list.List
 	hit, miss, size, MaxSize, Exp        float32
 	dataWritten, dataRead, dataReadOnHit float32
@@ -38,7 +37,7 @@ func (cache *WeightedLRU) Init(_ ...interface{}) {
 	cache.files = make(map[string]float32)
 	cache.fileWeights = make([]float32, 0)
 	cache.stats = make([]*WeightedFileStats, 0)
-	cache.statsFilenames = sync.Map{}
+	cache.statsFilenames = make(map[string]int, 0)
 	cache.queue = list.New()
 }
 
@@ -53,13 +52,7 @@ func (cache *WeightedLRU) Clear() {
 	cache.ClearFiles()
 	cache.fileWeights = make([]float32, 0)
 	cache.stats = make([]*WeightedFileStats, 0)
-	cache.statsFilenames.Range(
-		func(key interface{}, value interface{}) bool {
-			cache.statsFilenames.Delete(key)
-			return true
-		},
-	)
-	cache.statsFilenames = sync.Map{}
+	cache.statsFilenames = make(map[string]int, 0)
 	tmpVal := cache.queue.Front()
 	for {
 		if tmpVal == nil {
@@ -282,16 +275,10 @@ func (cache *WeightedLRU) reIndex(ranges ...int) {
 		start = ranges[0]
 		stop = ranges[1] + 1
 	}
-	wg := sync.WaitGroup{}
 	for curIdx := start; curIdx < stop; curIdx++ {
 		curStatFilename := cache.stats[curIdx].Filename
-		wg.Add(1)
-		go func(index int, filename string, waitGroup *sync.WaitGroup) {
-			cache.statsFilenames.Store(filename, index)
-			waitGroup.Done()
-		}(curIdx, curStatFilename, &wg)
+		cache.statsFilenames[curStatFilename] = curIdx
 	}
-	wg.Wait()
 }
 
 func (cache *WeightedLRU) getThreshold() float32 {
@@ -306,15 +293,9 @@ func (cache *WeightedLRU) getThreshold() float32 {
 			Q1Idx := int(math.Floor(float64(0.25 * float32(len(cache.fileWeights)))))
 			Q1 := cache.fileWeights[Q1Idx]
 			if Q1 > 2*Q2 {
-				wg := sync.WaitGroup{}
 				for idx := 0; idx < Q1Idx; idx++ {
-					wg.Add(1)
-					go func(filename string, waitGroup *sync.WaitGroup) {
-						cache.statsFilenames.Delete(filename)
-						waitGroup.Done()
-					}(cache.stats[idx].Filename, &wg)
+					delete(cache.statsFilenames, cache.stats[idx].Filename)
 				}
-				wg.Wait()
 				copy(cache.stats, cache.stats[Q1Idx:])
 				copy(cache.fileWeights, cache.fileWeights[Q1Idx:])
 				cache.stats = cache.stats[:len(cache.stats)-Q1Idx]
@@ -334,7 +315,7 @@ func (cache *WeightedLRU) getOrInsertStats(filename string) (int, *WeightedFileS
 		stats     *WeightedFileStats
 	)
 
-	idx, inStats := cache.statsFilenames.Load(filename)
+	idx, inStats := cache.statsFilenames[filename]
 
 	if !inStats {
 		cache.stats = append(cache.stats, &WeightedFileStats{
@@ -352,9 +333,9 @@ func (cache *WeightedLRU) getOrInsertStats(filename string) (int, *WeightedFileS
 		resultIdx = len(cache.stats) - 1
 		stats = cache.stats[resultIdx]
 		cache.fileWeights = append(cache.fileWeights, stats.Weight)
-		cache.statsFilenames.Store(filename, resultIdx)
+		cache.statsFilenames[filename] = resultIdx
 	} else {
-		resultIdx = idx.(int)
+		resultIdx = idx
 		stats = cache.stats[resultIdx]
 	}
 
