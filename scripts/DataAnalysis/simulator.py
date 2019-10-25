@@ -1383,6 +1383,12 @@ def main():
         dataset.modify_column(
             'size',
             lambda column: (column / 1024**2)
+        ).modify_column(
+            'size',
+            lambda column: (column / 1000).astype(int)
+        ).modify_column(
+            'avgTime',
+            lambda column: (column / 100).astype(int)
         ).make_converter_for(
             [
                 'class',
@@ -1390,6 +1396,8 @@ def main():
             unknown_value=False
         ).make_converter_for(
             [
+                'size',
+                'avgTime',
                 'siteName',
                 'userID',
                 'fileType',
