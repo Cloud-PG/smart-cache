@@ -20,19 +20,19 @@ import (
 
 // AILRU cache
 type AILRU struct {
-	files                                map[string]float32
-	stats                                []*WeightedFileStats
-	statsFilenames                       sync.Map
-	queue                                *list.List
-	hit, miss, size, MaxSize, Exp        float32
-	dataWritten, dataRead, dataReadOnHit float32
-	lastFileHitted                       bool
-	lastFileAdded                        bool
-	lastFileName                         string
-	aiClientHost                         string
-	aiClientPort                         string
-	aiClient                             aiPb.AIServiceClient
-	grpcConn                             *grpc.ClientConn
+	files                                                             map[string]float32
+	stats                                                             []*WeightedFileStats
+	statsFilenames                                                    sync.Map
+	queue                                                             *list.List
+	hit, miss, size, MaxSize, Exp                                     float32
+	dataWritten, dataRead, dataReadOnHit, dataReadOnMiss, dataDeleted float32
+	lastFileHitted                                                    bool
+	lastFileAdded                                                     bool
+	lastFileName                                                      string
+	aiClientHost                                                      string
+	aiClientPort                                                      string
+	aiClient                                                          aiPb.AIServiceClient
+	grpcConn                                                          *grpc.ClientConn
 }
 
 // Init the AILRU struct
@@ -93,6 +93,8 @@ func (cache *AILRU) Clear() {
 	cache.dataWritten = 0.
 	cache.dataRead = 0.
 	cache.dataReadOnHit = 0.
+	cache.dataReadOnMiss = 0.
+	cache.dataDeleted = 0.
 }
 
 // ClearHitMissStats the cache stats
@@ -102,6 +104,8 @@ func (cache *AILRU) ClearHitMissStats() {
 	cache.dataWritten = 0.
 	cache.dataRead = 0.
 	cache.dataReadOnHit = 0.
+	cache.dataReadOnMiss = 0.
+	cache.dataDeleted = 0.
 }
 
 // Dumps the AILRU cache
@@ -355,6 +359,8 @@ func (cache *AILRU) updatePolicy(filename string, size float32, hit bool, vars .
 				}
 				fileSize := cache.files[tmpVal.Value.(string)]
 				cache.size -= fileSize
+				cache.dataDeleted += size
+
 				totalDeleted += fileSize
 				delete(cache.files, tmpVal.Value.(string))
 
@@ -404,6 +410,7 @@ func (cache *AILRU) Get(filename string, size float32, vars ...interface{}) bool
 		cache.dataReadOnHit += size
 	} else {
 		cache.miss += 1.
+		cache.dataReadOnMiss += size
 	}
 
 	if added {
@@ -462,6 +469,16 @@ func (cache *AILRU) DataRead() float32 {
 // DataReadOnHit of the cache
 func (cache *AILRU) DataReadOnHit() float32 {
 	return cache.dataReadOnHit
+}
+
+// DataReadOnMiss of the cache
+func (cache *AILRU) DataReadOnMiss() float32 {
+	return cache.dataReadOnMiss
+}
+
+// DataDeleted of the cache
+func (cache *AILRU) DataDeleted() float32 {
+	return cache.dataDeleted
 }
 
 func (cache *AILRU) check(key string) bool {

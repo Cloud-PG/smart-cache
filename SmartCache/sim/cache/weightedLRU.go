@@ -17,19 +17,19 @@ import (
 
 // WeightedLRU cache
 type WeightedLRU struct {
-	files                                map[string]float32
-	fileWeights                          []float32
-	stats                                []*WeightedFileStats
-	statsFilenames                       map[string]int
-	queue                                *list.List
-	hit, miss, size, MaxSize, Exp        float32
-	dataWritten, dataRead, dataReadOnHit float32
-	SelFunctionType                      FunctionType
-	SelUpdateStatPolicyType              UpdateStatsPolicyType
-	SelLimitStatsPolicyType              LimitStatsPolicyType
-	lastFileHitted                       bool
-	lastFileAdded                        bool
-	lastFileName                         string
+	files                                                             map[string]float32
+	fileWeights                                                       []float32
+	stats                                                             []*WeightedFileStats
+	statsFilenames                                                    map[string]int
+	queue                                                             *list.List
+	hit, miss, size, MaxSize, Exp                                     float32
+	dataWritten, dataRead, dataReadOnHit, dataReadOnMiss, dataDeleted float32
+	SelFunctionType                                                   FunctionType
+	SelUpdateStatPolicyType                                           UpdateStatsPolicyType
+	SelLimitStatsPolicyType                                           LimitStatsPolicyType
+	lastFileHitted                                                    bool
+	lastFileAdded                                                     bool
+	lastFileName                                                      string
 }
 
 // Init the WeightedLRU struct
@@ -70,6 +70,8 @@ func (cache *WeightedLRU) Clear() {
 	cache.dataWritten = 0.
 	cache.dataRead = 0.
 	cache.dataReadOnHit = 0.
+	cache.dataReadOnMiss = 0.
+	cache.dataDeleted = 0.
 }
 
 // ClearHitMissStats the cache stats
@@ -79,6 +81,8 @@ func (cache *WeightedLRU) ClearHitMissStats() {
 	cache.dataWritten = 0.
 	cache.dataRead = 0.
 	cache.dataReadOnHit = 0.
+	cache.dataReadOnMiss = 0.
+	cache.dataDeleted = 0.
 }
 
 // Dumps the WeightedLRU cache
@@ -428,6 +432,8 @@ func (cache *WeightedLRU) updatePolicy(filename string, size float32, hit bool, 
 				}
 				fileSize := cache.files[tmpVal.Value.(string)]
 				cache.size -= fileSize
+				cache.dataDeleted += size
+
 				totalDeleted += fileSize
 				delete(cache.files, tmpVal.Value.(string))
 
@@ -477,6 +483,7 @@ func (cache *WeightedLRU) Get(filename string, size float32, vars ...interface{}
 		cache.dataReadOnHit += size
 	} else {
 		cache.miss += 1.
+		cache.dataReadOnMiss += size
 	}
 
 	if added {
@@ -535,6 +542,16 @@ func (cache *WeightedLRU) DataRead() float32 {
 // DataReadOnHit of the cache
 func (cache *WeightedLRU) DataReadOnHit() float32 {
 	return cache.dataReadOnHit
+}
+
+// DataReadOnMiss of the cache
+func (cache *WeightedLRU) DataReadOnMiss() float32 {
+	return cache.dataReadOnMiss
+}
+
+// DataDeleted of the cache
+func (cache *WeightedLRU) DataDeleted() float32 {
+	return cache.dataDeleted
 }
 
 func (cache *WeightedLRU) check(key string) bool {

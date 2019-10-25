@@ -269,6 +269,8 @@ func simulationCmd(testAISimulation bool) *cobra.Command {
 				"written data",
 				"read data",
 				"read on hit data",
+				"read on miss data",
+				"deleted data",
 			})
 			csvOutput.Flush()
 
@@ -324,6 +326,8 @@ func simulationCmd(testAISimulation bool) *cobra.Command {
 								fmt.Sprintf("%f", curCacheInstance.DataWritten()),
 								fmt.Sprintf("%f", curCacheInstance.DataRead()),
 								fmt.Sprintf("%f", curCacheInstance.DataReadOnHit()),
+								fmt.Sprintf("%f", curCacheInstance.DataReadOnMiss()),
+								fmt.Sprintf("%f", curCacheInstance.DataDeleted()),
 							})
 							csvOutput.Flush()
 							curCacheInstance.ClearHitMissStats()

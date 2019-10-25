@@ -37,14 +37,14 @@ func (stats *LRUFileStats) updateRequests(hit bool, newTime time.Time) {
 
 // LRUCache cache
 type LRUCache struct {
-	files                                map[string]float32
-	stats                                map[string]*LRUFileStats
-	queue                                *list.List
-	hit, miss, size, MaxSize             float32
-	dataWritten, dataRead, dataReadOnHit float32
-	lastFileHitted                       bool
-	lastFileAdded                        bool
-	lastFileName                         string
+	files                                                             map[string]float32
+	stats                                                             map[string]*LRUFileStats
+	queue                                                             *list.List
+	hit, miss, size, MaxSize                                          float32
+	dataWritten, dataRead, dataReadOnHit, dataReadOnMiss, dataDeleted float32
+	lastFileHitted                                                    bool
+	lastFileAdded                                                     bool
+	lastFileName                                                      string
 }
 
 // Init the LRU struct
@@ -81,6 +81,8 @@ func (cache *LRUCache) Clear() {
 	cache.dataWritten = 0.
 	cache.dataRead = 0.
 	cache.dataReadOnHit = 0.
+	cache.dataReadOnMiss = 0.
+	cache.dataDeleted = 0.
 }
 
 // ClearHitMissStats the cache stats
@@ -90,6 +92,8 @@ func (cache *LRUCache) ClearHitMissStats() {
 	cache.dataWritten = 0.
 	cache.dataRead = 0.
 	cache.dataReadOnHit = 0.
+	cache.dataReadOnMiss = 0.
+	cache.dataDeleted = 0.
 }
 
 // Dumps the LRUCache cache
@@ -268,6 +272,8 @@ func (cache *LRUCache) updatePolicy(filename string, size float32, hit bool, _ .
 				}
 				fileSize := cache.files[tmpVal.Value.(string)]
 				cache.size -= fileSize
+				cache.dataDeleted += size
+
 				totalDeleted += fileSize
 				delete(cache.files, tmpVal.Value.(string))
 
@@ -326,6 +332,7 @@ func (cache *LRUCache) Get(filename string, size float32, _ ...interface{}) bool
 		cache.dataReadOnHit += size
 	} else {
 		cache.miss += 1.
+		cache.dataReadOnMiss += size
 	}
 
 	// Always true because of LRU policy
@@ -386,6 +393,16 @@ func (cache LRUCache) DataRead() float32 {
 // DataReadOnHit of the cache
 func (cache LRUCache) DataReadOnHit() float32 {
 	return cache.dataReadOnHit
+}
+
+// DataReadOnMiss of the cache
+func (cache LRUCache) DataReadOnMiss() float32 {
+	return cache.dataReadOnMiss
+}
+
+// DataDeleted of the cache
+func (cache LRUCache) DataDeleted() float32 {
+	return cache.dataDeleted
 }
 
 func (cache LRUCache) check(key string) bool {

@@ -16,15 +16,15 @@ import (
 
 // WeightedCache cache
 type WeightedCache struct {
-	files                                map[string]float32
-	stats                                map[string]*WeightedFileStats
-	queue                                []*WeightedFileStats
-	hit, miss, size, MaxSize, Exp        float32
-	dataWritten, dataRead, dataReadOnHit float32
-	SelFunctionType                      FunctionType
-	lastFileHitted                       bool
-	lastFileAdded                        bool
-	lastFileName                         string
+	files                                                             map[string]float32
+	stats                                                             map[string]*WeightedFileStats
+	queue                                                             []*WeightedFileStats
+	hit, miss, size, MaxSize, Exp                                     float32
+	dataWritten, dataRead, dataReadOnHit, dataReadOnMiss, dataDeleted float32
+	SelFunctionType                                                   FunctionType
+	lastFileHitted                                                    bool
+	lastFileAdded                                                     bool
+	lastFileName                                                      string
 }
 
 // Init the WeightedCache struct
@@ -50,6 +50,8 @@ func (cache *WeightedCache) Clear() {
 	cache.dataWritten = 0.
 	cache.dataRead = 0.
 	cache.dataReadOnHit = 0.
+	cache.dataReadOnMiss = 0.
+	cache.dataDeleted = 0.
 }
 
 // ClearHitMissStats the cache stats
@@ -59,6 +61,8 @@ func (cache *WeightedCache) ClearHitMissStats() {
 	cache.dataWritten = 0.
 	cache.dataRead = 0.
 	cache.dataReadOnHit = 0.
+	cache.dataReadOnMiss = 0.
+	cache.dataDeleted = 0.
 }
 
 // Dumps the WeightedCache cache
@@ -331,6 +335,7 @@ func (cache *WeightedCache) Get(filename string, size float32, vars ...interface
 		cache.dataReadOnHit += size
 	} else {
 		cache.miss += 1.
+		cache.dataReadOnMiss += size
 	}
 
 	if added {
@@ -389,6 +394,16 @@ func (cache WeightedCache) DataRead() float32 {
 // DataReadOnHit of the cache
 func (cache WeightedCache) DataReadOnHit() float32 {
 	return cache.dataReadOnHit
+}
+
+// DataReadOnMiss of the cache
+func (cache WeightedCache) DataReadOnMiss() float32 {
+	return cache.dataReadOnMiss
+}
+
+// DataDeleted of the cache
+func (cache WeightedCache) DataDeleted() float32 {
+	return cache.dataDeleted
 }
 
 func (cache WeightedCache) check(key string) bool {

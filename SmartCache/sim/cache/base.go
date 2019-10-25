@@ -48,6 +48,8 @@ type Cache interface {
 	DataWritten() float32
 	DataRead() float32
 	DataReadOnHit() float32
+	DataReadOnMiss() float32
+	DataDeleted() float32
 
 	updatePolicy(filename string, size float32, hit bool, vars ...interface{}) bool
 	Get(filename string, size float32, vars ...interface{}) bool
@@ -72,5 +74,7 @@ func GetSimCacheStatus(cache Cache) *pb.SimCacheStatus {
 		DataWritten:     cache.DataWritten(),
 		DataRead:        cache.DataRead(),
 		DataReadOnHit:   cache.DataReadOnHit(),
+		DataReadOnMiss:  cache.DataReadOnMiss(),
+		DataDeleted:     cache.DataDeleted(),
 	}
 }
