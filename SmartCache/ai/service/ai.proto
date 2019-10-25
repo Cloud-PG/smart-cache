@@ -16,15 +16,11 @@ service AIService {
 
 message AIInput {
   string filename = 1;
-  float fileSize = 2;
-  string siteName = 3;
-  uint32 userID = 4;
-  float cacheCapacity = 5;
-  bool cacheLastFileHit = 6;
-  uint32 fileTotRequests = 7;
-  uint32 fileNHits = 8;
-  uint32 fileNMiss = 9;
-  float fileMeanTimeReq = 10;
+  string siteName = 2;
+  uint32 userID = 3;
+  uint32 numReq = 4;
+  float avgTime = 5;
+  float size = 6;
 }
 
 message StorePrediction {

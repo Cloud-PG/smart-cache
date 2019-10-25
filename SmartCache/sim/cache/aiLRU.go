@@ -331,16 +331,12 @@ func (cache *AILRU) updatePolicy(filename string, size float32, hit bool, vars .
 		defer cancel()
 		result, err := cache.aiClient.AIPredictOne(ctx,
 			&aiPb.AIInput{
-				Filename:         filename,
-				FileSize:         size,
-				SiteName:         siteName,
-				UserID:           uint32(userID),
-				CacheCapacity:    cache.Capacity(),
-				CacheLastFileHit: hit,
-				FileTotRequests:  curStats.TotRequests,
-				FileNHits:        curStats.NHits,
-				FileNMiss:        curStats.NMiss,
-				FileMeanTimeReq:  curStats.RequestTicksMean,
+				Filename: filename,
+				SiteName: siteName,
+				UserID:   uint32(userID),
+				NumReq:   curStats.TotRequests,
+				AvgTime:  curStats.RequestTicksMean,
+				Size:     size,
 			})
 		if err != nil {
 			log.Fatalf("ERROR: %v.AIPredictOne(_) = _, %v", cache.aiClient, err)
