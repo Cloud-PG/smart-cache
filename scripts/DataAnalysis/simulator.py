@@ -1171,17 +1171,13 @@ def main():
         for window_idx in range(args.window_start, args.window_stop):
             for cache_type in cache_types:
                 if cache_type == 'aiLRU':
-                    model_path = path.join(
-                        single_window_run_dir,
-                        f"weightedLRU_{int(args.cache_size/1024**2)}T_{args.region}",
-                        f"window_{window_idx}",
-                    )
                     cur_model = DonkeyModel()
-                    cur_model.load(
-                        path.join(model_path, "donkey_model")
-                    )
+                    cur_model.load(args.ai_model)
                     cur_model.add_feature_converter(
-                        path.join(model_path, "featureConverter.dump.pickle")
+                        path.join(
+                            path.dirname(args.ai_model), 
+                            "featureConverter.dump.pickle"
+                            )
                     )
                     cur_model_port = 4200+window_idx
                     cur_model.serve(port=cur_model_port)
