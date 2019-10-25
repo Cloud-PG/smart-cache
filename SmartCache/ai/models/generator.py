@@ -110,7 +110,7 @@ class DonkeyModel(ai_pb2_grpc.AIServiceServicer):
         self._model.save("{}.h5".format(out_name))
 
     def load(self, filename: str):
-        self._model = keras.models.load_model("{}.h5".format(filename))
+        self._model = keras.models.load_model(filename)
 
     def serve(self, host: str = "127.0.0.1",
               port: int = 4242
