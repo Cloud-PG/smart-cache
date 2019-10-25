@@ -1175,9 +1175,9 @@ def main():
                     cur_model.load(args.ai_model)
                     cur_model.add_feature_converter(
                         path.join(
-                            path.dirname(args.ai_model), 
+                            path.dirname(args.ai_model),
                             "featureConverter.dump.pickle"
-                            )
+                        )
                     )
                     cur_model_port = 4200+window_idx
                     cur_model.serve(port=cur_model_port)
@@ -1558,15 +1558,16 @@ def main():
             compare_greedy_solution(files_df, args.cache_size)
 
             dataset_data = []
-            len_dataset = int(len(cur_df) * 0.2)
+            len_dataset = int(len(cur_df) * 0.3)
 
             for cur_row in tqdm(cur_df.sample(len_dataset).itertuples(),
                                 total=len_dataset,
                                 desc=f"Create dataset {idx}", ascii=True):
                 filename = cur_row.filename
                 try:
-                    cur_class = files_df.loc[files_df.filename ==
-                                             filename, 'class'].to_list().pop()
+                    cur_class = files_df.loc[
+                        files_df.filename == filename, 'class'
+                    ].to_list().pop()
                 except IndexError:
                     cur_class = False
                 dataset_data.append(
