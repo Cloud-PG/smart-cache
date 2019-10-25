@@ -1140,6 +1140,9 @@ def main():
 
     if args.only_CPU:
         os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+    else:
+        # Make visible only first device
+        os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
     if args.action == "simulate":
         simulator_exe = get_simulator_exe(force_creation=args.force_exe_build)
