@@ -975,7 +975,7 @@ def crossover(parent_a, parent_b) -> 'np.Array':
 def mutation(individual) -> 'np.Array':
     """Bit Flip mutation."""
     flip_bits = np.random.rand(len(individual))
-    mutant_selection = V_MUTATE(flip_bits, 0.75).astype(bool)
+    mutant_selection = V_MUTATE(flip_bits, 0.9).astype(bool)
     individual[mutant_selection] = ~ individual[mutant_selection]
     return individual
 
@@ -1012,6 +1012,9 @@ def evolve_with_genetic_algorithm(population, dataframe,
         parent_selection = np.random.randint(len(population) - 1,
                                              size=len(cur_population))
 
+        childrens = []
+        childrens_fitness = []
+
         for cur_idx, (new_individual, new_fitness) in tqdm(
                 enumerate(
                     pool.imap(
@@ -1032,10 +1035,18 @@ def evolve_with_genetic_algorithm(population, dataframe,
                 ascii=True, position=1, leave=False,
                 total=len(cur_population),
         ):
-            if new_fitness > cur_fitness[cur_idx]:
-                cur_population[cur_idx] = new_individual
-                cur_fitness[cur_idx] = new_fitness
-                continue
+            childrens.append(new_individual)
+            childrens_fitness.append(new_fitness)
+
+        new_population = cur_population + childrens
+        new_fitness = cur_fitness + childrens_fitness
+
+        for idx, real_idx in enumerate(reversed(np.argsort(new_fitness).tolist())):
+            if idx < len(population):
+                cur_population[idx] = new_population[real_idx]
+                cur_fitness[idx] = new_fitness[real_idx]
+            else:
+                break
 
     pool.close()
     pool.join()
