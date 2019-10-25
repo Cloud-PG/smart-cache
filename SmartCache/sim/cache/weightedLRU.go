@@ -325,7 +325,7 @@ func (cache *WeightedLRU) getOrInsertStats(filename string) (int, *WeightedFileS
 			TotRequests:       0,
 			NHits:             0,
 			NMiss:             0,
-			LastTimeRequested: time.Now(),
+			LastTimeRequested: time.Time{},
 			RequestTicksMean:  0.,
 			RequestTicks:      [StatsMemorySize]time.Time{},
 			RequestLastIdx:    0,
@@ -388,10 +388,10 @@ func (cache *WeightedLRU) moveStat(curIdx int, curStats *WeightedFileStats) {
 
 }
 
-func (cache *WeightedLRU) updatePolicy(filename string, size float32, hit bool, _ ...interface{}) bool {
+func (cache *WeightedLRU) updatePolicy(filename string, size float32, hit bool, vars ...interface{}) bool {
 	var (
 		added       = false
-		currentTime = time.Now()
+		currentTime = vars[0].(time.Time)
 		curStats    *WeightedFileStats
 		statsIdx    int
 	)
@@ -466,8 +466,11 @@ func (cache *WeightedLRU) updatePolicy(filename string, size float32, hit bool, 
 
 // Get a file from the cache updating the statistics
 func (cache *WeightedLRU) Get(filename string, size float32, vars ...interface{}) bool {
+	day := vars[0].(int64)
+	curTime := time.Unix(day, 0)
+
 	hit := cache.check(filename)
-	added := cache.updatePolicy(filename, size, hit)
+	added := cache.updatePolicy(filename, size, hit, curTime)
 
 	if hit {
 		cache.hit += 1.

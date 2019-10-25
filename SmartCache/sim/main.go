@@ -341,7 +341,7 @@ func simulationCmd(testAISimulation bool) *cobra.Command {
 					if testAISimulation {
 						curCacheInstance.Get(record.Filename, sizeInMbytes, record.SiteName, record.UserID)
 					} else {
-						curCacheInstance.Get(record.Filename, sizeInMbytes)
+						curCacheInstance.Get(record.Filename, sizeInMbytes, record.Day)
 					}
 
 					numIterations++

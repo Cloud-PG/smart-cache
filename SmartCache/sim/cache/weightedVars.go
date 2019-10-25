@@ -113,7 +113,7 @@ func (stats WeightedFileStats) getMeanReqTimes() float32 {
 		}
 	}
 	if timeDiffSum != 0. {
-		return float32(timeDiffSum.Seconds()) / float32(StatsMemorySize)
+		return float32(timeDiffSum.Hours()) / float32(StatsMemorySize)
 	}
 	return 0.
 }
