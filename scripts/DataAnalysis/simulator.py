@@ -1516,14 +1516,19 @@ def main():
             )
 
             # Remove 1 request files
-            files_df = files_df.drop(files_df[files_df.totReq == 1].index)
+            # files_df = files_df.drop(files_df[files_df.totReq == 1].index)
+
             # TO Megabytes
             files_df['size'] = files_df['size'] / 1024**2
-            # Remove low value files
+
+            # Add value
             files_df['value'] = (files_df['size'] *
                                  files_df['totReq']) * files_df['days']
-            q1 = files_df.value.describe().quantile(0.25)
-            files_df = files_df.drop(files_df[files_df.value < q1].index)
+
+            # Remove low value files
+            # q1 = files_df.value.describe().quantile(0.25)
+            # files_df = files_df.drop(files_df[files_df.value < q1].index)
+
             # Sort and reset indexes
             files_df = files_df.sort_values(by=['value'], ascending=False)
             files_df = files_df.reset_index(drop=True)
