@@ -38,6 +38,7 @@ grpcio-tools = "*"
 grpcio = "*"
 pandas-profiling = "*"
 selenium = "*"
+pillow = ">=6.2.0"
 
 [requires]
 python_version = "3"
