@@ -98,7 +98,8 @@ def load_results(folder: str) -> dict:
                     file_path
                 )
                 # FIXME: to be removed after output upgrade
-                df['read on miss data'] = df['read data'] - df['read on hit data']
+                df['read on miss data'] = df['read data'] - \
+                    df['read on hit data']
                 cur_section[last_section] = df
 
     return results
@@ -1460,12 +1461,12 @@ def main():
             stat_avg_time = []
             stat_num_req = []
             for cur_row in tqdm(cur_df.itertuples(), total=cur_df.shape[0],
-                                desc=f"Parse window {idx} dataframe", ascii=True):
+                                desc=f"Parse window {idx} dataframe",
+                                ascii=True):
                 cur_filename = cur_row.filename
                 cur_size = cur_row.size
                 if cur_filename not in files:
-                    data_type, _, _, file_type = cur_filename.split(
-                        "/")[2:6]
+                    data_type, _, _, file_type = cur_filename.split("/")[2:6]
                     files[cur_filename] = {
                         'size': cur_size,
                         'totReq': 0,
