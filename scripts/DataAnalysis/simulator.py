@@ -975,7 +975,7 @@ def crossover(parent_a, parent_b) -> 'np.Array':
 def mutation(individual) -> 'np.Array':
     """Bit Flip mutation."""
     flip_bits = np.random.rand(len(individual))
-    mutant_selection = V_MUTATE(flip_bits, 0.9).astype(bool)
+    mutant_selection = V_MUTATE(flip_bits, 0.95).astype(bool)
     individual[mutant_selection] = ~ individual[mutant_selection]
     return individual
 
