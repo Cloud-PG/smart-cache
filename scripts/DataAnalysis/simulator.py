@@ -1132,6 +1132,9 @@ def main():
     parser.add_argument('--plot-resolution', type=str,
                         default="640,480",
                         help='A comma separate string representing the target resolution of each plot [DEFAULT: 640,480]')
+    parser.add_argument('--ai-model', type=str,
+                        default="donkey_model.h5",
+                        help='Ai Model file path [DEFAULT: "donkey_model.h5"]')
 
     args, _ = parser.parse_known_args()
 

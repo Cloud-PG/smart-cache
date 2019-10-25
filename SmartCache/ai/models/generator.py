@@ -191,4 +191,4 @@ class CMSTest0ModelGenerator(object):
         self._model.save("{}.h5".format(out_name))
 
     def load(self, filename: str):
-        self._model = keras.models.load_model("{}.h5".format(filename))
+        self._model = keras.models.load_model(filename)
