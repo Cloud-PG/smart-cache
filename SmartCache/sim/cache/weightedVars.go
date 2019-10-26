@@ -7,7 +7,7 @@ import (
 
 const (
 	// StatsMemorySize represents the  number of slots
-	StatsMemorySize uint64 = 8
+	StatsMemorySize uint64 = 64
 )
 
 // UpdateStatsPolicyType is used to select the update stats policy
@@ -113,7 +113,7 @@ func (stats WeightedFileStats) getMeanReqTimes() float32 {
 		}
 	}
 	if timeDiffSum != 0. {
-		return float32(timeDiffSum.Hours()) / float32(StatsMemorySize)
+		return float32(timeDiffSum.Minutes()) / float32(StatsMemorySize)
 	}
 	return 0.
 }
