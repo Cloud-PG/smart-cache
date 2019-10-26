@@ -310,6 +310,7 @@ func (cache *WeightedCache) updatePolicy(filename string, size float32, hit bool
 				added = false
 			} else {
 				cache.size -= cache.files[elmRemoved.Filename]
+				cache.dataDeleted += cache.files[elmRemoved.Filename]
 				delete(cache.files, elmRemoved.Filename)
 			}
 
