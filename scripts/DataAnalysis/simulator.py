@@ -1388,6 +1388,7 @@ def main():
                     wait_jobs(processes)
 
         wait_jobs(processes)
+
     elif args.action == "plot":
         filters = [elm for elm in args.plot_filters.split(",") if elm]
         results = load_results(args.source)
