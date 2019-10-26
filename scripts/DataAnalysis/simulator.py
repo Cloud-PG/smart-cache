@@ -97,9 +97,6 @@ def load_results(folder: str) -> dict:
                 df = pd.read_csv(
                     file_path
                 )
-                # FIXME: to be removed after output upgrade
-                df['read on miss data'] = df['read data'] - \
-                    df['read on hit data']
                 cur_section[last_section] = df
 
     return results
@@ -381,7 +378,7 @@ def plot_read_on_write_data(tools: list,
         title=title,
         x_axis_label="Day",
         y_axis_label="Ratio (Read on hit/Write)" if read_on_hit else "Ratio (Read/Write)",
-        y_axis_type="auto",
+        y_axis_type="log",
         x_range=x_range if x_range else dates,
         plot_width=plot_width,
         plot_height=plot_height,
@@ -646,7 +643,7 @@ def plot_results(folder: str, results: dict,
     run_single_window_figs = []
     run_next_period_figs = []
 
-    pbar = tqdm(total=10, desc="Plot results", ascii=True)
+    pbar = tqdm(total=11, desc="Plot results", ascii=True)
 
     ###########################################################################
     # Hit Rate plot of full normal run
@@ -721,6 +718,25 @@ def plot_results(folder: str, results: dict,
         plot_height=plot_height,
     )
     run_full_normal_data_rw_figs.append(read_data_fig)
+    pbar.update(1)
+    
+    ###########################################################################
+    # Deleted data plot of full normal run
+    ###########################################################################
+    deleted_data_fig = plot_column(
+        tools,
+        results,
+        dates,
+        filters,
+        color_table,
+        window_size,
+        column="deleted data",
+        title="Deleted data - Full Normal Run",
+        y_axis_label="Deleted data (MB)",
+        plot_width=plot_width,
+        plot_height=plot_height,
+    )
+    run_full_normal_data_rw_figs.append(deleted_data_fig)
     pbar.update(1)
 
     ###########################################################################
