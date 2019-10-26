@@ -719,7 +719,7 @@ def plot_results(folder: str, results: dict,
     )
     run_full_normal_data_rw_figs.append(read_data_fig)
     pbar.update(1)
-    
+
     ###########################################################################
     # Deleted data plot of full normal run
     ###########################################################################
@@ -1234,6 +1234,8 @@ def main():
                     stderr=subprocess.PIPE,
                 )
                 processes.append(("Single Window", cur_process))
+                if cache_type == 'aiLRU':
+                    wait_jobs(processes)
 
         wait_jobs(processes)
 
@@ -1275,6 +1277,8 @@ def main():
                 stderr=subprocess.PIPE,
             )
             processes.append(("Full Run", cur_process))
+            if cache_type == 'aiLRU':
+                wait_jobs(processes)
 
         wait_jobs(processes)
 
@@ -1325,6 +1329,8 @@ def main():
                     stderr=subprocess.PIPE,
                 )
                 processes.append(("Next Window", cur_process))
+                if cache_type == 'aiLRU':
+                    wait_jobs(processes)
 
         wait_jobs(processes)
 
@@ -1378,6 +1384,8 @@ def main():
                     exe_args.append("--aiHost=127.0.0.1")
                     exe_args.append(f"--aiPort={cur_model_port}")
                 processes.append(("Next Period", cur_process))
+                if cache_type == 'aiLRU':
+                    wait_jobs(processes)
 
         wait_jobs(processes)
     elif args.action == "plot":
