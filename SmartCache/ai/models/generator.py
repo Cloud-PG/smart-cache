@@ -85,20 +85,24 @@ class DonkeyModel(ai_pb2_grpc.AIServiceServicer):
                 target = data_type
             else:
                 target = getattr(request, feature)
-            for value in self._feature_converter.get_category_vector(
-                    feature, target):
-                features.append(value)
+            cur_feature = self._feature_converter.get_category_vector(
+                feature, target)
+            features.append(np.array(cur_feature))
 
-        features.append(request.numReq)
+        features.append(np.array([request.numReq]))
 
-        for value in self._feature_converter.get_category_vector(
-                'avgTime', avg_time):
-            features.append(value)
-        for value in self._feature_converter.get_category_vector(
-                'size', size):
-            features.append(value)
+        cur_feature = self._feature_converter.get_category_vector(
+            'avgTime', avg_time)
+        features.append(np.array(cur_feature))
+        cur_feature = self._feature_converter.get_category_vector(
+            'size', size)
+        features.append(np.array(cur_feature))
 
-        prediction = self.predict_one(np.array(features))
+        features = np.array(features)
+        features = np.hstack(features)
+
+        prediction = self.predict_one(features)
+
         response = ai_pb2.StorePrediction(
             store=True if prediction == 1 else False
         )
