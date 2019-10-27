@@ -6,6 +6,7 @@ from itertools import cycle
 from multiprocessing import Pool
 from os import path, walk
 from random import randint, seed
+from time import sleep
 
 import numpy as np
 import pandas as pd
@@ -1200,6 +1201,7 @@ def main():
                     )
                     cur_model_port = 4200+window_idx
                     cur_model.serve(port=cur_model_port)
+                    sleep(10)
                     model_processes.append((cur_model, cur_model))
 
                 working_dir = path.join(
@@ -1234,8 +1236,6 @@ def main():
                     stderr=subprocess.PIPE,
                 )
                 processes.append(("Single Window", cur_process))
-                if cache_type == 'aiLRU':
-                    wait_jobs(processes)
 
         wait_jobs(processes)
 
@@ -1329,8 +1329,6 @@ def main():
                     stderr=subprocess.PIPE,
                 )
                 processes.append(("Next Window", cur_process))
-                if cache_type == 'aiLRU':
-                    wait_jobs(processes)
 
         wait_jobs(processes)
 
@@ -1384,8 +1382,6 @@ def main():
                     exe_args.append("--aiHost=127.0.0.1")
                     exe_args.append(f"--aiPort={cur_model_port}")
                 processes.append(("Next Period", cur_process))
-                if cache_type == 'aiLRU':
-                    wait_jobs(processes)
 
         wait_jobs(processes)
 
