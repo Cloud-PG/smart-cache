@@ -124,9 +124,12 @@ class DonkeyModel(ai_pb2_grpc.AIServiceServicer):
         self._model = keras.models.load_model(filename)
 
     def serve(self, host: str = "127.0.0.1",
-              port: int = 4242
+              port: int = 4242,
+              max_workers: int = 1,
               ) -> 'DonkeyModel':
-        self._server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+        self._server = grpc.server(
+            futures.ThreadPoolExecutor(max_workers=max_workers)
+        )
         ai_pb2_grpc.add_AIServiceServicer_to_server(self, self._server)
         self._server.add_insecure_port(f'{host}:{port}')
         self._server.start()
