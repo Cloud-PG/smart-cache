@@ -238,7 +238,7 @@ func simulationCmd(testAISimulation bool) *cobra.Command {
 			// Open simulation files
 			fileStats, statErr := os.Stat(pathString)
 			if statErr != nil {
-				fmt.Printf("ERR: Can not have stat for %s.\n", pathString)
+				fmt.Printf("ERR: Cannot open source %s.\n", pathString)
 				os.Exit(-1)
 			}
 
@@ -390,7 +390,7 @@ func simulationCmd(testAISimulation bool) *cobra.Command {
 					numRecords = 0
 				} else {
 					if time.Now().Sub(start).Seconds() >= 1. {
-						fmt.Printf("[Jump %d records]\r", numRecords)
+						fmt.Printf("[Jump %d records of window %d]\r", numRecords)
 						start = time.Now()
 					}
 				}
