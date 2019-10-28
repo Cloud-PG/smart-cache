@@ -342,6 +342,7 @@ func simulationCmd(testAISimulation bool) *cobra.Command {
 				} else if windowCounter >= simStartFromWindow {
 					// TODO: make size measure a parameter: [K, M, G, P]
 					sizeInMbytes := record.Size / (1024 * 1024)
+
 					if testAISimulation {
 						curCacheInstance.Get(record.Filename, sizeInMbytes, record.SiteName, record.UserID)
 					} else {
@@ -390,7 +391,10 @@ func simulationCmd(testAISimulation bool) *cobra.Command {
 					numRecords = 0
 				} else {
 					if time.Now().Sub(start).Seconds() >= 1. {
-						fmt.Printf("[Jump %d records of window %d]\r", numRecords)
+						fmt.Printf("[Jump %d records of window %d]\r",
+							numRecords,
+							windowCounter,
+						)
 						start = time.Now()
 					}
 				}
