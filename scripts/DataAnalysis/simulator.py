@@ -982,7 +982,7 @@ def crossover(parent_a, parent_b) -> 'np.Array':
     """Perform and uniform corssover."""
     new_individual = np.zeros(len(parent_a)).astype(bool)
     uniform_crossover = np.random.rand(len(parent_a))
-    cross_selection = V_CROSS(uniform_crossover, 0.75).astype(bool)
+    cross_selection = V_CROSS(uniform_crossover, 0.95).astype(bool)
     new_individual[cross_selection] = parent_b[cross_selection]
     cross_selection = ~cross_selection
     new_individual[cross_selection] = parent_a[cross_selection]
