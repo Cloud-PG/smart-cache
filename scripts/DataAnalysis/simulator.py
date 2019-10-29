@@ -1026,7 +1026,7 @@ def roulette_wheel(fitness: list, extractions: int = 1):
         while(True):
             idx = randint(0, len(probabilities) - 1)
             cur_probability = probabilities[idx]
-            if random() >= cur_probability:
+            if random() <= cur_probability:
                 candidates.append(idx)
             if len(candidates) == 2:
                 yield candidates
