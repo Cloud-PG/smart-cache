@@ -17,10 +17,12 @@ service AIService {
 message AIInput {
   string filename = 1;
   string siteName = 2;
-  uint32 userID = 3;
-  uint32 numReq = 4;
-  float avgTime = 5;
-  float size = 6;
+  string dataType = 3;
+  string fileType = 4;
+  uint32 userID = 5;
+  uint32 numReq = 6;
+  float avgTime = 7;
+  float size = 8;
 }
 
 message StorePrediction {

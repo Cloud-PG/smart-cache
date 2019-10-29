@@ -74,17 +74,11 @@ class DonkeyModel(ai_pb2_grpc.AIServiceServicer):
 
     def AIPredictOne(self, request, context) -> 'ai_pb2.StorePrediction':
         features = []
-        data_type, _, _, file_type = request.filename.split("/")[2:6]
         size = int(request.size / 1000)
         avg_time = int(request.avgTime / 100)
 
         for feature in ['siteName', 'userID', 'fileType', 'dataType']:
-            if feature == 'fileType':
-                target = file_type
-            elif feature == 'dataType':
-                target = data_type
-            else:
-                target = getattr(request, feature)
+            target = getattr(request, feature)
             cur_feature = self._feature_converter.get_category_vector(
                 feature, target)
             features.append(np.array(cur_feature))
