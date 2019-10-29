@@ -896,7 +896,7 @@ def make_it_valid(individual, dataframe, cache_size: float):
     individual_size = indivudual_size(individual, dataframe)
     if individual_size > cache_size:
         nonzero = np.nonzero(individual)[0]
-        nonzero = np.random.shuffle(nonzero)
+        np.random.shuffle(nonzero)
         sizes = dataframe.loc[nonzero]['size']
         to_false = []
         for cur_idx in nonzero.tolist():
