@@ -936,22 +936,22 @@ def get_best_configuration(dataframe, cache_size: float,
     pool.close()
     pool.join()
 
-    print("[Create best individual with greedy method]")
-    # Create 1 best individual with greedy method
-    best_greedy = np.zeros(dataframe.shape[0], dtype=bool)
-    cur_size = 0.
-    cur_score = 0.
+    # print("[Create best individual with greedy method]")
+    # # Create 1 best individual with greedy method
+    # best_greedy = np.zeros(dataframe.shape[0], dtype=bool)
+    # cur_size = 0.
+    # cur_score = 0.
 
-    for idx, cur_row in enumerate(dataframe.itertuples()):
-        file_size = cur_row.size
-        if cur_size + file_size <= cache_size:
-            cur_size += file_size
-            cur_score += cur_row.value
-            best_greedy[idx] = True
-        else:
-            break
+    # for idx, cur_row in enumerate(dataframe.itertuples()):
+    #     file_size = cur_row.size
+    #     if cur_size + file_size <= cache_size:
+    #         cur_size += file_size
+    #         cur_score += cur_row.value
+    #         best_greedy[idx] = True
+    #     else:
+    #         break
 
-    population.append(best_greedy)
+    # population.append(best_greedy)
 
     best = evolve_with_genetic_algorithm(
         population, dataframe, cache_size, num_generations
