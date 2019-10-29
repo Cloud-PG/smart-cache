@@ -1152,10 +1152,10 @@ def main():
                         default=4,
                         help='Window where to stop [DEFAULT: 4]')
     parser.add_argument('--population-size', type=int,
-                        default=42,
+                        default=21,
                         help='Num. of individuals in the GA [DEFAULT: 100]')
     parser.add_argument('--num-generations', type=int,
-                        default=1000,
+                        default=200,
                         help='Num. of generations of GA [DEFAULT: 200]')
     parser.add_argument('--out-html', type=bool,
                         default=True,
