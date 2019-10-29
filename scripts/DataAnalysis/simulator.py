@@ -1152,10 +1152,10 @@ def main():
                         default=4,
                         help='Window where to stop [DEFAULT: 4]')
     parser.add_argument('--population-size', type=int,
-                        default=100,
+                        default=42,
                         help='Num. of individuals in the GA [DEFAULT: 100]')
     parser.add_argument('--num-generations', type=int,
-                        default=200,
+                        default=1000,
                         help='Num. of generations of GA [DEFAULT: 200]')
     parser.add_argument('--out-html', type=bool,
                         default=True,
@@ -1596,8 +1596,8 @@ def main():
             # files_df = files_df.drop(files_df[files_df.value < q1].index)
 
             # Sort and reset indexes
-            # files_df = files_df.sort_values(by=['value'], ascending=False)
-            # files_df = files_df.reset_index(drop=True)
+            files_df = files_df.sort_values(by=['value'], ascending=False)
+            files_df = files_df.reset_index(drop=True)
             # print(files_df)
 
             # print(sum(files_df['size']), args.cache_size, sum(files_df['size'])/args.cache_size)
