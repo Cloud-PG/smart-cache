@@ -917,8 +917,8 @@ def get_one_solution(gen_input):
 
 
 def get_best_configuration(dataframe, cache_size: float,
-                           num_generations: int = 200,
-                           population_size: int = 100):
+                           num_generations: int = 1000,
+                           population_size: int = 42):
     population = []
     pool = Pool()
     for _, individual in tqdm(enumerate(
