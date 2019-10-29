@@ -982,10 +982,10 @@ def crossover(parent_a, parent_b) -> 'np.Array':
     """Perform and uniform corssover."""
     new_individual = np.zeros(len(parent_a)).astype(bool)
     uniform_crossover = np.random.rand(len(parent_a))
-    cross_selection = V_CROSS(uniform_crossover, 0.5).astype(bool)
-    new_individual[cross_selection] = parent_b[cross_selection]
-    cross_selection = ~cross_selection
+    cross_selection = V_CROSS(uniform_crossover, 0.75).astype(bool)
     new_individual[cross_selection] = parent_a[cross_selection]
+    cross_selection = ~cross_selection
+    new_individual[cross_selection] = parent_b[cross_selection]
     return new_individual
 
 
@@ -993,7 +993,7 @@ def mutation(individual) -> 'np.Array':
     """Bit Flip mutation."""
     flip_bits = np.random.rand(len(individual))
     mutant_selection = V_MUTATE(flip_bits, 0.1).astype(bool)
-    individual[mutant_selection] = ~ individual[mutant_selection]
+    individual[mutant_selection] = ~individual[mutant_selection]
     return individual
 
 
@@ -1152,7 +1152,7 @@ def main():
                         default=4,
                         help='Window where to stop [DEFAULT: 4]')
     parser.add_argument('--population-size', type=int,
-                        default=100,
+                        default=10,
                         help='Num. of individuals in the GA [DEFAULT: 100]')
     parser.add_argument('--num-generations', type=int,
                         default=100,
