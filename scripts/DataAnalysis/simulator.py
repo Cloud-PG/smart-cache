@@ -930,7 +930,7 @@ def get_best_configuration(dataframe, cache_size: float,
             ]
         )
     ), desc="Create Population",
-            total=population_size-1, ascii=True):
+            total=population_size, ascii=True):
         population.append(individual)
 
     pool.close()
