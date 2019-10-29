@@ -1601,10 +1601,10 @@ def main():
             # print(files_df)
 
             # print(sum(files_df['size']), args.cache_size, sum(files_df['size'])/args.cache_size)
-            cache_size_factor = int(sum(files_df['size'])/args.cache_size)
+            cache_size_factor = (sum(files_df['size'])/args.cache_size) / 2.
 
             best_files = get_best_configuration(
-                files_df, args.cache_size*cache_size_factor,
+                files_df, int(args.cache_size*cache_size_factor,)
                 population_size=args.population_size,
                 num_generations=args.num_generations,
             )
@@ -1616,7 +1616,7 @@ def main():
             )
 
             compare_greedy_solution(
-                files_df, args.cache_size*cache_size_factor
+                files_df, int(args.cache_size*cache_size_factor)
             )
 
             dataset_data = []
