@@ -5,8 +5,7 @@ import subprocess
 from itertools import cycle
 from multiprocessing import Pool
 from os import path, walk
-from random import randint, seed
-from time import sleep
+from random import randint, random, seed
 
 import numpy as np
 import pandas as pd
@@ -897,9 +896,10 @@ def make_it_valid(individual, dataframe, cache_size: float):
     individual_size = indivudual_size(individual, dataframe)
     if individual_size > cache_size:
         nonzero = np.nonzero(individual)[0]
+        nonzero = np.random.shuffle(nonzero)
         sizes = dataframe.loc[nonzero]['size']
         to_false = []
-        for cur_idx in reversed(nonzero.tolist()):
+        for cur_idx in nonzero.tolist():
             if individual_size <= cache_size:
                 break
             to_false.append(cur_idx)
@@ -961,7 +961,7 @@ def get_best_configuration(dataframe, cache_size: float,
 
 
 def cross(element, factor):
-    if element > factor:
+    if element >= factor:
         return 1
     return 0
 
@@ -970,7 +970,7 @@ V_CROSS = np.vectorize(cross)
 
 
 def mutate(element, factor):
-    if element > factor:
+    if element <= factor:
         return 1
     return 0
 
@@ -982,7 +982,7 @@ def crossover(parent_a, parent_b) -> 'np.Array':
     """Perform and uniform corssover."""
     new_individual = np.zeros(len(parent_a)).astype(bool)
     uniform_crossover = np.random.rand(len(parent_a))
-    cross_selection = V_CROSS(uniform_crossover, 0.5).astype(bool)
+    cross_selection = V_CROSS(uniform_crossover, 0.75).astype(bool)
     new_individual[cross_selection] = parent_b[cross_selection]
     cross_selection = ~cross_selection
     new_individual[cross_selection] = parent_a[cross_selection]
@@ -992,19 +992,45 @@ def crossover(parent_a, parent_b) -> 'np.Array':
 def mutation(individual) -> 'np.Array':
     """Bit Flip mutation."""
     flip_bits = np.random.rand(len(individual))
-    mutant_selection = V_MUTATE(flip_bits, 0.95).astype(bool)
+    mutant_selection = V_MUTATE(flip_bits, 0.1).astype(bool)
     individual[mutant_selection] = ~ individual[mutant_selection]
     return individual
 
 
 def generation(gen_input):
     best, individual, dataframe, cache_size = gen_input
-    new_individual = crossover(best, individual)
-    new_individual = mutation(new_individual)
-    new_individual = make_it_valid(
-        new_individual, dataframe, cache_size)
-    new_fitness = individual_fitness(new_individual, dataframe)
-    return (new_individual, new_fitness)
+    child_0 = crossover(best, individual)
+    child_1 = ~child_0
+
+    child_0 = mutation(child_0)
+    child_0 = make_it_valid(
+        child_0, dataframe, cache_size)
+    child_0_fitness = individual_fitness(child_0, dataframe)
+
+    child_1 = mutation(child_1)
+    child_1 = make_it_valid(
+        child_1, dataframe, cache_size)
+    child_1_fitness = individual_fitness(child_1, dataframe)
+
+    return (child_0, child_0_fitness, child_1, child_1_fitness)
+
+
+def roulette_wheel(fitness: list, extractions: int = 1):
+    cur_fitness = np.array(fitness)
+    fitness_sum = np.sum(cur_fitness)
+    probabilities = cur_fitness / fitness_sum
+    probabilities = probabilities.tolist()
+
+    for _ in range(extractions):
+        candidates = []
+        while(True):
+            idx = randint(0, len(probabilities) - 1)
+            cur_probability = probabilities[idx]
+            if random() >= cur_probability:
+                candidates.append(idx)
+            if len(candidates) == 2:
+                yield candidates
+                break
 
 
 def evolve_with_genetic_algorithm(population, dataframe,
@@ -1025,35 +1051,32 @@ def evolve_with_genetic_algorithm(population, dataframe,
     ):
         idx_best = np.argmax(cur_fitness)
         best = cur_population[idx_best]
-        mean = sum(cur_fitness) / len(cur_fitness)
-        parent_selection = np.random.randint(len(population) - 1,
-                                             size=len(cur_population))
 
         childrens = []
         childrens_fitness = []
 
-        for cur_idx, (new_individual, new_fitness) in tqdm(
+        for cur_idx, (child_0, child_0_fitness, child_1, child_1_fitness) in tqdm(
                 enumerate(
                     pool.imap(
                         generation,
                         [
                             (
-                                cur_population[parent_selection[sel_idx]],
-                                individual,
+                                cur_population[candidates[0]],
+                                cur_population[candidates[1]],
                                 dataframe,
                                 cache_size
                             )
-                            for sel_idx, individual
-                            in enumerate(cur_population)
+                            for candidates
+                            in roulette_wheel(cur_fitness, len(population))
                         ]
                     )
                 ),
-                desc=f"Make new generation [Best: {cur_fitness[idx_best]:0.0f}][Mean: {mean:0.0f}]",
+                desc=f"Make new generation [Best: {cur_fitness[idx_best]:0.0f}][Mean: {np.mean(cur_fitness):0.0f}][Var: {np.var(cur_fitness):0.0f}]",
                 ascii=True, position=1, leave=False,
                 total=len(cur_population),
         ):
-            childrens.append(new_individual)
-            childrens_fitness.append(new_fitness)
+            childrens += [child_0, child_1]
+            childrens_fitness += [child_0_fitness, child_1_fitness]
 
         new_population = cur_population + childrens
         new_fitness = cur_fitness + childrens_fitness
@@ -1201,7 +1224,6 @@ def main():
                     )
                     cur_model_port = 4200+window_idx
                     cur_model.serve(port=cur_model_port)
-                    sleep(10)
                     model_processes.append((cur_model, cur_model))
 
                 working_dir = path.join(
@@ -1402,6 +1424,7 @@ def main():
             plot_height=plot_height,
             read_on_hit=args.read_on_hit,
         )
+
     elif args.action == "train":
         dataset = SimulatorDatasetReader(args.source)
         dataset.modify_column(
@@ -1446,6 +1469,7 @@ def main():
         model.save(path.join(
             path.dirname(args.source), "donkey_model"
         ))
+
     elif args.action == "create_dataset":
         base_dir = path.join(path.dirname(path.abspath(__file__)), "datasets")
         os.makedirs(base_dir, exist_ok=True)
