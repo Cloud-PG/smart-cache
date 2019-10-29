@@ -1596,11 +1596,15 @@ def main():
             # files_df = files_df.drop(files_df[files_df.value < q1].index)
 
             # Sort and reset indexes
-            files_df = files_df.sort_values(by=['value'], ascending=False)
-            files_df = files_df.reset_index(drop=True)
+            # files_df = files_df.sort_values(by=['value'], ascending=False)
+            # files_df = files_df.reset_index(drop=True)
             # print(files_df)
+
+            # print(sum(files_df['size']), args.cache_size, sum(files_df['size'])/args.cache_size)
+            cache_size_factor = int(sum(files_df['size'])/args.cache_size)
+
             best_files = get_best_configuration(
-                files_df, args.cache_size,
+                files_df, args.cache_size*cache_size_factor,
                 population_size=args.population_size,
                 num_generations=args.num_generations,
             )
@@ -1611,7 +1615,9 @@ def main():
                 f"dataset_window_{idx:02d}.feather.gz"
             )
 
-            compare_greedy_solution(files_df, args.cache_size)
+            compare_greedy_solution(
+                files_df, args.cache_size*cache_size_factor
+            )
 
             dataset_data = []
             len_dataset = int(len(cur_df) * 0.3)
