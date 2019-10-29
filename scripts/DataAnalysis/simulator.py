@@ -1604,7 +1604,7 @@ def main():
             cache_size_factor = (sum(files_df['size'])/args.cache_size) / 2.
 
             best_files = get_best_configuration(
-                files_df, int(args.cache_size*cache_size_factor,)
+                files_df, int(args.cache_size*cache_size_factor),
                 population_size=args.population_size,
                 num_generations=args.num_generations,
             )
