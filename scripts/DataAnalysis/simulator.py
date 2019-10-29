@@ -938,20 +938,20 @@ def get_best_configuration(dataframe, cache_size: float,
 
     print("[Create best individual with greedy method]")
     # Create 1 best individual with greedy method
-    # best_greedy = np.zeros(dataframe.shape[0], dtype=bool)
-    # cur_size = 0.
-    # cur_score = 0.
+    best_greedy = np.zeros(dataframe.shape[0], dtype=bool)
+    cur_size = 0.
+    cur_score = 0.
 
-    # for idx, cur_row in enumerate(dataframe.itertuples()):
-    #     file_size = cur_row.size
-    #     if cur_size + file_size <= cache_size:
-    #         cur_size += file_size
-    #         cur_score += cur_row.value
-    #         best_greedy[idx] = True
-    #     else:
-    #         break
+    for idx, cur_row in enumerate(dataframe.itertuples()):
+        file_size = cur_row.size
+        if cur_size + file_size <= cache_size:
+            cur_size += file_size
+            cur_score += cur_row.value
+            best_greedy[idx] = True
+        else:
+            break
 
-    # population.append(best_greedy)
+    population.append(best_greedy)
 
     best = evolve_with_genetic_algorithm(
         population, dataframe, cache_size, num_generations
@@ -982,7 +982,7 @@ def crossover(parent_a, parent_b) -> 'np.Array':
     """Perform and uniform corssover."""
     new_individual = np.zeros(len(parent_a)).astype(bool)
     uniform_crossover = np.random.rand(len(parent_a))
-    cross_selection = V_CROSS(uniform_crossover, 0.95).astype(bool)
+    cross_selection = V_CROSS(uniform_crossover, 0.5).astype(bool)
     new_individual[cross_selection] = parent_b[cross_selection]
     cross_selection = ~cross_selection
     new_individual[cross_selection] = parent_a[cross_selection]
@@ -1152,10 +1152,10 @@ def main():
                         default=4,
                         help='Window where to stop [DEFAULT: 4]')
     parser.add_argument('--population-size', type=int,
-                        default=21,
+                        default=100,
                         help='Num. of individuals in the GA [DEFAULT: 100]')
     parser.add_argument('--num-generations', type=int,
-                        default=400,
+                        default=100,
                         help='Num. of generations of GA [DEFAULT: 200]')
     parser.add_argument('--out-html', type=bool,
                         default=True,
