@@ -20,19 +20,22 @@ import (
 
 // AILRU cache
 type AILRU struct {
-	files                                                             map[string]float32
-	stats                                                             []*WeightedFileStats
-	statsFilenames                                                    sync.Map
-	queue                                                             *list.List
-	hit, miss, size, MaxSize, Exp                                     float32
-	dataWritten, dataRead, dataReadOnHit, dataReadOnMiss, dataDeleted float32
-	lastFileHitted                                                    bool
-	lastFileAdded                                                     bool
-	lastFileName                                                      string
-	aiClientHost                                                      string
-	aiClientPort                                                      string
-	aiClient                                                          aiPb.AIServiceClient
-	grpcConn                                                          *grpc.ClientConn
+	files                              map[string]float32
+	stats                              []*WeightedFileStats
+	statsFilenames                     sync.Map
+	queue                              *list.List
+	hit, miss, size, MaxSize, Exp      float32
+	dataWritten, dataRead, dataDeleted float32
+	dataReadOnHit, dataReadOnMiss      float32
+	lastFileHitted                     bool
+	lastFileAdded                      bool
+	lastFileName                       string
+	aiClientHost                       string
+	aiClientPort                       string
+	aiClient                           aiPb.AIServiceClient
+	grpcConn                           *grpc.ClientConn
+	grpcContext                        context.Context
+	grpcCxtCancel                      context.CancelFunc
 }
 
 // Init the AILRU struct
@@ -331,19 +334,36 @@ func (cache *AILRU) updatePolicy(filename string, size float32, hit bool, vars .
 	if !hit {
 		siteName := vars[0].(string)
 		userID := vars[1].(int)
+		dataType := vars[2].(string)
+		fileType := vars[3].(string)
 
-		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-		defer cancel()
-		result, err := cache.aiClient.AIPredictOne(ctx,
+		clientDeadline := time.Now().Add(time.Duration(60) * time.Second)
+		ctx, ctxCancel := context.WithDeadline(
+			context.Background(),
+			clientDeadline,
+		)
+		defer ctxCancel()
+
+		result, err := cache.aiClient.AIPredictOne(
+			ctx,
 			&aiPb.AIInput{
 				Filename: filename,
 				SiteName: siteName,
+				DataType: dataType,
+				FileType: fileType,
 				UserID:   uint32(userID),
 				NumReq:   curStats.TotRequests,
 				AvgTime:  curStats.RequestTicksMean,
 				Size:     size,
 			})
 		if err != nil {
+			fmt.Println()
+			fmt.Println(filename)
+			fmt.Println(siteName)
+			fmt.Println(userID)
+			fmt.Println(curStats.TotRequests)
+			fmt.Println(curStats.RequestTicksMean)
+			fmt.Println(size)
 			log.Fatalf("ERROR: %v.AIPredictOne(_) = _, %v", cache.aiClient, err)
 		}
 		if result.Store == false {
@@ -400,10 +420,8 @@ func (cache *AILRU) updatePolicy(filename string, size float32, hit bool, vars .
 // Get a file from the cache updating the statistics
 func (cache *AILRU) Get(filename string, size float32, vars ...interface{}) bool {
 	hit := cache.check(filename)
-	siteName := vars[0].(string)
-	userID := vars[1].(int)
 
-	added := cache.updatePolicy(filename, size, hit, siteName, userID)
+	added := cache.updatePolicy(filename, size, hit, vars...)
 
 	if hit {
 		cache.hit += 1.
