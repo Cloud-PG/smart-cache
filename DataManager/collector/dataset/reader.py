@@ -57,6 +57,7 @@ class SimulatorDatasetReader(object):
         for column in columns:
             if column not in self._converter_map:
                 self._converter_map[column] = {
+                    'feature': column,
                     'keys': [],
                     'values': {},
                     'unknown_values': unknown_values
@@ -81,9 +82,15 @@ class SimulatorDatasetReader(object):
     def store_converter_map(self,
                             out_filename: str = "featureConverter.json.gzip"
                             ):
-        with gzip.GzipFile(path.join(self._data_dir, out_filename), "wb") as outfile:
-            outfile.write(json.dumps(self._converter_map,
-                                     indent=2).encode("utf-8"))
+        with yaspin(
+            Spinners.bouncingBall,
+            f"[Save converter map: {path.join(self._data_dir, out_filename)}]"
+        ) as sp:
+            with gzip.GzipFile(path.join(self._data_dir, out_filename), "wb") as outfile:
+                outfile.write(json.dumps(
+                    self._converter_map,
+                    indent=2).encode("utf-8")
+                )
         return self
 
     @staticmethod
