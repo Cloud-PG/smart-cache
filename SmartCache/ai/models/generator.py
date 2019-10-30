@@ -40,9 +40,9 @@ class DonkeyModel(ai_pb2_grpc.AIServiceServicer):
             ])
         else:
             self._model = keras.Sequential([
-                keras.layers.Dense(2048, activation='sigmoid',
+                keras.layers.Dense(512, activation='sigmoid',
                                    input_shape=(input_size, )),
-                keras.layers.Dense(1024, activation='sigmoid'),
+                keras.layers.Dense(512, activation='sigmoid'),
                 keras.layers.Dense(512, activation='sigmoid'),
                 keras.layers.Dense(output_size, activation='softmax')
             ])
@@ -118,7 +118,7 @@ class CMSTest0ModelGenerator(object):
     def __compile_model(self, input_size: int, output_size: int):
         self._model = keras.Sequential([
             keras.layers.Flatten(input_shape=(input_size, )),
-            keras.layers.Dense(2048, activation='hard_sigmoid'),
+            keras.layers.Dense(512, activation='hard_sigmoid'),
             keras.layers.Dense(1024, activation='hard_sigmoid'),
             keras.layers.Dense(512, activation='hard_sigmoid'),
             keras.layers.Dense(256, activation='hard_sigmoid'),
