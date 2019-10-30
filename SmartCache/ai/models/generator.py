@@ -6,7 +6,6 @@ import tensorflow as tf
 from tensorflow import keras
 
 from ..service import ai_pb2_grpc, ai_pb2
-from DataManager.collector.dataset.utils import FeatureConverter
 
 
 class DonkeyModel(ai_pb2_grpc.AIServiceServicer):
@@ -16,7 +15,6 @@ class DonkeyModel(ai_pb2_grpc.AIServiceServicer):
         self._epochs = epochs
         self._model = None
         self._server = None
-        self._feature_converter = None
 
     def __compile_model(self, input_size: int, output_size: int,
                         cnn: bool = False
@@ -42,10 +40,10 @@ class DonkeyModel(ai_pb2_grpc.AIServiceServicer):
             ])
         else:
             self._model = keras.Sequential([
-                keras.layers.Dense(1024, activation='sigmoid',
+                keras.layers.Dense(2048, activation='sigmoid',
                                    input_shape=(input_size, )),
+                keras.layers.Dense(1024, activation='sigmoid'),
                 keras.layers.Dense(512, activation='sigmoid'),
-                keras.layers.Dense(256, activation='sigmoid'),
                 keras.layers.Dense(output_size, activation='softmax')
             ])
         self._model.compile(
@@ -54,10 +52,6 @@ class DonkeyModel(ai_pb2_grpc.AIServiceServicer):
             metrics=['accuracy']
         )
         self._model.summary()
-
-    def add_feature_converter(self, fc_path) -> 'DonkeyModel':
-        self._feature_converter = FeatureConverter().load(fc_path)
-        return self
 
     def train(self, data, labels, num_classes: int = 2):
         self.__compile_model(
@@ -74,26 +68,6 @@ class DonkeyModel(ai_pb2_grpc.AIServiceServicer):
 
     def AIPredictOne(self, request, context) -> 'ai_pb2.StorePrediction':
         features = []
-        size = int(request.size / 1000)
-        avg_time = int(request.avgTime / 100)
-
-        for feature in ['siteName', 'userID', 'fileType', 'dataType']:
-            target = getattr(request, feature)
-            cur_feature = self._feature_converter.get_category_vector(
-                feature, target)
-            features.append(np.array(cur_feature))
-
-        features.append(np.array([request.numReq]))
-
-        cur_feature = self._feature_converter.get_category_vector(
-            'avgTime', avg_time)
-        features.append(np.array(cur_feature))
-        cur_feature = self._feature_converter.get_category_vector(
-            'size', size)
-        features.append(np.array(cur_feature))
-
-        features = np.array(features)
-        features = np.hstack(features)
 
         prediction = self.predict_one(features)
 

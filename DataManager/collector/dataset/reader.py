@@ -7,12 +7,12 @@ import numpy as np
 import pandas as pd
 from tensorflow import keras
 from tqdm import tqdm
+from yaspin import yaspin
+from yaspin.spinners import Spinners
 
 from ..datafeatures.extractor import CMSRecordTest0
 from ..datafile.json import JSONDataFileReader
-from .utils import FeatureConverter, ReadableDictAsAttribute, SupportTable
-from yaspin import yaspin
-from yaspin.spinners import Spinners
+from .utils import ReadableDictAsAttribute, SupportTable
 
 
 class SimulatorDatasetReader(object):
@@ -21,7 +21,7 @@ class SimulatorDatasetReader(object):
         self._df = None
         self._data = (None, None)
         self._data_dir = None
-        self._converter = None
+        self._converter_map = {}
 
         with yaspin(
             Spinners.bouncingBall,
@@ -48,65 +48,119 @@ class SimulatorDatasetReader(object):
         self._df[column] = function(self._df[column])
         return self
 
-    def make_converter_for(self, columns: list = [],
-                           unknown_value: bool = True
+    def make_converter_map(self, columns: list = [],
+                           unknown_values: bool = True,
+                           sort_values: bool = False,
+                           sort_type=int,
                            ) -> 'SimulatorDatasetReader':
-        with yaspin(
-            Spinners.bouncingBall,
-            f"[Make converter for (unknown value: {unknown_value})]{columns}"
-        ):
-            if not self._converter:
-                self._converter = FeatureConverter()
 
-            for column in columns:
-                values = self._df[column].to_list()
-                self._converter.insert_from_values(
-                    column, values, unknown_value
-                )
+        for column in columns:
+            if column not in self._converter_map:
+                self._converter_map[column] = {
+                    'keys': [],
+                    'values': {},
+                    'unknown_values': unknown_values
+                }
+            cur_map = self._converter_map[column]
+            cur_values = set(self._df[column].astype(str).to_list())
+            for cur_value in tqdm(cur_values, desc=f"Make map of {column}",
+                                  ascii=True):
+                if cur_value not in cur_map['keys']:
+                    cur_map['keys'].append(cur_value)
+            if sort_values:
+                cur_map['keys'] = list(sorted(cur_map['keys'],
+                                              key=lambda elm: sort_type(elm)))
 
-            self._converter.dump(
-                path.join(
-                    self._data_dir,
-                    "featureConverter.dump.pickle"
-                )
+            cur_map['values'] = dict(
+                (name, idx) for idx, name
+                in enumerate(cur_map['keys'],
+                             1 if unknown_values else 0)
             )
-
         return self
+
+    def store_converter_map(self,
+                            out_filename: str = "featureConverter.json.gzip"
+                            ):
+        with gzip.GzipFile(path.join(self._data_dir, out_filename), "wb") as outfile:
+            outfile.write(json.dumps(self._converter_map,
+                                     indent=2).encode("utf-8"))
+        return self
+
+    @staticmethod
+    def __get_category_value(category_obj, value) -> int:
+        if value in category_obj['keys']:
+            return category_obj['values'][value]
+        if category_obj['unknown_values']:
+            return 0
 
     def make_data_and_labels(self, data_columns: list = [],
                              label_column: str = "",
                              for_cnn: bool = False,
                              ) -> 'SimulatorDatasetReader':
         df = self._df
+
         with yaspin(
             Spinners.bouncingBall,
-            "[Make data and labels]]"
-        ):
+            f"[Make data and labels][{','.join(data_columns)} -> {label_column}]"
+        ) as sp:
+            sp.text = f"[Prepare labels][Column: {label_column}]"
             if not label_column:
                 label_column = df.columns[-1]
-            if label_column in self._converter:
-                labels = self._converter.get_categories(
-                    label_column,
-                    df[label_column]
+            if label_column in self._converter_map:
+                tmp_labels = [
+                    self._converter_map[label_column]['values'][elm]
+                    for elm in df[label_column].astype(str)
+                ]
+                labels = np.zeros(
+                    (
+                        len(tmp_labels),
+                        len(self._converter_map[label_column]['keys'])
+                    ),
+                    dtype='int32'
                 )
+                labels[np.arange(len(tmp_labels)), tmp_labels] = 1
             else:
                 labels = df[label_column].to_numpy()
 
             new_df = None
             for column in data_columns:
-                if column in self._converter:
-                    cur_data = self._converter.get_column_categories(
-                        column,
-                        df[column]
+                sp.text = f"[Prepare data][Column: {column}]"
+                if column in self._converter_map:
+                    cur_map = self._converter_map[column]
+                    if cur_map['unknown_values']:
+                        num_categories = len(cur_map['keys']) + 1
+                    else:
+                        num_categories = len(cur_map['keys'])
+                    categories = []
+                    for value in df[column]:
+                        cur_value = self.__get_category_value(
+                            cur_map,
+                            value
+                        )
+                        tmp = np.zeros(num_categories, dtype='float32')
+                        if not cur_map['unknown_values']:
+                            cur_value -= 1
+                        tmp[cur_value] = 1.0
+                        categories.append(
+                            tmp.tolist()
+                        )
+                    cur_data = pd.DataFrame(
+                        categories,
+                        columns=[
+                            f"{column}_{idx}"
+                            for idx in range(num_categories)
+                        ]
                     )
                 else:
                     cur_data = df[column]
 
+                sp.text = "[Merge data]"
                 if new_df is not None:
                     new_df = new_df.join(cur_data, how='outer')
                 else:
                     new_df = cur_data
 
+            sp.text = "[Convert data]"
             if for_cnn:
                 new_df = new_df.to_numpy()
                 new_df = new_df.reshape(
@@ -117,6 +171,7 @@ class SimulatorDatasetReader(object):
 
             self._data = (new_df, labels)
 
+        print(f"[Data shape: {new_df.shape}][Labels shape: {labels.shape}]")
         return self
 
     def save_data_and_labels(self,
