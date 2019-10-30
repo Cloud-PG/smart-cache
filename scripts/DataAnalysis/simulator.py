@@ -1155,7 +1155,7 @@ def main():
                         default=10,
                         help='Num. of individuals in the GA [DEFAULT: 100]')
     parser.add_argument('--num-generations', type=int,
-                        default=10000,
+                        default=2000,
                         help='Num. of generations of GA [DEFAULT: 200]')
     parser.add_argument('--out-html', type=bool,
                         default=True,
