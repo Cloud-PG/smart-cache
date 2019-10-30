@@ -365,14 +365,14 @@ func simulationCmd(testAISimulation bool) *cobra.Command {
 					numIterations++
 
 					if time.Now().Sub(start).Seconds() >= 1. {
-						timeElapsed := time.Now().Sub(simBeginTime)
+						elapsedTime := time.Now().Sub(simBeginTime)
 						outString := strings.Join(
 							[]string{
 								fmt.Sprintf("[%s_%0.0f_%s]", cacheType, cacheSize, simRegion),
-								fmt.Sprintf("[Time Elapsed: %02d:%02d:%02d]",
-									int(timeElapsed.Hours())%24,
-									int(timeElapsed.Minutes())%60,
-									int(timeElapsed.Seconds())%60,
+								fmt.Sprintf("[Elapsed Time: %02d:%02d:%02d]",
+									int(elapsedTime.Hours())%24,
+									int(elapsedTime.Minutes())%60,
+									int(elapsedTime.Seconds())%60,
 								),
 								fmt.Sprintf("[Window %d]", windowCounter),
 								fmt.Sprintf("[Step %d/%d]", windowStepCounter+1, simWindowSize),
@@ -424,13 +424,13 @@ func simulationCmd(testAISimulation bool) *cobra.Command {
 				}
 
 			}
-			timeElapsed := time.Now().Sub(simBeginTime)
-			fmt.Printf("\n[Simulation END][Time elapsed: %02d:%02d:%02d][Num. Records: %d][Mean Records/s: %0.0f]\n",
-				int(timeElapsed.Hours())%24,
-				int(timeElapsed.Minutes())%60,
-				int(timeElapsed.Seconds())%60,
+			elapsedTime := time.Now().Sub(simBeginTime)
+			fmt.Printf("\n[Simulation END][elapsed Time: %02d:%02d:%02d][Num. Records: %d][Mean Records/s: %0.0f]\n",
+				int(elapsedTime.Hours())%24,
+				int(elapsedTime.Minutes())%60,
+				int(elapsedTime.Seconds())%60,
 				numRecords,
-				float64(totIterations)/timeElapsed.Seconds(),
+				float64(totIterations)/elapsedTime.Seconds(),
 			)
 		},
 		Use:   useDesc,
