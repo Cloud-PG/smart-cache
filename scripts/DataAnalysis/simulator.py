@@ -1581,8 +1581,8 @@ def main():
                              for filename in files],
                     'totReq': [files[filename]['totReq']
                                for filename in files],
-                    'days': [len(files[filename]['days'])
-                             for filename in files],
+                    # 'days': [len(files[filename]['days'])
+                    #          for filename in files],
                 }
             )
 
@@ -1594,7 +1594,7 @@ def main():
 
             # Add value
             files_df['value'] = (files_df['size'] *
-                                 files_df['totReq']) * files_df['days']
+                                 files_df['totReq'])  # * files_df['days']
 
             # Remove low value files
             # q1 = files_df.value.describe().quantile(0.25)
