@@ -1155,7 +1155,7 @@ def main():
                         default=42,
                         help='Num. of individuals in the GA [DEFAULT: 100]')
     parser.add_argument('--num-generations', type=int,
-                        default=400,
+                        default=100,
                         help='Num. of generations of GA [DEFAULT: 200]')
     parser.add_argument('--out-html', type=bool,
                         default=True,
@@ -1625,7 +1625,7 @@ def main():
             )
 
             dataset_data = []
-            len_dataset = int(len(cur_df) * 0.3)
+            len_dataset = int(len(cur_df) * 0.2)
 
             for cur_row in tqdm(cur_df.sample(len_dataset).itertuples(),
                                 total=len_dataset,
