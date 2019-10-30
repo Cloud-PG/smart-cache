@@ -23,7 +23,8 @@ type WeightedLRU struct {
 	statsFilenames                                                    map[string]int
 	queue                                                             *list.List
 	hit, miss, size, MaxSize, Exp                                     float32
-	dataWritten, dataRead, dataReadOnHit, dataReadOnMiss, dataDeleted float32
+	dataWritten, dataRead, dataDeleted float32
+	dataReadOnHit, dataReadOnMiss      float32
 	SelFunctionType                                                   FunctionType
 	SelUpdateStatPolicyType                                           UpdateStatsPolicyType
 	SelLimitStatsPolicyType                                           LimitStatsPolicyType

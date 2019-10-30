@@ -20,7 +20,8 @@ type WeightedCache struct {
 	stats                                                             map[string]*WeightedFileStats
 	queue                                                             []*WeightedFileStats
 	hit, miss, size, MaxSize, Exp                                     float32
-	dataWritten, dataRead, dataReadOnHit, dataReadOnMiss, dataDeleted float32
+	dataWritten, dataRead, dataDeleted float32
+	dataReadOnHit, dataReadOnMiss      float32
 	SelFunctionType                                                   FunctionType
 	lastFileHitted                                                    bool
 	lastFileAdded                                                     bool

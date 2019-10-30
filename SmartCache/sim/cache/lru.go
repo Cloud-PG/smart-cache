@@ -41,7 +41,8 @@ type LRUCache struct {
 	stats                                                             map[string]*LRUFileStats
 	queue                                                             *list.List
 	hit, miss, size, MaxSize                                          float32
-	dataWritten, dataRead, dataReadOnHit, dataReadOnMiss, dataDeleted float32
+	dataWritten, dataRead, dataDeleted float32
+	dataReadOnHit, dataReadOnMiss      float32
 	lastFileHitted                                                    bool
 	lastFileAdded                                                     bool
 	lastFileName                                                      string
