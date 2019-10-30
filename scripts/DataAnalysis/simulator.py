@@ -2,6 +2,7 @@ import argparse
 import gzip
 import os
 import subprocess
+from datetime import datetime
 from itertools import cycle
 from multiprocessing import Pool
 from os import path, walk
@@ -1531,6 +1532,8 @@ def main():
             tick_counter = 1
             stat_avg_time = []
             stat_num_req = []
+            max_history = 64
+
             for cur_row in tqdm(cur_df.itertuples(), total=cur_df.shape[0],
                                 desc=f"Parse window {idx} dataframe",
                                 ascii=True):
@@ -1544,28 +1547,30 @@ def main():
                         'days': set([]),
                         'siteName': cur_row.site_name,
                         'userID': cur_row.user,
-                        'reqHistory': [0, 0, 0, 0, 0, 0, 0, 0],
+                        'reqHistory': [],
                         'lastReq': 0,
                         'fileType': file_type,
                         'dataType': data_type
                     }
-                files[cur_filename]['totReq'] += 1
-                files[cur_filename]['lastReq'] = tick_counter
-                files[cur_filename]['reqHistory'].pop()
-                files[cur_filename]['reqHistory'].append(tick_counter)
+                cur_time = datetime.fromtimestamp(cur_row.day)
+                cur_file_stats = files[cur_filename]
+                cur_file_stats['totReq'] += 1
+                cur_file_stats['lastReq'] = cur_time
+                if len(cur_file_stats['reqHistory']) > max_history:
+                    cur_file_stats['reqHistory'].pop()
 
-                assert len(files[cur_filename]['reqHistory']
-                           ) == 8, f"History do not have len 8 but {len(files[cur_filename]['reqHistory'])}"
-                assert files[cur_filename]['size'] == cur_size, f"{files[cur_filename]['size']} != {cur_size}"
+                cur_file_stats['reqHistory'].append(cur_time)
 
-                files[cur_filename]['days'] |= set((cur_row.day, ))
+                assert cur_file_stats['size'] == cur_size, f"{cur_file_stats['size']} != {cur_size}"
 
-                stat_num_req.append(files[cur_filename]['totReq'])
+                cur_file_stats['days'] |= set((cur_row.day, ))
+
+                stat_num_req.append(cur_file_stats['totReq'])
                 stat_avg_time.append(
                     sum([
-                        files[cur_filename]['lastReq'] - elm
-                        for elm in files[cur_filename]['reqHistory']
-                    ]) / len(files[cur_filename]['reqHistory'])  # len = 8
+                        (cur_file_stats['lastReq'] - elm).total_seconds() / 60.
+                        for elm in cur_file_stats['reqHistory']
+                    ]) / max_history
                 )
 
                 tick_counter += 1
