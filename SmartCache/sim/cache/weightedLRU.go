@@ -17,20 +17,20 @@ import (
 
 // WeightedLRU cache
 type WeightedLRU struct {
-	files                                                             map[string]float32
-	fileWeights                                                       []float32
-	stats                                                             []*WeightedFileStats
-	statsFilenames                                                    map[string]int
-	queue                                                             *list.List
-	hit, miss, size, MaxSize, Exp                                     float32
+	files                              map[string]float32
+	fileWeights                        []float32
+	stats                              []*WeightedFileStats
+	statsFilenames                     map[string]int
+	queue                              *list.List
+	hit, miss, size, MaxSize, Exp      float32
 	dataWritten, dataRead, dataDeleted float32
 	dataReadOnHit, dataReadOnMiss      float32
-	SelFunctionType                                                   FunctionType
-	SelUpdateStatPolicyType                                           UpdateStatsPolicyType
-	SelLimitStatsPolicyType                                           LimitStatsPolicyType
-	lastFileHitted                                                    bool
-	lastFileAdded                                                     bool
-	lastFileName                                                      string
+	SelFunctionType                    FunctionType
+	SelUpdateStatPolicyType            UpdateStatsPolicyType
+	SelLimitStatsPolicyType            LimitStatsPolicyType
+	lastFileHitted                     bool
+	lastFileAdded                      bool
+	lastFileName                       string
 }
 
 // Init the WeightedLRU struct
