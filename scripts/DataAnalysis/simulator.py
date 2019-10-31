@@ -1630,7 +1630,7 @@ def main():
             )
 
             dataset_data = []
-            len_dataset = int(len(cur_df) * 0.2)
+            len_dataset = int(len(cur_df) * 0.42)
 
             for cur_row in tqdm(cur_df.sample(len_dataset).itertuples(),
                                 total=len_dataset,
