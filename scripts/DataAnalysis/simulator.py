@@ -919,7 +919,8 @@ def get_one_solution(gen_input):
 
 def get_best_configuration(dataframe, cache_size: float,
                            num_generations: int = 1000,
-                           population_size: int = 42):
+                           population_size: int = 42,
+                           insert_best_greedy: bool = False):
     population = []
     pool = Pool()
     for _, individual in tqdm(enumerate(
@@ -937,22 +938,23 @@ def get_best_configuration(dataframe, cache_size: float,
     pool.close()
     pool.join()
 
-    # print("[Create best individual with greedy method]")
-    # # Create 1 best individual with greedy method
-    # best_greedy = np.zeros(dataframe.shape[0], dtype=bool)
-    # cur_size = 0.
-    # cur_score = 0.
+    if insert_best_greedy:
+        print("[Create best individual with greedy method]")
+        # Create 1 best individual with greedy method
+        best_greedy = np.zeros(dataframe.shape[0], dtype=bool)
+        cur_size = 0.
+        cur_score = 0.
 
-    # for idx, cur_row in enumerate(dataframe.itertuples()):
-    #     file_size = cur_row.size
-    #     if cur_size + file_size <= cache_size:
-    #         cur_size += file_size
-    #         cur_score += cur_row.value
-    #         best_greedy[idx] = True
-    #     else:
-    #         break
+        for idx, cur_row in enumerate(dataframe.itertuples()):
+            file_size = cur_row.size
+            if cur_size + file_size <= cache_size:
+                cur_size += file_size
+                cur_score += cur_row.value
+                best_greedy[idx] = True
+            else:
+                break
 
-    # population.append(best_greedy)
+        population.append(best_greedy)
 
     best = evolve_with_genetic_algorithm(
         population, dataframe, cache_size, num_generations
@@ -1170,6 +1172,9 @@ def main():
     parser.add_argument('--only-CPU', type=bool,
                         default=True,
                         help='Force to use only CPU with TensorFlow [DEFAULT: True]')
+    parser.add_argument('--insert-best-greedy', type=bool,
+                        default=False,
+                        help='Force to use insert 1 individual equal to the greedy composition [DEFAULT: False]')
     parser.add_argument('--plot-resolution', type=str,
                         default="640,480",
                         help='A comma separate string representing the target resolution of each plot [DEFAULT: 640,480]')
@@ -1617,6 +1622,7 @@ def main():
                 files_df, args.cache_size*cache_size_factor,
                 population_size=args.population_size,
                 num_generations=args.num_generations,
+                insert_vest_greedy=args.insert_best_greedy,
             )
 
             files_df['class'] = best_files
