@@ -1622,7 +1622,7 @@ def main():
                 files_df, args.cache_size*cache_size_factor,
                 population_size=args.population_size,
                 num_generations=args.num_generations,
-                insert_vest_greedy=args.insert_best_greedy,
+                insert_best_greedy=args.insert_best_greedy,
             )
 
             files_df['class'] = best_files
