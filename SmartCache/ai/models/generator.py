@@ -40,10 +40,10 @@ class DonkeyModel(ai_pb2_grpc.AIServiceServicer):
             ])
         else:
             self._model = keras.Sequential([
-                keras.layers.Dense(1024, activation='sigmoid',
+                keras.layers.Dense(2048, activation='sigmoid',
                                    input_shape=(input_size, )),
-                keras.layers.Dense(256, activation='sigmoid'),
-                keras.layers.Dense(256, activation='sigmoid'),
+                keras.layers.Dense(1024, activation='sigmoid'),
+                keras.layers.Dense(512, activation='sigmoid'),
                 keras.layers.Dense(output_size, activation='softmax')
             ])
         self._model.compile(
