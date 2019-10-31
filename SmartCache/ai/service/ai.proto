@@ -15,14 +15,7 @@ service AIService {
 }
 
 message AIInput {
-  string filename = 1;
-  string siteName = 2;
-  string dataType = 3;
-  string fileType = 4;
-  uint32 userID = 5;
-  uint32 numReq = 6;
-  float avgTime = 7;
-  float size = 8;
+  repeated float inputVector = 1;
 }
 
 message StorePrediction {

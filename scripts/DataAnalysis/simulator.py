@@ -1222,12 +1222,6 @@ def main():
                 if cache_type == 'aiLRU':
                     cur_model = DonkeyModel()
                     cur_model.load(args.ai_model)
-                    cur_model.add_feature_converter(
-                        path.join(
-                            path.dirname(args.ai_model),
-                            "featureConverter.dump.pickle"
-                        )
-                    )
                     cur_model_port = 4200+window_idx
                     cur_model.serve(port=cur_model_port)
                     model_processes.append((cur_model, cur_model))
@@ -1252,9 +1246,15 @@ def main():
                     "--simDumpFileName=dump.json.gz",
                 ]
                 if cache_type == 'aiLRU':
+                    feature_map_file = path.join(
+                            path.dirname(args.ai_model),
+                            "featureConverter.json.gzip"
+                        )
                     exe_args.append("--aiHost=127.0.0.1")
                     exe_args.append(f"--aiPort={cur_model_port}")
+                    exe_args.append(f"--aiFeatureMap={feature_map_file}")
 
+                print(" ".join(exe_args))
                 cur_process = subprocess.Popen(
                     " ".join(exe_args),
                     shell=True,

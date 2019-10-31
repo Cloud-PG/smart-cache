@@ -18,6 +18,7 @@ import (
 )
 
 var (
+	aiFeatureMap        string
 	aiHost              string
 	aiPort              string
 	buildstamp          string
@@ -213,7 +214,11 @@ func simulationCmd(testAISimulation bool) *cobra.Command {
 			// Create cache
 			curCacheInstance := genCache(cacheType)
 			if testAISimulation {
-				curCacheInstance.Init(aiHost, aiPort)
+				if aiFeatureMap == "" {
+					fmt.Println("ERR: No feature map indicated...")
+					os.Exit(-1)
+				}
+				curCacheInstance.Init(aiHost, aiPort, aiFeatureMap)
 			}
 
 			if simDumpFileName == "" {
@@ -447,6 +452,10 @@ func simulationCmd(testAISimulation bool) *cobra.Command {
 		cmd.PersistentFlags().StringVar(
 			&aiPort, "aiPort", "4242",
 			"indicate the filter for record region",
+		)
+		cmd.PersistentFlags().StringVar(
+			&aiFeatureMap, "aiFeatureMap", "",
+			"the feature map file for data conversions",
 		)
 	}
 	return cmd

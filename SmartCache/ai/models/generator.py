@@ -71,9 +71,7 @@ class DonkeyModel(ai_pb2_grpc.AIServiceServicer):
         )
 
     def AIPredictOne(self, request, context) -> 'ai_pb2.StorePrediction':
-        features = []
-
-        prediction = self.predict_one(features)
+        prediction = self.predict_one(np.array(request.inputVector))
 
         response = ai_pb2.StorePrediction(
             store=True if prediction == 1 else False

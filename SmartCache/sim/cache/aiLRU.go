@@ -18,6 +18,13 @@ import (
 	"google.golang.org/grpc"
 )
 
+type featureMapObj struct {
+	Feature       string
+	Keys          []string
+	Values        map[string]float32
+	UnknownValues bool
+}
+
 // AILRU cache
 type AILRU struct {
 	files                              map[string]float32
@@ -33,6 +40,7 @@ type AILRU struct {
 	aiClientHost                       string
 	aiClientPort                       string
 	aiClient                           aiPb.AIServiceClient
+	aiFeatureMap                       map[string]featureMapObj
 	grpcConn                           *grpc.ClientConn
 	grpcContext                        context.Context
 	grpcCxtCancel                      context.CancelFunc
@@ -43,10 +51,58 @@ func (cache *AILRU) Init(args ...interface{}) {
 	cache.files = make(map[string]float32)
 	cache.queue = list.New()
 	cache.stats = make([]*WeightedFileStats, 0)
+	cache.aiFeatureMap = make(map[string]featureMapObj, 0)
 	cache.statsFilenames = sync.Map{}
 
 	cache.aiClientHost = args[0].(string)
 	cache.aiClientPort = args[1].(string)
+	featureMapFilePath := args[2].(string)
+
+	featureMapFile, errOpenFile := os.Open(featureMapFilePath)
+	if errOpenFile != nil {
+		log.Fatalf("Cannot open file '%s'\n", errOpenFile)
+	}
+
+	featureMapFileGz, errOpenZipFile := gzip.NewReader(featureMapFile)
+	if errOpenZipFile != nil {
+		log.Fatalf("Cannot open zip stream from file '%s'\nError: %s\n", featureMapFilePath, errOpenZipFile)
+	}
+
+	var tmpMap interface{}
+	errJSONUnmarshal := json.NewDecoder(featureMapFileGz).Decode(&tmpMap)
+	if errJSONUnmarshal != nil {
+		log.Fatalf("Cannot unmarshal json from file '%s'\nError: %s\n", featureMapFilePath, errJSONUnmarshal)
+	}
+
+	// Parse feature map
+	lvl0 := tmpMap.(map[string]interface{})
+	for k0, v0 := range lvl0 {
+		curObj := v0.(map[string]interface{})
+		curStruct := featureMapObj{}
+		for objK, objV := range curObj {
+			switch objK {
+			case "feature":
+				curStruct.Feature = objV.(string)
+			case "keys":
+				curKeys := objV.([]interface{})
+				for _, elm := range curKeys {
+					curStruct.Keys = append(
+						curStruct.Keys,
+						elm.(string),
+					)
+				}
+			case "values":
+				curValues := objV.(map[string]interface{})
+				curStruct.Values = make(map[string]float32)
+				for vK, vV := range curValues {
+					curStruct.Values[vK] = float32(vV.(float64))
+				}
+			case "unknown_value":
+				curStruct.UnknownValues = objV.(bool)
+			}
+		}
+		cache.aiFeatureMap[k0] = curStruct
+	}
 
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithInsecure())
@@ -334,8 +390,8 @@ func (cache *AILRU) updatePolicy(filename string, size float32, hit bool, vars .
 	if !hit {
 		siteName := vars[0].(string)
 		userID := vars[1].(int)
-		dataType := vars[2].(string)
-		fileType := vars[3].(string)
+		// dataType := vars[2].(string)
+		// fileType := vars[3].(string)
 
 		clientDeadline := time.Now().Add(time.Duration(60) * time.Second)
 		ctx, ctxCancel := context.WithDeadline(
@@ -347,14 +403,7 @@ func (cache *AILRU) updatePolicy(filename string, size float32, hit bool, vars .
 		result, err := cache.aiClient.AIPredictOne(
 			ctx,
 			&aiPb.AIInput{
-				Filename: filename,
-				SiteName: siteName,
-				DataType: dataType,
-				FileType: fileType,
-				UserID:   uint32(userID),
-				NumReq:   curStats.TotRequests,
-				AvgTime:  curStats.RequestTicksMean,
-				Size:     size,
+				InputVector: []float32{0.0, 0.0, 0.0},
 			})
 		if err != nil {
 			fmt.Println()
