@@ -43,7 +43,9 @@ class DonkeyModel(ai_pb2_grpc.AIServiceServicer):
                 keras.layers.Dense(1024, activation='hard_sigmoid',
                                    input_shape=(input_size, )),
                 keras.layers.Dense(512, activation='hard_sigmoid'),
-                keras.layers.Dense(512, activation='hard_sigmoid'),
+                keras.layers.Dense(256, activation='hard_sigmoid'),
+                keras.layers.Dense(128, activation='hard_sigmoid'),
+                keras.layers.Dense(64, activation='hard_sigmoid'),
                 keras.layers.Dense(output_size, activation='softmax')
             ])
         self._model.compile(
