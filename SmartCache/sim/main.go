@@ -307,6 +307,7 @@ func simulationCmd(testAISimulation bool) *cobra.Command {
 			}
 
 			fmt.Println("[Simulation START]")
+
 			for record := range iterator {
 				if strings.Compare(simRegion, "all") != 0 {
 					if strings.Index(strings.ToLower(record.SiteName), selectedRegion) == -1 {

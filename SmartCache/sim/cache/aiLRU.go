@@ -9,6 +9,8 @@ import (
 	"io"
 	"log"
 	"os"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -21,7 +23,7 @@ import (
 type featureMapObj struct {
 	Feature       string
 	Keys          []string
-	Values        map[string]float32
+	Values        map[string]int
 	UnknownValues bool
 }
 
@@ -93,11 +95,11 @@ func (cache *AILRU) Init(args ...interface{}) {
 				}
 			case "values":
 				curValues := objV.(map[string]interface{})
-				curStruct.Values = make(map[string]float32)
+				curStruct.Values = make(map[string]int)
 				for vK, vV := range curValues {
-					curStruct.Values[vK] = float32(vV.(float64))
+					curStruct.Values[vK] = int(vV.(float64))
 				}
-			case "unknown_value":
+			case "unknown_values":
 				curStruct.UnknownValues = objV.(bool)
 			}
 		}
@@ -379,6 +381,64 @@ func (cache *AILRU) getOrInsertStats(filename string) (int, *WeightedFileStats) 
 	return resultIdx, stats
 }
 
+func (cache *AILRU) getCategory(key string, value string) []float32 {
+	var res []float32
+	if cache.aiFeatureMap[key].UnknownValues {
+		res = make([]float32, len(cache.aiFeatureMap[key].Keys)+1)
+		oneHot, inMap := cache.aiFeatureMap[key].Values[value]
+		if inMap {
+			res[oneHot] = 1.0
+		} else {
+			res[0] = 1.0
+		}
+	} else {
+		res = make([]float32, len(cache.aiFeatureMap[key].Keys))
+		res[cache.aiFeatureMap[key].Values[value]] = 1.0
+	}
+	return res
+}
+
+func (cache *AILRU) composeFeatures(vars ...interface{}) []float32 {
+	var inputVector []float32
+	var tmpArr []float32
+
+	siteName := vars[0].(string)
+	userID := strconv.Itoa(vars[1].(int))
+	fileType := vars[2].(string)
+	dataType := vars[3].(string)
+	totRequests := float32(vars[4].(uint32))
+	avgTime := vars[5].(float32)
+	size := vars[6].(float32)
+
+	tmpArr = cache.getCategory("siteName", siteName)
+	for _, value := range tmpArr {
+		inputVector = append(inputVector, value)
+	}
+	tmpArr = cache.getCategory("userID", userID)
+	for _, value := range tmpArr {
+		inputVector = append(inputVector, value)
+	}
+	tmpArr = cache.getCategory("fileType", fileType)
+	for _, value := range tmpArr {
+		inputVector = append(inputVector, value)
+	}
+	tmpArr = cache.getCategory("dataType", dataType)
+	for _, value := range tmpArr {
+		inputVector = append(inputVector, value)
+	}
+	inputVector = append(inputVector, totRequests)
+	tmpArr = cache.getCategory("avgTime", strconv.Itoa(int(avgTime/100.0)))
+	for _, value := range tmpArr {
+		inputVector = append(inputVector, value)
+	}
+	tmpArr = cache.getCategory("size", strconv.Itoa(int(size/1000.0)))
+	for _, value := range tmpArr {
+		inputVector = append(inputVector, value)
+	}
+
+	return inputVector
+}
+
 func (cache *AILRU) updatePolicy(filename string, size float32, hit bool, vars ...interface{}) bool {
 	var added = false
 
@@ -390,8 +450,19 @@ func (cache *AILRU) updatePolicy(filename string, size float32, hit bool, vars .
 	if !hit {
 		siteName := vars[0].(string)
 		userID := vars[1].(int)
-		// dataType := vars[2].(string)
-		// fileType := vars[3].(string)
+		tmpSplit := strings.Split(filename, "/")
+		dataType := tmpSplit[2]
+		fileType := tmpSplit[5]
+
+		featureVector := cache.composeFeatures(
+			siteName,
+			userID,
+			fileType,
+			dataType,
+			curStats.TotRequests,
+			curStats.RequestTicksMean,
+			size,
+		)
 
 		clientDeadline := time.Now().Add(time.Duration(60) * time.Second)
 		ctx, ctxCancel := context.WithDeadline(
@@ -403,8 +474,9 @@ func (cache *AILRU) updatePolicy(filename string, size float32, hit bool, vars .
 		result, err := cache.aiClient.AIPredictOne(
 			ctx,
 			&aiPb.AIInput{
-				InputVector: []float32{0.0, 0.0, 0.0},
+				InputVector: featureVector,
 			})
+
 		if err != nil {
 			fmt.Println()
 			fmt.Println(filename)
@@ -413,6 +485,7 @@ func (cache *AILRU) updatePolicy(filename string, size float32, hit bool, vars .
 			fmt.Println(curStats.TotRequests)
 			fmt.Println(curStats.RequestTicksMean)
 			fmt.Println(size)
+			fmt.Println(featureVector)
 			log.Fatalf("ERROR: %v.AIPredictOne(_) = _, %v", cache.aiClient, err)
 		}
 		if result.Store == false {

@@ -1246,15 +1246,16 @@ def main():
                     "--simDumpFileName=dump.json.gz",
                 ]
                 if cache_type == 'aiLRU':
-                    feature_map_file = path.join(
+                    feature_map_file = path.abspath(
+                        path.join(
                             path.dirname(args.ai_model),
                             "featureConverter.json.gzip"
                         )
+                    )
                     exe_args.append("--aiHost=127.0.0.1")
                     exe_args.append(f"--aiPort={cur_model_port}")
                     exe_args.append(f"--aiFeatureMap={feature_map_file}")
 
-                print(" ".join(exe_args))
                 cur_process = subprocess.Popen(
                     " ".join(exe_args),
                     shell=True,
