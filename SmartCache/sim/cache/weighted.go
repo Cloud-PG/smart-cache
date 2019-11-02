@@ -16,23 +16,24 @@ import (
 
 // WeightedCache cache
 type WeightedCache struct {
-	files                                                             map[string]float32
-	stats                                                             map[string]*WeightedFileStats
-	queue                                                             []*WeightedFileStats
-	hit, miss, size, MaxSize, Exp                                     float32
+	files                              map[string]float32
+	stats                              map[string]*WeightedFileStats
+	queue                              []*WeightedFileStats
+	hit, miss, size, MaxSize, Exp      float32
 	dataWritten, dataRead, dataDeleted float32
 	dataReadOnHit, dataReadOnMiss      float32
-	SelFunctionType                                                   FunctionType
-	lastFileHitted                                                    bool
-	lastFileAdded                                                     bool
-	lastFileName                                                      string
+	SelFunctionType                    FunctionType
+	lastFileHitted                     bool
+	lastFileAdded                      bool
+	lastFileName                       string
 }
 
 // Init the WeightedCache struct
-func (cache *WeightedCache) Init(_ ...interface{}) {
+func (cache *WeightedCache) Init(_ ...interface{}) interface{} {
 	cache.files = make(map[string]float32)
 	cache.stats = make(map[string]*WeightedFileStats)
 	cache.queue = make([]*WeightedFileStats, 0)
+	return cache
 }
 
 // ClearFiles remove the cache files

@@ -218,7 +218,8 @@ func simulationCmd(testAISimulation bool) *cobra.Command {
 					fmt.Println("ERR: No feature map indicated...")
 					os.Exit(-1)
 				}
-				curCacheInstance.Init(aiHost, aiPort, aiFeatureMap)
+				grpcConn := curCacheInstance.Init(aiHost, aiPort, aiFeatureMap)
+				defer grpcConn.(*grpc.ClientConn).Close()
 			}
 
 			if simDumpFileName == "" {

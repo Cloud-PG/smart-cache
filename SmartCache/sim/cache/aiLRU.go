@@ -49,7 +49,7 @@ type AILRU struct {
 }
 
 // Init the AILRU struct
-func (cache *AILRU) Init(args ...interface{}) {
+func (cache *AILRU) Init(args ...interface{}) interface{} {
 	cache.files = make(map[string]float32)
 	cache.queue = list.New()
 	cache.stats = make([]*WeightedFileStats, 0)
@@ -108,6 +108,8 @@ func (cache *AILRU) Init(args ...interface{}) {
 
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithInsecure())
+	opts = append(opts, grpc.WithBlock())
+
 	conn, err := grpc.Dial(fmt.Sprintf("%s:%s",
 		cache.aiClientHost, cache.aiClientPort,
 	), opts...)
@@ -118,6 +120,8 @@ func (cache *AILRU) Init(args ...interface{}) {
 	}
 
 	cache.aiClient = aiPb.NewAIServiceClient(cache.grpcConn)
+
+	return cache.grpcConn
 }
 
 // ClearFiles remove the cache files
@@ -464,20 +468,16 @@ func (cache *AILRU) updatePolicy(filename string, size float32, hit bool, vars .
 			size,
 		)
 
-		clientDeadline := time.Now().Add(time.Duration(60) * time.Second)
-		ctx, ctxCancel := context.WithDeadline(
-			context.Background(),
-			clientDeadline,
-		)
+		ctx, ctxCancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer ctxCancel()
 
-		result, err := cache.aiClient.AIPredictOne(
+		result, errGRPC := cache.aiClient.AIPredictOne(
 			ctx,
 			&aiPb.AIInput{
 				InputVector: featureVector,
 			})
 
-		if err != nil {
+		if errGRPC != nil {
 			fmt.Println()
 			fmt.Println(filename)
 			fmt.Println(siteName)
@@ -486,7 +486,7 @@ func (cache *AILRU) updatePolicy(filename string, size float32, hit bool, vars .
 			fmt.Println(curStats.RequestTicksMean)
 			fmt.Println(size)
 			fmt.Println(featureVector)
-			log.Fatalf("ERROR: %v.AIPredictOne(_) = _, %v", cache.aiClient, err)
+			log.Fatalf("ERROR: %v.AIPredictOne(_) = _, %v", cache.aiClient, errGRPC)
 		}
 		if result.Store == false {
 			return added

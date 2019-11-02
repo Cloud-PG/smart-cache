@@ -37,22 +37,23 @@ func (stats *LRUFileStats) updateRequests(hit bool, newTime time.Time) {
 
 // LRUCache cache
 type LRUCache struct {
-	files                                                             map[string]float32
-	stats                                                             map[string]*LRUFileStats
-	queue                                                             *list.List
-	hit, miss, size, MaxSize                                          float32
+	files                              map[string]float32
+	stats                              map[string]*LRUFileStats
+	queue                              *list.List
+	hit, miss, size, MaxSize           float32
 	dataWritten, dataRead, dataDeleted float32
 	dataReadOnHit, dataReadOnMiss      float32
-	lastFileHitted                                                    bool
-	lastFileAdded                                                     bool
-	lastFileName                                                      string
+	lastFileHitted                     bool
+	lastFileAdded                      bool
+	lastFileName                       string
 }
 
 // Init the LRU struct
-func (cache *LRUCache) Init(_ ...interface{}) {
+func (cache *LRUCache) Init(_ ...interface{}) interface{} {
 	cache.files = make(map[string]float32)
 	cache.stats = make(map[string]*LRUFileStats)
 	cache.queue = list.New()
+	return cache
 }
 
 // ClearFiles remove the cache files

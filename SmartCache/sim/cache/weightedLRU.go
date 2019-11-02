@@ -34,12 +34,13 @@ type WeightedLRU struct {
 }
 
 // Init the WeightedLRU struct
-func (cache *WeightedLRU) Init(_ ...interface{}) {
+func (cache *WeightedLRU) Init(_ ...interface{}) interface{} {
 	cache.files = make(map[string]float32)
 	cache.fileWeights = make([]float32, 0)
 	cache.stats = make([]*WeightedFileStats, 0)
 	cache.statsFilenames = make(map[string]int, 0)
 	cache.queue = list.New()
+	return cache
 }
 
 // ClearFiles remove the cache files
