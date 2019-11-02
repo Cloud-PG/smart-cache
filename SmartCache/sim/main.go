@@ -351,16 +351,12 @@ func simulationCmd(testAISimulation bool) *cobra.Command {
 					sizeInMbytes := record.Size / (1024 * 1024)
 
 					if testAISimulation {
-						parts := strings.Split(record.Filename, "/")
-						dataType := parts[1]
-						fileType := parts[5]
 						curCacheInstance.Get(
 							record.Filename,
 							sizeInMbytes,
+							record.Day,
 							record.SiteName,
 							record.UserID,
-							dataType,
-							fileType,
 						)
 					} else {
 						curCacheInstance.Get(

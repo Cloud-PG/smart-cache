@@ -446,14 +446,14 @@ func (cache *AILRU) composeFeatures(vars ...interface{}) []float32 {
 func (cache *AILRU) updatePolicy(filename string, size float32, hit bool, vars ...interface{}) bool {
 	var added = false
 
-	// FIXME: ADD REAL REQUEST TIME
-	currentTime := time.Now()
+	day := vars[0].(int64)
+	currentTime := time.Unix(day, 0)
 	_, curStats := cache.getOrInsertStats(filename)
 	curStats.updateStats(hit, size, currentTime)
 
 	if !hit {
-		siteName := vars[0].(string)
-		userID := vars[1].(int)
+		siteName := vars[1].(string)
+		userID := vars[2].(int)
 		tmpSplit := strings.Split(filename, "/")
 		dataType := tmpSplit[2]
 		fileType := tmpSplit[5]
