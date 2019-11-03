@@ -1,11 +1,13 @@
 from concurrent import futures
+from sys import argv
+from time import time
 
 import grpc
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 
-from ..service import ai_pb2_grpc, ai_pb2
+from ..service import ai_pb2, ai_pb2_grpc
 
 
 class DonkeyModel(ai_pb2_grpc.AIServiceServicer):
@@ -15,6 +17,9 @@ class DonkeyModel(ai_pb2_grpc.AIServiceServicer):
         self._epochs = epochs
         self._model = None
         self._server = None
+        # Outputs
+        self.__num_predictions = 0
+        self.__start_time = time()
 
     def __compile_model(self, input_size: int, output_size: int,
                         cnn: bool = False
@@ -76,6 +81,14 @@ class DonkeyModel(ai_pb2_grpc.AIServiceServicer):
         response = ai_pb2.StorePrediction(
             store=True if prediction == 1 else False
         )
+
+        self.__num_predictions += 1
+
+        if time() - self.__start_time >= 1.0:
+            print(f"[AI][Predicted {self.__num_predictions}/s]", end="\r")
+            self.__num_predictions = 0
+            self.__start_time = time()
+
         return response
 
     def predict_one(self, data):
@@ -95,20 +108,21 @@ class DonkeyModel(ai_pb2_grpc.AIServiceServicer):
 
     def serve(self, host: str = "127.0.0.1",
               port: int = 4242,
-              max_workers: int = 1,
+              max_workers: int = 10,
               ) -> 'DonkeyModel':
         self._server = grpc.server(
             futures.ThreadPoolExecutor(max_workers=max_workers)
         )
         ai_pb2_grpc.add_AIServiceServicer_to_server(self, self._server)
         self._server.add_insecure_port(f'{host}:{port}')
+        print(f"[AI][Serve on {host}:{port}]")
         self._server.start()
+        self._server.wait_for_termination()
         return self
 
     def __del__(self):
         if self._server:
-            self._server.stop(False)
-            self._server.wait_for_termination()
+            self._server.stop(True)
 
 
 class CMSTest0ModelGenerator(object):
@@ -176,3 +190,11 @@ class CMSTest0ModelGenerator(object):
 
     def load(self, filename: str):
         self._model = keras.models.load_model(filename)
+
+if __name__ == "__main__":
+    if argv[1] == "serve" and argv[2] == "donkey":
+        model = DonkeyModel()
+        model.load(argv[3])
+        model.serve()
+    else:
+        print("Use: python -m SmartCache.ai.models.generator serve 'model_name' 'model_file_path'")

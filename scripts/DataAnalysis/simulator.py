@@ -1215,17 +1215,8 @@ def main():
         )
         os.makedirs(single_window_run_dir, exist_ok=True)
 
-        model_processes = []
-
         for window_idx in range(args.window_start, args.window_stop):
             for cache_type in cache_types:
-                if cache_type == 'aiLRU':
-                    cur_model = DonkeyModel()
-                    cur_model.load(args.ai_model)
-                    cur_model_port = 4200+window_idx
-                    cur_model.serve(port=cur_model_port)
-                    model_processes.append((cur_model, cur_model))
-
                 working_dir = path.join(
                     single_window_run_dir,
                     f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}",
@@ -1253,7 +1244,7 @@ def main():
                         )
                     )
                     exe_args.append("--aiHost=127.0.0.1")
-                    exe_args.append(f"--aiPort={cur_model_port}")
+                    exe_args.append(f"--aiPort=4242")
                     exe_args.append(f"--aiFeatureMap={feature_map_file}")
 
                 cur_process = subprocess.Popen(
