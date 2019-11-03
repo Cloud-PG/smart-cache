@@ -468,7 +468,7 @@ func (cache *AILRU) updatePolicy(filename string, size float32, hit bool, vars .
 			size,
 		)
 
-		ctx, ctxCancel := context.WithTimeout(context.Background(), 960*time.Second)
+		ctx, ctxCancel := context.WithTimeout(context.Background(), 24*time.Hour)
 		defer ctxCancel()
 
 		req := &aiPb.AIInput{
