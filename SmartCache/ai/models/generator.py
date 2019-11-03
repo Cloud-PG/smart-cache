@@ -1,3 +1,4 @@
+import logging
 from concurrent import futures
 from sys import argv
 from time import time
@@ -195,6 +196,7 @@ if __name__ == "__main__":
     if argv[1] == "serve" and argv[2] == "donkey":
         model = DonkeyModel()
         model.load(argv[3])
+        logging.basicConfig()
         model.serve()
     else:
         print("Use: python -m SmartCache.ai.models.generator serve 'model_name' 'model_file_path'")
