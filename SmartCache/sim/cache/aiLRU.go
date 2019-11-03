@@ -468,14 +468,14 @@ func (cache *AILRU) updatePolicy(filename string, size float32, hit bool, vars .
 			size,
 		)
 
-		ctx, ctxCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		ctx, ctxCancel := context.WithTimeout(context.Background(), 240*time.Second)
 		defer ctxCancel()
 
-		result, errGRPC := cache.aiClient.AIPredictOne(
-			ctx,
-			&aiPb.AIInput{
-				InputVector: featureVector,
-			})
+		req := &aiPb.AIInput{
+			InputVector: featureVector,
+		}
+
+		result, errGRPC := cache.aiClient.AIPredictOne(ctx, req)
 
 		if errGRPC != nil {
 			fmt.Println()
