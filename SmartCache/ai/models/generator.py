@@ -14,6 +14,9 @@ from ..service import ai_pb2, ai_pb2_grpc
 class DonkeyModel(ai_pb2_grpc.AIServiceServicer):
 
     def __init__(self, epochs: int = 20, batch_size: int = 64):
+        # Force CPU 
+        os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+
         self._batch_size = batch_size
         self._epochs = epochs
         self._model = None
