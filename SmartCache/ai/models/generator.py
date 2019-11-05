@@ -1,4 +1,5 @@
 import logging
+import os
 from concurrent import futures
 from sys import argv
 from time import time
@@ -14,9 +15,6 @@ from ..service import ai_pb2, ai_pb2_grpc
 class DonkeyModel(ai_pb2_grpc.AIServiceServicer):
 
     def __init__(self, epochs: int = 20, batch_size: int = 64):
-        # Force CPU 
-        os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
-
         self._batch_size = batch_size
         self._epochs = epochs
         self._model = None
@@ -24,6 +22,9 @@ class DonkeyModel(ai_pb2_grpc.AIServiceServicer):
         # Outputs
         self.__num_predictions = 0
         self.__start_time = time()
+        
+        # Force CPU 
+        os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
     def __compile_model(self, input_size: int, output_size: int,
                         cnn: bool = False
