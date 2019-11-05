@@ -22,8 +22,8 @@ class DonkeyModel(ai_pb2_grpc.AIServiceServicer):
         # Outputs
         self.__num_predictions = 0
         self.__start_time = time()
-        
-        # Force CPU 
+
+        # Force CPU
         os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
     def __compile_model(self, input_size: int, output_size: int,
@@ -195,6 +195,7 @@ class CMSTest0ModelGenerator(object):
 
     def load(self, filename: str):
         self._model = keras.models.load_model(filename)
+
 
 if __name__ == "__main__":
     if argv[1] == "serve" and argv[2] == "donkey":
