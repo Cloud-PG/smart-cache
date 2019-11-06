@@ -1041,7 +1041,6 @@ def evolve_with_genetic_algorithm(population, dataframe,
                                   num_generations: int
                                   ):
     cur_population = [elm for elm in population]
-    pool = Pool()
 
     cur_fitness = []
     for indivudual in cur_population:
@@ -1053,33 +1052,35 @@ def evolve_with_genetic_algorithm(population, dataframe,
         position=0
     ):
         idx_best = np.argmax(cur_fitness)
-        best = cur_population[idx_best]
 
         childrens = []
         childrens_fitness = []
 
-        for cur_idx, (child_0, child_0_fitness, child_1, child_1_fitness) in tqdm(
-                enumerate(
-                    pool.imap(
-                        generation,
-                        [
-                            (
-                                cur_population[candidates[0]],
-                                cur_population[candidates[1]],
-                                dataframe,
-                                cache_size
-                            )
-                            for candidates
-                            in roulette_wheel(cur_fitness, len(population))
-                        ]
+        pool = Pool()
+
+        for child_0, child_0_fitness, child_1, child_1_fitness in tqdm(
+            pool.imap(
+                generation,
+                [
+                    (
+                        cur_population[candidates[0]],
+                        cur_population[candidates[1]],
+                        dataframe,
+                        cache_size
                     )
-                ),
+                    for candidates
+                    in roulette_wheel(cur_fitness, len(population))
+                ]
+            ),
                 desc=f"Make new generation [Best: {cur_fitness[idx_best]:0.0f}][Mean: {np.mean(cur_fitness):0.0f}][Var: {np.var(cur_fitness):0.0f}]",
                 ascii=True, position=1, leave=False,
                 total=len(cur_population),
         ):
             childrens += [child_0, child_1]
             childrens_fitness += [child_0_fitness, child_1_fitness]
+
+        pool.close()
+        pool.join()
 
         new_population = cur_population + childrens
         new_fitness = cur_fitness + childrens_fitness
@@ -1090,9 +1091,6 @@ def evolve_with_genetic_algorithm(population, dataframe,
                 cur_fitness[idx] = new_fitness[real_idx]
             else:
                 break
-
-    pool.close()
-    pool.join()
 
     idx_best = np.argmax(cur_fitness)
     return cur_population[idx_best]
