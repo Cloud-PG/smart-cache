@@ -15,7 +15,7 @@ service AIService {
 }
 
 message AIInput {
-  repeated float inputVector = 1;
+  repeated double inputVector = 1;
 }
 
 message StorePrediction {

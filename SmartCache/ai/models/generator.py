@@ -1,3 +1,5 @@
+import gzip
+import json
 import logging
 import os
 from concurrent import futures
@@ -104,6 +106,34 @@ class DonkeyModel(ai_pb2_grpc.AIServiceServicer):
     def predict(self, data):
         predictions = self._model.predict(data)
         return np.argmax(predictions, axis=1)
+
+    def export_weights(self, out_name: str):
+        model = {
+            'name': "DonkeyModel",
+            'layers': []
+        }
+        config = self._model.get_config()['layers']
+        for idx, layer in enumerate(self._model.layers):
+            weights, bias = layer.get_weights()
+            model['layers'].append(
+                {
+                    'name': config[idx]['config']['name'],
+                    'weights': {
+                        "shape": weights.shape,
+                        "values": weights.tolist()
+                    },
+                    'bias': {
+                        "shape": bias.shape,
+                        "values": bias.tolist()
+                    },
+                    'activation_function': config[idx]['config']['activation']
+                }
+            )
+        with gzip.GzipFile("{}.json.gz".format(out_name), "wb") as outZip:
+            outZip.write(
+                json.dumps(model, indent=2).encode("utf-8")
+            )
+        self._model.save()
 
     def save(self, out_name: str):
         self._model.save("{}.h5".format(out_name))

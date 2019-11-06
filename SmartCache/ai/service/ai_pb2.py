@@ -20,7 +20,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='aiservice',
   syntax='proto3',
   serialized_options=_b('\n\030io.grpc.cache.ai.serviceB\016CacheAIServiceP\001'),
-  serialized_pb=_b('\n\x08\x61i.proto\x12\taiservice\"\x1e\n\x07\x41IInput\x12\x13\n\x0binputVector\x18\x01 \x03(\x02\" \n\x0fStorePrediction\x12\r\n\x05store\x18\x01 \x01(\x08\x32M\n\tAIService\x12@\n\x0c\x41IPredictOne\x12\x12.aiservice.AIInput\x1a\x1a.aiservice.StorePrediction\"\x00\x42,\n\x18io.grpc.cache.ai.serviceB\x0e\x43\x61\x63heAIServiceP\x01\x62\x06proto3')
+  serialized_pb=_b('\n\x08\x61i.proto\x12\taiservice\"\x1e\n\x07\x41IInput\x12\x13\n\x0binputVector\x18\x01 \x03(\x01\" \n\x0fStorePrediction\x12\r\n\x05store\x18\x01 \x01(\x08\x32M\n\tAIService\x12@\n\x0c\x41IPredictOne\x12\x12.aiservice.AIInput\x1a\x1a.aiservice.StorePrediction\"\x00\x42,\n\x18io.grpc.cache.ai.serviceB\x0e\x43\x61\x63heAIServiceP\x01\x62\x06proto3')
 )
 
 
@@ -35,7 +35,7 @@ _AIINPUT = _descriptor.Descriptor(
   fields=[
     _descriptor.FieldDescriptor(
       name='inputVector', full_name='aiservice.AIInput.inputVector', index=0,
-      number=1, type=2, cpp_type=6, label=3,
+      number=1, type=1, cpp_type=5, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,

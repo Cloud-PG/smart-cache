@@ -20,6 +20,7 @@ import (
 var (
 	aiFeatureMap        string
 	aiHost              string
+	aiModel             string
 	aiPort              string
 	buildstamp          string
 	cacheSize           float32
@@ -212,14 +213,17 @@ func simulationCmd(testAISimulation bool) *cobra.Command {
 			resultFileName := baseName + "_results.csv"
 
 			// Create cache
+			var grpcConn interface{} = nil
 			curCacheInstance := genCache(cacheType)
 			if testAISimulation {
 				if aiFeatureMap == "" {
 					fmt.Println("ERR: No feature map indicated...")
 					os.Exit(-1)
 				}
-				grpcConn := curCacheInstance.Init(aiHost, aiPort, aiFeatureMap)
-				defer grpcConn.(*grpc.ClientConn).Close()
+				grpcConn = curCacheInstance.Init(aiHost, aiPort, aiFeatureMap, aiModel)
+				if grpcConn != nil {
+					defer grpcConn.(*grpc.ClientConn).Close()
+				}
 			}
 
 			if simDumpFileName == "" {
@@ -454,6 +458,10 @@ func simulationCmd(testAISimulation bool) *cobra.Command {
 		cmd.PersistentFlags().StringVar(
 			&aiFeatureMap, "aiFeatureMap", "",
 			"the feature map file for data conversions",
+		)
+		cmd.PersistentFlags().StringVar(
+			&aiModel, "aiModel", "",
+			"the model to load into the simulator",
 		)
 	}
 	return cmd

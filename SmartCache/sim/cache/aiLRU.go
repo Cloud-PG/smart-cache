@@ -17,6 +17,7 @@ import (
 	aiPb "./aiService"
 	pb "./simService"
 	empty "github.com/golang/protobuf/ptypes/empty"
+	"gonum.org/v1/gonum/mat"
 	"google.golang.org/grpc"
 )
 
@@ -43,6 +44,7 @@ type AILRU struct {
 	aiClientPort                       string
 	aiClient                           aiPb.AIServiceClient
 	aiFeatureMap                       map[string]featureMapObj
+	aiModel                            *AIModel
 	grpcConn                           *grpc.ClientConn
 	grpcContext                        context.Context
 	grpcCxtCancel                      context.CancelFunc
@@ -59,6 +61,7 @@ func (cache *AILRU) Init(args ...interface{}) interface{} {
 	cache.aiClientHost = args[0].(string)
 	cache.aiClientPort = args[1].(string)
 	featureMapFilePath := args[2].(string)
+	modelFilePath := args[3].(string)
 
 	featureMapFile, errOpenFile := os.Open(featureMapFilePath)
 	if errOpenFile != nil {
@@ -106,22 +109,30 @@ func (cache *AILRU) Init(args ...interface{}) interface{} {
 		cache.aiFeatureMap[k0] = curStruct
 	}
 
-	var opts []grpc.DialOption
-	opts = append(opts, grpc.WithInsecure())
-	opts = append(opts, grpc.WithBlock())
+	if modelFilePath == "" {
+		cache.aiModel = nil
 
-	conn, err := grpc.Dial(fmt.Sprintf("%s:%s",
-		cache.aiClientHost, cache.aiClientPort,
-	), opts...)
+		var opts []grpc.DialOption
+		opts = append(opts, grpc.WithInsecure())
+		opts = append(opts, grpc.WithBlock())
 
-	cache.grpcConn = conn
-	if err != nil {
-		log.Fatalf("ERROR: Fail to dial wit AI Client: %v", err)
+		conn, err := grpc.Dial(fmt.Sprintf("%s:%s",
+			cache.aiClientHost, cache.aiClientPort,
+		), opts...)
+
+		cache.grpcConn = conn
+		if err != nil {
+			log.Fatalf("ERROR: Fail to dial wit AI Client: %v", err)
+		}
+
+		cache.aiClient = aiPb.NewAIServiceClient(cache.grpcConn)
+
+		return cache.grpcConn
+	} else {
+		cache.aiModel = LoadModel(modelFilePath)
 	}
 
-	cache.aiClient = aiPb.NewAIServiceClient(cache.grpcConn)
-
-	return cache.grpcConn
+	return nil
 }
 
 // ClearFiles remove the cache files
@@ -385,10 +396,10 @@ func (cache *AILRU) getOrInsertStats(filename string) (int, *WeightedFileStats) 
 	return resultIdx, stats
 }
 
-func (cache *AILRU) getCategory(key string, value string) []float32 {
-	var res []float32
+func (cache *AILRU) getCategory(key string, value string) []float64 {
+	var res []float64
 	if cache.aiFeatureMap[key].UnknownValues {
-		res = make([]float32, len(cache.aiFeatureMap[key].Keys)+1)
+		res = make([]float64, len(cache.aiFeatureMap[key].Keys)+1)
 		oneHot, inMap := cache.aiFeatureMap[key].Values[value]
 		if inMap {
 			res[oneHot] = 1.0
@@ -396,23 +407,23 @@ func (cache *AILRU) getCategory(key string, value string) []float32 {
 			res[0] = 1.0
 		}
 	} else {
-		res = make([]float32, len(cache.aiFeatureMap[key].Keys))
+		res = make([]float64, len(cache.aiFeatureMap[key].Keys))
 		res[cache.aiFeatureMap[key].Values[value]] = 1.0
 	}
 	return res
 }
 
-func (cache *AILRU) composeFeatures(vars ...interface{}) []float32 {
-	var inputVector []float32
-	var tmpArr []float32
+func (cache *AILRU) composeFeatures(vars ...interface{}) []float64 {
+	var inputVector []float64
+	var tmpArr []float64
 
 	siteName := vars[0].(string)
 	userID := strconv.Itoa(vars[1].(int))
 	fileType := vars[2].(string)
 	dataType := vars[3].(string)
-	totRequests := float32(vars[4].(uint32))
-	avgTime := vars[5].(float32)
-	size := vars[6].(float32)
+	totRequests := float64(vars[4].(uint32))
+	avgTime := float64(vars[5].(float32))
+	size := float64(vars[6].(float32))
 
 	tmpArr = cache.getCategory("siteName", siteName)
 	for _, value := range tmpArr {
@@ -468,29 +479,36 @@ func (cache *AILRU) updatePolicy(filename string, size float32, hit bool, vars .
 			size,
 		)
 
-		ctx, ctxCancel := context.WithTimeout(context.Background(), 24*time.Hour)
-		defer ctxCancel()
+		if cache.aiModel == nil {
+			ctx, ctxCancel := context.WithTimeout(context.Background(), 24*time.Hour)
+			defer ctxCancel()
 
-		req := &aiPb.AIInput{
-			InputVector: featureVector,
+			req := &aiPb.AIInput{
+				InputVector: featureVector,
+			}
+
+			result, errGRPC := cache.aiClient.AIPredictOne(ctx, req)
+
+			if errGRPC != nil {
+				fmt.Println()
+				fmt.Println(filename)
+				fmt.Println(siteName)
+				fmt.Println(userID)
+				fmt.Println(curStats.TotRequests)
+				fmt.Println(curStats.RequestTicksMean)
+				fmt.Println(size)
+				fmt.Println(featureVector)
+				log.Fatalf("ERROR: %v.AIPredictOne(_) = _, %v", cache.aiClient, errGRPC)
+			}
+			if result.Store == false {
+				return added
+			}
+		} else {
+			inputVector := mat.NewDense(len(featureVector), 1, featureVector)
+			result := cache.aiModel.Predict(inputVector)
+			fmt.Println(result)
 		}
 
-		result, errGRPC := cache.aiClient.AIPredictOne(ctx, req)
-
-		if errGRPC != nil {
-			fmt.Println()
-			fmt.Println(filename)
-			fmt.Println(siteName)
-			fmt.Println(userID)
-			fmt.Println(curStats.TotRequests)
-			fmt.Println(curStats.RequestTicksMean)
-			fmt.Println(size)
-			fmt.Println(featureVector)
-			log.Fatalf("ERROR: %v.AIPredictOne(_) = _, %v", cache.aiClient, errGRPC)
-		}
-		if result.Store == false {
-			return added
-		}
 		// Insert with LRU mechanism
 		if cache.Size()+size > cache.MaxSize {
 			var totalDeleted float32
