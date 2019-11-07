@@ -1441,9 +1441,6 @@ def main():
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                 )
-                if cache_type == 'aiLRU':
-                    exe_args.append("--aiHost=127.0.0.1")
-                    exe_args.append(f"--aiPort={cur_model_port}")
                 processes.append(("Next Period", cur_process))
 
         wait_jobs(processes)
