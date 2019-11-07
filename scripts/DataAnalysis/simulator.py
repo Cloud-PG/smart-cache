@@ -1289,9 +1289,22 @@ def main():
                 f"--simStopWindow={args.window_stop}",
             ]
             if cache_type == 'aiLRU':
-                cur_model_port = 4200
+                feature_map_file = path.abspath(
+                    path.join(
+                        path.dirname(args.ai_model),
+                        "featureConverter.json.gzip"
+                    )
+                )
+                model_weights_file = path.abspath(
+                    path.join(
+                        path.dirname(args.ai_model),
+                        "modelWeightsDump.json.gzip"
+                    )
+                )
                 exe_args.append("--aiHost=127.0.0.1")
-                exe_args.append(f"--aiPort={cur_model_port}")
+                exe_args.append(f"--aiPort=4242")
+                exe_args.append(f"--aiFeatureMap={feature_map_file}")
+                exe_args.append(f"--aiModel={model_weights_file}")
             cur_process = subprocess.Popen(
                 " ".join(exe_args),
                 shell=True,
@@ -1341,9 +1354,22 @@ def main():
                     f"--simLoadDumpFileName={path.join(dump_dir, 'dump.json.gz')}",
                 ]
                 if cache_type == 'aiLRU':
-                    cur_model_port = 4200+window_idx
+                    feature_map_file = path.abspath(
+                        path.join(
+                            path.dirname(args.ai_model),
+                            "featureConverter.json.gzip"
+                        )
+                    )
+                    model_weights_file = path.abspath(
+                        path.join(
+                            path.dirname(args.ai_model),
+                            "modelWeightsDump.json.gzip"
+                        )
+                    )
                     exe_args.append("--aiHost=127.0.0.1")
-                    exe_args.append(f"--aiPort={cur_model_port}")
+                    exe_args.append(f"--aiPort=4242")
+                    exe_args.append(f"--aiFeatureMap={feature_map_file}")
+                    exe_args.append(f"--aiModel={model_weights_file}")
                 cur_process = subprocess.Popen(
                     " ".join(exe_args),
                     shell=True,
@@ -1391,9 +1417,22 @@ def main():
                     f"--simLoadDumpFileName={path.join(dump_dir, 'dump.json.gz')}",
                 ]
                 if cache_type == 'aiLRU':
-                    cur_model_port = 4200+window_idx
+                    feature_map_file = path.abspath(
+                        path.join(
+                            path.dirname(args.ai_model),
+                            "featureConverter.json.gzip"
+                        )
+                    )
+                    model_weights_file = path.abspath(
+                        path.join(
+                            path.dirname(args.ai_model),
+                            "modelWeightsDump.json.gzip"
+                        )
+                    )
                     exe_args.append("--aiHost=127.0.0.1")
-                    exe_args.append(f"--aiPort={cur_model_port}")
+                    exe_args.append(f"--aiPort=4242")
+                    exe_args.append(f"--aiFeatureMap={feature_map_file}")
+                    exe_args.append(f"--aiModel={model_weights_file}")
                 cur_process = subprocess.Popen(
                     " ".join(exe_args),
                     shell=True,
