@@ -1241,10 +1241,16 @@ def main():
                             "featureConverter.json.gzip"
                         )
                     )
+                    model_weights_file = path.abspath(
+                        path.join(
+                            path.dirname(args.ai_model),
+                            "modelWeightsDump.json.gzip"
+                        )
+                    )
                     exe_args.append("--aiHost=127.0.0.1")
                     exe_args.append(f"--aiPort=4242")
                     exe_args.append(f"--aiFeatureMap={feature_map_file}")
-
+                    exe_args.append(f"--aiModel={model_weights_file}")
                 cur_process = subprocess.Popen(
                     " ".join(exe_args),
                     shell=True,

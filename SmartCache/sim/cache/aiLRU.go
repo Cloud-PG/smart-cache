@@ -506,7 +506,11 @@ func (cache *AILRU) updatePolicy(filename string, size float32, hit bool, vars .
 		} else {
 			inputVector := mat.NewDense(len(featureVector), 1, featureVector)
 			result := cache.aiModel.Predict(inputVector)
-			fmt.Println(result)
+			store := result.At(0, 0) < result.At(0, 1)
+			// PrintTensor(result)
+			if store == false {
+				return added
+			}
 		}
 
 		// Insert with LRU mechanism

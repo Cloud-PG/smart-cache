@@ -3,6 +3,7 @@ package cache
 import (
 	"compress/gzip"
 	"encoding/json"
+	"fmt"
 	"log"
 	"math"
 	"os"
@@ -52,7 +53,7 @@ func hardSigmoid(x float64) float64 {
 
 // softMax implements the soft max function
 // for use in activation functions.
-func softMax(matrix *mat.Dense) *mat.Dense {
+func softMax(matrix mat.Matrix) *mat.Dense {
 	// Implement the softMax for 2D matrices. The formula is:
 	//  S(y_i) = e^(y_i) / sum(e^(y_i))
 
@@ -83,7 +84,7 @@ func softMax(matrix *mat.Dense) *mat.Dense {
 
 // LoadModel loads an AI model from a gzip file
 func LoadModel(modelFilePath string) *AIModel {
-	var curModel *AIModel
+	var curModel AIModel
 
 	modelFile, errOpenFile := os.Open(modelFilePath)
 	if errOpenFile != nil {
@@ -95,12 +96,12 @@ func LoadModel(modelFilePath string) *AIModel {
 		log.Fatalf("[Model Error]: Cannot open zip stream from file '%s'\nError: %s\n", modelFilePath, errOpenZipFile)
 	}
 
-	errJSONUnmarshal := json.NewDecoder(modelFileGz).Decode(curModel)
+	errJSONUnmarshal := json.NewDecoder(modelFileGz).Decode(&curModel)
 	if errJSONUnmarshal != nil {
 		log.Fatalf("[Model Error]: Cannot unmarshal json from file '%s'\nError: %s\n", modelFilePath, errJSONUnmarshal)
 	}
 
-	for _, layer := range curModel.Layers {
+	for idx, layer := range curModel.Layers {
 		// Create weight tensor
 		curWeights := mat.NewDense(
 			layer.Weights.Shape[0],
@@ -110,34 +111,64 @@ func LoadModel(modelFilePath string) *AIModel {
 		for row := 0; row < layer.Weights.Shape[0]; row++ {
 			curWeights.SetRow(row, layer.Weights.Values[row])
 		}
-		layer.Weights.Tensor = curWeights
+		curModel.Layers[idx].Weights.Tensor = curWeights
 		// Create bias tensor
 		curBias := mat.NewDense(
-			layer.Weights.Shape[0],
+			layer.Bias.Shape[0],
 			1,
 			nil,
 		)
 		for row := 0; row < layer.Bias.Shape[0]; row++ {
 			curBias.Set(row, 0, layer.Bias.Values[row])
 		}
-		layer.Bias.Tensor = curBias
+		curModel.Layers[idx].Bias.Tensor = curBias
 	}
 
-	return curModel
+	return &curModel
+}
+
+// PrintTensor make an output for mat.Matrix
+func PrintTensor(tensor mat.Matrix) {
+	d0, d1 := tensor.Dims()
+	fmt.Printf("(%d,%d)\n", d0, d1)
+	fmt.Print(" ")
+	for row := 0; row < d0; row++ {
+		fmt.Print("[")
+		for column := 0; column < d1; column++ {
+			fmt.Printf("%0.2f", tensor.At(row, column))
+			if column != d1-1 {
+				fmt.Print(" ")
+			} else {
+				fmt.Print("]")
+			}
+		}
+		fmt.Println()
+	}
+	fmt.Print("]")
+	fmt.Println()
 }
 
 // Predict implements the feed dorward prediction
-func (model AIModel) Predict(input *mat.Dense) mat.Dense {
+func (model AIModel) Predict(input *mat.Dense) *mat.Dense {
 	var output mat.Dense
 
 	for lvl, layer := range model.Layers {
 		var mulRes, sumRes, activationRes mat.Dense
+		// println(lvl, layer.Name)
 		if lvl == 0 {
-			mulRes.Mul(&input, layer.Weights.Tensor)
+			// PrintTensor(input.T())
+			// PrintTensor(layer.Weights.Tensor)
+			mulRes.Mul(input.T(), layer.Weights.Tensor)
+			// PrintTensor(&mulRes)
 		} else {
-			mulRes.Mul(&output, layer.Weights.Tensor)
+			// PrintTensor(output.T())
+			// PrintTensor(layer.Weights.Tensor)
+			mulRes.Mul(output.T(), layer.Weights.Tensor)
+			// PrintTensor(&mulRes)
 		}
-		sumRes.Add(&mulRes, layer.Bias.Tensor)
+		// PrintTensor(layer.Bias.Tensor)
+		sumRes.Add(mulRes.T(), layer.Bias.Tensor)
+		// PrintTensor(&sumRes)
 
 		var activationFunction func(int, int, float64) float64
 		switch layer.ActivationFunction {
@@ -148,11 +179,17 @@ func (model AIModel) Predict(input *mat.Dense) mat.Dense {
 			activationFunction = func(_, _ int, x float64) float64 { return hardSigmoid(x) }
 			activationRes.Apply(activationFunction, &sumRes)
 		case "softmax":
-			activationRes.Copy(softMax(&sumRes))
+			// fmt.Println("SumRes")
+			// PrintTensor(&sumRes)
+			softMaxRes := softMax(sumRes.T())
+			// fmt.Println("SoftMax")
+			// PrintTensor(softMaxRes)
+			activationRes.CloneFrom(softMaxRes)
 		}
 
-		output = activationRes
+		output.CloneFrom(&activationRes)
+		// PrintTensor(&output)
 	}
 
-	return output
+	return &output
 }

@@ -113,11 +113,12 @@ class DonkeyModel(ai_pb2_grpc.AIServiceServicer):
             'layers': []
         }
         config = self._model.get_config()['layers']
-        for idx, layer in enumerate(self._model.layers):
-            weights, bias = layer.get_weights()
+        for layer in config:
+            layer_name = layer['config']['name']
+            weights, bias = model.get_layer(layer_name).get_weights()
             model['layers'].append(
                 {
-                    'name': config[idx]['config']['name'],
+                    'name': layer_name,
                     'weights': {
                         "shape": weights.shape,
                         "values": weights.tolist()
@@ -126,7 +127,7 @@ class DonkeyModel(ai_pb2_grpc.AIServiceServicer):
                         "shape": bias.shape,
                         "values": bias.tolist()
                     },
-                    'activation_function': config[idx]['config']['activation']
+                    'activation_function': layer['config']['activation']
                 }
             )
         with gzip.GzipFile("{}.json.gz".format(out_name), "wb") as outZip:
