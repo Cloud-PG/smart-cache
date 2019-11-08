@@ -367,6 +367,7 @@ func (cache *WeightedLRU) moveStat(curIdx int, curStats *WeightedFileStats) {
 		copy(cache.fileWeights[targetIdx+2:curIdx+1], cache.fileWeights[targetIdx+1:curIdx])
 		cache.stats[targetIdx+1] = curStats
 		cache.fileWeights[targetIdx+1] = curWeight
+
 		cache.reIndex(targetIdx+1, curIdx)
 
 	} else if curIdx+1 < len(cache.stats) && cache.fileWeights[curIdx+1] > curWeight { // [Check right]-->
@@ -383,10 +384,10 @@ func (cache *WeightedLRU) moveStat(curIdx int, curStats *WeightedFileStats) {
 		copy(cache.fileWeights[curIdx:targetIdx], cache.fileWeights[curIdx+1:targetIdx])
 		cache.stats[targetIdx-1] = curStats
 		cache.fileWeights[targetIdx-1] = curWeight
+
 		cache.reIndex(curIdx, targetIdx-1)
 
 	}
-
 }
 
 func (cache *WeightedLRU) updatePolicy(filename string, size float32, hit bool, vars ...interface{}) bool {
