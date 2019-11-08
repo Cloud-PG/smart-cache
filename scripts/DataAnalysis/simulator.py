@@ -1032,8 +1032,8 @@ def roulette_wheel(fitness: list, extractions: int = 1):
             if random() <= cur_probability:
                 candidates.append(idx)
             if len(candidates) == 2:
-                yield candidates
                 break
+        yield candidates
 
 
 def evolve_with_genetic_algorithm(population, dataframe,
@@ -1056,7 +1056,7 @@ def evolve_with_genetic_algorithm(population, dataframe,
         childrens = []
         childrens_fitness = []
 
-        pool = Pool()
+        pool = Pool(processes=4, maxtasksperchild=1)
 
         for child_0, child_0_fitness, child_1, child_1_fitness in tqdm(
             pool.imap(
