@@ -356,16 +356,14 @@ func (cache *WeightedLRU) moveStat(curIdx int, curStats *WeightedFileStats) {
 		targetIdx = -1
 		for idx := curIdx - 1; idx >= 0; idx-- {
 			targetWeight := cache.fileWeights[idx]
-			if targetWeight < curWeight {
+			if targetWeight >= curWeight {
 				targetIdx = idx
-				continue
-			} else {
 				break
 			}
 		}
 		if targetIdx != -1 {
-			copy(cache.stats[targetIdx+1:curIdx+1], cache.stats[targetIdx:curIdx])
-			copy(cache.fileWeights[targetIdx+1:curIdx+1], cache.fileWeights[targetIdx:curIdx])
+			copy(cache.stats[targetIdx+1:curIdx], cache.stats[targetIdx:curIdx-1])
+			copy(cache.fileWeights[targetIdx+1:curIdx], cache.fileWeights[targetIdx:curIdx-1])
 			cache.stats[targetIdx] = curStats
 			cache.fileWeights[targetIdx] = curWeight
 			cache.reIndex(targetIdx, curIdx)
@@ -375,17 +373,15 @@ func (cache *WeightedLRU) moveStat(curIdx int, curStats *WeightedFileStats) {
 		targetIdx = len(cache.stats)
 		for idx := curIdx + 1; idx < len(cache.stats); idx++ {
 			targetWeight := cache.fileWeights[idx]
-			if targetWeight > curWeight {
+			if targetWeight <= curWeight {
 				targetIdx = idx
-				continue
-			} else {
 				break
 			}
 		}
 
 		if targetIdx != len(cache.stats) {
-			copy(cache.stats[curIdx:targetIdx], cache.stats[curIdx+1:targetIdx+1])
-			copy(cache.fileWeights[curIdx:targetIdx], cache.fileWeights[curIdx+1:targetIdx+1])
+			copy(cache.stats[curIdx:targetIdx-1], cache.stats[curIdx+1:targetIdx])
+			copy(cache.fileWeights[curIdx:targetIdx-1], cache.fileWeights[curIdx+1:targetIdx])
 			cache.stats[targetIdx] = curStats
 			cache.fileWeights[targetIdx] = curWeight
 			cache.reIndex(curIdx, targetIdx)
