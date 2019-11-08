@@ -352,7 +352,8 @@ func (cache *WeightedLRU) moveStat(curIdx int, curStats *WeightedFileStats) {
 	curWeight := cache.fileWeights[curIdx]
 	var targetIdx int
 
-	if curIdx-1 >= 0 { // <--[Check left]
+	// <--[Check left]
+	if curIdx-1 >= 0 && cache.fileWeights[curIdx-1] < curWeight {
 		targetIdx = -1
 		for idx := curIdx - 1; idx >= 0; idx-- {
 			targetWeight := cache.fileWeights[idx]
@@ -361,15 +362,14 @@ func (cache *WeightedLRU) moveStat(curIdx int, curStats *WeightedFileStats) {
 				break
 			}
 		}
-		if targetIdx != -1 {
-			copy(cache.stats[targetIdx:curIdx-1], cache.stats[targetIdx+1:curIdx])
-			copy(cache.fileWeights[targetIdx:curIdx-1], cache.fileWeights[targetIdx+1:curIdx])
-			cache.stats[targetIdx] = curStats
-			cache.fileWeights[targetIdx] = curWeight
-			cache.reIndex(targetIdx, curIdx)
-		}
-	}
-	if curIdx+1 < len(cache.stats) { // [Check right]-->
+
+		copy(cache.stats[targetIdx+2:curIdx+1], cache.stats[targetIdx+1:curIdx])
+		copy(cache.fileWeights[targetIdx+2:curIdx+1], cache.fileWeights[targetIdx+1:curIdx])
+		cache.stats[targetIdx+1] = curStats
+		cache.fileWeights[targetIdx+1] = curWeight
+		cache.reIndex(targetIdx, curIdx)
+
+	} else if curIdx+1 < len(cache.stats) && cache.fileWeights[curIdx+1] > curWeight { // [Check right]-->
 		targetIdx = len(cache.stats)
 		for idx := curIdx + 1; idx < len(cache.stats); idx++ {
 			targetWeight := cache.fileWeights[idx]
@@ -379,13 +379,12 @@ func (cache *WeightedLRU) moveStat(curIdx int, curStats *WeightedFileStats) {
 			}
 		}
 
-		if targetIdx != len(cache.stats) {
-			copy(cache.stats[curIdx:targetIdx-1], cache.stats[curIdx+1:targetIdx])
-			copy(cache.fileWeights[curIdx:targetIdx-1], cache.fileWeights[curIdx+1:targetIdx])
-			cache.stats[targetIdx] = curStats
-			cache.fileWeights[targetIdx] = curWeight
-			cache.reIndex(curIdx, targetIdx)
-		}
+		copy(cache.stats[curIdx:targetIdx], cache.stats[curIdx+1:targetIdx])
+		copy(cache.fileWeights[curIdx:targetIdx], cache.fileWeights[curIdx+1:targetIdx])
+		cache.stats[targetIdx-1] = curStats
+		cache.fileWeights[targetIdx-1] = curWeight
+		cache.reIndex(curIdx, targetIdx)
+
 	}
 
 }
