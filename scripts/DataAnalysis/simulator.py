@@ -1194,6 +1194,7 @@ def main():
     if args.action == "simulate":
         simulator_exe = get_simulator_exe(force_creation=args.force_exe_build)
         cache_types = args.cache_types.split(",")
+        simulation_steps = args.simulation_steps.split(",")
 
         base_dir = path.join(path.dirname(
             path.abspath(__file__)), args.out_folder)
@@ -1216,7 +1217,7 @@ def main():
         )
         os.makedirs(single_window_run_dir, exist_ok=True)
 
-        if 'single' in args.simulation_steps:
+        if 'single' in simulation_steps:
             for window_idx in range(args.window_start, args.window_stop):
                 for cache_type in cache_types:
                     working_dir = path.join(
@@ -1275,7 +1276,7 @@ def main():
         )
         os.makedirs(normal_run_dir, exist_ok=True)
 
-        if 'normal' in args.simulation_steps:
+        if 'normal' in simulation_steps:
             for cache_type in cache_types:
                 working_dir = path.join(
                     normal_run_dir,
@@ -1332,7 +1333,7 @@ def main():
         )
         os.makedirs(nexxt_window_run_dir, exist_ok=True)
 
-        if 'nextW' in args.simulation_steps:
+        if 'nextW' in simulation_steps:
             for window_idx in range(args.window_start, args.window_stop):
                 for cache_type in cache_types:
                     working_dir = path.join(
@@ -1396,7 +1397,7 @@ def main():
         )
         os.makedirs(next_period_run_dir, exist_ok=True)
 
-        if 'nextP' in args.simulation_steps:
+        if 'nextP' in simulation_steps:
             for window_idx in range(args.window_start, args.window_stop):
                 for cache_type in cache_types:
                     working_dir = path.join(
