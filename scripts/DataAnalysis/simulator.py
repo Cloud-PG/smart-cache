@@ -1134,6 +1134,9 @@ def main():
     parser.add_argument('--read-on-hit', type=bool,
                         default=True,
                         help='Use read on hit data [DEFAULT: True]')
+    parser.add_argument('--simulation-steps', type=str,
+                        default='single,normal,nextW,nextP',
+                        help='Select the simulation steps [DEFAULT: "single,normal,nextW,next"]')
     parser.add_argument('-FEB', '--force-exe-build', type=bool,
                         default=True,
                         help='Force to build the simulation executable [DEFAULT: True]')
@@ -1213,55 +1216,56 @@ def main():
         )
         os.makedirs(single_window_run_dir, exist_ok=True)
 
-        for window_idx in range(args.window_start, args.window_stop):
-            for cache_type in cache_types:
-                working_dir = path.join(
-                    single_window_run_dir,
-                    f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}",
-                    f"window_{window_idx}",
-                )
-                os.makedirs(working_dir, exist_ok=True)
-                exe_args = [
-                    simulator_exe,
-                    "simulate" if cache_type != 'aiLRU' else "testAI",
-                    cache_type,
-                    path.abspath(args.source),
-                    f"--size={args.cache_size}",
-                    f"--simRegion={args.region}",
-                    f"--simWindowSize={args.window_size}",
-                    f"--simStartFromWindow={window_idx}",
-                    f"--simStopWindow={window_idx+1}",
-                    "--simDump=true",
-                    "--simDumpFileName=dump.json.gz",
-                ]
-                if cache_type == 'aiLRU':
-                    feature_map_file = path.abspath(
-                        path.join(
-                            path.dirname(args.ai_model),
-                            "featureConverter.json.gzip"
-                        )
+        if 'single' in args.simulation_steps:
+            for window_idx in range(args.window_start, args.window_stop):
+                for cache_type in cache_types:
+                    working_dir = path.join(
+                        single_window_run_dir,
+                        f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}",
+                        f"window_{window_idx}",
                     )
-                    model_weights_file = path.abspath(
-                        path.join(
-                            path.dirname(args.ai_model),
-                            "modelWeightsDump.json.gzip"
+                    os.makedirs(working_dir, exist_ok=True)
+                    exe_args = [
+                        simulator_exe,
+                        "simulate" if cache_type != 'aiLRU' else "testAI",
+                        cache_type,
+                        path.abspath(args.source),
+                        f"--size={args.cache_size}",
+                        f"--simRegion={args.region}",
+                        f"--simWindowSize={args.window_size}",
+                        f"--simStartFromWindow={window_idx}",
+                        f"--simStopWindow={window_idx+1}",
+                        "--simDump=true",
+                        "--simDumpFileName=dump.json.gz",
+                    ]
+                    if cache_type == 'aiLRU':
+                        feature_map_file = path.abspath(
+                            path.join(
+                                path.dirname(args.ai_model),
+                                "featureConverter.json.gzip"
+                            )
                         )
+                        model_weights_file = path.abspath(
+                            path.join(
+                                path.dirname(args.ai_model),
+                                "modelWeightsDump.json.gzip"
+                            )
+                        )
+                        exe_args.append("--aiHost=127.0.0.1")
+                        exe_args.append(f"--aiPort=4242")
+                        exe_args.append(f"--aiFeatureMap={feature_map_file}")
+                        exe_args.append(f"--aiModel={model_weights_file}")
+                    cur_process = subprocess.Popen(
+                        " ".join(exe_args),
+                        shell=True,
+                        cwd=working_dir,
+                        stdin=subprocess.PIPE,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
                     )
-                    exe_args.append("--aiHost=127.0.0.1")
-                    exe_args.append(f"--aiPort=4242")
-                    exe_args.append(f"--aiFeatureMap={feature_map_file}")
-                    exe_args.append(f"--aiModel={model_weights_file}")
-                cur_process = subprocess.Popen(
-                    " ".join(exe_args),
-                    shell=True,
-                    cwd=working_dir,
-                    stdin=subprocess.PIPE,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                )
-                processes.append(("Single Window", cur_process))
+                    processes.append(("Single Window", cur_process))
 
-        wait_jobs(processes)
+            wait_jobs(processes)
 
         ##
         # Normal runs
@@ -1271,53 +1275,54 @@ def main():
         )
         os.makedirs(normal_run_dir, exist_ok=True)
 
-        for cache_type in cache_types:
-            working_dir = path.join(
-                normal_run_dir,
-                f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}"
-            )
-            os.makedirs(working_dir, exist_ok=True)
-            exe_args = [
-                simulator_exe,
-                "simulate" if cache_type != 'aiLRU' else "testAI",
-                cache_type,
-                path.abspath(args.source),
-                f"--size={args.cache_size}",
-                f"--simRegion={args.region}",
-                f"--simWindowSize={args.window_size}",
-                f"--simStartFromWindow={args.window_start}",
-                f"--simStopWindow={args.window_stop}",
-            ]
-            if cache_type == 'aiLRU':
-                feature_map_file = path.abspath(
-                    path.join(
-                        path.dirname(args.ai_model),
-                        "featureConverter.json.gzip"
-                    )
+        if 'normal' in args.simulation_steps:
+            for cache_type in cache_types:
+                working_dir = path.join(
+                    normal_run_dir,
+                    f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}"
                 )
-                model_weights_file = path.abspath(
-                    path.join(
-                        path.dirname(args.ai_model),
-                        "modelWeightsDump.json.gzip"
+                os.makedirs(working_dir, exist_ok=True)
+                exe_args = [
+                    simulator_exe,
+                    "simulate" if cache_type != 'aiLRU' else "testAI",
+                    cache_type,
+                    path.abspath(args.source),
+                    f"--size={args.cache_size}",
+                    f"--simRegion={args.region}",
+                    f"--simWindowSize={args.window_size}",
+                    f"--simStartFromWindow={args.window_start}",
+                    f"--simStopWindow={args.window_stop}",
+                ]
+                if cache_type == 'aiLRU':
+                    feature_map_file = path.abspath(
+                        path.join(
+                            path.dirname(args.ai_model),
+                            "featureConverter.json.gzip"
+                        )
                     )
+                    model_weights_file = path.abspath(
+                        path.join(
+                            path.dirname(args.ai_model),
+                            "modelWeightsDump.json.gzip"
+                        )
+                    )
+                    exe_args.append("--aiHost=127.0.0.1")
+                    exe_args.append(f"--aiPort=4242")
+                    exe_args.append(f"--aiFeatureMap={feature_map_file}")
+                    exe_args.append(f"--aiModel={model_weights_file}")
+                cur_process = subprocess.Popen(
+                    " ".join(exe_args),
+                    shell=True,
+                    cwd=working_dir,
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
                 )
-                exe_args.append("--aiHost=127.0.0.1")
-                exe_args.append(f"--aiPort=4242")
-                exe_args.append(f"--aiFeatureMap={feature_map_file}")
-                exe_args.append(f"--aiModel={model_weights_file}")
-            cur_process = subprocess.Popen(
-                " ".join(exe_args),
-                shell=True,
-                cwd=working_dir,
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
-            processes.append(("Full Run", cur_process))
-            if cache_type == 'aiLRU':
-                wait_jobs(processes)
+                processes.append(("Full Run", cur_process))
+                if cache_type == 'aiLRU':
+                    wait_jobs(processes)
 
-        wait_jobs(processes)
+            wait_jobs(processes)
 
         ##
         # Next windows
@@ -1327,60 +1332,61 @@ def main():
         )
         os.makedirs(nexxt_window_run_dir, exist_ok=True)
 
-        for window_idx in range(args.window_start, args.window_stop):
-            for cache_type in cache_types:
-                working_dir = path.join(
-                    nexxt_window_run_dir,
-                    f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}",
-                    f"window_{window_idx+1}",
-                )
-                dump_dir = path.join(
-                    single_window_run_dir,
-                    f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}",
-                    f"window_{window_idx}",
-                )
-                os.makedirs(working_dir, exist_ok=True)
-                exe_args = [
-                    simulator_exe,
-                    "simulate" if cache_type != 'aiLRU' else "testAI",
-                    cache_type,
-                    path.abspath(args.source),
-                    f"--size={args.cache_size}",
-                    f"--simRegion={args.region}",
-                    f"--simWindowSize={args.window_size}",
-                    f"--simStartFromWindow={window_idx+1}",
-                    f"--simStopWindow={window_idx+2}",
-                    "--simLoadDump=true",
-                    f"--simLoadDumpFileName={path.join(dump_dir, 'dump.json.gz')}",
-                ]
-                if cache_type == 'aiLRU':
-                    feature_map_file = path.abspath(
-                        path.join(
-                            path.dirname(args.ai_model),
-                            "featureConverter.json.gzip"
-                        )
+        if 'nextW' in args.simulation_steps:
+            for window_idx in range(args.window_start, args.window_stop):
+                for cache_type in cache_types:
+                    working_dir = path.join(
+                        nexxt_window_run_dir,
+                        f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}",
+                        f"window_{window_idx+1}",
                     )
-                    model_weights_file = path.abspath(
-                        path.join(
-                            path.dirname(args.ai_model),
-                            "modelWeightsDump.json.gzip"
-                        )
+                    dump_dir = path.join(
+                        single_window_run_dir,
+                        f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}",
+                        f"window_{window_idx}",
                     )
-                    exe_args.append("--aiHost=127.0.0.1")
-                    exe_args.append(f"--aiPort=4242")
-                    exe_args.append(f"--aiFeatureMap={feature_map_file}")
-                    exe_args.append(f"--aiModel={model_weights_file}")
-                cur_process = subprocess.Popen(
-                    " ".join(exe_args),
-                    shell=True,
-                    cwd=working_dir,
-                    stdin=subprocess.PIPE,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                )
-                processes.append(("Next Window", cur_process))
+                    os.makedirs(working_dir, exist_ok=True)
+                    exe_args = [
+                        simulator_exe,
+                        "simulate" if cache_type != 'aiLRU' else "testAI",
+                        cache_type,
+                        path.abspath(args.source),
+                        f"--size={args.cache_size}",
+                        f"--simRegion={args.region}",
+                        f"--simWindowSize={args.window_size}",
+                        f"--simStartFromWindow={window_idx+1}",
+                        f"--simStopWindow={window_idx+2}",
+                        "--simLoadDump=true",
+                        f"--simLoadDumpFileName={path.join(dump_dir, 'dump.json.gz')}",
+                    ]
+                    if cache_type == 'aiLRU':
+                        feature_map_file = path.abspath(
+                            path.join(
+                                path.dirname(args.ai_model),
+                                "featureConverter.json.gzip"
+                            )
+                        )
+                        model_weights_file = path.abspath(
+                            path.join(
+                                path.dirname(args.ai_model),
+                                "modelWeightsDump.json.gzip"
+                            )
+                        )
+                        exe_args.append("--aiHost=127.0.0.1")
+                        exe_args.append(f"--aiPort=4242")
+                        exe_args.append(f"--aiFeatureMap={feature_map_file}")
+                        exe_args.append(f"--aiModel={model_weights_file}")
+                    cur_process = subprocess.Popen(
+                        " ".join(exe_args),
+                        shell=True,
+                        cwd=working_dir,
+                        stdin=subprocess.PIPE,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                    )
+                    processes.append(("Next Window", cur_process))
 
-        wait_jobs(processes)
+            wait_jobs(processes)
 
         ##
         # Next Period
@@ -1390,60 +1396,61 @@ def main():
         )
         os.makedirs(next_period_run_dir, exist_ok=True)
 
-        for window_idx in range(args.window_start, args.window_stop):
-            for cache_type in cache_types:
-                working_dir = path.join(
-                    next_period_run_dir,
-                    f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}",
-                    f"windows_{window_idx+1}-{args.window_stop}",
-                )
-                dump_dir = path.join(
-                    single_window_run_dir,
-                    f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}",
-                    f"window_{window_idx}",
-                )
-                os.makedirs(working_dir, exist_ok=True)
-                exe_args = [
-                    simulator_exe,
-                    "simulate" if cache_type != 'aiLRU' else "testAI",
-                    cache_type,
-                    path.abspath(args.source),
-                    f"--size={args.cache_size}",
-                    f"--simRegion={args.region}",
-                    f"--simWindowSize={args.window_size}",
-                    f"--simStartFromWindow={window_idx+1}",
-                    f"--simStopWindow={args.window_stop+1}",
-                    "--simLoadDump=true",
-                    f"--simLoadDumpFileName={path.join(dump_dir, 'dump.json.gz')}",
-                ]
-                if cache_type == 'aiLRU':
-                    feature_map_file = path.abspath(
-                        path.join(
-                            path.dirname(args.ai_model),
-                            "featureConverter.json.gzip"
-                        )
+        if 'nextP' in args.simulation_steps:
+            for window_idx in range(args.window_start, args.window_stop):
+                for cache_type in cache_types:
+                    working_dir = path.join(
+                        next_period_run_dir,
+                        f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}",
+                        f"windows_{window_idx+1}-{args.window_stop}",
                     )
-                    model_weights_file = path.abspath(
-                        path.join(
-                            path.dirname(args.ai_model),
-                            "modelWeightsDump.json.gzip"
-                        )
+                    dump_dir = path.join(
+                        single_window_run_dir,
+                        f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}",
+                        f"window_{window_idx}",
                     )
-                    exe_args.append("--aiHost=127.0.0.1")
-                    exe_args.append(f"--aiPort=4242")
-                    exe_args.append(f"--aiFeatureMap={feature_map_file}")
-                    exe_args.append(f"--aiModel={model_weights_file}")
-                cur_process = subprocess.Popen(
-                    " ".join(exe_args),
-                    shell=True,
-                    cwd=working_dir,
-                    stdin=subprocess.PIPE,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                )
-                processes.append(("Next Period", cur_process))
+                    os.makedirs(working_dir, exist_ok=True)
+                    exe_args = [
+                        simulator_exe,
+                        "simulate" if cache_type != 'aiLRU' else "testAI",
+                        cache_type,
+                        path.abspath(args.source),
+                        f"--size={args.cache_size}",
+                        f"--simRegion={args.region}",
+                        f"--simWindowSize={args.window_size}",
+                        f"--simStartFromWindow={window_idx+1}",
+                        f"--simStopWindow={args.window_stop+1}",
+                        "--simLoadDump=true",
+                        f"--simLoadDumpFileName={path.join(dump_dir, 'dump.json.gz')}",
+                    ]
+                    if cache_type == 'aiLRU':
+                        feature_map_file = path.abspath(
+                            path.join(
+                                path.dirname(args.ai_model),
+                                "featureConverter.json.gzip"
+                            )
+                        )
+                        model_weights_file = path.abspath(
+                            path.join(
+                                path.dirname(args.ai_model),
+                                "modelWeightsDump.json.gzip"
+                            )
+                        )
+                        exe_args.append("--aiHost=127.0.0.1")
+                        exe_args.append(f"--aiPort=4242")
+                        exe_args.append(f"--aiFeatureMap={feature_map_file}")
+                        exe_args.append(f"--aiModel={model_weights_file}")
+                    cur_process = subprocess.Popen(
+                        " ".join(exe_args),
+                        shell=True,
+                        cwd=working_dir,
+                        stdin=subprocess.PIPE,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                    )
+                    processes.append(("Next Period", cur_process))
 
-        wait_jobs(processes)
+            wait_jobs(processes)
 
     elif args.action == "plot":
         filters = [elm for elm in args.plot_filters.split(",") if elm]
