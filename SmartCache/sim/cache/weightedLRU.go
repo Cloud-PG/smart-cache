@@ -362,8 +362,8 @@ func (cache *WeightedLRU) moveStat(curIdx int, curStats *WeightedFileStats) {
 			}
 		}
 		if targetIdx != -1 {
-			copy(cache.stats[targetIdx+1:curIdx], cache.stats[targetIdx:curIdx-1])
-			copy(cache.fileWeights[targetIdx+1:curIdx], cache.fileWeights[targetIdx:curIdx-1])
+			copy(cache.stats[targetIdx:curIdx-1], cache.stats[targetIdx+1:curIdx])
+			copy(cache.fileWeights[targetIdx:curIdx-1], cache.fileWeights[targetIdx+1:curIdx])
 			cache.stats[targetIdx] = curStats
 			cache.fileWeights[targetIdx] = curWeight
 			cache.reIndex(targetIdx, curIdx)
