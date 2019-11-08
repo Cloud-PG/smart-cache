@@ -417,6 +417,7 @@ func (cache *WeightedLRU) updatePolicy(filename string, size float32, hit bool, 
 
 		var Q2 = cache.getThreshold()
 		// If weight is higher exit and return added = false
+		// and skip the file insertion
 		if curStats.Weight > Q2 {
 			return added
 		}
