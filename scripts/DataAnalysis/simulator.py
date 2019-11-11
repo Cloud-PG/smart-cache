@@ -2,7 +2,7 @@ import argparse
 import gzip
 import os
 import subprocess
-from datetime import datetime
+from datetime import datetime, timedelta
 from itertools import cycle
 from multiprocessing import Pool
 from os import path, walk
@@ -935,7 +935,7 @@ def get_best_configuration(dataframe, cache_size: float,
             total=population_size, ascii=True):
         population.append(individual)
 
-    pool.close()
+    pool.terminate()
     pool.join()
 
     if insert_best_greedy:
@@ -1079,7 +1079,7 @@ def evolve_with_genetic_algorithm(population, dataframe,
             childrens += [child_0, child_1]
             childrens_fitness += [child_0_fitness, child_1_fitness]
 
-        pool.close()
+        pool.terminate()
         pool.join()
 
         new_population = cur_population + childrens
@@ -1574,7 +1574,6 @@ def main():
                 ]
             # print(cur_df.shape)
 
-            tick_counter = 1
             stat_avg_time = []
             stat_num_req = []
             max_history = 64
@@ -1589,13 +1588,14 @@ def main():
                     files[cur_filename] = {
                         'size': cur_size,
                         'totReq': 0,
-                        'days': set([]),
+                        'days': [],
                         'siteName': cur_row.site_name,
                         'userID': cur_row.user,
                         'reqHistory': [],
                         'lastReq': 0,
                         'fileType': file_type,
-                        'dataType': data_type
+                        'dataType': data_type,
+                        'maxStrike': 1
                     }
                 cur_time = datetime.fromtimestamp(cur_row.day)
                 cur_file_stats = files[cur_filename]
@@ -1608,7 +1608,8 @@ def main():
 
                 assert cur_file_stats['size'] == cur_size, f"{cur_file_stats['size']} != {cur_size}"
 
-                cur_file_stats['days'] |= set((cur_row.day, ))
+                if cur_row.day not in cur_file_stats['days']:
+                    cur_file_stats['days'].append(cur_row.day)
 
                 stat_num_req.append(cur_file_stats['totReq'])
                 stat_avg_time.append(
@@ -1618,7 +1619,23 @@ def main():
                     ]) / max_history
                 )
 
-                tick_counter += 1
+            for file_, stats in tqdm(files.items(),
+                                     desc=f"Parse file stats",
+                                     ascii=True):
+                strike = 1
+                if len(stats['days']) > 1:
+                    for idx in range(len(stats['days'])-1):
+                        cur_day = datetime.fromtimestamp(
+                            stats['days'][idx]
+                        )
+                        next_day = datetime.fromtimestamp(
+                            stats['days'][idx+1])
+                        if next_day - cur_day == timedelta(days=1):
+                            strike += 1
+                        else:
+                            strike = 1
+                        if strike > stats['maxStrike']:
+                            stats['maxStrike'] = strike
 
             cur_df['avg_time'] = stat_avg_time
             cur_df['num_req'] = stat_num_req
@@ -1631,8 +1648,8 @@ def main():
                              for filename in files],
                     'totReq': [files[filename]['totReq']
                                for filename in files],
-                    # 'days': [len(files[filename]['days'])
-                    #          for filename in files],
+                    'maxStrike': [files[filename]['maxStrike']
+                                  for filename in files],
                 }
             )
 
@@ -1643,15 +1660,18 @@ def main():
             files_df['size'] = files_df['size'] / 1024**2
 
             # Add value
-            files_df['value'] = (files_df['size'] *
-                                 files_df['totReq'])  # * files_df['days']
+            files_df['value'] = ((files_df['size'] *
+                                  files_df['totReq']
+                                  ) / args.window_size) * files_df['maxStrike']
 
             # Remove low value files
             # q1 = files_df.value.describe().quantile(0.25)
             # files_df = files_df.drop(files_df[files_df.value < q1].index)
 
             # Sort and reset indexes
-            files_df = files_df.sort_values(by=['value'], ascending=False)
+            files_df['greedyValue'] = files_df['value'] / files_df['size']
+            files_df = files_df.sort_values(
+                by=['greedyValue'], ascending=False)
             files_df = files_df.reset_index(drop=True)
             # print(files_df)
 
