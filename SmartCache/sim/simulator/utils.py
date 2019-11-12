@@ -1,4 +1,4 @@
-from multiprocessing import subprocess
+import subprocess
 from os import path, walk
 
 import pandas as pd
