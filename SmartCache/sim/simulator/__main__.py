@@ -553,7 +553,8 @@ def main():
             )
 
             files_df['class'] = best_files
-            dataset_out_file = path.join(
+
+            dataset_labels_out_file = path.join(
                 base_dir,
                 f"dataset_labels-window_{idx:02d}.feather.gz"
             )
@@ -596,13 +597,14 @@ def main():
             )
 
             with yaspin(Spinners.bouncingBall,
-                        text=f"[Store labeleled stage dataset][{dataset_out_file}]"
+                        text=f"[Store labeleled stage dataset][{dataset_labels_out_file}]"
                         ):
-                with gzip.GzipFile(dataset_out_file, "wb") as out_file:
+                with gzip.GzipFile(dataset_labels_out_file, "wb") as out_file:
                     dataset_df.to_feather(out_file)
 
-            print(f"[Prepare dataset][Using: '{dataset_out_file}']")
-            dataset = SimulatorDatasetReader(dataset_out_file)
+            # Prepare dataset
+            print(f"[Prepare dataset][Using: '{dataset_labels_out_file}']")
+            dataset = SimulatorDatasetReader(dataset_labels_out_file)
             dataset.modify_column(
                 'size',
                 lambda column: (column / 1024**2)
@@ -612,21 +614,20 @@ def main():
                 ],
                 map_type=bool,
                 sort_values=True,
-                unknown_values=False
             ).make_converter_map(
                 [
                     'size',
                 ],
-                map_type=float,
+                map_type=int,
                 sort_values=True,
                 buckets=[50, 100, 500, 1000, 2000, 4000, '...'],
             ).make_converter_map(
                 [
                     'avgTime',
                 ],
-                map_type=float,
+                map_type=int,
                 sort_values=True,
-                buckets=list(range(0, 300, 1000)) + ['...'],
+                buckets=list(range(0, 300*1000, 1000)) + ['...'],
             ).make_converter_map(
                 [
                     'siteName',
@@ -634,6 +635,7 @@ def main():
                     'fileType',
                     'dataType'
                 ],
+                unknown_values=True,
                 map_type=str,
             ).store_converter_map(
             ).make_data_and_labels(
@@ -647,7 +649,12 @@ def main():
                     'size',
                 ],
                 'class'
-            ).save_data_and_labels()
+            ).save_data_and_labels(
+                f"dataset_converted-window_{idx:02d}"
+            )
+            print(
+                f"[Dataset created][Name: 'dataset_converted-window_{idx:02d}']"
+            )
 
 
 if __name__ == "__main__":

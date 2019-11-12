@@ -22,10 +22,13 @@ import (
 )
 
 type featureMapObj struct {
-	Feature       string
-	Keys          []string
-	Values        map[string]int
-	UnknownValues bool
+	Feature         string
+	Type            string
+	Keys            []interface{}
+	Values          map[string]int
+	UnknownValues   bool
+	Buckets         bool
+	BucketOpenRight bool
 }
 
 // AILRU cache
@@ -88,14 +91,10 @@ func (cache *AILRU) Init(args ...interface{}) interface{} {
 			switch objK {
 			case "feature":
 				curStruct.Feature = objV.(string)
+			case "type":
+				curStruct.Type = objV.(string)
 			case "keys":
-				curKeys := objV.([]interface{})
-				for _, elm := range curKeys {
-					curStruct.Keys = append(
-						curStruct.Keys,
-						elm.(string),
-					)
-				}
+				curStruct.Keys = objV.([]interface{})
 			case "values":
 				curValues := objV.(map[string]interface{})
 				curStruct.Values = make(map[string]int)
@@ -104,8 +103,13 @@ func (cache *AILRU) Init(args ...interface{}) interface{} {
 				}
 			case "unknown_values":
 				curStruct.UnknownValues = objV.(bool)
+			case "buckets":
+				curStruct.Buckets = objV.(bool)
+			case "unknown_bucket_open_rightvalues":
+				curStruct.BucketOpenRight = objV.(bool)
 			}
 		}
+
 		cache.aiFeatureMap[k0] = curStruct
 	}
 
@@ -396,19 +400,49 @@ func (cache *AILRU) getOrInsertStats(filename string) (int, *WeightedFileStats) 
 	return resultIdx, stats
 }
 
-func (cache *AILRU) getCategory(key string, value string) []float64 {
+func (cache *AILRU) getCategory(key string, value interface{}) []float64 {
 	var res []float64
-	if cache.aiFeatureMap[key].UnknownValues {
-		res = make([]float64, len(cache.aiFeatureMap[key].Keys)+1)
-		oneHot, inMap := cache.aiFeatureMap[key].Values[value]
-		if inMap {
-			res[oneHot] = 1.0
+	if cache.aiFeatureMap[key].Buckets == false {
+		if cache.aiFeatureMap[key].UnknownValues {
+			res = make([]float64, len(cache.aiFeatureMap[key].Keys)+1)
+			oneHot, inMap := cache.aiFeatureMap[key].Values[value.(string)]
+			if inMap {
+				res[oneHot] = 1.0
+			} else {
+				res[0] = 1.0
+			}
 		} else {
-			res[0] = 1.0
+			res = make([]float64, len(cache.aiFeatureMap[key].Keys))
+			res[cache.aiFeatureMap[key].Values[value.(string)]] = 1.0
 		}
 	} else {
-		res = make([]float64, len(cache.aiFeatureMap[key].Keys))
-		res[cache.aiFeatureMap[key].Values[value]] = 1.0
+		if cache.aiFeatureMap[key].BucketOpenRight {
+			res = make([]float64, len(cache.aiFeatureMap[key].Keys)+1)
+		} else {
+			res = make([]float64, len(cache.aiFeatureMap[key].Keys))
+		}
+		for _, valI := range cache.aiFeatureMap[key].Keys {
+			switch cache.aiFeatureMap[key].Type {
+			case "int":
+				keyValue := valI.(int64)
+				inputValue := value.(int64)
+				if inputValue <= keyValue {
+					res[cache.aiFeatureMap[key].Values[fmt.Sprintf("%d", keyValue)]] = 1.0
+				}
+			case "float":
+				keyValue := valI.(float64)
+				inputValue := value.(float64)
+				if inputValue <= keyValue {
+					res[cache.aiFeatureMap[key].Values[fmt.Sprintf("%0.2f", keyValue)]] = 1.0
+				}
+			case "str":
+				keyValue := valI.(string)
+				inputValue := value.(string)
+				if inputValue <= keyValue {
+					res[cache.aiFeatureMap[key].Values[fmt.Sprintf("%s", keyValue)]] = 1.0
+				}
+			}
+		}
 	}
 	return res
 }
@@ -506,9 +540,9 @@ func (cache *AILRU) updatePolicy(filename string, size float32, hit bool, vars .
 		} else {
 			inputVector := mat.NewDense(len(featureVector), 1, featureVector)
 			result := cache.aiModel.Predict(inputVector)
-			store := result.At(0, 0) < result.At(0, 1)
+			store := GetPredictionArgMax(result)
 			// PrintTensor(result)
-			if store == false {
+			if store == 0 {
 				return added
 			}
 		}

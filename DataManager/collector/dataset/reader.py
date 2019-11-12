@@ -49,15 +49,12 @@ class SimulatorDatasetReader(object):
         return self
 
     def make_converter_map(self, columns: list = [],
-                           unknown_values: bool = True,
+                           unknown_values: bool = False,
                            sort_values: bool = False,
                            map_type=int,
                            buckets: list = [],
                            sort_type=None,
                            ) -> 'SimulatorDatasetReader':
-        assert len(
-            buckets) != 0 and not unknown_values, "You can't use unknown values with buckets"
-
         if not sort_type:
             sort_type = map_type
 
@@ -81,6 +78,8 @@ class SimulatorDatasetReader(object):
                 cur_map['type'] = "float"
             elif map_type == str:
                 cur_map['type'] = "str"
+            elif map_type == bool:
+                cur_map['type'] = "bool"
 
             if buckets:
                 if buckets[-1] == "...":
@@ -102,7 +101,10 @@ class SimulatorDatasetReader(object):
                 )
 
             cur_map['values'] = dict(
-                (str(name), idx) for idx, name
+                (
+                    self.__get_str_value(key),
+                    idx
+                ) for idx, key
                 in enumerate(
                     cur_map['keys'],
                     1 if unknown_values else 0
@@ -110,7 +112,8 @@ class SimulatorDatasetReader(object):
             )
 
             if cur_map['bucket_open_right']:
-                cur_map['values']['max'] = len(cur_map['values']) + 1
+                cur_map['values']['max'] = len(
+                    cur_map['values']) + (1 if unknown_values else 0)
 
         return self
 
@@ -121,7 +124,9 @@ class SimulatorDatasetReader(object):
             Spinners.bouncingBall,
             f"[Save converter map: {path.join(self._data_dir, out_filename)}]"
         ) as sp:
-            with gzip.GzipFile(path.join(self._data_dir, out_filename), "wb") as outfile:
+            with gzip.GzipFile(
+                path.join(self._data_dir, out_filename), "wb"
+            ) as outfile:
                 outfile.write(json.dumps(
                     self._converter_map,
                     indent=2).encode("utf-8")
@@ -129,23 +134,33 @@ class SimulatorDatasetReader(object):
         return self
 
     @staticmethod
-    def __get_category_value(category_obj, value) -> int:
+    def __get_str_value(value) -> str:
+        if isinstance(value, float):
+            return f"{value:0.2f}"
+        else:
+            return str(value)
+
+    def __get_category_value(self, category_obj, value) -> int:
         if not category_obj['buckets']:
             if value in category_obj['keys']:
-                return category_obj['values'][value]
+                return category_obj['values'][
+                    self.__get_str_value(value)
+                ]
             if category_obj['unknown_values']:
                 return 0
         else:
             for key in category_obj['keys']:
                 if value <= key:
-                    return category_obj['values'][key]
+                    return category_obj['values'][
+                        self.__get_str_value(key)
+                    ]
             else:
                 if category_obj['bucket_open_right']:
                     return category_obj['values']['max']
 
         raise Exception(
             f"Can't convert value '{value}' with category object {category_obj}"
-            )
+        )
 
     def make_data_and_labels(self, data_columns: list = [],
                              label_column: str = "",
