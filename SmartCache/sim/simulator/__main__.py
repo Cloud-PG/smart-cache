@@ -114,7 +114,7 @@ def main():
 
         ##
         # Single Window runs
-        single_window_run_dir = working_dir = path.join(
+        single_window_run_dir = path.join(
             base_dir,
             "run_single_window"
         )
@@ -173,7 +173,7 @@ def main():
 
         ##
         # Normal runs
-        normal_run_dir = working_dir = path.join(
+        normal_run_dir = path.join(
             base_dir,
             "run_full_normal"
         )
@@ -230,7 +230,7 @@ def main():
 
         ##
         # Next windows
-        nexxt_window_run_dir = working_dir = path.join(
+        nexxt_window_run_dir = path.join(
             base_dir,
             "run_next_window"
         )
@@ -294,7 +294,7 @@ def main():
 
         ##
         # Next Period
-        next_period_run_dir = working_dir = path.join(
+        next_period_run_dir = path.join(
             base_dir,
             "run_next_period"
         )
@@ -375,47 +375,7 @@ def main():
         )
 
     elif args.action == "train":
-        dataset = SimulatorDatasetReader(args.source)
-        dataset.modify_column(
-            'size',
-            lambda column: (column / 1024**2)
-        ).modify_column(
-            'size',
-            lambda column: (column / 1000).astype(int)
-        ).modify_column(
-            'avgTime',
-            lambda column: (column / 100).astype(int)
-        ).make_converter_map(
-            [
-                'class',
-            ],
-            unknown_values=False
-        ).make_converter_map(
-            [
-                'size',
-                'avgTime',
-            ],
-            sort_values=True
-        ).make_converter_map(
-            [
-                'siteName',
-                'userID',
-                'fileType',
-                'dataType'
-            ]
-        ).store_converter_map(
-        ).make_data_and_labels(
-            [
-                'siteName',
-                'userID',
-                'fileType',
-                'dataType',
-                'numReq',
-                'avgTime',
-                'size',
-            ],
-            'class'
-        ).save_data_and_labels()
+        dataset = SimulatorDatasetReader().load_data_and_labels(args.source)
         model = DonkeyModel()
         data, labels = dataset.data
         # print(data.shape)
@@ -425,7 +385,9 @@ def main():
         ))
 
     elif args.action == "create_dataset":
-        base_dir = path.join(path.dirname(path.abspath(__file__)), "datasets")
+        base_dir = path.join(
+            path.dirname(path.abspath(args.source)), "datasets"
+        )
         os.makedirs(base_dir, exist_ok=True)
 
         day_files = []
@@ -493,8 +455,6 @@ def main():
                         'size': cur_size,
                         'totReq': 0,
                         'days': [],
-                        'siteName': cur_row.site_name,
-                        'userID': cur_row.user,
                         'reqHistory': [],
                         'lastReq': 0,
                         'fileType': file_type,
@@ -580,7 +540,7 @@ def main():
             # print(files_df)
 
             # print(
-            #   sum(files_df['size']), args.cache_size, 
+            #   sum(files_df['size']), args.cache_size,
             #   sum(files_df['size'])/args.cache_size
             # )
             cache_size_factor = (sum(files_df['size'])/args.cache_size) / 2.
@@ -593,9 +553,9 @@ def main():
             )
 
             files_df['class'] = best_files
-            datest_out_file = path.join(
+            dataset_out_file = path.join(
                 base_dir,
-                f"dataset_window_{idx:02d}.feather.gz"
+                f"dataset_labels-window_{idx:02d}.feather.gz"
             )
 
             compare_greedy_solution(
@@ -603,22 +563,21 @@ def main():
             )
 
             dataset_data = []
-            len_dataset = int(len(cur_df) * 0.42)
+            len_dataset = int(cur_df.size * 0.2)
 
             for cur_row in tqdm(cur_df.sample(len_dataset).itertuples(),
                                 total=len_dataset,
-                                desc=f"Create dataset {idx}", ascii=True):
+                                desc=f"Create labeleled stage dataset {idx}",
+                                ascii=True
+                                ):
                 filename = cur_row.filename
-                try:
-                    cur_class = files_df.loc[
-                        files_df.filename == filename, 'class'
-                    ].to_list().pop()
-                except IndexError:
-                    cur_class = False
+                cur_class = files_df.loc[
+                    files_df.filename == filename, 'class'
+                ].to_list().pop()
                 dataset_data.append(
                     [
-                        files[filename]['siteName'],
-                        files[filename]['userID'],
+                        cur_row.site_name,
+                        cur_row.user,
                         cur_row.num_req,
                         cur_row.avg_time,
                         files[filename]['size'],
@@ -636,10 +595,58 @@ def main():
             )
 
             with yaspin(Spinners.bouncingBall,
-                        text=f"[Store dataset][{datest_out_file}]"
+                        text=f"[Store labeleled stage dataset][{dataset_out_file}]"
                         ):
-                with gzip.GzipFile(datest_out_file, "wb") as out_file:
+                with gzip.GzipFile(dataset_out_file, "wb") as out_file:
                     dataset_df.to_feather(out_file)
+
+            print(f"[Prepare dataset][Using: '{dataset_out_file}']")
+            dataset = SimulatorDatasetReader(dataset_out_file)
+            dataset.modify_column(
+                'size',
+                lambda column: (column / 1024**2)
+            ).make_converter_map(
+                [
+                    'class',
+                ],
+                map_type=bool,
+                sort_values=True,
+                unknown_values=False
+            ).make_converter_map(
+                [
+                    'size',
+                ],
+                map_type=float,
+                sort_values=True,
+                buckets=[50, 100, 500, 1000, 2000, 4000, '...'],
+            ).make_converter_map(
+                [
+                    'avgTime',
+                ],
+                map_type=float,
+                sort_values=True,
+                buckets=list(range(0, 300, 1000)) + ['...'],
+            ).make_converter_map(
+                [
+                    'siteName',
+                    'userID',
+                    'fileType',
+                    'dataType'
+                ],
+                map_type=str,
+            ).store_converter_map(
+            ).make_data_and_labels(
+                [
+                    'siteName',
+                    'userID',
+                    'fileType',
+                    'dataType',
+                    'numReq',
+                    'avgTime',
+                    'size',
+                ],
+                'class'
+            ).save_data_and_labels()
 
 
 if __name__ == "__main__":

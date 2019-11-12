@@ -51,32 +51,67 @@ class SimulatorDatasetReader(object):
     def make_converter_map(self, columns: list = [],
                            unknown_values: bool = True,
                            sort_values: bool = False,
-                           sort_type=int,
+                           map_type=int,
+                           buckets: list = [],
+                           sort_type=None,
                            ) -> 'SimulatorDatasetReader':
+        assert len(
+            buckets) != 0 and not unknown_values, "You can't use unknown values with buckets"
+
+        if not sort_type:
+            sort_type = map_type
 
         for column in columns:
             if column not in self._converter_map:
                 self._converter_map[column] = {
                     'feature': column,
+                    'type': None,
                     'keys': [],
                     'values': {},
-                    'unknown_values': unknown_values
+                    'unknown_values': unknown_values,
+                    'buckets': False,
+                    'bucket_open_right': False,
                 }
+
             cur_map = self._converter_map[column]
-            cur_values = set(self._df[column].astype(str).to_list())
-            for cur_value in tqdm(cur_values, desc=f"Make map of {column}",
-                                  ascii=True):
-                if cur_value not in cur_map['keys']:
-                    cur_map['keys'].append(cur_value)
+
+            if map_type == int:
+                cur_map['type'] = "int"
+            elif map_type == float:
+                cur_map['type'] = "float"
+            elif map_type == str:
+                cur_map['type'] = "str"
+
+            if buckets:
+                if buckets[-1] == "...":
+                    cur_map['buckets'] = True
+                    cur_map['bucket_open_right'] = True
+                    buckets = buckets[:-1]
+                cur_map['keys'] = buckets
+            else:
+                cur_map['keys'] = list(
+                    set(self._df[column].astype(map_type).to_list())
+                )
+
             if sort_values:
-                cur_map['keys'] = list(sorted(cur_map['keys'],
-                                              key=lambda elm: sort_type(elm)))
+                cur_map['keys'] = list(
+                    sorted(
+                        cur_map['keys'],
+                        key=lambda elm: sort_type(elm)
+                    )
+                )
 
             cur_map['values'] = dict(
-                (name, idx) for idx, name
-                in enumerate(cur_map['keys'],
-                             1 if unknown_values else 0)
+                (str(name), idx) for idx, name
+                in enumerate(
+                    cur_map['keys'],
+                    1 if unknown_values else 0
+                )
             )
+
+            if cur_map['bucket_open_right']:
+                cur_map['values']['max'] = len(cur_map['values']) + 1
+
         return self
 
     def store_converter_map(self,
@@ -95,10 +130,22 @@ class SimulatorDatasetReader(object):
 
     @staticmethod
     def __get_category_value(category_obj, value) -> int:
-        if value in category_obj['keys']:
-            return category_obj['values'][value]
-        if category_obj['unknown_values']:
-            return 0
+        if not category_obj['buckets']:
+            if value in category_obj['keys']:
+                return category_obj['values'][value]
+            if category_obj['unknown_values']:
+                return 0
+        else:
+            for key in category_obj['keys']:
+                if value <= key:
+                    return category_obj['values'][key]
+            else:
+                if category_obj['bucket_open_right']:
+                    return category_obj['values']['max']
+
+        raise Exception(
+            f"Can't convert value '{value}' with category object {category_obj}"
+            )
 
     def make_data_and_labels(self, data_columns: list = [],
                              label_column: str = "",
@@ -134,10 +181,12 @@ class SimulatorDatasetReader(object):
                 sp.text = f"[Prepare data][Column: {column}]"
                 if column in self._converter_map:
                     cur_map = self._converter_map[column]
+
                     if cur_map['unknown_values']:
                         num_categories = len(cur_map['keys']) + 1
                     else:
                         num_categories = len(cur_map['keys'])
+
                     categories = []
                     for value in df[column]:
                         cur_value = self.__get_category_value(
