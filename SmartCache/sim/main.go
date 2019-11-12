@@ -377,7 +377,7 @@ func simulationCmd(testAISimulation bool) *cobra.Command {
 							[]string{
 								fmt.Sprintf("[%s_%0.0f_%s]", cacheType, cacheSize, simRegion),
 								fmt.Sprintf("[Elapsed Time: %02d:%02d:%02d]",
-									int(elapsedTime.Hours())%24,
+									int(elapsedTime.Hours()),
 									int(elapsedTime.Minutes())%60,
 									int(elapsedTime.Seconds())%60,
 								),
@@ -433,7 +433,7 @@ func simulationCmd(testAISimulation bool) *cobra.Command {
 			}
 			elapsedTime := time.Now().Sub(simBeginTime)
 			fmt.Printf("\n[Simulation END][elapsed Time: %02d:%02d:%02d][Num. Records: %d][Mean Records/s: %0.0f]\n",
-				int(elapsedTime.Hours())%24,
+				int(elapsedTime.Hours()),
 				int(elapsedTime.Minutes())%60,
 				int(elapsedTime.Seconds())%60,
 				numRecords,
