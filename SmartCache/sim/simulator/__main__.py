@@ -563,13 +563,14 @@ def main():
             )
 
             dataset_data = []
-            len_dataset = int(cur_df.size * 0.2)
+            len_dataset = int(cur_df.shape[0] * 0.2)
 
-            for cur_row in tqdm(cur_df.sample(len_dataset).itertuples(),
-                                total=len_dataset,
-                                desc=f"Create labeleled stage dataset {idx}",
-                                ascii=True
-                                ):
+            for cur_row in tqdm(
+                cur_df.sample(n=len_dataset, random_state=42).itertuples(),
+                total=len_dataset,
+                desc=f"Create labeleled stage dataset {idx}",
+                ascii=True
+            ):
                 filename = cur_row.filename
                 cur_class = files_df.loc[
                     files_df.filename == filename, 'class'
