@@ -343,9 +343,10 @@ func (cache *WeightedLRU) getOrInsertStats(filename string) (int, *WeightedFileS
 	} else {
 		resultIdx = idx
 		stats = cache.stats[resultIdx]
-		if filename != stats.Filename {
-			panic("The two file have to be the same...")
-		}
+		// Uncomment to force filename check during simulation
+		// if filename != stats.Filename {
+		// 	panic("The two file have to be the same...")
+		// }
 	}
 
 	return resultIdx, stats
