@@ -79,7 +79,7 @@ class SimulatorDatasetReader(object):
             elif map_type == float:
                 cur_map['type'] = "float"
             elif map_type == str:
-                cur_map['type'] = "str"
+                cur_map['type'] = "string"
             elif map_type == bool:
                 cur_map['type'] = "bool"
 
