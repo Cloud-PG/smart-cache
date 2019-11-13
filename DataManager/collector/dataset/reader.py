@@ -118,14 +118,14 @@ class SimulatorDatasetReader(object):
         return self
 
     def store_converter_map(self,
-                            out_filename: str = "featureConverter.json.gzip"
+                            out_filename: str = "featureConverter"
                             ):
         with yaspin(
             Spinners.bouncingBall,
-            f"[Save converter map: {path.join(self._data_dir, out_filename)}]"
+            f"[Save converter map: {path.join(self._data_dir, out_filename)}.json.gzip]"
         ) as sp:
             with gzip.GzipFile(
-                path.join(self._data_dir, out_filename), "wb"
+                path.join(self._data_dir, f"{out_filename}.json.gzip"), "wb"
             ) as outfile:
                 outfile.write(json.dumps(
                     self._converter_map,

@@ -21,14 +21,65 @@ import (
 	"google.golang.org/grpc"
 )
 
+type mapType int
+
+const (
+	typeInt mapType = iota
+	typeFloat
+	typeString
+)
+
 type featureMapObj struct {
 	Feature         string
-	Type            string
-	Keys            []interface{}
+	Type            mapType
+	Keys            interface{}
+	KeysI           []int64
+	KeysF           []float64
+	KeysS           []string
 	Values          map[string]int
 	UnknownValues   bool
 	Buckets         bool
 	BucketOpenRight bool
+}
+
+type featureMapKey struct {
+	ValueI int64
+	ValueF float64
+	ValueS string
+}
+
+func (curMap featureMapObj) GetLenKeys() int {
+	var lenght int
+	switch curMap.Type {
+	case typeInt:
+		lenght = len(curMap.KeysI)
+	case typeFloat:
+		lenght = len(curMap.KeysF)
+	case typeString:
+		lenght = len(curMap.KeysS)
+	}
+	return lenght
+}
+
+func (curMap featureMapObj) GetKeys() chan featureMapKey {
+	channel := make(chan featureMapKey)
+	go func() {
+		defer close(channel)
+		numKeys := curMap.GetLenKeys()
+		for idx := 0; idx < numKeys; idx++ {
+			curKey := featureMapKey{}
+			switch curMap.Type {
+			case typeInt:
+				curKey.ValueI = curMap.KeysI[idx]
+			case typeFloat:
+				curKey.ValueF = curMap.KeysF[idx]
+			case typeString:
+				curKey.ValueS = curMap.KeysS[idx]
+			}
+			channel <- curKey
+		}
+	}()
+	return channel
 }
 
 // AILRU cache
@@ -92,9 +143,17 @@ func (cache *AILRU) Init(args ...interface{}) interface{} {
 			case "feature":
 				curStruct.Feature = objV.(string)
 			case "type":
-				curStruct.Type = objV.(string)
+				curType := objV.(string)
+				switch curType {
+				case "int":
+					curStruct.Type = typeInt
+				case "float":
+					curStruct.Type = typeFloat
+				case "string":
+					curStruct.Type = typeString
+				}
 			case "keys":
-				curStruct.Keys = objV.([]interface{})
+				curStruct.Keys = objV
 			case "values":
 				curValues := objV.(map[string]interface{})
 				curStruct.Values = make(map[string]int)
@@ -109,6 +168,18 @@ func (cache *AILRU) Init(args ...interface{}) interface{} {
 				curStruct.BucketOpenRight = objV.(bool)
 			}
 		}
+
+		switch curStruct.Type {
+		case typeInt:
+			curStruct.KeysI = curStruct.Keys.([]int64)
+		case typeFloat:
+			curStruct.KeysF = curStruct.Keys.([]float64)
+		case typeString:
+			curStruct.KeysS = curStruct.Keys.([]string)
+		}
+
+		fmt.Println(curStruct)
+		panic()
 
 		cache.aiFeatureMap[k0] = curStruct
 	}
@@ -400,50 +471,50 @@ func (cache *AILRU) getOrInsertStats(filename string) (int, *WeightedFileStats) 
 	return resultIdx, stats
 }
 
-func (cache *AILRU) getCategory(key string, value interface{}) []float64 {
+func (cache *AILRU) getCategory(catKey string, value interface{}) []float64 {
 	var res []float64
-	if cache.aiFeatureMap[key].Buckets == false {
-		if cache.aiFeatureMap[key].UnknownValues {
-			res = make([]float64, len(cache.aiFeatureMap[key].Keys)+1)
-			oneHot, inMap := cache.aiFeatureMap[key].Values[value.(string)]
+	curCategory := cache.aiFeatureMap[catKey]
+
+	if curCategory.Buckets == false {
+		if curCategory.UnknownValues {
+			res = make([]float64, curCategory.GetLenKeys()+1)
+			oneHot, inMap := curCategory.Values[value.(string)]
 			if inMap {
 				res[oneHot] = 1.0
 			} else {
 				res[0] = 1.0
 			}
 		} else {
-			res = make([]float64, len(cache.aiFeatureMap[key].Keys))
-			res[cache.aiFeatureMap[key].Values[value.(string)]] = 1.0
+			res = make([]float64, curCategory.GetLenKeys())
+			res[curCategory.Values[value.(string)]] = 1.0
 		}
 	} else {
-		if cache.aiFeatureMap[key].BucketOpenRight {
-			res = make([]float64, len(cache.aiFeatureMap[key].Keys)+1)
+		if curCategory.BucketOpenRight {
+			res = make([]float64, curCategory.GetLenKeys()+1)
 		} else {
-			res = make([]float64, len(cache.aiFeatureMap[key].Keys))
+			res = make([]float64, curCategory.GetLenKeys())
 		}
-		for _, valI := range cache.aiFeatureMap[key].Keys {
-			switch cache.aiFeatureMap[key].Type {
-			case "int":
-				keyValue := valI.(int64)
+		for curKey := range curCategory.GetKeys() {
+			switch curCategory.Type {
+			case typeInt:
 				inputValue := value.(int64)
-				if inputValue <= keyValue {
-					res[cache.aiFeatureMap[key].Values[fmt.Sprintf("%d", keyValue)]] = 1.0
+				if inputValue <= curKey.ValueI {
+					res[curCategory.Values[fmt.Sprintf("%d", curKey.ValueI)]] = 1.0
 				}
-			case "float":
-				keyValue := valI.(float64)
+			case typeFloat:
 				inputValue := value.(float64)
-				if inputValue <= keyValue {
-					res[cache.aiFeatureMap[key].Values[fmt.Sprintf("%0.2f", keyValue)]] = 1.0
+				if inputValue <= curKey.ValueF {
+					res[curCategory.Values[fmt.Sprintf("%0.2f", curKey.ValueF)]] = 1.0
 				}
-			case "str":
-				keyValue := valI.(string)
+			case typeString:
 				inputValue := value.(string)
-				if inputValue <= keyValue {
-					res[cache.aiFeatureMap[key].Values[fmt.Sprintf("%s", keyValue)]] = 1.0
+				if inputValue <= curKey.ValueS {
+					res[curCategory.Values[fmt.Sprintf("%s", curKey.ValueS)]] = 1.0
 				}
 			}
 		}
 	}
+
 	return res
 }
 

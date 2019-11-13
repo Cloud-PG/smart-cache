@@ -638,6 +638,7 @@ def main():
                 unknown_values=True,
                 map_type=str,
             ).store_converter_map(
+                f"featureConverter-window_{idx:02d}"
             ).make_data_and_labels(
                 [
                     'siteName',

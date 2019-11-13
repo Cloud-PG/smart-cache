@@ -33,6 +33,7 @@ type CSVRecord struct {
 func recordGenerator(csvReader *csv.Reader, curFile *os.File) chan CSVRecord {
 	channel := make(chan CSVRecord)
 	go func() {
+		defer close(channel)
 		defer curFile.Close()
 		for {
 			record, err := csvReader.Read()
@@ -72,7 +73,6 @@ func recordGenerator(csvReader *csv.Reader, curFile *os.File) chan CSVRecord {
 				Size:          float32(size),
 			}
 		}
-		close(channel)
 	}()
 	return channel
 }
@@ -111,6 +111,7 @@ func OpenSimFolder(dirPath *os.File) chan CSVRecord {
 	sort.Slice(fileList, func(i, j int) bool { return fileList[i] < fileList[j] })
 
 	go func() {
+		defer close(channel)
 		for _, name := range fileList {
 			fileExt := path.Ext(name)
 			switch fileExt {
@@ -122,7 +123,6 @@ func OpenSimFolder(dirPath *os.File) chan CSVRecord {
 			}
 
 		}
-		close(channel)
 	}()
 
 	return channel
