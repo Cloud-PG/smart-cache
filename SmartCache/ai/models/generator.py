@@ -115,7 +115,7 @@ class DonkeyModel(ai_pb2_grpc.AIServiceServicer):
         config = self._model.get_config()['layers']
         for layer in config:
             layer_name = layer['config']['name']
-            weights, bias = model.get_layer(layer_name).get_weights()
+            weights, bias = self._model.get_layer(layer_name).get_weights()
             model['layers'].append(
                 {
                     'name': layer_name,
