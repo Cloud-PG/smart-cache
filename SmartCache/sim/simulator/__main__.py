@@ -198,19 +198,19 @@ def main():
                     f"--simStopWindow={args.window_stop}",
                 ]
                 if cache_type == 'aiLRU':
-                        feature_map_file = path.abspath(
-                            path.join(
-                                path.dirname(args.ai_model),
-                                args.feature_converter_name
-                            )
+                    feature_map_file = path.abspath(
+                        path.join(
+                            path.dirname(args.ai_model),
+                            args.feature_converter_name
                         )
-                        model_weights_file = path.abspath(
-                            f"{args.ai_model.split('.h5')[0]}.dump.json.gz"
-                        )
-                        exe_args.append("--aiHost=127.0.0.1")
-                        exe_args.append(f"--aiPort=4242")
-                        exe_args.append(f"--aiFeatureMap={feature_map_file}")
-                        exe_args.append(f"--aiModel={model_weights_file}")
+                    )
+                    model_weights_file = path.abspath(
+                        f"{args.ai_model.split('.h5')[0]}.dump.json.gz"
+                    )
+                    exe_args.append("--aiHost=127.0.0.1")
+                    exe_args.append(f"--aiPort=4242")
+                    exe_args.append(f"--aiFeatureMap={feature_map_file}")
+                    exe_args.append(f"--aiModel={model_weights_file}")
                 cur_process = subprocess.Popen(
                     " ".join(exe_args),
                     shell=True,
