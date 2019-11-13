@@ -179,7 +179,6 @@ func (cache *AILRU) Init(args ...interface{}) interface{} {
 		}
 
 		fmt.Println(curStruct)
-		panic()
 
 		cache.aiFeatureMap[k0] = curStruct
 	}
@@ -494,24 +493,36 @@ func (cache *AILRU) getCategory(catKey string, value interface{}) []float64 {
 		} else {
 			res = make([]float64, curCategory.GetLenKeys())
 		}
+		done := false
 		for curKey := range curCategory.GetKeys() {
 			switch curCategory.Type {
 			case typeInt:
 				inputValue := value.(int64)
 				if inputValue <= curKey.ValueI {
 					res[curCategory.Values[fmt.Sprintf("%d", curKey.ValueI)]] = 1.0
+					done = true
+					break
 				}
 			case typeFloat:
 				inputValue := value.(float64)
 				if inputValue <= curKey.ValueF {
 					res[curCategory.Values[fmt.Sprintf("%0.2f", curKey.ValueF)]] = 1.0
+					done = true
+					break
 				}
 			case typeString:
 				inputValue := value.(string)
 				if inputValue <= curKey.ValueS {
 					res[curCategory.Values[fmt.Sprintf("%s", curKey.ValueS)]] = 1.0
+					done = true
+					break
 				}
 			}
+		}
+		if !done && curCategory.BucketOpenRight {
+			res[curCategory.Values["max"]] = 1.0
+		} else {
+			panic("Cannot convert a value...")
 		}
 	}
 
