@@ -27,12 +27,14 @@ const (
 	typeInt mapType = iota
 	typeFloat
 	typeString
+	typeBool
 )
 
 type featureMapObj struct {
 	Feature         string
 	Type            mapType
-	Keys            interface{}
+	Keys            []interface{}
+	KeysB           []bool
 	KeysI           []int64
 	KeysF           []float64
 	KeysS           []string
@@ -151,9 +153,11 @@ func (cache *AILRU) Init(args ...interface{}) interface{} {
 					curStruct.Type = typeFloat
 				case "string":
 					curStruct.Type = typeString
+				case "bool":
+					curStruct.Type = typeBool
 				}
 			case "keys":
-				curStruct.Keys = objV
+				curStruct.Keys = objV.([]interface{})
 			case "values":
 				curValues := objV.(map[string]interface{})
 				curStruct.Values = make(map[string]int)
@@ -164,21 +168,26 @@ func (cache *AILRU) Init(args ...interface{}) interface{} {
 				curStruct.UnknownValues = objV.(bool)
 			case "buckets":
 				curStruct.Buckets = objV.(bool)
-			case "unknown_bucket_open_rightvalues":
+			case "bucket_open_right":
 				curStruct.BucketOpenRight = objV.(bool)
 			}
 		}
 
-		switch curStruct.Type {
-		case typeInt:
-			curStruct.KeysI = curStruct.Keys.([]int64)
-		case typeFloat:
-			curStruct.KeysF = curStruct.Keys.([]float64)
-		case typeString:
-			curStruct.KeysS = curStruct.Keys.([]string)
+		for _, elm := range curStruct.Keys {
+			switch curStruct.Type {
+			case typeInt:
+				curStruct.KeysI = append(curStruct.KeysI, int64(elm.(float64)))
+			case typeFloat:
+				curStruct.KeysF = append(curStruct.KeysF, elm.(float64))
+			case typeString:
+				curStruct.KeysS = append(curStruct.KeysS, elm.(string))
+			case typeBool:
+				curStruct.KeysB = append(curStruct.KeysB, elm.(bool))
+			}
 		}
 
-		fmt.Println(curStruct)
+		// Output the structure
+		// fmt.Println(curStruct)
 
 		cache.aiFeatureMap[k0] = curStruct
 	}
@@ -202,10 +211,9 @@ func (cache *AILRU) Init(args ...interface{}) interface{} {
 		cache.aiClient = aiPb.NewAIServiceClient(cache.grpcConn)
 
 		return cache.grpcConn
-	} else {
-		cache.aiModel = LoadModel(modelFilePath)
 	}
 
+	cache.aiModel = LoadModel(modelFilePath)
 	return nil
 }
 
@@ -474,9 +482,14 @@ func (cache *AILRU) getCategory(catKey string, value interface{}) []float64 {
 	var res []float64
 	curCategory := cache.aiFeatureMap[catKey]
 
+	if curCategory.UnknownValues == true || curCategory.BucketOpenRight == true {
+		res = make([]float64, curCategory.GetLenKeys()+1)
+	} else {
+		res = make([]float64, curCategory.GetLenKeys())
+	}
+
 	if curCategory.Buckets == false {
 		if curCategory.UnknownValues {
-			res = make([]float64, curCategory.GetLenKeys()+1)
 			oneHot, inMap := curCategory.Values[value.(string)]
 			if inMap {
 				res[oneHot] = 1.0
@@ -484,49 +497,39 @@ func (cache *AILRU) getCategory(catKey string, value interface{}) []float64 {
 				res[0] = 1.0
 			}
 		} else {
-			res = make([]float64, curCategory.GetLenKeys())
 			res[curCategory.Values[value.(string)]] = 1.0
 		}
+		return res
+
 	} else {
-		if curCategory.BucketOpenRight {
-			res = make([]float64, curCategory.GetLenKeys()+1)
-		} else {
-			res = make([]float64, curCategory.GetLenKeys())
-		}
-		done := false
 		for curKey := range curCategory.GetKeys() {
 			switch curCategory.Type {
 			case typeInt:
-				inputValue := value.(int64)
+				inputValue := int64(value.(float64))
 				if inputValue <= curKey.ValueI {
 					res[curCategory.Values[fmt.Sprintf("%d", curKey.ValueI)]] = 1.0
-					done = true
-					break
+					return res
 				}
 			case typeFloat:
 				inputValue := value.(float64)
 				if inputValue <= curKey.ValueF {
 					res[curCategory.Values[fmt.Sprintf("%0.2f", curKey.ValueF)]] = 1.0
-					done = true
-					break
+					return res
 				}
 			case typeString:
 				inputValue := value.(string)
 				if inputValue <= curKey.ValueS {
 					res[curCategory.Values[fmt.Sprintf("%s", curKey.ValueS)]] = 1.0
-					done = true
-					break
+					return res
 				}
 			}
 		}
-		if !done && curCategory.BucketOpenRight {
+		if curCategory.BucketOpenRight == true {
 			res[curCategory.Values["max"]] = 1.0
-		} else {
-			panic("Cannot convert a value...")
+			return res
 		}
 	}
-
-	return res
+	panic(fmt.Sprintf("Cannot convert a value '%v' of category %s", value, catKey))
 }
 
 func (cache *AILRU) composeFeatures(vars ...interface{}) []float64 {
@@ -543,16 +546,21 @@ func (cache *AILRU) composeFeatures(vars ...interface{}) []float64 {
 
 	tmpArr = cache.getCategory("siteName", siteName)
 	inputVector = append(inputVector, tmpArr...)
+
 	tmpArr = cache.getCategory("userID", userID)
 	inputVector = append(inputVector, tmpArr...)
+
 	tmpArr = cache.getCategory("fileType", fileType)
 	inputVector = append(inputVector, tmpArr...)
+
 	tmpArr = cache.getCategory("dataType", dataType)
 	inputVector = append(inputVector, tmpArr...)
+
 	inputVector = append(inputVector, totRequests)
-	tmpArr = cache.getCategory("avgTime", strconv.Itoa(int(avgTime/100.0)))
+	tmpArr = cache.getCategory("avgTime", avgTime)
 	inputVector = append(inputVector, tmpArr...)
-	tmpArr = cache.getCategory("size", strconv.Itoa(int(size/1000.0)))
+
+	tmpArr = cache.getCategory("size", size)
 	inputVector = append(inputVector, tmpArr...)
 
 	return inputVector
