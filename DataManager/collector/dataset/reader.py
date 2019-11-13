@@ -23,22 +23,24 @@ class SimulatorDatasetReader(object):
         self._data_dir = None
         self._converter_map = {}
 
-        with yaspin(
-            Spinners.bouncingBall,
-            f"[Open dataset {filename}]"
-        ) as sp:
-            head, tail = path.splitext(filename)
-            if tail in [".gzip", ".gz"]:
-                head, tail = path.splitext(head)
-                with gzip.GzipFile(filename, "rb") as cur_file:
-                    if tail == ".feather":
-                        self._df = pd.read_feather(cur_file)
-                        self._data_dir = path.dirname(path.abspath(filename))
-                    else:
-                        raise Exception(f"Unknow extension '{tail}'")
-            else:
-                raise Exception(f"Unknow extension '{tail}'")
-            sp.text = "[Dataset loaded...]"
+        # TODO: update open file
+        # if filename:
+        #     with yaspin(
+        #         Spinners.bouncingBall,
+        #         f"[Open dataset {filename}]"
+        #     ) as sp:
+        #         head, tail = path.splitext(filename)
+        #         if tail in [".gzip", ".gz"]:
+        #             head, tail = path.splitext(head)
+        #             with gzip.GzipFile(filename, "rb") as cur_file:
+        #                 if tail == ".feather":
+        #                     self._df = pd.read_feather(cur_file)
+        #                     self._data_dir = path.dirname(path.abspath(filename))
+        #                 else:
+        #                     raise Exception(f"Unknow extension '{tail}'")
+        #         else:
+        #             raise Exception(f"Unknow extension '{tail}'")
+        #         sp.text = "[Dataset loaded...]"
 
     @property
     def data(self):
