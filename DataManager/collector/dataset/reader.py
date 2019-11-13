@@ -198,7 +198,7 @@ class SimulatorDatasetReader(object):
                 if column in self._converter_map:
                     cur_map = self._converter_map[column]
 
-                    if cur_map['unknown_values']:
+                    if cur_map['unknown_values'] or cur_map['bucket_open_right']:
                         num_categories = len(cur_map['keys']) + 1
                     else:
                         num_categories = len(cur_map['keys'])
