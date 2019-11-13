@@ -384,6 +384,7 @@ def main():
             path.dirname(args.source), "donkey_model"
         )
         model.save(out_path).export_weights(out_path)
+        print(f"[Model saved][Output: {out_path}...]")
 
     elif args.action == "create_dataset":
         base_dir = path.join(
