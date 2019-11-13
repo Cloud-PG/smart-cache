@@ -83,8 +83,11 @@ def main():
                         default="640,480",
                         help='A comma separate string representing the target resolution of each plot [DEFAULT: 640,480]')
     parser.add_argument('--ai-model', type=str,
-                        default="donkey_model.h5",
-                        help='Ai Model file path [DEFAULT: "donkey_model.h5"]')
+                        default="donkey_model",
+                        help='Ai Model file path [DEFAULT: "donkey_model"]')
+    parser.add_argument('--feature-converter-name', type=str,
+                        default="featureConverter-window_00.json.gzip",
+                        help='Ai Model feature converter name [DEFAULT: "featureConverter-window_00.json.gzip"]')
 
     args, _ = parser.parse_known_args()
 
@@ -146,19 +149,19 @@ def main():
                         feature_map_file = path.abspath(
                             path.join(
                                 path.dirname(args.ai_model),
-                                "featureConverter.json.gzip"
+                                args.feature_converter_name
                             )
                         )
                         model_weights_file = path.abspath(
                             path.join(
                                 path.dirname(args.ai_model),
-                                "modelWeightsDump.json.gzip"
+                                f"{model_weights_file}.dump.json.gz"
                             )
                         )
                         exe_args.append("--aiHost=127.0.0.1")
                         exe_args.append(f"--aiPort=4242")
                         exe_args.append(f"--aiFeatureMap={feature_map_file}")
-                        exe_args.append(f"--aiModel={model_weights_file}")
+                        exe_args.append(f"--aiModel={model_weights_file}.h5")
                     cur_process = subprocess.Popen(
                         " ".join(exe_args),
                         shell=True,
