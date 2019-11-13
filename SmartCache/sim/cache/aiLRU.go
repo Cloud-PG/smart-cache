@@ -542,30 +542,18 @@ func (cache *AILRU) composeFeatures(vars ...interface{}) []float64 {
 	size := float64(vars[6].(float32))
 
 	tmpArr = cache.getCategory("siteName", siteName)
-	for _, value := range tmpArr {
-		inputVector = append(inputVector, value)
-	}
+	inputVector = append(inputVector, tmpArr...)
 	tmpArr = cache.getCategory("userID", userID)
-	for _, value := range tmpArr {
-		inputVector = append(inputVector, value)
-	}
+	inputVector = append(inputVector, tmpArr...)
 	tmpArr = cache.getCategory("fileType", fileType)
-	for _, value := range tmpArr {
-		inputVector = append(inputVector, value)
-	}
+	inputVector = append(inputVector, tmpArr...)
 	tmpArr = cache.getCategory("dataType", dataType)
-	for _, value := range tmpArr {
-		inputVector = append(inputVector, value)
-	}
+	inputVector = append(inputVector, tmpArr...)
 	inputVector = append(inputVector, totRequests)
 	tmpArr = cache.getCategory("avgTime", strconv.Itoa(int(avgTime/100.0)))
-	for _, value := range tmpArr {
-		inputVector = append(inputVector, value)
-	}
+	inputVector = append(inputVector, tmpArr...)
 	tmpArr = cache.getCategory("size", strconv.Itoa(int(size/1000.0)))
-	for _, value := range tmpArr {
-		inputVector = append(inputVector, value)
-	}
+	inputVector = append(inputVector, tmpArr...)
 
 	return inputVector
 }
