@@ -416,10 +416,10 @@ def main():
                 windows.append(cur_window)
                 cur_window = []
 
-        for idx, window in enumerate(windows):
+        for winIdx, window in enumerate(windows):
             list_df = []
             files = {}
-            for file_ in tqdm(window, desc=f"Create window {idx} dataframe",
+            for file_ in tqdm(window, desc=f"Create window {winIdx} dataframe",
                               ascii=True):
                 head, _ = path.splitext(file_)
                 _, tail = path.splitext(head)
@@ -445,7 +445,7 @@ def main():
             max_history = 64
 
             for cur_row in tqdm(cur_df.itertuples(), total=cur_df.shape[0],
-                                desc=f"Parse window {idx} dataframe",
+                                desc=f"Parse window {winIdx} dataframe",
                                 ascii=True):
                 cur_filename = cur_row.filename
                 cur_size = cur_row.size
@@ -488,12 +488,12 @@ def main():
                                      ascii=True):
                 strike = 1
                 if len(stats['days']) > 1:
-                    for idx in range(len(stats['days'])-1):
+                    for dayIdx in range(len(stats['days'])-1):
                         cur_day = datetime.fromtimestamp(
-                            stats['days'][idx]
+                            stats['days'][dayIdx]
                         )
                         next_day = datetime.fromtimestamp(
-                            stats['days'][idx+1])
+                            stats['days'][dayIdx+1])
                         if next_day - cur_day == timedelta(days=1):
                             strike += 1
                         else:
@@ -556,7 +556,7 @@ def main():
 
             dataset_labels_out_file = path.join(
                 base_dir,
-                f"dataset_labels-window_{idx:02d}.feather.gz"
+                f"dataset_labels-window_{winIdx:02d}.feather.gz"
             )
 
             compare_greedy_solution(
@@ -569,7 +569,7 @@ def main():
             for cur_row in tqdm(
                 cur_df.sample(n=len_dataset, random_state=42).itertuples(),
                 total=len_dataset,
-                desc=f"Create labeleled stage dataset {idx}",
+                desc=f"Create labeleled stage dataset {winIdx}",
                 ascii=True
             ):
                 filename = cur_row.filename
@@ -638,7 +638,7 @@ def main():
                 unknown_values=True,
                 map_type=str,
             ).store_converter_map(
-                f"featureConverter-window_{idx:02d}"
+                f"featureConverter-window_{winIdx:02d}"
             ).make_data_and_labels(
                 [
                     'siteName',
@@ -651,10 +651,10 @@ def main():
                 ],
                 'class'
             ).save_data_and_labels(
-                f"dataset_converted-window_{idx:02d}"
+                f"dataset_converted-window_{winIdx:02d}"
             )
             print(
-                f"[Dataset created][Name: 'dataset_converted-window_{idx:02d}']"
+                f"[Dataset created][Name: 'dataset_converted-window_{winIdx:02d}']"
             )
 
 
