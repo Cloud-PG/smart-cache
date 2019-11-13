@@ -601,9 +601,10 @@ def main():
                 )
             )
 
-            with yaspin(Spinners.bouncingBall,
-                        text=f"[Store labeleled stage dataset][{dataset_labels_out_file}]"
-                        ):
+            with yaspin(
+                Spinners.bouncingBall,
+                text=f"[Store labeleled stage dataset][{dataset_labels_out_file}]"
+            ):
                 with gzip.GzipFile(dataset_labels_out_file, "wb") as out_file:
                     dataset_df.to_feather(out_file)
 
