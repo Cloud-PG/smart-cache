@@ -380,9 +380,10 @@ def main():
         data, labels = dataset.data
         # print(data.shape)
         model.train(data, labels)
-        model.save(path.join(
+        out_path = path.join(
             path.dirname(args.source), "donkey_model"
-        ))
+        )
+        model.save(out_path).export_weights(out_path)
 
     elif args.action == "create_dataset":
         base_dir = path.join(

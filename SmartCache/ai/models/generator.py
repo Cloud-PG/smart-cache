@@ -134,10 +134,11 @@ class DonkeyModel(ai_pb2_grpc.AIServiceServicer):
             outZip.write(
                 json.dumps(model, indent=2).encode("utf-8")
             )
-        self._model.save()
+        return self
 
     def save(self, out_name: str):
         self._model.save("{}.h5".format(out_name))
+        return self
 
     def load(self, filename: str):
         self._model = keras.models.load_model(filename)
