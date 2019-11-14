@@ -1,0 +1,16 @@
+version: '3'
+services:
+  minio:
+    image: minio/minio
+    network_mode: "host"
+    volumes:
+        - /path/to/minio/data:/data
+    environment:
+        - MINIO_ACCESS_KEY=insert a key!!!
+        - MINIO_SECRET_KEY=insert a passwd!!!
+    command: server /data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
