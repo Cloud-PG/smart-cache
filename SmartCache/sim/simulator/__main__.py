@@ -378,6 +378,7 @@ def main():
                     )
 
         for dataset_file in datasets:
+            print(f"[Start training][Dataset: {dataset_file}]")
             dataset = SimulatorDatasetReader(
             ).load_data_and_labels(dataset_file)
             window_num = dataset_file.split("-window_")[1].split(".")[0]
