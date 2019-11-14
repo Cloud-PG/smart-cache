@@ -102,7 +102,7 @@ def main():
         cache_types = args.cache_types.split(",")
         simulation_steps = args.simulation_steps.split(",")
 
-        base_dir = path.abspath(args.out_folder)
+        base_dir = path.abspath(path.join(os.getcwd(), args.out_folder))
         os.makedirs(base_dir, exist_ok=True)
 
         with open(path.join(base_dir, "simulator.version"), "w") as ver_file:
