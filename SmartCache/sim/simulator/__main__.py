@@ -32,7 +32,7 @@ def main():
                         default="lru,weightedLRU",
                         help='Comma separated list of cache to simulate [DEFAULT: "lru,weightedLRU"]')
     parser.add_argument('--out-folder', type=str,
-                        default="simulation_results",
+                        default="./simulation_results",
                         help='The folder where the simulation results will be stored [DEFAULT: "simulation_results"]')
     parser.add_argument('--read-on-hit', type=bool,
                         default=True,
@@ -102,8 +102,7 @@ def main():
         cache_types = args.cache_types.split(",")
         simulation_steps = args.simulation_steps.split(",")
 
-        base_dir = path.join(path.dirname(
-            path.abspath(__file__)), args.out_folder)
+        base_dir = path.abspath(args.out_folder)
         os.makedirs(base_dir, exist_ok=True)
 
         with open(path.join(base_dir, "simulator.version"), "w") as ver_file:
