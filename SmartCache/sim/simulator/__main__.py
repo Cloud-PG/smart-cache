@@ -76,9 +76,6 @@ def main():
     parser.add_argument('--only-CPU', type=bool,
                         default=True,
                         help='Force to use only CPU with TensorFlow [DEFAULT: True]')
-    parser.add_argument('--cache-factor', type=float,
-                        default=2./3.,
-                        help='Multiplication factor of cache size multiplicity for the window selected [DEFAULT: 2/3]')
     parser.add_argument('--insert-best-greedy', type=bool,
                         default=False,
                         help='Force to use insert 1 individual equal to the greedy composition [DEFAULT: False]')
@@ -556,12 +553,9 @@ def main():
             #   sum(files_df['size']), args.cache_size,
             #   sum(files_df['size'])/args.cache_size
             # )
-            needed_space = sum(files_df['size'])
-            cache_multiplicity = needed_space / args.cache_size
-            cache_size_factor = cache_multiplicity * args.cache_factor
 
             best_files = get_best_configuration(
-                files_df, args.cache_size*cache_size_factor,
+                files_df, args.cache_size,
                 population_size=args.population_size,
                 num_generations=args.num_generations,
                 insert_best_greedy=args.insert_best_greedy,
@@ -575,7 +569,7 @@ def main():
             )
 
             compare_greedy_solution(
-                files_df, args.cache_size*cache_size_factor
+                files_df, args.cache_size
             )
 
             len_dataset = int(cur_df.shape[0] * 0.3)
