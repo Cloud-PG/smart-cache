@@ -76,11 +76,14 @@ def main():
     parser.add_argument('--only-CPU', type=bool,
                         default=True,
                         help='Force to use only CPU with TensorFlow [DEFAULT: True]')
+    parser.add_argument('--cache-factor', type=float,
+                        default=2./3.,
+                        help='Multiplication factor of cache size multiplicity for the window selected [DEFAULT: 2/3]')
     parser.add_argument('--insert-best-greedy', type=bool,
                         default=False,
                         help='Force to use insert 1 individual equal to the greedy composition [DEFAULT: False]')
     parser.add_argument('--plot-resolution', type=str,
-                        default="640,480",
+                        default="800,600",
                         help='A comma separate string representing the target resolution of each plot [DEFAULT: 640,480]')
     parser.add_argument('--ai-model', type=str,
                         default="donkey_model",
@@ -506,6 +509,10 @@ def main():
                                for filename in files],
                     'maxStrike': [files[filename]['maxStrike']
                                   for filename in files],
+                    'fileType': [files[filename]['fileType']
+                                 for filename in files],
+                    'dataType': [files[filename]['dataType']
+                                 for filename in files],
                 }
             )
 
@@ -525,6 +532,7 @@ def main():
             # files_df = files_df.drop(files_df[files_df.value < q1].index)
 
             # Sort and reset indexes
+            # Note: greedyValue is prepared for 2 PTAS algorithm
             files_df['greedyValue'] = files_df['value'] / files_df['size']
             files_df = files_df.sort_values(
                 by=['greedyValue'], ascending=False)
@@ -535,7 +543,9 @@ def main():
             #   sum(files_df['size']), args.cache_size,
             #   sum(files_df['size'])/args.cache_size
             # )
-            cache_size_factor = (sum(files_df['size'])/args.cache_size) / 2.
+            needed_space = sum(files_df['size'])
+            cache_multiplicity = needed_space / args.cache_size
+            cache_size_factor = cache_multiplicity * args.cache_factor
 
             best_files = get_best_configuration(
                 files_df, args.cache_size*cache_size_factor,
@@ -556,36 +566,23 @@ def main():
             )
 
             dataset_data = []
-            len_dataset = int(cur_df.shape[0] * 0.1)
+            len_dataset = int(cur_df.shape[0] * 0.3)
 
-            for cur_row in tqdm(
-                cur_df.sample(n=len_dataset, random_state=42).itertuples(),
-                total=len_dataset,
-                desc=f"Create labeleled stage dataset {winIdx}",
-                ascii=True
-            ):
-                filename = cur_row.filename
-                cur_class = files_df.loc[
-                    files_df.filename == filename, 'class'
-                ].to_list().pop()
-                dataset_data.append(
-                    [
-                        cur_row.site_name,
-                        cur_row.user,
-                        cur_row.num_req,
-                        cur_row.avg_time,
-                        files[filename]['size'],
-                        files[filename]['fileType'],
-                        files[filename]['dataType'],
-                        cur_class,
-                    ]
-                )
-
-            dataset_df = pd.DataFrame(
-                dataset_data, columns=(
-                    'siteName', 'userID', 'numReq', 'avgTime',
-                    'size', 'fileType', 'dataType', 'class'
-                )
+            sample = cur_df.sample(n=len_dataset, random_state=42)
+            sample.rename(columns={'size': 'fileSize'}, inplace=True)
+            dataset_df = pd.merge(sample, files_df, on='filename')
+            dataset_df = dataset_df[
+                ['site_name', 'user', 'num_req', 'avg_time',
+                 'size', 'fileType', 'dataType', 'class']
+            ]
+            dataset_df.rename(
+                columns={
+                    'site_name': "siteName",
+                    'user': "userID",
+                    'num_req': "numReq",
+                    'avg_time': "avgTime",
+                },
+                inplace=True
             )
 
             with yaspin(
