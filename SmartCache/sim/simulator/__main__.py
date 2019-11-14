@@ -155,7 +155,7 @@ def main():
                             )
                         )
                         model_weights_file = path.abspath(
-                            f"{args.ai_model_basename.split('.h5')[0]}.dump.json.gz"
+                            f"{args.ai_model_basename.split('.h5')[0]}-window_{window_idx:02d}.dump.json.gz"
                         )
                         exe_args.append("--aiHost=127.0.0.1")
                         exe_args.append(f"--aiPort=4242")
@@ -207,7 +207,7 @@ def main():
                         )
                     )
                     model_weights_file = path.abspath(
-                        f"{args.ai_model_basename.split('.h5')[0]}.dump.json.gz"
+                        f"{args.ai_model_basename.split('.h5')[0]}-window_00.dump.json.gz"
                     )
                     exe_args.append("--aiHost=127.0.0.1")
                     exe_args.append(f"--aiPort=4242")
@@ -270,7 +270,7 @@ def main():
                             )
                         )
                         model_weights_file = path.abspath(
-                            f"{args.ai_model_basename.split('.h5')[0]}.dump.json.gz"
+                            f"{args.ai_model_basename.split('.h5')[0]}-window_{window_idx:02d}.dump.json.gz"
                         )
                         exe_args.append("--aiHost=127.0.0.1")
                         exe_args.append(f"--aiPort=4242")
@@ -327,7 +327,7 @@ def main():
                         feature_map_file = path.abspath(
                             path.join(
                                 path.dirname(args.ai_model_basename),
-                                f"{args.feature_converter_name}-window_{window_idx:02d}.json.gzip"
+                                f"{args.ai_model_basename.split('.h5')[0]}-window_{window_idx:02d}.dump.json.gz"
                             )
                         )
                         model_weights_file = path.abspath(
