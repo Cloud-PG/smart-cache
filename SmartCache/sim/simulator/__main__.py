@@ -326,7 +326,6 @@ def main():
                     if cache_type == 'aiLRU':
                         feature_map_file = path.abspath(
                             path.join(
-                                path.dirname(args.ai_model_basename),
                                 f"{args.ai_model_basename.split('.h5')[0]}-window_{window_idx:02d}.dump.json.gz"
                             )
                         )
