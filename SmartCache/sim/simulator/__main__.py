@@ -325,10 +325,13 @@ def main():
                     ]
                     if cache_type == 'aiLRU':
                         feature_map_file = path.abspath(
-                            f"{args.ai_model_basename.split('.h5')[0]}-window_{window_idx:02d}.dump.json.gz"
+                            path.join(
+                                path.dirname(args.ai_model_basename),
+                                f"{args.feature_converter_name}-window_{window_idx:02d}.json.gzip"
+                            )
                         )
                         model_weights_file = path.abspath(
-                            f"{args.ai_model_basename.split('.h5')[0]}.dump.json.gz"
+                            f"{args.ai_model_basename.split('.h5')[0]}-window_{window_idx:02d}.dump.json.gz"
                         )
                         exe_args.append("--aiHost=127.0.0.1")
                         exe_args.append(f"--aiPort=4242")
