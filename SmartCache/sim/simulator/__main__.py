@@ -368,17 +368,28 @@ def main():
         )
 
     elif args.action == "train":
-        dataset = SimulatorDatasetReader().load_data_and_labels(args.source)
-        window_num = args.source.split("-window_")[1].split(".")[0]
-        model = DonkeyModel()
-        data, labels = dataset.data
-        # print(data.shape)
-        model.train(data, labels)
-        out_path = path.join(
-            path.dirname(args.source), f"donkey_model-window_{window_num}"
-        )
-        model.save(out_path).export_weights(out_path)
-        print(f"[Model saved][Output: {out_path}...]")
+        datasets = []
+        for root, dirs, files in walk(args.source):
+            for file_ in files:
+                head, tail = path.splitext(file_)
+                if tail == ".npz":
+                    datasets.append(
+                        path.join(root, file_)
+                    )
+
+        for dataset_file in datasets:
+            dataset = SimulatorDatasetReader(
+            ).load_data_and_labels(dataset_file)
+            window_num = args.source.split("-window_")[1].split(".")[0]
+            model = DonkeyModel()
+            data, labels = dataset.data
+            # print(data.shape)
+            model.train(data, labels)
+            out_path = path.join(
+                path.dirname(args.source), f"donkey_model-window_{window_num}"
+            )
+            model.save(out_path).export_weights(out_path)
+            print(f"[Model saved][Output: {out_path}...]")
 
     elif args.action == "create_dataset":
         base_dir = path.join(
