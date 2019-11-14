@@ -85,12 +85,12 @@ def main():
     parser.add_argument('--plot-resolution', type=str,
                         default="800,600",
                         help='A comma separate string representing the target resolution of each plot [DEFAULT: 640,480]')
-    parser.add_argument('--ai-model', type=str,
-                        default="donkey_model",
-                        help='Ai Model file path [DEFAULT: "donkey_model"]')
+    parser.add_argument('--ai-model-basename', type=str,
+                        default="./models/donkey_model",
+                        help='Ai Model basename and path [DEFAULT: "./models/donkey_model"]')
     parser.add_argument('--feature-converter-name', type=str,
-                        default="featureConverter-window_00.json.gzip",
-                        help='Ai Model feature converter name [DEFAULT: "featureConverter-window_00.json.gzip"]')
+                        default="featureConverter",
+                        help='Ai Model feature converter name [DEFAULT: "featureConverter"]')
 
     args, _ = parser.parse_known_args()
 
@@ -150,12 +150,12 @@ def main():
                     if cache_type == 'aiLRU':
                         feature_map_file = path.abspath(
                             path.join(
-                                path.dirname(args.ai_model),
-                                args.feature_converter_name
+                                path.dirname(args.ai_model_basename),
+                                f"{args.feature_converter_name}-window_{window_idx:02d}.json.gzip"
                             )
                         )
                         model_weights_file = path.abspath(
-                            f"{args.ai_model.split('.h5')[0]}.dump.json.gz"
+                            f"{args.ai_model_basename.split('.h5')[0]}.dump.json.gz"
                         )
                         exe_args.append("--aiHost=127.0.0.1")
                         exe_args.append(f"--aiPort=4242")
@@ -202,12 +202,12 @@ def main():
                 if cache_type == 'aiLRU':
                     feature_map_file = path.abspath(
                         path.join(
-                            path.dirname(args.ai_model),
-                            args.feature_converter_name
+                            path.dirname(args.ai_model_basename),
+                            f"{args.feature_converter_name}-window_00.json.gzip"
                         )
                     )
                     model_weights_file = path.abspath(
-                        f"{args.ai_model.split('.h5')[0]}.dump.json.gz"
+                        f"{args.ai_model_basename.split('.h5')[0]}.dump.json.gz"
                     )
                     exe_args.append("--aiHost=127.0.0.1")
                     exe_args.append(f"--aiPort=4242")
@@ -265,12 +265,12 @@ def main():
                     if cache_type == 'aiLRU':
                         feature_map_file = path.abspath(
                             path.join(
-                                path.dirname(args.ai_model),
-                                args.feature_converter_name
+                                path.dirname(args.ai_model_basename),
+                                f"{args.feature_converter_name}-window_{window_idx:02d}.json.gzip"
                             )
                         )
                         model_weights_file = path.abspath(
-                            f"{args.ai_model.split('.h5')[0]}.dump.json.gz"
+                            f"{args.ai_model_basename.split('.h5')[0]}.dump.json.gz"
                         )
                         exe_args.append("--aiHost=127.0.0.1")
                         exe_args.append(f"--aiPort=4242")
@@ -326,12 +326,12 @@ def main():
                     if cache_type == 'aiLRU':
                         feature_map_file = path.abspath(
                             path.join(
-                                path.dirname(args.ai_model),
-                                args.feature_converter_name
+                                path.dirname(args.ai_model_basename),
+                                f"{args.feature_converter_name}-window_{window_idx:02d}.json.gzip"
                             )
                         )
                         model_weights_file = path.abspath(
-                            f"{args.ai_model.split('.h5')[0]}.dump.json.gz"
+                            f"{args.ai_model_basename.split('.h5')[0]}.dump.json.gz"
                         )
                         exe_args.append("--aiHost=127.0.0.1")
                         exe_args.append(f"--aiPort=4242")
@@ -369,12 +369,13 @@ def main():
 
     elif args.action == "train":
         dataset = SimulatorDatasetReader().load_data_and_labels(args.source)
+        window_num = args.source.split("-window_")[1].split(".")[0]
         model = DonkeyModel()
         data, labels = dataset.data
         # print(data.shape)
         model.train(data, labels)
         out_path = path.join(
-            path.dirname(args.source), "donkey_model"
+            path.dirname(args.source), f"donkey_model-window{window_num}"
         )
         model.save(out_path).export_weights(out_path)
         print(f"[Model saved][Output: {out_path}...]")
