@@ -375,7 +375,7 @@ def main():
         # print(data.shape)
         model.train(data, labels)
         out_path = path.join(
-            path.dirname(args.source), f"donkey_model-window{window_num}"
+            path.dirname(args.source), f"donkey_model-window_{window_num}"
         )
         model.save(out_path).export_weights(out_path)
         print(f"[Model saved][Output: {out_path}...]")
