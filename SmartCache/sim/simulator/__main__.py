@@ -565,7 +565,6 @@ def main():
                 files_df, args.cache_size*cache_size_factor
             )
 
-            dataset_data = []
             len_dataset = int(cur_df.shape[0] * 0.3)
 
             sample = cur_df.sample(n=len_dataset, random_state=42)
