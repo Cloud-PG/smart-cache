@@ -325,9 +325,7 @@ def main():
                     ]
                     if cache_type == 'aiLRU':
                         feature_map_file = path.abspath(
-                            path.join(
-                                f"{args.ai_model_basename.split('.h5')[0]}-window_{window_idx:02d}.dump.json.gz"
-                            )
+                            f"{args.ai_model_basename.split('.h5')[0]}-window_{window_idx:02d}.dump.json.gz"
                         )
                         model_weights_file = path.abspath(
                             f"{args.ai_model_basename.split('.h5')[0]}.dump.json.gz"
