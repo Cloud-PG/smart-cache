@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"./cache"
-	pb "./cache/simService"
+	"simulator/v2/cache"
+	pb "simulator/v2/cache/simService"
 	"google.golang.org/grpc"
 
 	"github.com/spf13/cobra"
