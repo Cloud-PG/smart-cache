@@ -16,6 +16,7 @@ import (
 
 	aiPb "simulator/v2/cache/aiService"
 	pb "simulator/v2/cache/simService"
+
 	empty "github.com/golang/protobuf/ptypes/empty"
 	"gonum.org/v1/gonum/mat"
 	"google.golang.org/grpc"
