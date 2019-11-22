@@ -224,7 +224,7 @@ $RECYCLE.BIN/
 PipelineResults
 
 # Sim executable
-SmartCache/sim/bin
+SmartCache/sim/bin/simulator
 
 # Proxy certificate for das
 SmartCache/plugin/proxy
