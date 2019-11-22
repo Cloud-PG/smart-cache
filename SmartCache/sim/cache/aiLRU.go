@@ -536,6 +536,7 @@ func (cache *AILRU) getCategory(catKey string, value interface{}) []float64 {
 			}
 		}
 	}
+
 	if curCategory.BucketOpenRight == true {
 		res[curCategory.Values["max"]] = 1.0
 		return res
@@ -575,24 +576,6 @@ func (cache *AILRU) composeFeatures(vars ...interface{}) []float64 {
 		}
 		inputVector = append(inputVector, curInputs[idx].(float64))
 	}
-
-	tmpArr = cache.getCategory("userID", userID)
-	inputVector = append(inputVector, tmpArr...)
-
-	tmpArr = cache.getCategory("fileType", fileType)
-	inputVector = append(inputVector, tmpArr...)
-
-	tmpArr = cache.getCategory("dataType", dataType)
-	inputVector = append(inputVector, tmpArr...)
-
-	tmpArr = cache.getCategory("numReq", totRequests)
-	inputVector = append(inputVector, tmpArr...)
-
-	tmpArr = cache.getCategory("avgTime", avgTime)
-	inputVector = append(inputVector, tmpArr...)
-
-	tmpArr = cache.getCategory("size", size)
-	inputVector = append(inputVector, tmpArr...)
 
 	return inputVector
 }
