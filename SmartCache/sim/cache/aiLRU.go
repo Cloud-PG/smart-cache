@@ -502,34 +502,35 @@ func (cache *AILRU) getCategory(catKey string, value interface{}) []float64 {
 		}
 		return res
 
-	} else {
-		for curKey := range curCategory.GetKeys() {
-			switch curCategory.Type {
-			case typeInt:
-				inputValue := int64(value.(float64))
-				if inputValue <= curKey.ValueI {
-					res[curCategory.Values[fmt.Sprintf("%d", curKey.ValueI)]] = 1.0
-					return res
-				}
-			case typeFloat:
-				inputValue := value.(float64)
-				if inputValue <= curKey.ValueF {
-					res[curCategory.Values[fmt.Sprintf("%0.2f", curKey.ValueF)]] = 1.0
-					return res
-				}
-			case typeString:
-				inputValue := value.(string)
-				if inputValue <= curKey.ValueS {
-					res[curCategory.Values[fmt.Sprintf("%s", curKey.ValueS)]] = 1.0
-					return res
-				}
+	}
+
+	for curKey := range curCategory.GetKeys() {
+		switch curCategory.Type {
+		case typeInt:
+			inputValue := int64(value.(float64))
+			if inputValue <= curKey.ValueI {
+				res[curCategory.Values[fmt.Sprintf("%d", curKey.ValueI)]] = 1.0
+				return res
+			}
+		case typeFloat:
+			inputValue := value.(float64)
+			if inputValue <= curKey.ValueF {
+				res[curCategory.Values[fmt.Sprintf("%0.2f", curKey.ValueF)]] = 1.0
+				return res
+			}
+		case typeString:
+			inputValue := value.(string)
+			if inputValue <= curKey.ValueS {
+				res[curCategory.Values[fmt.Sprintf("%s", curKey.ValueS)]] = 1.0
+				return res
 			}
 		}
-		if curCategory.BucketOpenRight == true {
-			res[curCategory.Values["max"]] = 1.0
-			return res
-		}
 	}
+	if curCategory.BucketOpenRight == true {
+		res[curCategory.Values["max"]] = 1.0
+		return res
+	}
+
 	panic(fmt.Sprintf("Cannot convert a value '%v' of category %s", value, catKey))
 }
 
@@ -557,7 +558,9 @@ func (cache *AILRU) composeFeatures(vars ...interface{}) []float64 {
 	tmpArr = cache.getCategory("dataType", dataType)
 	inputVector = append(inputVector, tmpArr...)
 
-	inputVector = append(inputVector, totRequests)
+	tmpArr = cache.getCategory("numReq", totRequests)
+	inputVector = append(inputVector, tmpArr...)
+
 	tmpArr = cache.getCategory("avgTime", avgTime)
 	inputVector = append(inputVector, tmpArr...)
 
