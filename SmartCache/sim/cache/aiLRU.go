@@ -101,6 +101,7 @@ type AILRU struct {
 	aiClientPort                       string
 	aiClient                           aiPb.AIServiceClient
 	aiFeatureMap                       map[string]featureMapObj
+	aiFeatureOrder                     []string
 	aiModel                            *AIModel
 	grpcConn                           *grpc.ClientConn
 	grpcContext                        context.Context
@@ -109,6 +110,15 @@ type AILRU struct {
 
 // Init the AILRU struct
 func (cache *AILRU) Init(args ...interface{}) interface{} {
+	cache.aiFeatureOrder = []string{
+		"siteName",
+		"userID",
+		"fileType",
+		"dataType",
+		"numReq",
+		"avgTime",
+		"size",
+	}
 	cache.files = make(map[string]float32)
 	cache.queue = list.New()
 	cache.stats = make([]*WeightedFileStats, 0)
@@ -546,8 +556,25 @@ func (cache *AILRU) composeFeatures(vars ...interface{}) []float64 {
 	avgTime := float64(vars[5].(float32))
 	size := float64(vars[6].(float32))
 
-	tmpArr = cache.getCategory("siteName", siteName)
-	inputVector = append(inputVector, tmpArr...)
+	curInputs := []interface{}{
+		siteName,
+		userID,
+		fileType,
+		dataType,
+		totRequests,
+		avgTime,
+		size,
+	}
+
+	for idx, featureName := range cache.aiFeatureOrder {
+		_, inFeatureMap := cache.aiFeatureMap[featureName]
+		if inFeatureMap {
+			tmpArr = cache.getCategory(featureName, curInputs[idx])
+			inputVector = append(inputVector, tmpArr...)
+			continue
+		}
+		inputVector = append(inputVector, curInputs[idx].(float64))
+	}
 
 	tmpArr = cache.getCategory("userID", userID)
 	inputVector = append(inputVector, tmpArr...)
