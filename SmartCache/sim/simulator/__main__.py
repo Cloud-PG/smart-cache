@@ -1,5 +1,6 @@
 import argparse
 import gzip
+import json
 import os
 import subprocess
 from datetime import datetime, timedelta
@@ -15,9 +16,9 @@ from SmartCache.ai.models.generator import DonkeyModel
 from SmartCache.sim import get_simulator_exe
 
 from .ga import compare_greedy_solution, get_best_configuration
+from .greedy import get2PTAS
 from .plotter import plot_results
 from .utils import load_results, wait_jobs
-from .greedy import get2PTAS
 
 
 def main():
@@ -426,6 +427,9 @@ def main():
                 cur_window = []
 
         for winIdx, window in enumerate(windows):
+            if winIdx == args.window_stop:
+                break
+
             list_df = []
             files = {}
             for file_ in tqdm(window, desc=f"Create window {winIdx} dataframe",
@@ -517,8 +521,8 @@ def main():
 
             # Add value
             files_df['value'] = (files_df['size'] *
-                                  files_df['totReq']
-                                  ) / args.window_size
+                                 files_df['totReq']
+                                 ) / args.window_size
 
             # Remove low value files
             # q1 = files_df.value.describe().quantile(0.25)
@@ -556,13 +560,19 @@ def main():
                 gr_size = sum(files_df[best_selection]['size'].to_list())
                 gr_score = sum(files_df[best_selection]['value'].to_list())
                 print("---[Results]---")
-                print(f"[Size: \t{gr_size:0.2f}][Score: \t{gr_score:0.2f}][Greedy]")
+                print(
+                    f"[Size: \t{gr_size:0.2f}][Score: \t{gr_score:0.2f}][Greedy]")
 
             files_df['class'] = best_selection
 
             dataset_labels_out_file = path.join(
                 base_dir,
                 f"dataset_labels-window_{winIdx:02d}.feather.gz"
+            )
+
+            dataset_best_solution_out_file = path.join(
+                base_dir,
+                f"dataset_best_solution-window_{winIdx:02d}.json.gz"
             )
 
             len_dataset = int(cur_df.shape[0] * 0.3)  # get 30% of the requests
@@ -592,6 +602,22 @@ def main():
                 with gzip.GzipFile(dataset_labels_out_file, "wb") as out_file:
                     dataset_df.to_feather(out_file)
 
+            with yaspin(
+                Spinners.bouncingBall,
+                text=f"[Store best stolution][{dataset_best_solution_out_file}]"
+            ):
+                with gzip.GzipFile(dataset_best_solution_out_file, "wb") as out_file:
+                    out_file.write(
+                        json.dumps({
+                            'selected_files': files_df[
+                                files_df['class'] == True
+                            ]['filename'].to_list()
+                        }).encode("utf-8")
+                    )
+
+            # Get some stats
+            # print(dataset_df.describe())
+
             # Prepare dataset
             print(f"[Prepare dataset][Using: '{dataset_labels_out_file}']")
             dataset = SimulatorDatasetReader(dataset_labels_out_file)
@@ -603,21 +629,28 @@ def main():
                     'class',
                 ],
                 map_type=bool,
-                sort_values=True,
+                sort_keys=True,
             ).make_converter_map(
                 [
                     'size',
                 ],
                 map_type=int,
-                sort_values=True,
-                buckets=[50, 100, 500, 1000, 2000, 4000, '...'],
+                sort_keys=True,
+                buckets=[50, 100, 250, 500, 1000, 2000, 4000, '...'],
+            ).make_converter_map(
+                [
+                    'numReq',
+                ],
+                map_type=int,
+                sort_keys=True,
+                buckets=[1, 2, 3, 4, 5, 6, 10, 50, 75, 100, 200, '...'],
             ).make_converter_map(
                 [
                     'avgTime',
                 ],
                 map_type=int,
-                sort_values=True,
-                buckets=list(range(0, 300*1000, 1000)) + ['...'],
+                sort_keys=True,
+                buckets=list(range(0, 6*1000, 100)) + ['...'],
             ).make_converter_map(
                 [
                     'siteName',

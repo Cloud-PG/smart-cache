@@ -51,7 +51,7 @@ class SimulatorDatasetReader(object):
 
     def make_converter_map(self, columns: list = [],
                            unknown_values: bool = False,
-                           sort_values: bool = False,
+                           sort_keys: bool = False,
                            map_type=int,
                            buckets: list = [],
                            sort_type=None,
@@ -93,7 +93,7 @@ class SimulatorDatasetReader(object):
                     set(self._df[column].astype(map_type).to_list())
                 )
 
-            if sort_values:
+            if sort_keys:
                 cur_map['keys'] = list(
                     sorted(
                         cur_map['keys'],
