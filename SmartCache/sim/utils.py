@@ -2,12 +2,12 @@ import subprocess
 import sys
 from os import path
 
-SIM_NAME = "goCacheSim"
+SIM_NAME = "simulator"
 
 
 def get_simulator_exe(force_creation: bool = False) -> str:
     cur_dir = path.dirname(path.abspath(__file__))
-    sim_path = path.join(cur_dir, SIM_NAME)
+    sim_path = path.join(cur_dir, 'bin', SIM_NAME)
     if force_creation or not path.exists(sim_path) or not path.isfile(sim_path):
         try:
             subprocess.check_output(
