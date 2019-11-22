@@ -17,6 +17,7 @@ from SmartCache.sim import get_simulator_exe
 from .ga import compare_greedy_solution, get_best_configuration
 from .plotter import plot_results
 from .utils import load_results, wait_jobs
+from .greedy import get2PTAS
 
 
 def main():
@@ -79,6 +80,9 @@ def main():
     parser.add_argument('--insert-best-greedy', type=bool,
                         default=False,
                         help='Force to use insert 1 individual equal to the greedy composition [DEFAULT: False]')
+    parser.add_argument('--dataset-creation-method', type=str,
+                        choices=['greedy', 'ga'], default="greedy",
+                        help='The method used to create the dataset [DEFAULT: "greedy"]')
     parser.add_argument('--plot-resolution', type=str,
                         default="800,600",
                         help='A comma separate string representing the target resolution of each plot [DEFAULT: 640,480]')
@@ -464,7 +468,6 @@ def main():
                         'lastReq': 0,
                         'fileType': file_type,
                         'dataType': data_type,
-                        'maxStrike': 1
                     }
                 cur_time = datetime.fromtimestamp(cur_row.day)
                 cur_file_stats = files[cur_filename]
@@ -488,24 +491,6 @@ def main():
                     ]) / max_history
                 )
 
-            for file_, stats in tqdm(files.items(),
-                                     desc=f"Parse file stats",
-                                     ascii=True):
-                strike = 1
-                if len(stats['days']) > 1:
-                    for dayIdx in range(len(stats['days'])-1):
-                        cur_day = datetime.fromtimestamp(
-                            stats['days'][dayIdx]
-                        )
-                        next_day = datetime.fromtimestamp(
-                            stats['days'][dayIdx+1])
-                        if next_day - cur_day == timedelta(days=1):
-                            strike += 1
-                        else:
-                            strike = 1
-                        if strike > stats['maxStrike']:
-                            stats['maxStrike'] = strike
-
             cur_df['avg_time'] = stat_avg_time
             cur_df['num_req'] = stat_num_req
 
@@ -517,8 +502,6 @@ def main():
                              for filename in files],
                     'totReq': [files[filename]['totReq']
                                for filename in files],
-                    'maxStrike': [files[filename]['maxStrike']
-                                  for filename in files],
                     'fileType': [files[filename]['fileType']
                                  for filename in files],
                     'dataType': [files[filename]['dataType']
@@ -533,9 +516,9 @@ def main():
             files_df['size'] = files_df['size'] / 1024**2
 
             # Add value
-            files_df['value'] = ((files_df['size'] *
+            files_df['value'] = (files_df['size'] *
                                   files_df['totReq']
-                                  ) / args.window_size) * files_df['maxStrike']
+                                  ) / args.window_size
 
             # Remove low value files
             # q1 = files_df.value.describe().quantile(0.25)
@@ -554,28 +537,39 @@ def main():
             #   sum(files_df['size'])/args.cache_size
             # )
 
-            best_files = get_best_configuration(
-                files_df, args.cache_size,
-                population_size=args.population_size,
-                num_generations=args.num_generations,
-                insert_best_greedy=args.insert_best_greedy,
+            greedy_solution = get2PTAS(
+                files_df, args.cache_size
             )
 
-            files_df['class'] = best_files
+            if args.dataset_creation_method == "ga":
+                best_selection = get_best_configuration(
+                    files_df, args.cache_size,
+                    population_size=args.population_size,
+                    num_generations=args.num_generations,
+                    insert_best_greedy=args.insert_best_greedy,
+                )
+                compare_greedy_solution(
+                    files_df, args.cache_size, greedy_solution,
+                )
+            else:
+                best_selection = greedy_solution
+                gr_size = sum(files_df[best_selection]['size'].to_list())
+                gr_score = sum(files_df[best_selection]['value'].to_list())
+                print("---[Results]---")
+                print(f"[Size: \t{gr_size:0.2f}][Score: \t{gr_score:0.2f}][Greedy]")
+
+            files_df['class'] = best_selection
 
             dataset_labels_out_file = path.join(
                 base_dir,
                 f"dataset_labels-window_{winIdx:02d}.feather.gz"
             )
 
-            compare_greedy_solution(
-                files_df, args.cache_size
-            )
-
-            len_dataset = int(cur_df.shape[0] * 0.3)
+            len_dataset = int(cur_df.shape[0] * 0.3)  # get 30% of the requests
 
             sample = cur_df.sample(n=len_dataset, random_state=42)
             sample.rename(columns={'size': 'fileSize'}, inplace=True)
+
             dataset_df = pd.merge(sample, files_df, on='filename')
             dataset_df = dataset_df[
                 ['site_name', 'user', 'num_req', 'avg_time',
