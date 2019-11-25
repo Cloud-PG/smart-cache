@@ -84,6 +84,12 @@ def main():
     parser.add_argument('--dataset-creation-method', type=str,
                         choices=['greedy', 'ga'], default="greedy",
                         help='The method used to create the dataset [DEFAULT: "greedy"]')
+    parser.add_argument('--dataset-folder', type=str,
+                        default="./datasets",
+                        help='Folder where datasets are stored [DEFAULT: "./datasets"]')
+    parser.add_argument('--dataset-converter-name', type=str,
+                        default="dataset_best_solution",
+                        help='The dataset file name prefix [DEFAULT: "dataset_best_solution"]')
     parser.add_argument('--plot-resolution', type=str,
                         default="800,600",
                         help='A comma separate string representing the target resolution of each plot [DEFAULT: 640,480]')
@@ -92,7 +98,7 @@ def main():
                         help='Ai Model basename and path [DEFAULT: "./models/donkey_model"]')
     parser.add_argument('--feature-converter-name', type=str,
                         default="featureConverter",
-                        help='Ai Model feature converter name [DEFAULT: "featureConverter"]')
+                        help='Ai Model feature converter name prefix [DEFAULT: "featureConverter"]')
 
     args, _ = parser.parse_known_args()
 
@@ -136,6 +142,7 @@ def main():
                         f"window_{window_idx}",
                     )
                     os.makedirs(working_dir, exist_ok=True)
+                    # Create base command
                     exe_args = [
                         simulator_exe,
                         args.action,
@@ -149,6 +156,7 @@ def main():
                         "--simDump=true",
                         "--simDumpFileName=dump.json.gz",
                     ]
+                    # Add custom cache parameters
                     if cache_type == 'aiLRU':
                         feature_map_file = path.abspath(
                             path.join(
@@ -163,6 +171,15 @@ def main():
                         exe_args.append(f"--aiPort=4242")
                         exe_args.append(f"--aiFeatureMap={feature_map_file}")
                         exe_args.append(f"--aiModel={model_weights_file}")
+                    elif cache_type == 'lruDatasetVerifier':
+                        dataset_file = path.abspath(
+                            path.join(
+                                args.dataset_folder,
+                                f"{args.dataset_file_name}-window_{window_idx:02d}.json.gzip"
+                            )
+                        )
+                        exe_args.append(f"--dataset2TestPath={dataset_file}")
+                    # Create the task
                     cur_process = subprocess.Popen(
                         " ".join(exe_args),
                         shell=True,
@@ -190,6 +207,7 @@ def main():
                     f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}"
                 )
                 os.makedirs(working_dir, exist_ok=True)
+                # Create base command
                 exe_args = [
                     simulator_exe,
                     args.action,
@@ -201,6 +219,7 @@ def main():
                     f"--simStartFromWindow={args.window_start}",
                     f"--simStopWindow={args.window_stop}",
                 ]
+                # Add custom cache parameters
                 if cache_type == 'aiLRU':
                     feature_map_file = path.abspath(
                         path.join(
@@ -215,6 +234,14 @@ def main():
                     exe_args.append(f"--aiPort=4242")
                     exe_args.append(f"--aiFeatureMap={feature_map_file}")
                     exe_args.append(f"--aiModel={model_weights_file}")
+                elif cache_type == 'lruDatasetVerifier':
+                        dataset_file = path.abspath(
+                            path.join(
+                                args.dataset_folder,
+                                f"{args.dataset_file_name}-window_00.json.gzip"
+                            )
+                        )
+                        exe_args.append(f"--dataset2TestPath={dataset_file}")
                 cur_process = subprocess.Popen(
                     " ".join(exe_args),
                     shell=True,
@@ -224,6 +251,7 @@ def main():
                     stderr=subprocess.PIPE,
                 )
                 processes.append(("Full Run", cur_process))
+                # Add custom cache parameters
                 if cache_type == 'aiLRU':
                     wait_jobs(processes)
 
@@ -251,6 +279,7 @@ def main():
                         f"window_{window_idx}",
                     )
                     os.makedirs(working_dir, exist_ok=True)
+                    # Create base command
                     exe_args = [
                         simulator_exe,
                         args.action,
@@ -264,6 +293,7 @@ def main():
                         "--simLoadDump=true",
                         f"--simLoadDumpFileName={path.join(dump_dir, 'dump.json.gz')}",
                     ]
+                    # Add custom cache parameters
                     if cache_type == 'aiLRU':
                         feature_map_file = path.abspath(
                             path.join(
@@ -278,6 +308,15 @@ def main():
                         exe_args.append(f"--aiPort=4242")
                         exe_args.append(f"--aiFeatureMap={feature_map_file}")
                         exe_args.append(f"--aiModel={model_weights_file}")
+                    elif cache_type == 'lruDatasetVerifier':
+                        dataset_file = path.abspath(
+                            path.join(
+                                args.dataset_folder,
+                                f"{args.dataset_file_name}-window_{window_idx:02d}.json.gzip"
+                            )
+                        )
+                        exe_args.append(f"--dataset2TestPath={dataset_file}")
+                    # Create the task
                     cur_process = subprocess.Popen(
                         " ".join(exe_args),
                         shell=True,
@@ -312,6 +351,7 @@ def main():
                         f"window_{window_idx}",
                     )
                     os.makedirs(working_dir, exist_ok=True)
+                    # Create base command
                     exe_args = [
                         simulator_exe,
                         args.action,
@@ -325,6 +365,7 @@ def main():
                         "--simLoadDump=true",
                         f"--simLoadDumpFileName={path.join(dump_dir, 'dump.json.gz')}",
                     ]
+                    # Add custom cache parameters
                     if cache_type == 'aiLRU':
                         feature_map_file = path.abspath(
                             path.join(
@@ -339,6 +380,15 @@ def main():
                         exe_args.append(f"--aiPort=4242")
                         exe_args.append(f"--aiFeatureMap={feature_map_file}")
                         exe_args.append(f"--aiModel={model_weights_file}")
+                    elif cache_type == 'lruDatasetVerifier':
+                        dataset_file = path.abspath(
+                            path.join(
+                                args.dataset_folder,
+                                f"{args.dataset_file_name}-window_{window_idx:02d}.json.gzip"
+                            )
+                        )
+                        exe_args.append(f"--dataset2TestPath={dataset_file}")
+                    # Create the task
                     cur_process = subprocess.Popen(
                         " ".join(exe_args),
                         shell=True,
