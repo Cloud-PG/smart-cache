@@ -123,10 +123,10 @@ class SimulatorDatasetReader(object):
                             ):
         with yaspin(
             Spinners.bouncingBall,
-            f"[Save converter map: {path.join(self._data_dir, out_filename)}.json.gzip]"
+            f"[Save converter map: {path.join(self._data_dir, out_filename)}.json.gz]"
         ) as sp:
             with gzip.GzipFile(
-                path.join(self._data_dir, f"{out_filename}.json.gzip"), "wb"
+                path.join(self._data_dir, f"{out_filename}.json.gz"), "wb"
             ) as outfile:
                 outfile.write(json.dumps(
                     self._converter_map,

@@ -161,7 +161,7 @@ def main():
                         feature_map_file = path.abspath(
                             path.join(
                                 path.dirname(args.ai_model_basename),
-                                f"{args.feature_prefix}-window_{window_idx:02d}.json.gzip"
+                                f"{args.feature_prefix}-window_{window_idx:02d}.json.gz"
                             )
                         )
                         model_weights_file = path.abspath(
@@ -224,7 +224,7 @@ def main():
                     feature_map_file = path.abspath(
                         path.join(
                             path.dirname(args.ai_model_basename),
-                            f"{args.feature_prefix}-window_00.json.gzip"
+                            f"{args.feature_prefix}-window_00.json.gz"
                         )
                     )
                     model_weights_file = path.abspath(
@@ -298,7 +298,7 @@ def main():
                         feature_map_file = path.abspath(
                             path.join(
                                 path.dirname(args.ai_model_basename),
-                                f"{args.feature_prefix}-window_{window_idx:02d}.json.gzip"
+                                f"{args.feature_prefix}-window_{window_idx:02d}.json.gz"
                             )
                         )
                         model_weights_file = path.abspath(
@@ -370,7 +370,7 @@ def main():
                         feature_map_file = path.abspath(
                             path.join(
                                 path.dirname(args.ai_model_basename),
-                                f"{args.feature_prefix}-window_{window_idx:02d}.json.gzip"
+                                f"{args.feature_prefix}-window_{window_idx:02d}.json.gz"
                             )
                         )
                         model_weights_file = path.abspath(
