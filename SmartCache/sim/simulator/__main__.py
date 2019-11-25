@@ -24,7 +24,7 @@ from .utils import load_results, wait_jobs
 def main():
     parser = argparse.ArgumentParser(
         "simulator", description="Simulation and result plotting")
-    parser.add_argument('action', choices=['simulate', 'plot', 'train', 'create_dataset'],
+    parser.add_argument('action', choices=['simulate', 'testAI', 'testDataset', 'plot', 'train', 'create_dataset'],
                         default="simulate",
                         help='Action requested')
     parser.add_argument('source', type=str,
@@ -102,7 +102,7 @@ def main():
         # Make visible only first device
         os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
-    if args.action == "simulate":
+    if args.action in ["simulate", "testAI", "testDataset"]:
         simulator_exe = get_simulator_exe(force_creation=args.force_exe_build)
         cache_types = args.cache_types.split(",")
         simulation_steps = args.simulation_steps.split(",")
@@ -138,7 +138,7 @@ def main():
                     os.makedirs(working_dir, exist_ok=True)
                     exe_args = [
                         simulator_exe,
-                        "simulate" if cache_type != 'aiLRU' else "testAI",
+                        args.action,
                         cache_type,
                         path.abspath(args.source),
                         f"--size={args.cache_size}",
@@ -192,7 +192,7 @@ def main():
                 os.makedirs(working_dir, exist_ok=True)
                 exe_args = [
                     simulator_exe,
-                    "simulate" if cache_type != 'aiLRU' else "testAI",
+                    args.action,
                     cache_type,
                     path.abspath(args.source),
                     f"--size={args.cache_size}",
@@ -253,7 +253,7 @@ def main():
                     os.makedirs(working_dir, exist_ok=True)
                     exe_args = [
                         simulator_exe,
-                        "simulate" if cache_type != 'aiLRU' else "testAI",
+                        args.action,
                         cache_type,
                         path.abspath(args.source),
                         f"--size={args.cache_size}",
@@ -314,7 +314,7 @@ def main():
                     os.makedirs(working_dir, exist_ok=True)
                     exe_args = [
                         simulator_exe,
-                        "simulate" if cache_type != 'aiLRU' else "testAI",
+                        args.action,
                         cache_type,
                         path.abspath(args.source),
                         f"--size={args.cache_size}",

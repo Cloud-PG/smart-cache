@@ -26,6 +26,7 @@ var (
 	buildstamp          string
 	cacheSize           float32
 	cpuprofile          string
+	dataset2TestPath    string
 	githash             string
 	limitStatsPolicy    string
 	memprofile          string
@@ -46,11 +47,20 @@ var (
 	weightExp           float32
 )
 
+type simDetailCmd int
+
+const (
+	normalSimulationCmd simDetailCmd = iota
+	testAICmd
+	testDatasetCmd
+)
+
 func main() {
 	rootCmd := &cobra.Command{}
 	rootCmd.AddCommand(commandServe())
 	rootCmd.AddCommand(commandSimulate())
 	rootCmd.AddCommand(testAI())
+	rootCmd.AddCommand(testDataset())
 
 	rootCmd.AddCommand(&cobra.Command{
 		Use:   "version",
@@ -179,17 +189,22 @@ func addSimFlags(cmd *cobra.Command) {
 	)
 }
 
-func simulationCmd(testAISimulation bool) *cobra.Command {
+func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 	var useDesc, shortDesc, longDesc string
 
-	if testAISimulation {
-		useDesc = `testAI cacheType fileOrFolderPath`
-		shortDesc = "Simulate a session with AI"
-		longDesc = "Simulate a session from data input using an AI model"
-	} else {
+	switch typeCmd {
+	case normalSimulationCmd:
 		useDesc = `simulate cacheType fileOrFolderPath`
 		shortDesc = "Simulate a session"
 		longDesc = "Simulate a session from data input"
+	case testAICmd:
+		useDesc = `testAI cacheType fileOrFolderPath`
+		shortDesc = "Simulate a session with AI"
+		longDesc = "Simulate a session from data input using an AI model"
+	case testDatasetCmd:
+		useDesc = `testDataset cacheType fileOrFolderPath`
+		shortDesc = "Simulate a cache with the given dataset"
+		longDesc = "Simulate a cache that accept only the file in the dataset"
 	}
 
 	cmd := &cobra.Command{
@@ -216,7 +231,9 @@ func simulationCmd(testAISimulation bool) *cobra.Command {
 			// Create cache
 			var grpcConn interface{} = nil
 			curCacheInstance := genCache(cacheType)
-			if testAISimulation {
+
+			switch typeCmd {
+			case testAICmd:
 				if aiFeatureMap == "" {
 					fmt.Println("ERR: No feature map indicated...")
 					os.Exit(-1)
@@ -225,6 +242,8 @@ func simulationCmd(testAISimulation bool) *cobra.Command {
 				if grpcConn != nil {
 					defer grpcConn.(*grpc.ClientConn).Close()
 				}
+			case testDatasetCmd:
+				curCacheInstance.Init(dataset2TestPath)
 			}
 
 			if simDumpFileName == "" {
@@ -355,7 +374,8 @@ func simulationCmd(testAISimulation bool) *cobra.Command {
 					// TODO: make size measure a parameter: [K, M, G, P]
 					sizeInMbytes := record.Size / (1024 * 1024)
 
-					if testAISimulation {
+					switch typeCmd {
+					case testAICmd:
 						curCacheInstance.Get(
 							record.Filename,
 							sizeInMbytes,
@@ -363,7 +383,7 @@ func simulationCmd(testAISimulation bool) *cobra.Command {
 							record.SiteName,
 							record.UserID,
 						)
-					} else {
+					default:
 						curCacheInstance.Get(
 							record.Filename,
 							sizeInMbytes,
@@ -447,7 +467,8 @@ func simulationCmd(testAISimulation bool) *cobra.Command {
 		Args:  cobra.MaximumNArgs(2),
 	}
 	addSimFlags(cmd)
-	if testAISimulation {
+	switch typeCmd {
+	case testAICmd:
 		cmd.PersistentFlags().StringVar(
 			&aiHost, "aiHost", "localhost",
 			"indicate the filter for record region",
@@ -464,16 +485,25 @@ func simulationCmd(testAISimulation bool) *cobra.Command {
 			&aiModel, "aiModel", "",
 			"the model to load into the simulator",
 		)
+	case testDatasetCmd:
+		cmd.PersistentFlags().StringVar(
+			&dataset2TestPath, "dataset2TestPath", "",
+			"the dataset to use as reference for the lru choices",
+		)
 	}
 	return cmd
 }
 
 func commandSimulate() *cobra.Command {
-	return simulationCmd(false)
+	return simulationCmd(normalSimulationCmd)
 }
 
 func testAI() *cobra.Command {
-	return simulationCmd(true)
+	return simulationCmd(testAICmd)
+}
+
+func testDataset() *cobra.Command {
+	return simulationCmd(testDatasetCmd)
 }
 
 func genCache(cacheType string) cache.Cache {
@@ -485,6 +515,11 @@ func genCache(cacheType string) cache.Cache {
 			MaxSize: cacheSize,
 		}
 		cacheInstance.Init()
+	case "lruDatasetVerifier":
+		fmt.Printf("[Create lruDatasetVerifier Cache][Size: %f]\n", cacheSize)
+		cacheInstance = &cache.LRUDatasetVerifier{
+			MaxSize: cacheSize,
+		}
 	case "aiLRU":
 		fmt.Printf("[Create aiLRU Cache][Size: %f]\n", cacheSize)
 		cacheInstance = &cache.AILRU{
