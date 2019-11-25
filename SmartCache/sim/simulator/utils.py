@@ -57,7 +57,7 @@ def get_result_section(cur_path: str, source_folder: str):
 
 def load_results(folder: str) -> dict:
     results = {}
-    for root, dirs, files in walk(folder):
+    for root, _, files in walk(folder):
         for file_ in files:
             _, ext = path.splitext(file_)
             if ext == ".csv":
