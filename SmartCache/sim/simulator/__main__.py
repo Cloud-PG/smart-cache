@@ -109,6 +109,10 @@ def main():
         os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
     if args.action in ["simulate", "testAI", "testDataset"]:
+        if not os.path.exists(args.source):
+            print(f"Path '{args.source}' does not exist!")
+            exit(-1)
+
         simulator_exe = get_simulator_exe(force_creation=args.force_exe_build)
         cache_types = args.cache_types.split(",")
         simulation_steps = args.simulation_steps.split(",")
