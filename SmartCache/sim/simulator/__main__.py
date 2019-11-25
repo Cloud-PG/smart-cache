@@ -87,7 +87,7 @@ def main():
     parser.add_argument('--dataset-folder', type=str,
                         default="./datasets",
                         help='Folder where datasets are stored [DEFAULT: "./datasets"]')
-    parser.add_argument('--dataset-converter-name', type=str,
+    parser.add_argument('--dataset-prefix', type=str,
                         default="dataset_best_solution",
                         help='The dataset file name prefix [DEFAULT: "dataset_best_solution"]')
     parser.add_argument('--plot-resolution', type=str,
@@ -96,7 +96,7 @@ def main():
     parser.add_argument('--ai-model-basename', type=str,
                         default="./models/donkey_model",
                         help='Ai Model basename and path [DEFAULT: "./models/donkey_model"]')
-    parser.add_argument('--feature-converter-name', type=str,
+    parser.add_argument('--feature-prefix', type=str,
                         default="featureConverter",
                         help='Ai Model feature converter name prefix [DEFAULT: "featureConverter"]')
 
@@ -161,7 +161,7 @@ def main():
                         feature_map_file = path.abspath(
                             path.join(
                                 path.dirname(args.ai_model_basename),
-                                f"{args.feature_converter_name}-window_{window_idx:02d}.json.gzip"
+                                f"{args.feature_prefix}-window_{window_idx:02d}.json.gzip"
                             )
                         )
                         model_weights_file = path.abspath(
@@ -175,7 +175,7 @@ def main():
                         dataset_file = path.abspath(
                             path.join(
                                 args.dataset_folder,
-                                f"{args.dataset_file_name}-window_{window_idx:02d}.json.gzip"
+                                f"{args.dataset_prefix}-window_{window_idx:02d}.json.gz"
                             )
                         )
                         exe_args.append(f"--dataset2TestPath={dataset_file}")
@@ -224,7 +224,7 @@ def main():
                     feature_map_file = path.abspath(
                         path.join(
                             path.dirname(args.ai_model_basename),
-                            f"{args.feature_converter_name}-window_00.json.gzip"
+                            f"{args.feature_prefix}-window_00.json.gzip"
                         )
                     )
                     model_weights_file = path.abspath(
@@ -238,7 +238,7 @@ def main():
                         dataset_file = path.abspath(
                             path.join(
                                 args.dataset_folder,
-                                f"{args.dataset_file_name}-window_00.json.gzip"
+                                f"{args.dataset_prefix}-window_00.json.gz"
                             )
                         )
                         exe_args.append(f"--dataset2TestPath={dataset_file}")
@@ -298,7 +298,7 @@ def main():
                         feature_map_file = path.abspath(
                             path.join(
                                 path.dirname(args.ai_model_basename),
-                                f"{args.feature_converter_name}-window_{window_idx:02d}.json.gzip"
+                                f"{args.feature_prefix}-window_{window_idx:02d}.json.gzip"
                             )
                         )
                         model_weights_file = path.abspath(
@@ -312,7 +312,7 @@ def main():
                         dataset_file = path.abspath(
                             path.join(
                                 args.dataset_folder,
-                                f"{args.dataset_file_name}-window_{window_idx:02d}.json.gzip"
+                                f"{args.dataset_prefix}-window_{window_idx:02d}.json.gz"
                             )
                         )
                         exe_args.append(f"--dataset2TestPath={dataset_file}")
@@ -370,7 +370,7 @@ def main():
                         feature_map_file = path.abspath(
                             path.join(
                                 path.dirname(args.ai_model_basename),
-                                f"{args.feature_converter_name}-window_{window_idx:02d}.json.gzip"
+                                f"{args.feature_prefix}-window_{window_idx:02d}.json.gzip"
                             )
                         )
                         model_weights_file = path.abspath(
@@ -384,7 +384,7 @@ def main():
                         dataset_file = path.abspath(
                             path.join(
                                 args.dataset_folder,
-                                f"{args.dataset_file_name}-window_{window_idx:02d}.json.gzip"
+                                f"{args.dataset_prefix}-window_{window_idx:02d}.json.gz"
                             )
                         )
                         exe_args.append(f"--dataset2TestPath={dataset_file}")
