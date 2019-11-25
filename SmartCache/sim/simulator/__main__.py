@@ -24,8 +24,8 @@ from .utils import load_results, str2bool, wait_jobs
 def main():
     parser = argparse.ArgumentParser(
         "simulator", description="Simulation and result plotting")
-    
-    parser.register('type','bool',str2bool) # add type keyword to registries
+
+    parser.register('type', 'bool', str2bool)  # add type keyword to registries
 
     parser.add_argument('action', choices=['simulate', 'testAI', 'testDataset', 'plot', 'train', 'create_dataset'],
                         default="simulate",
@@ -242,13 +242,13 @@ def main():
                     exe_args.append(f"--aiFeatureMap={feature_map_file}")
                     exe_args.append(f"--aiModel={model_weights_file}")
                 elif cache_type == 'lruDatasetVerifier':
-                        dataset_file = path.abspath(
-                            path.join(
-                                args.dataset_folder,
-                                f"{args.dataset_prefix}-window_00.json.gz"
-                            )
+                    dataset_file = path.abspath(
+                        path.join(
+                            args.dataset_folder,
+                            f"{args.dataset_prefix}-window_00.json.gz"
                         )
-                        exe_args.append(f"--dataset2TestPath={dataset_file}")
+                    )
+                    exe_args.append(f"--dataset2TestPath={dataset_file}")
                 cur_process = subprocess.Popen(
                     " ".join(exe_args),
                     shell=True,
@@ -577,9 +577,10 @@ def main():
             files_df['size'] = files_df['size'] / 1024**2
 
             # Add value
-            files_df['value'] = (files_df['size'] *
-                                 files_df['totReq']
-                                 ) / args.window_size
+            files_df['value'] = (
+                files_df['size'] *
+                files_df['totReq']
+            ) / args.window_size
 
             # Remove low value files
             # q1 = files_df.value.describe().quantile(0.25)
@@ -632,7 +633,8 @@ def main():
                 f"dataset_best_solution-window_{winIdx:02d}.json.gz"
             )
 
-            len_dataset = int(cur_df.shape[0] * 0.42)  # get 42% of the requests
+            # get 42% of the requests
+            len_dataset = int(cur_df.shape[0] * 0.30)
 
             sample = cur_df.sample(n=len_dataset, random_state=42)
             sample.rename(columns={'size': 'fileSize'}, inplace=True)
@@ -693,14 +695,14 @@ def main():
                 ],
                 map_type=int,
                 sort_keys=True,
-                buckets=[50, 100, 250, 500, 1000, 2000, 4000, '...'],
+                buckets=[50, 100, 250, 500, 1000, 2000, 4000, 10000, '...'],
             ).make_converter_map(
                 [
                     'numReq',
                 ],
                 map_type=int,
                 sort_keys=True,
-                buckets=[1, 2, 3, 4, 5, 6, 10, 50, 75, 100, 200, '...'],
+                buckets=[1, 2, 3, 4, 5, 10, 25, 50, 75, 100, 200, '...'],
             ).make_converter_map(
                 [
                     'avgTime',
