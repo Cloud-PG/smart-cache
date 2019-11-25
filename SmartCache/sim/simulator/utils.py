@@ -4,6 +4,10 @@ from os import path, walk
 import pandas as pd
 
 
+def str2bool(v):
+    return v.lower() in ("yes", "true", "True", "t", "1")
+
+
 def wait_jobs(processes):
     while job_run(processes):
         for _, process in processes:

@@ -18,12 +18,15 @@ from SmartCache.sim import get_simulator_exe
 from .ga import compare_greedy_solution, get_best_configuration
 from .greedy import get2PTAS
 from .plotter import plot_results
-from .utils import load_results, wait_jobs
+from .utils import load_results, str2bool, wait_jobs
 
 
 def main():
     parser = argparse.ArgumentParser(
         "simulator", description="Simulation and result plotting")
+    
+    parser.register('type','bool',str2bool) # add type keyword to registries
+
     parser.add_argument('action', choices=['simulate', 'testAI', 'testDataset', 'plot', 'train', 'create_dataset'],
                         default="simulate",
                         help='Action requested')
@@ -36,13 +39,13 @@ def main():
     parser.add_argument('--out-folder', type=str,
                         default="./simulation_results",
                         help='The folder where the simulation results will be stored [DEFAULT: "simulation_results"]')
-    parser.add_argument('--read-on-hit', type=bool,
+    parser.add_argument('--read-on-hit', type='bool',
                         default=True,
                         help='Use read on hit data [DEFAULT: True]')
     parser.add_argument('--simulation-steps', type=str,
                         default='single,normal,nextW,nextP',
                         help='Select the simulation steps [DEFAULT: "single,normal,nextW,next"]')
-    parser.add_argument('-FEB', '--force-exe-build', type=bool,
+    parser.add_argument('-FEB', '--force-exe-build', type='bool',
                         default=True,
                         help='Force to build the simulation executable [DEFAULT: True]')
     parser.add_argument('-CS', '--cache-size', type=int,
@@ -66,19 +69,19 @@ def main():
     parser.add_argument('--num-generations', type=int,
                         default=1000,
                         help='Num. of generations of GA [DEFAULT: 200]')
-    parser.add_argument('--out-html', type=bool,
+    parser.add_argument('--out-html', type='bool',
                         default=True,
                         help='Plot the output as a html [DEFAULT: True]')
-    parser.add_argument('--out-png', type=bool,
+    parser.add_argument('--out-png', type='bool',
                         default=False,
                         help='Plot the output as a png (requires phantomjs-prebuilt installed with npm) [DEFAULT: False]')
     parser.add_argument('--plot-filters', type=str,
                         default="",
                         help='A comma separate string to search as filters')
-    parser.add_argument('--only-CPU', type=bool,
+    parser.add_argument('--only-CPU', type='bool',
                         default=True,
                         help='Force to use only CPU with TensorFlow [DEFAULT: True]')
-    parser.add_argument('--insert-best-greedy', type=bool,
+    parser.add_argument('--insert-best-greedy', type='bool',
                         default=False,
                         help='Force to use insert 1 individual equal to the greedy composition [DEFAULT: False]')
     parser.add_argument('--dataset-creation-method', type=str,
