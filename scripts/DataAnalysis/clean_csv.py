@@ -13,7 +13,7 @@ def main():
         for file_ in files:
             _, ext = path.splitext(file_)
             if ext == ".gz":
-                print(f"==> {file_}")
+                print(f"=> {file_}")
                 with gzip.GzipFile(path.join(root, file_)) as gzipfile:
                     df = pd.read_csv(gzipfile)
                     print(f"==> Cur. schape: {df.shape}")
