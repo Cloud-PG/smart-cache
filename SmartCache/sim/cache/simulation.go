@@ -53,15 +53,15 @@ func recordGenerator(csvReader *csv.Reader, curFile *os.File) chan CSVRecord {
 			iotime, _ := strconv.ParseFloat(record[12], 32)
 			size, _ := strconv.ParseFloat(record[13], 32)
 
-			channel <- CSVRecord{
+			curRecord := CSVRecord{
 				Day:           int64(day),
-				Filename:      record[2],
-				Protocol:      record[3],
-				TaskMonitorID: record[4],
+				Filename:      record[1],
+				Protocol:      record[2],
+				TaskMonitorID: record[3],
 				TaskID:        int(taskID),
 				JobID:         int(jobID),
-				SiteName:      record[7],
-				JobSuccess:    record[8],
+				SiteName:      record[6],
+				JobSuccess:    record[7],
 				JobLengthH:    float32(joblengthh),
 				JobLengthM:    float32(joblengthm),
 				UserID:        int(userID),
@@ -69,6 +69,8 @@ func recordGenerator(csvReader *csv.Reader, curFile *os.File) chan CSVRecord {
 				IOTime:        float32(iotime),
 				Size:          float32(size),
 			}
+
+			channel <- curRecord
 		}
 	}()
 	return channel
