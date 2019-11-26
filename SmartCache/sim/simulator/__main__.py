@@ -702,7 +702,7 @@ def main():
                 ],
                 map_type=int,
                 sort_keys=True,
-                buckets=[50, 100, 250, 500, 1000, 2000, 4000, 10000, '...'],
+                buckets=[5, 10, 50, 100, 250, 500, 1000, 2000, 4000, 10000, '...'],
             ).make_converter_map(
                 [
                     'numReq',
