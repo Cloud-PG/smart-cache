@@ -13,7 +13,6 @@ import (
 
 // CSVRecord is the base record composition readed from the logs
 type CSVRecord struct {
-	Index         int     `json:"index"`
 	Day           int64   `json:"day"`
 	Filename      string  `json:"filename"`
 	Protocol      string  `json:"protocol"`
@@ -44,19 +43,17 @@ func recordGenerator(csvReader *csv.Reader, curFile *os.File) chan CSVRecord {
 				log.Fatal(err)
 			}
 
-			index, _ := strconv.ParseInt(record[0], 10, 32)
-			day, _ := strconv.ParseFloat(record[1], 64)
-			taskID, _ := strconv.ParseInt(record[5], 10, 32)
-			jobID, _ := strconv.ParseInt(record[6], 10, 32)
-			joblengthh, _ := strconv.ParseFloat(record[9], 32)
-			joblengthm, _ := strconv.ParseFloat(record[10], 32)
-			userID, _ := strconv.ParseInt(record[11], 10, 32)
-			cputime, _ := strconv.ParseFloat(record[12], 32)
-			iotime, _ := strconv.ParseFloat(record[13], 32)
-			size, _ := strconv.ParseFloat(record[14], 32)
+			day, _ := strconv.ParseFloat(record[0], 64)
+			taskID, _ := strconv.ParseInt(record[4], 10, 32)
+			jobID, _ := strconv.ParseInt(record[5], 10, 32)
+			joblengthh, _ := strconv.ParseFloat(record[8], 32)
+			joblengthm, _ := strconv.ParseFloat(record[9], 32)
+			userID, _ := strconv.ParseInt(record[10], 10, 32)
+			cputime, _ := strconv.ParseFloat(record[11], 32)
+			iotime, _ := strconv.ParseFloat(record[12], 32)
+			size, _ := strconv.ParseFloat(record[13], 32)
 
 			channel <- CSVRecord{
-				Index:         int(index),
 				Day:           int64(day),
 				Filename:      record[2],
 				Protocol:      record[3],
