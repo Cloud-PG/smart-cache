@@ -520,8 +520,6 @@ def main():
                 cur_filename = cur_row.filename
                 cur_size = cur_row.size
                 if cur_filename not in files:
-                    print(cur_filename.split("/"))
-                    exit()
                     data_type, campain, process, file_type = cur_filename.split("/")[2:6]
                     files[cur_filename] = {
                         'size': cur_size,
