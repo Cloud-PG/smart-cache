@@ -115,6 +115,8 @@ func (cache *AILRU) Init(args ...interface{}) interface{} {
 		"userID",
 		"fileType",
 		"dataType",
+		"campain",
+		"process",
 		"numReq",
 		"avgTime",
 		"size",
@@ -553,15 +555,19 @@ func (cache *AILRU) composeFeatures(vars ...interface{}) []float64 {
 	userID := strconv.Itoa(vars[1].(int))
 	fileType := vars[2].(string)
 	dataType := vars[3].(string)
-	totRequests := float64(vars[4].(uint32))
-	avgTime := float64(vars[5].(float32))
-	size := float64(vars[6].(float32))
+	campain := vars[4].(string)
+	process := vars[5].(string)
+	totRequests := float64(vars[6].(uint32))
+	avgTime := float64(vars[7].(float32))
+	size := float64(vars[8].(float32))
 
 	curInputs := []interface{}{
 		siteName,
 		userID,
 		fileType,
 		dataType,
+		campain,
+		process,
 		totRequests,
 		avgTime,
 		size,
@@ -593,6 +599,8 @@ func (cache *AILRU) updatePolicy(filename string, size float32, hit bool, vars .
 		userID := vars[2].(int)
 		tmpSplit := strings.Split(filename, "/")
 		dataType := tmpSplit[2]
+		campain := tmpSplit[3]
+		process := tmpSplit[4]
 		fileType := tmpSplit[5]
 
 		featureVector := cache.composeFeatures(
@@ -600,6 +608,8 @@ func (cache *AILRU) updatePolicy(filename string, size float32, hit bool, vars .
 			userID,
 			fileType,
 			dataType,
+			campain,
+			process,
 			curStats.TotRequests,
 			curStats.RequestTicksMean,
 			size,

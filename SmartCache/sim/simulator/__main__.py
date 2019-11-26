@@ -520,11 +520,15 @@ def main():
                 cur_filename = cur_row.filename
                 cur_size = cur_row.size
                 if cur_filename not in files:
-                    data_type, _, _, file_type = cur_filename.split("/")[2:6]
+                    print(cur_filename.split("/"))
+                    exit()
+                    data_type, campain, process, file_type = cur_filename.split("/")[2:6]
                     files[cur_filename] = {
                         'size': cur_size,
                         'totReq': 0,
                         'days': [],
+                        'campain': campain,
+                        'process': process,
                         'reqHistory': [],
                         'lastReq': 0,
                         'fileType': file_type,
@@ -567,6 +571,10 @@ def main():
                                  for filename in files],
                     'dataType': [files[filename]['dataType']
                                  for filename in files],
+                    'campain': [files[filename]['campain']
+                               for filename in files],
+                    'process': [files[filename]['process']
+                               for filename in files],
                 }
             )
 
@@ -642,7 +650,8 @@ def main():
             dataset_df = pd.merge(sample, files_df, on='filename')
             dataset_df = dataset_df[
                 ['site_name', 'user', 'num_req', 'avg_time',
-                 'size', 'fileType', 'dataType', 'class']
+                 'size', 'fileType', 'dataType', 
+                 'campain', 'process', 'class']
             ]
             dataset_df.rename(
                 columns={
@@ -715,7 +724,9 @@ def main():
                     'siteName',
                     'userID',
                     'fileType',
-                    'dataType'
+                    'dataType',
+                    'campain',
+                    'process',
                 ],
                 unknown_values=True,
                 map_type=str,
@@ -727,6 +738,8 @@ def main():
                     'userID',
                     'fileType',
                     'dataType',
+                    'campain',
+                    'process',
                     'numReq',
                     'avgTime',
                     'size',
