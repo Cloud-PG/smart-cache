@@ -1,4 +1,4 @@
-package cache
+package neuralnet
 
 import (
 	"compress/gzip"

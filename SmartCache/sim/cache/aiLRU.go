@@ -15,6 +15,7 @@ import (
 	"time"
 
 	aiPb "simulator/v2/cache/aiService"
+	"simulator/v2/cache/neuralnet"
 	pb "simulator/v2/cache/simService"
 
 	empty "github.com/golang/protobuf/ptypes/empty"
@@ -102,7 +103,7 @@ type AILRU struct {
 	aiClient                           aiPb.AIServiceClient
 	aiFeatureMap                       map[string]featureMapObj
 	aiFeatureOrder                     []string
-	aiModel                            *AIModel
+	aiModel                            *neuralnet.AIModel
 	grpcConn                           *grpc.ClientConn
 	grpcContext                        context.Context
 	grpcCxtCancel                      context.CancelFunc
@@ -226,7 +227,7 @@ func (cache *AILRU) Init(args ...interface{}) interface{} {
 		return cache.grpcConn
 	}
 
-	cache.aiModel = LoadModel(modelFilePath)
+	cache.aiModel = neuralnet.LoadModel(modelFilePath)
 	return nil
 }
 
@@ -642,7 +643,7 @@ func (cache *AILRU) updatePolicy(filename string, size float32, hit bool, vars .
 		} else {
 			inputVector := mat.NewDense(len(featureVector), 1, featureVector)
 			result := cache.aiModel.Predict(inputVector)
-			store := GetPredictionArgMax(result)
+			store := neuralnet.GetPredictionArgMax(result)
 			// PrintTensor(result)
 			if store == 0 {
 				return added
