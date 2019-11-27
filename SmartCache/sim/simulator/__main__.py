@@ -102,6 +102,9 @@ def main():
     parser.add_argument('--feature-prefix', type=str,
                         default="featureConverter",
                         help='Ai Model feature converter name prefix [DEFAULT: "featureConverter"]')
+    parser.add_argument('--use-qlearn', type='bool',
+                        default=False,
+                        help='Force to use Q-Learning method [DEFAULT: False]')
 
     args, _ = parser.parse_known_args()
 
@@ -174,10 +177,13 @@ def main():
                         model_weights_file = path.abspath(
                             f"{args.ai_model_basename.split('.h5')[0]}-window_{window_idx:02d}.dump.json.gz"
                         )
-                        exe_args.append("--aiHost=127.0.0.1")
-                        exe_args.append(f"--aiPort=4242")
                         exe_args.append(f"--aiFeatureMap={feature_map_file}")
-                        exe_args.append(f"--aiModel={model_weights_file}")
+                        if args.use_qlearn:
+                            exe_args.append("--aiQLearn=true")
+                        else:
+                            exe_args.append("--aiHost=127.0.0.1")
+                            exe_args.append(f"--aiPort=4242")
+                            exe_args.append(f"--aiModel={model_weights_file}")
                     elif cache_type == 'lruDatasetVerifier':
                         dataset_file = path.abspath(
                             path.join(
@@ -237,10 +243,13 @@ def main():
                     model_weights_file = path.abspath(
                         f"{args.ai_model_basename.split('.h5')[0]}-window_00.dump.json.gz"
                     )
-                    exe_args.append("--aiHost=127.0.0.1")
-                    exe_args.append(f"--aiPort=4242")
                     exe_args.append(f"--aiFeatureMap={feature_map_file}")
-                    exe_args.append(f"--aiModel={model_weights_file}")
+                    if args.use_qlearn:
+                        exe_args.append("--aiQLearn=true")
+                    else:
+                        exe_args.append("--aiHost=127.0.0.1")
+                        exe_args.append(f"--aiPort=4242")
+                        exe_args.append(f"--aiModel={model_weights_file}")
                 elif cache_type == 'lruDatasetVerifier':
                     dataset_file = path.abspath(
                         path.join(
@@ -311,10 +320,13 @@ def main():
                         model_weights_file = path.abspath(
                             f"{args.ai_model_basename.split('.h5')[0]}-window_{window_idx:02d}.dump.json.gz"
                         )
-                        exe_args.append("--aiHost=127.0.0.1")
-                        exe_args.append(f"--aiPort=4242")
                         exe_args.append(f"--aiFeatureMap={feature_map_file}")
-                        exe_args.append(f"--aiModel={model_weights_file}")
+                        if args.use_qlearn:
+                            exe_args.append("--aiQLearn=true")
+                        else:
+                            exe_args.append("--aiHost=127.0.0.1")
+                            exe_args.append(f"--aiPort=4242")
+                            exe_args.append(f"--aiModel={model_weights_file}")
                     elif cache_type == 'lruDatasetVerifier':
                         dataset_file = path.abspath(
                             path.join(
@@ -383,10 +395,13 @@ def main():
                         model_weights_file = path.abspath(
                             f"{args.ai_model_basename.split('.h5')[0]}-window_{window_idx:02d}.dump.json.gz"
                         )
-                        exe_args.append("--aiHost=127.0.0.1")
-                        exe_args.append(f"--aiPort=4242")
                         exe_args.append(f"--aiFeatureMap={feature_map_file}")
-                        exe_args.append(f"--aiModel={model_weights_file}")
+                        if args.use_qlearn:
+                            exe_args.append("--aiQLearn=true")
+                        else:
+                            exe_args.append("--aiHost=127.0.0.1")
+                            exe_args.append(f"--aiPort=4242")
+                            exe_args.append(f"--aiModel={model_weights_file}")
                     elif cache_type == 'lruDatasetVerifier':
                         dataset_file = path.abspath(
                             path.join(

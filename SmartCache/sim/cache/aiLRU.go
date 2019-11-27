@@ -11,11 +11,11 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	aiPb "simulator/v2/cache/aiService"
 	"simulator/v2/cache/neuralnet"
+	qlearn "simulator/v2/cache/qLearn"
 	pb "simulator/v2/cache/simService"
 
 	empty "github.com/golang/protobuf/ptypes/empty"
@@ -90,7 +90,7 @@ func (curMap featureMapObj) GetKeys() chan featureMapKey {
 type AILRU struct {
 	files                              map[string]float32
 	stats                              []*WeightedFileStats
-	statsFilenames                     sync.Map
+	statsFilenames                     map[string]int
 	queue                              *list.List
 	hit, miss, size, MaxSize, Exp      float32
 	dataWritten, dataRead, dataDeleted float32
@@ -103,14 +103,22 @@ type AILRU struct {
 	aiClient                           aiPb.AIServiceClient
 	aiFeatureMap                       map[string]featureMapObj
 	aiFeatureOrder                     []string
+	aiFeatureSelection                 []bool
 	aiModel                            *neuralnet.AIModel
 	grpcConn                           *grpc.ClientConn
 	grpcContext                        context.Context
 	grpcCxtCancel                      context.CancelFunc
+	qTable                             *qlearn.QTable
 }
 
 // Init the AILRU struct
 func (cache *AILRU) Init(args ...interface{}) interface{} {
+	cache.aiClientHost = args[0].(string)
+	cache.aiClientPort = args[1].(string)
+	featureMapFilePath := args[2].(string)
+	modelFilePath := args[3].(string)
+	enableQLearn := args[4].(bool)
+
 	cache.aiFeatureOrder = []string{
 		"siteName",
 		"userID",
@@ -122,16 +130,38 @@ func (cache *AILRU) Init(args ...interface{}) interface{} {
 		"avgTime",
 		"size",
 	}
+
+	if !enableQLearn {
+		cache.aiFeatureSelection = []bool{
+			true,
+			true,
+			true,
+			true,
+			true,
+			true,
+			true,
+			true,
+			true,
+		}
+	} else {
+		cache.aiFeatureSelection = []bool{
+			false,
+			false,
+			true,
+			true,
+			false,
+			false,
+			true,
+			true,
+			true,
+		}
+	}
+
 	cache.files = make(map[string]float32)
 	cache.queue = list.New()
 	cache.stats = make([]*WeightedFileStats, 0)
 	cache.aiFeatureMap = make(map[string]featureMapObj, 0)
-	cache.statsFilenames = sync.Map{}
-
-	cache.aiClientHost = args[0].(string)
-	cache.aiClientPort = args[1].(string)
-	featureMapFilePath := args[2].(string)
-	modelFilePath := args[3].(string)
+	cache.statsFilenames = make(map[string]int)
 
 	featureMapFile, errOpenFile := os.Open(featureMapFilePath)
 	if errOpenFile != nil {
@@ -206,9 +236,7 @@ func (cache *AILRU) Init(args ...interface{}) interface{} {
 		cache.aiFeatureMap[k0] = curStruct
 	}
 
-	if modelFilePath == "" {
-		cache.aiModel = nil
-
+	if modelFilePath == "" && !enableQLearn && cache.aiClientHost != "" && cache.aiClientPort != "" {
 		var opts []grpc.DialOption
 		opts = append(opts, grpc.WithInsecure())
 		opts = append(opts, grpc.WithBlock())
@@ -225,9 +253,26 @@ func (cache *AILRU) Init(args ...interface{}) interface{} {
 		cache.aiClient = aiPb.NewAIServiceClient(cache.grpcConn)
 
 		return cache.grpcConn
+	} else if modelFilePath != "" && !enableQLearn {
+		cache.aiModel = neuralnet.LoadModel(modelFilePath)
+	} else if enableQLearn {
+		cache.qTable = &qlearn.QTable{}
+		inputLenghts := []int{}
+		for idx, featureName := range cache.aiFeatureOrder {
+			if cache.aiFeatureSelection[idx] {
+				curFeature, _ := cache.aiFeatureMap[featureName]
+				curLen := len(curFeature.Values)
+				if curFeature.UnknownValues {
+					curLen++
+				}
+				inputLenghts = append(inputLenghts, curLen)
+			}
+		}
+		fmt.Print("[Generate QTable]")
+		cache.qTable.Init(inputLenghts)
+		fmt.Println("[Done]")
 	}
 
-	cache.aiModel = neuralnet.LoadModel(modelFilePath)
 	return nil
 }
 
@@ -241,13 +286,7 @@ func (cache *AILRU) ClearFiles() {
 func (cache *AILRU) Clear() {
 	cache.ClearFiles()
 	cache.stats = make([]*WeightedFileStats, 0)
-	cache.statsFilenames.Range(
-		func(key interface{}, value interface{}) bool {
-			cache.statsFilenames.Delete(key)
-			return true
-		},
-	)
-	cache.statsFilenames = sync.Map{}
+	cache.statsFilenames = make(map[string]int)
 	tmpVal := cache.queue.Front()
 	for {
 		if tmpVal == nil {
@@ -466,7 +505,7 @@ func (cache *AILRU) getOrInsertStats(filename string) (int, *WeightedFileStats) 
 		stats     *WeightedFileStats
 	)
 
-	idx, inStats := cache.statsFilenames.Load(filename)
+	idx, inStats := cache.statsFilenames[filename]
 
 	if !inStats {
 		cache.stats = append(cache.stats, &WeightedFileStats{
@@ -483,9 +522,9 @@ func (cache *AILRU) getOrInsertStats(filename string) (int, *WeightedFileStats) 
 		})
 		resultIdx = len(cache.stats) - 1
 		stats = cache.stats[resultIdx]
-		cache.statsFilenames.Store(filename, resultIdx)
+		cache.statsFilenames[filename] = resultIdx
 	} else {
-		resultIdx = idx.(int)
+		resultIdx = idx
 		stats = cache.stats[resultIdx]
 	}
 
@@ -575,20 +614,38 @@ func (cache *AILRU) composeFeatures(vars ...interface{}) []float64 {
 	}
 
 	for idx, featureName := range cache.aiFeatureOrder {
-		_, inFeatureMap := cache.aiFeatureMap[featureName]
-		if inFeatureMap {
-			tmpArr = cache.getCategory(featureName, curInputs[idx])
-			inputVector = append(inputVector, tmpArr...)
-			continue
+		if cache.aiFeatureSelection[idx] {
+			_, inFeatureMap := cache.aiFeatureMap[featureName]
+			if inFeatureMap {
+				tmpArr = cache.getCategory(featureName, curInputs[idx])
+				inputVector = append(inputVector, tmpArr...)
+				continue
+			}
+			inputVector = append(inputVector, curInputs[idx].(float64))
 		}
-		inputVector = append(inputVector, curInputs[idx].(float64))
+
 	}
 
 	return inputVector
 }
 
+func (cache AILRU) getPoints() float64 {
+	points := 0.0
+	for filename, size := range cache.files {
+		idx, _ := cache.statsFilenames[filename]
+		nReq := cache.stats[idx].TotRequests
+		points += float64(nReq) * float64(size)
+	}
+	return float64(points)
+}
+
 func (cache *AILRU) updatePolicy(filename string, size float32, hit bool, vars ...interface{}) bool {
-	var added = false
+	var (
+		added      = false
+		curAction  qlearn.ActionType
+		prevPoints float64
+		curState   []float64
+	)
 
 	day := vars[0].(int64)
 	currentTime := time.Unix(day, 0)
@@ -616,7 +673,7 @@ func (cache *AILRU) updatePolicy(filename string, size float32, hit bool, vars .
 			size,
 		)
 
-		if cache.aiModel == nil {
+		if cache.aiModel == nil && cache.qTable == nil {
 			ctx, ctxCancel := context.WithTimeout(context.Background(), 24*time.Hour)
 			defer ctxCancel()
 
@@ -640,12 +697,39 @@ func (cache *AILRU) updatePolicy(filename string, size float32, hit bool, vars .
 			if result.Store == false {
 				return added
 			}
-		} else {
+		} else if cache.aiModel != nil {
 			inputVector := mat.NewDense(len(featureVector), 1, featureVector)
 			result := cache.aiModel.Predict(inputVector)
 			store := neuralnet.GetPredictionArgMax(result)
 			// PrintTensor(result)
 			if store == 0 {
+				return added
+			}
+		} else if cache.qTable != nil {
+			curState = featureVector
+			prevPoints = cache.getPoints()
+
+			// QLearn - Check action
+			expTradeoff := cache.qTable.GetRandomTradeOff()
+			if expTradeoff > cache.qTable.Epsilon {
+				// action
+				curAction = cache.qTable.GetBestAction(curState)
+			} else {
+				// random choice
+				if expTradeoff > 0.5 {
+					curAction = qlearn.ActionStore
+				} else {
+					curAction = qlearn.ActionNotStore
+				}
+			}
+
+			// QLearn - Take the action
+			if curAction == qlearn.ActionNotStore {
+				reward := cache.getPoints() - prevPoints
+				// Update table
+				cache.qTable.Update(curState, curAction, reward)
+				// Update epsilon
+				cache.qTable.UpdateEpsilon()
 				return added
 			}
 		}
@@ -683,6 +767,16 @@ func (cache *AILRU) updatePolicy(filename string, size float32, hit bool, vars .
 			cache.size += size
 			added = true
 		}
+
+		// QLearn - Take the action
+		if cache.qTable != nil && curAction == qlearn.ActionStore {
+			reward := cache.getPoints() - prevPoints
+			// Update table
+			cache.qTable.Update(curState, curAction, reward)
+			// Update epsilon
+			cache.qTable.UpdateEpsilon()
+		}
+
 	} else {
 		var elm2move *list.Element
 		for tmpVal := cache.queue.Front(); tmpVal != nil; tmpVal = tmpVal.Next() {
