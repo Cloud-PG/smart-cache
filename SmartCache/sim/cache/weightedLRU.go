@@ -11,7 +11,8 @@ import (
 	"os"
 	"time"
 
-	pb "./simService"
+	pb "simulator/v2/cache/simService"
+
 	empty "github.com/golang/protobuf/ptypes/empty"
 )
 

@@ -1,0 +1,44 @@
+{
+	"folders": [{
+			"path": "./"
+		},
+		{
+			"path": "./SmartCache/sim"
+		}
+	],
+	"settings": {
+		"go.useLanguageServer": true,
+		"[go]": {
+			"editor.snippetSuggestions": "none",
+			"editor.formatOnSave": true,
+			"editor.codeActionsOnSaveTimeout": 2000,
+			"editor.codeActionsOnSave": {
+				"source.organizeImports": true,
+			}
+		},
+		"go.languageServerExperimentalFeatures": {
+			"format": true,
+			"autoComplete": true,
+			"rename": true,
+			"goToDefinition": true,
+			"hover": true,
+			"signatureHelp": true,
+			"goToTypeDefinition": true,
+			"goToImplementation": true,
+			"documentSymbols": true,
+			"workspaceSymbols": true,
+			"findReferences": true,
+			"diagnostics": true,
+			"documentLink": true
+		},
+		"gopls": {
+			"usePlaceholders": true, // add parameter placeholders when completing a function
+
+			// Experimental settings
+			"completeUnimported": true, // autocomplete unimported packages
+			"watchFileChanges": true, // watch file changes outside of the editor
+			"deepCompletion": true, // enable deep completion
+		},
+		"files.eol": "\n", // formatting only supports LF line endings
+	}
+}

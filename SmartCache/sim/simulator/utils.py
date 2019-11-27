@@ -4,6 +4,10 @@ from os import path, walk
 import pandas as pd
 
 
+def str2bool(v):
+    return v.lower() in ("yes", "true", "True", "t", "1")
+
+
 def wait_jobs(processes):
     while job_run(processes):
         for _, process in processes:
@@ -57,7 +61,7 @@ def get_result_section(cur_path: str, source_folder: str):
 
 def load_results(folder: str) -> dict:
     results = {}
-    for root, dirs, files in walk(folder):
+    for root, _, files in walk(folder):
         for file_ in files:
             _, ext = path.splitext(file_)
             if ext == ".csv":

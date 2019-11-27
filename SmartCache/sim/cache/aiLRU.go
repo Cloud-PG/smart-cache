@@ -14,8 +14,9 @@ import (
 	"sync"
 	"time"
 
-	aiPb "./aiService"
-	pb "./simService"
+	aiPb "simulator/v2/cache/aiService"
+	pb "simulator/v2/cache/simService"
+
 	empty "github.com/golang/protobuf/ptypes/empty"
 	"gonum.org/v1/gonum/mat"
 	"google.golang.org/grpc"
@@ -100,6 +101,7 @@ type AILRU struct {
 	aiClientPort                       string
 	aiClient                           aiPb.AIServiceClient
 	aiFeatureMap                       map[string]featureMapObj
+	aiFeatureOrder                     []string
 	aiModel                            *AIModel
 	grpcConn                           *grpc.ClientConn
 	grpcContext                        context.Context
@@ -108,6 +110,17 @@ type AILRU struct {
 
 // Init the AILRU struct
 func (cache *AILRU) Init(args ...interface{}) interface{} {
+	cache.aiFeatureOrder = []string{
+		"siteName",
+		"userID",
+		"fileType",
+		"dataType",
+		"campain",
+		"process",
+		"numReq",
+		"avgTime",
+		"size",
+	}
 	cache.files = make(map[string]float32)
 	cache.queue = list.New()
 	cache.stats = make([]*WeightedFileStats, 0)
@@ -501,34 +514,36 @@ func (cache *AILRU) getCategory(catKey string, value interface{}) []float64 {
 		}
 		return res
 
-	} else {
-		for curKey := range curCategory.GetKeys() {
-			switch curCategory.Type {
-			case typeInt:
-				inputValue := int64(value.(float64))
-				if inputValue <= curKey.ValueI {
-					res[curCategory.Values[fmt.Sprintf("%d", curKey.ValueI)]] = 1.0
-					return res
-				}
-			case typeFloat:
-				inputValue := value.(float64)
-				if inputValue <= curKey.ValueF {
-					res[curCategory.Values[fmt.Sprintf("%0.2f", curKey.ValueF)]] = 1.0
-					return res
-				}
-			case typeString:
-				inputValue := value.(string)
-				if inputValue <= curKey.ValueS {
-					res[curCategory.Values[fmt.Sprintf("%s", curKey.ValueS)]] = 1.0
-					return res
-				}
+	}
+
+	for curKey := range curCategory.GetKeys() {
+		switch curCategory.Type {
+		case typeInt:
+			inputValue := int64(value.(float64))
+			if inputValue <= curKey.ValueI {
+				res[curCategory.Values[fmt.Sprintf("%d", curKey.ValueI)]] = 1.0
+				return res
+			}
+		case typeFloat:
+			inputValue := value.(float64)
+			if inputValue <= curKey.ValueF {
+				res[curCategory.Values[fmt.Sprintf("%0.2f", curKey.ValueF)]] = 1.0
+				return res
+			}
+		case typeString:
+			inputValue := value.(string)
+			if inputValue <= curKey.ValueS {
+				res[curCategory.Values[fmt.Sprintf("%s", curKey.ValueS)]] = 1.0
+				return res
 			}
 		}
-		if curCategory.BucketOpenRight == true {
-			res[curCategory.Values["max"]] = 1.0
-			return res
-		}
 	}
+
+	if curCategory.BucketOpenRight == true {
+		res[curCategory.Values["max"]] = 1.0
+		return res
+	}
+
 	panic(fmt.Sprintf("Cannot convert a value '%v' of category %s", value, catKey))
 }
 
@@ -540,28 +555,33 @@ func (cache *AILRU) composeFeatures(vars ...interface{}) []float64 {
 	userID := strconv.Itoa(vars[1].(int))
 	fileType := vars[2].(string)
 	dataType := vars[3].(string)
-	totRequests := float64(vars[4].(uint32))
-	avgTime := float64(vars[5].(float32))
-	size := float64(vars[6].(float32))
+	campain := vars[4].(string)
+	process := vars[5].(string)
+	totRequests := float64(vars[6].(uint32))
+	avgTime := float64(vars[7].(float32))
+	size := float64(vars[8].(float32))
 
-	tmpArr = cache.getCategory("siteName", siteName)
-	inputVector = append(inputVector, tmpArr...)
+	curInputs := []interface{}{
+		siteName,
+		userID,
+		fileType,
+		dataType,
+		campain,
+		process,
+		totRequests,
+		avgTime,
+		size,
+	}
 
-	tmpArr = cache.getCategory("userID", userID)
-	inputVector = append(inputVector, tmpArr...)
-
-	tmpArr = cache.getCategory("fileType", fileType)
-	inputVector = append(inputVector, tmpArr...)
-
-	tmpArr = cache.getCategory("dataType", dataType)
-	inputVector = append(inputVector, tmpArr...)
-
-	inputVector = append(inputVector, totRequests)
-	tmpArr = cache.getCategory("avgTime", avgTime)
-	inputVector = append(inputVector, tmpArr...)
-
-	tmpArr = cache.getCategory("size", size)
-	inputVector = append(inputVector, tmpArr...)
+	for idx, featureName := range cache.aiFeatureOrder {
+		_, inFeatureMap := cache.aiFeatureMap[featureName]
+		if inFeatureMap {
+			tmpArr = cache.getCategory(featureName, curInputs[idx])
+			inputVector = append(inputVector, tmpArr...)
+			continue
+		}
+		inputVector = append(inputVector, curInputs[idx].(float64))
+	}
 
 	return inputVector
 }
@@ -579,6 +599,8 @@ func (cache *AILRU) updatePolicy(filename string, size float32, hit bool, vars .
 		userID := vars[2].(int)
 		tmpSplit := strings.Split(filename, "/")
 		dataType := tmpSplit[2]
+		campain := tmpSplit[3]
+		process := tmpSplit[4]
 		fileType := tmpSplit[5]
 
 		featureVector := cache.composeFeatures(
@@ -586,6 +608,8 @@ func (cache *AILRU) updatePolicy(filename string, size float32, hit bool, vars .
 			userID,
 			fileType,
 			dataType,
+			campain,
+			process,
 			curStats.TotRequests,
 			curStats.RequestTicksMean,
 			size,

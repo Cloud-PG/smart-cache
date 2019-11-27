@@ -1,5 +1,6 @@
 import argparse
 import gzip
+import json
 import os
 import subprocess
 from datetime import datetime, timedelta
@@ -15,14 +16,18 @@ from SmartCache.ai.models.generator import DonkeyModel
 from SmartCache.sim import get_simulator_exe
 
 from .ga import compare_greedy_solution, get_best_configuration
+from .greedy import get2PTAS
 from .plotter import plot_results
-from .utils import load_results, wait_jobs
+from .utils import load_results, str2bool, wait_jobs
 
 
 def main():
     parser = argparse.ArgumentParser(
         "simulator", description="Simulation and result plotting")
-    parser.add_argument('action', choices=['simulate', 'plot', 'train', 'create_dataset'],
+
+    parser.register('type', 'bool', str2bool)  # add type keyword to registries
+
+    parser.add_argument('action', choices=['simulate', 'testAI', 'testDataset', 'plot', 'train', 'create_dataset'],
                         default="simulate",
                         help='Action requested')
     parser.add_argument('source', type=str,
@@ -34,13 +39,13 @@ def main():
     parser.add_argument('--out-folder', type=str,
                         default="./simulation_results",
                         help='The folder where the simulation results will be stored [DEFAULT: "simulation_results"]')
-    parser.add_argument('--read-on-hit', type=bool,
+    parser.add_argument('--read-on-hit', type='bool',
                         default=True,
                         help='Use read on hit data [DEFAULT: True]')
     parser.add_argument('--simulation-steps', type=str,
                         default='single,normal,nextW,nextP',
                         help='Select the simulation steps [DEFAULT: "single,normal,nextW,next"]')
-    parser.add_argument('-FEB', '--force-exe-build', type=bool,
+    parser.add_argument('-FEB', '--force-exe-build', type='bool',
                         default=True,
                         help='Force to build the simulation executable [DEFAULT: True]')
     parser.add_argument('-CS', '--cache-size', type=int,
@@ -64,30 +69,39 @@ def main():
     parser.add_argument('--num-generations', type=int,
                         default=1000,
                         help='Num. of generations of GA [DEFAULT: 200]')
-    parser.add_argument('--out-html', type=bool,
+    parser.add_argument('--out-html', type='bool',
                         default=True,
                         help='Plot the output as a html [DEFAULT: True]')
-    parser.add_argument('--out-png', type=bool,
+    parser.add_argument('--out-png', type='bool',
                         default=False,
                         help='Plot the output as a png (requires phantomjs-prebuilt installed with npm) [DEFAULT: False]')
     parser.add_argument('--plot-filters', type=str,
                         default="",
                         help='A comma separate string to search as filters')
-    parser.add_argument('--only-CPU', type=bool,
+    parser.add_argument('--only-CPU', type='bool',
                         default=True,
                         help='Force to use only CPU with TensorFlow [DEFAULT: True]')
-    parser.add_argument('--insert-best-greedy', type=bool,
+    parser.add_argument('--insert-best-greedy', type='bool',
                         default=False,
                         help='Force to use insert 1 individual equal to the greedy composition [DEFAULT: False]')
+    parser.add_argument('--dataset-creation-method', type=str,
+                        choices=['greedy', 'ga'], default="greedy",
+                        help='The method used to create the dataset [DEFAULT: "greedy"]')
+    parser.add_argument('--dataset-folder', type=str,
+                        default="./datasets",
+                        help='Folder where datasets are stored [DEFAULT: "./datasets"]')
+    parser.add_argument('--dataset-prefix', type=str,
+                        default="dataset_best_solution",
+                        help='The dataset file name prefix [DEFAULT: "dataset_best_solution"]')
     parser.add_argument('--plot-resolution', type=str,
                         default="800,600",
                         help='A comma separate string representing the target resolution of each plot [DEFAULT: 640,480]')
     parser.add_argument('--ai-model-basename', type=str,
                         default="./models/donkey_model",
                         help='Ai Model basename and path [DEFAULT: "./models/donkey_model"]')
-    parser.add_argument('--feature-converter-name', type=str,
+    parser.add_argument('--feature-prefix', type=str,
                         default="featureConverter",
-                        help='Ai Model feature converter name [DEFAULT: "featureConverter"]')
+                        help='Ai Model feature converter name prefix [DEFAULT: "featureConverter"]')
 
     args, _ = parser.parse_known_args()
 
@@ -97,7 +111,11 @@ def main():
         # Make visible only first device
         os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
-    if args.action == "simulate":
+    if args.action in ["simulate", "testAI", "testDataset"]:
+        if not os.path.exists(args.source):
+            print(f"Path '{args.source}' does not exist!")
+            exit(-1)
+
         simulator_exe = get_simulator_exe(force_creation=args.force_exe_build)
         cache_types = args.cache_types.split(",")
         simulation_steps = args.simulation_steps.split(",")
@@ -131,9 +149,10 @@ def main():
                         f"window_{window_idx}",
                     )
                     os.makedirs(working_dir, exist_ok=True)
+                    # Create base command
                     exe_args = [
                         simulator_exe,
-                        "simulate" if cache_type != 'aiLRU' else "testAI",
+                        args.action,
                         cache_type,
                         path.abspath(args.source),
                         f"--size={args.cache_size}",
@@ -144,11 +163,12 @@ def main():
                         "--simDump=true",
                         "--simDumpFileName=dump.json.gz",
                     ]
+                    # Add custom cache parameters
                     if cache_type == 'aiLRU':
                         feature_map_file = path.abspath(
                             path.join(
                                 path.dirname(args.ai_model_basename),
-                                f"{args.feature_converter_name}-window_{window_idx:02d}.json.gzip"
+                                f"{args.feature_prefix}-window_{window_idx:02d}.json.gz"
                             )
                         )
                         model_weights_file = path.abspath(
@@ -158,6 +178,15 @@ def main():
                         exe_args.append(f"--aiPort=4242")
                         exe_args.append(f"--aiFeatureMap={feature_map_file}")
                         exe_args.append(f"--aiModel={model_weights_file}")
+                    elif cache_type == 'lruDatasetVerifier':
+                        dataset_file = path.abspath(
+                            path.join(
+                                args.dataset_folder,
+                                f"{args.dataset_prefix}-window_{window_idx:02d}.json.gz"
+                            )
+                        )
+                        exe_args.append(f"--dataset2TestPath={dataset_file}")
+                    # Create the task
                     cur_process = subprocess.Popen(
                         " ".join(exe_args),
                         shell=True,
@@ -185,9 +214,10 @@ def main():
                     f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}"
                 )
                 os.makedirs(working_dir, exist_ok=True)
+                # Create base command
                 exe_args = [
                     simulator_exe,
-                    "simulate" if cache_type != 'aiLRU' else "testAI",
+                    args.action,
                     cache_type,
                     path.abspath(args.source),
                     f"--size={args.cache_size}",
@@ -196,11 +226,12 @@ def main():
                     f"--simStartFromWindow={args.window_start}",
                     f"--simStopWindow={args.window_stop}",
                 ]
+                # Add custom cache parameters
                 if cache_type == 'aiLRU':
                     feature_map_file = path.abspath(
                         path.join(
                             path.dirname(args.ai_model_basename),
-                            f"{args.feature_converter_name}-window_00.json.gzip"
+                            f"{args.feature_prefix}-window_00.json.gz"
                         )
                     )
                     model_weights_file = path.abspath(
@@ -210,6 +241,14 @@ def main():
                     exe_args.append(f"--aiPort=4242")
                     exe_args.append(f"--aiFeatureMap={feature_map_file}")
                     exe_args.append(f"--aiModel={model_weights_file}")
+                elif cache_type == 'lruDatasetVerifier':
+                    dataset_file = path.abspath(
+                        path.join(
+                            args.dataset_folder,
+                            f"{args.dataset_prefix}-window_00.json.gz"
+                        )
+                    )
+                    exe_args.append(f"--dataset2TestPath={dataset_file}")
                 cur_process = subprocess.Popen(
                     " ".join(exe_args),
                     shell=True,
@@ -219,6 +258,7 @@ def main():
                     stderr=subprocess.PIPE,
                 )
                 processes.append(("Full Run", cur_process))
+                # Add custom cache parameters
                 if cache_type == 'aiLRU':
                     wait_jobs(processes)
 
@@ -246,9 +286,10 @@ def main():
                         f"window_{window_idx}",
                     )
                     os.makedirs(working_dir, exist_ok=True)
+                    # Create base command
                     exe_args = [
                         simulator_exe,
-                        "simulate" if cache_type != 'aiLRU' else "testAI",
+                        args.action,
                         cache_type,
                         path.abspath(args.source),
                         f"--size={args.cache_size}",
@@ -259,11 +300,12 @@ def main():
                         "--simLoadDump=true",
                         f"--simLoadDumpFileName={path.join(dump_dir, 'dump.json.gz')}",
                     ]
+                    # Add custom cache parameters
                     if cache_type == 'aiLRU':
                         feature_map_file = path.abspath(
                             path.join(
                                 path.dirname(args.ai_model_basename),
-                                f"{args.feature_converter_name}-window_{window_idx:02d}.json.gzip"
+                                f"{args.feature_prefix}-window_{window_idx:02d}.json.gz"
                             )
                         )
                         model_weights_file = path.abspath(
@@ -273,6 +315,15 @@ def main():
                         exe_args.append(f"--aiPort=4242")
                         exe_args.append(f"--aiFeatureMap={feature_map_file}")
                         exe_args.append(f"--aiModel={model_weights_file}")
+                    elif cache_type == 'lruDatasetVerifier':
+                        dataset_file = path.abspath(
+                            path.join(
+                                args.dataset_folder,
+                                f"{args.dataset_prefix}-window_{window_idx:02d}.json.gz"
+                            )
+                        )
+                        exe_args.append(f"--dataset2TestPath={dataset_file}")
+                    # Create the task
                     cur_process = subprocess.Popen(
                         " ".join(exe_args),
                         shell=True,
@@ -307,9 +358,10 @@ def main():
                         f"window_{window_idx}",
                     )
                     os.makedirs(working_dir, exist_ok=True)
+                    # Create base command
                     exe_args = [
                         simulator_exe,
-                        "simulate" if cache_type != 'aiLRU' else "testAI",
+                        args.action,
                         cache_type,
                         path.abspath(args.source),
                         f"--size={args.cache_size}",
@@ -320,11 +372,12 @@ def main():
                         "--simLoadDump=true",
                         f"--simLoadDumpFileName={path.join(dump_dir, 'dump.json.gz')}",
                     ]
+                    # Add custom cache parameters
                     if cache_type == 'aiLRU':
                         feature_map_file = path.abspath(
                             path.join(
                                 path.dirname(args.ai_model_basename),
-                                f"{args.feature_converter_name}-window_{window_idx:02d}.json.gzip"
+                                f"{args.feature_prefix}-window_{window_idx:02d}.json.gz"
                             )
                         )
                         model_weights_file = path.abspath(
@@ -334,6 +387,15 @@ def main():
                         exe_args.append(f"--aiPort=4242")
                         exe_args.append(f"--aiFeatureMap={feature_map_file}")
                         exe_args.append(f"--aiModel={model_weights_file}")
+                    elif cache_type == 'lruDatasetVerifier':
+                        dataset_file = path.abspath(
+                            path.join(
+                                args.dataset_folder,
+                                f"{args.dataset_prefix}-window_{window_idx:02d}.json.gz"
+                            )
+                        )
+                        exe_args.append(f"--dataset2TestPath={dataset_file}")
+                    # Create the task
                     cur_process = subprocess.Popen(
                         " ".join(exe_args),
                         shell=True,
@@ -422,6 +484,9 @@ def main():
                 cur_window = []
 
         for winIdx, window in enumerate(windows):
+            if winIdx == args.window_stop:
+                break
+
             list_df = []
             files = {}
             for file_ in tqdm(window, desc=f"Create window {winIdx} dataframe",
@@ -455,16 +520,17 @@ def main():
                 cur_filename = cur_row.filename
                 cur_size = cur_row.size
                 if cur_filename not in files:
-                    data_type, _, _, file_type = cur_filename.split("/")[2:6]
+                    data_type, campain, process, file_type = cur_filename.split("/")[2:6]
                     files[cur_filename] = {
                         'size': cur_size,
                         'totReq': 0,
                         'days': [],
+                        'campain': campain,
+                        'process': process,
                         'reqHistory': [],
                         'lastReq': 0,
                         'fileType': file_type,
                         'dataType': data_type,
-                        'maxStrike': 1
                     }
                 cur_time = datetime.fromtimestamp(cur_row.day)
                 cur_file_stats = files[cur_filename]
@@ -488,24 +554,6 @@ def main():
                     ]) / max_history
                 )
 
-            for file_, stats in tqdm(files.items(),
-                                     desc=f"Parse file stats",
-                                     ascii=True):
-                strike = 1
-                if len(stats['days']) > 1:
-                    for dayIdx in range(len(stats['days'])-1):
-                        cur_day = datetime.fromtimestamp(
-                            stats['days'][dayIdx]
-                        )
-                        next_day = datetime.fromtimestamp(
-                            stats['days'][dayIdx+1])
-                        if next_day - cur_day == timedelta(days=1):
-                            strike += 1
-                        else:
-                            strike = 1
-                        if strike > stats['maxStrike']:
-                            stats['maxStrike'] = strike
-
             cur_df['avg_time'] = stat_avg_time
             cur_df['num_req'] = stat_num_req
 
@@ -517,12 +565,14 @@ def main():
                              for filename in files],
                     'totReq': [files[filename]['totReq']
                                for filename in files],
-                    'maxStrike': [files[filename]['maxStrike']
-                                  for filename in files],
                     'fileType': [files[filename]['fileType']
                                  for filename in files],
                     'dataType': [files[filename]['dataType']
                                  for filename in files],
+                    'campain': [files[filename]['campain']
+                               for filename in files],
+                    'process': [files[filename]['process']
+                               for filename in files],
                 }
             )
 
@@ -533,9 +583,10 @@ def main():
             files_df['size'] = files_df['size'] / 1024**2
 
             # Add value
-            files_df['value'] = ((files_df['size'] *
-                                  files_df['totReq']
-                                  ) / args.window_size) * files_df['maxStrike']
+            files_df['value'] = (
+                files_df['size'] *
+                files_df['totReq']
+            ) / args.window_size
 
             # Remove low value files
             # q1 = files_df.value.describe().quantile(0.25)
@@ -554,32 +605,51 @@ def main():
             #   sum(files_df['size'])/args.cache_size
             # )
 
-            best_files = get_best_configuration(
-                files_df, args.cache_size,
-                population_size=args.population_size,
-                num_generations=args.num_generations,
-                insert_best_greedy=args.insert_best_greedy,
+            greedy_solution = get2PTAS(
+                files_df, args.cache_size
             )
 
-            files_df['class'] = best_files
+            if args.dataset_creation_method == "ga":
+                best_selection = get_best_configuration(
+                    files_df, args.cache_size,
+                    population_size=args.population_size,
+                    num_generations=args.num_generations,
+                    insert_best_greedy=args.insert_best_greedy,
+                )
+                compare_greedy_solution(
+                    files_df, args.cache_size, greedy_solution,
+                )
+            else:
+                best_selection = greedy_solution
+                gr_size = sum(files_df[best_selection]['size'].to_list())
+                gr_score = sum(files_df[best_selection]['value'].to_list())
+                print("---[Results]---")
+                print(
+                    f"[Size: \t{gr_size:0.2f}][Score: \t{gr_score:0.2f}][Greedy]")
+
+            files_df['class'] = best_selection
 
             dataset_labels_out_file = path.join(
                 base_dir,
                 f"dataset_labels-window_{winIdx:02d}.feather.gz"
             )
 
-            compare_greedy_solution(
-                files_df, args.cache_size
+            dataset_best_solution_out_file = path.join(
+                base_dir,
+                f"dataset_best_solution-window_{winIdx:02d}.json.gz"
             )
 
-            len_dataset = int(cur_df.shape[0] * 0.3)
+            # get 42% of the requests
+            len_dataset = int(cur_df.shape[0] * 0.30)
 
             sample = cur_df.sample(n=len_dataset, random_state=42)
             sample.rename(columns={'size': 'fileSize'}, inplace=True)
+
             dataset_df = pd.merge(sample, files_df, on='filename')
             dataset_df = dataset_df[
                 ['site_name', 'user', 'num_req', 'avg_time',
-                 'size', 'fileType', 'dataType', 'class']
+                 'size', 'fileType', 'dataType', 
+                 'campain', 'process', 'class']
             ]
             dataset_df.rename(
                 columns={
@@ -598,6 +668,22 @@ def main():
                 with gzip.GzipFile(dataset_labels_out_file, "wb") as out_file:
                     dataset_df.to_feather(out_file)
 
+            with yaspin(
+                Spinners.bouncingBall,
+                text=f"[Store best stolution][{dataset_best_solution_out_file}]"
+            ):
+                with gzip.GzipFile(dataset_best_solution_out_file, "wb") as out_file:
+                    out_file.write(
+                        json.dumps({
+                            'selected_files': files_df[
+                                files_df['class'] == True
+                            ]['filename'].to_list()
+                        }).encode("utf-8")
+                    )
+
+            # Get some stats
+            # print(dataset_df.describe())
+
             # Prepare dataset
             print(f"[Prepare dataset][Using: '{dataset_labels_out_file}']")
             dataset = SimulatorDatasetReader(dataset_labels_out_file)
@@ -609,27 +695,36 @@ def main():
                     'class',
                 ],
                 map_type=bool,
-                sort_values=True,
+                sort_keys=True,
             ).make_converter_map(
                 [
                     'size',
                 ],
                 map_type=int,
-                sort_values=True,
-                buckets=[50, 100, 500, 1000, 2000, 4000, '...'],
+                sort_keys=True,
+                buckets=[5, 10, 50, 100, 250, 500, 1000, 2000, 4000, 10000, '...'],
+            ).make_converter_map(
+                [
+                    'numReq',
+                ],
+                map_type=int,
+                sort_keys=True,
+                buckets=[1, 2, 3, 4, 5, 10, 25, 50, 75, 100, 200, '...'],
             ).make_converter_map(
                 [
                     'avgTime',
                 ],
                 map_type=int,
-                sort_values=True,
-                buckets=list(range(0, 300*1000, 1000)) + ['...'],
+                sort_keys=True,
+                buckets=list(range(0, 6*1000, 100)) + ['...'],
             ).make_converter_map(
                 [
                     'siteName',
                     'userID',
                     'fileType',
-                    'dataType'
+                    'dataType',
+                    'campain',
+                    'process',
                 ],
                 unknown_values=True,
                 map_type=str,
@@ -641,6 +736,8 @@ def main():
                     'userID',
                     'fileType',
                     'dataType',
+                    'campain',
+                    'process',
                     'numReq',
                     'avgTime',
                     'size',

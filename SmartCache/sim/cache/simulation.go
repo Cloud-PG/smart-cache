@@ -13,7 +13,6 @@ import (
 
 // CSVRecord is the base record composition readed from the logs
 type CSVRecord struct {
-	Index         int     `json:"index"`
 	Day           int64   `json:"day"`
 	Filename      string  `json:"filename"`
 	Protocol      string  `json:"protocol"`
@@ -44,27 +43,25 @@ func recordGenerator(csvReader *csv.Reader, curFile *os.File) chan CSVRecord {
 				log.Fatal(err)
 			}
 
-			index, _ := strconv.ParseInt(record[0], 10, 32)
-			day, _ := strconv.ParseFloat(record[1], 64)
-			taskID, _ := strconv.ParseInt(record[5], 10, 32)
-			jobID, _ := strconv.ParseInt(record[6], 10, 32)
-			joblengthh, _ := strconv.ParseFloat(record[9], 32)
-			joblengthm, _ := strconv.ParseFloat(record[10], 32)
-			userID, _ := strconv.ParseInt(record[11], 10, 32)
-			cputime, _ := strconv.ParseFloat(record[12], 32)
-			iotime, _ := strconv.ParseFloat(record[13], 32)
-			size, _ := strconv.ParseFloat(record[14], 32)
+			day, _ := strconv.ParseFloat(record[0], 64)
+			taskID, _ := strconv.ParseInt(record[4], 10, 32)
+			jobID, _ := strconv.ParseInt(record[5], 10, 32)
+			joblengthh, _ := strconv.ParseFloat(record[8], 32)
+			joblengthm, _ := strconv.ParseFloat(record[9], 32)
+			userID, _ := strconv.ParseInt(record[10], 10, 32)
+			cputime, _ := strconv.ParseFloat(record[11], 32)
+			iotime, _ := strconv.ParseFloat(record[12], 32)
+			size, _ := strconv.ParseFloat(record[13], 32)
 
-			channel <- CSVRecord{
-				Index:         int(index),
+			curRecord := CSVRecord{
 				Day:           int64(day),
-				Filename:      record[2],
-				Protocol:      record[3],
-				TaskMonitorID: record[4],
+				Filename:      record[1],
+				Protocol:      record[2],
+				TaskMonitorID: record[3],
 				TaskID:        int(taskID),
 				JobID:         int(jobID),
-				SiteName:      record[7],
-				JobSuccess:    record[8],
+				SiteName:      record[6],
+				JobSuccess:    record[7],
 				JobLengthH:    float32(joblengthh),
 				JobLengthM:    float32(joblengthm),
 				UserID:        int(userID),
@@ -72,6 +69,8 @@ func recordGenerator(csvReader *csv.Reader, curFile *os.File) chan CSVRecord {
 				IOTime:        float32(iotime),
 				Size:          float32(size),
 			}
+
+			channel <- curRecord
 		}
 	}()
 	return channel

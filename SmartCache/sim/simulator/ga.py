@@ -229,21 +229,14 @@ def evolve_with_genetic_algorithm(population, dataframe,
     return cur_population[idx_best]
 
 
-def compare_greedy_solution(dataframe, cache_size):
-    cur_size = 0.
-    cur_score = 0.
-
-    for cur_row in dataframe.itertuples():
-        file_size = cur_row.size
-        if cur_size + file_size <= cache_size:
-            cur_size += file_size
-            cur_score += cur_row.value
-        else:
-            break
-
+def compare_greedy_solution(dataframe: pd.DataFrame, cache_size: float,
+                            greedy_selection: pd.Series):
     ga_size = sum(dataframe[dataframe['class']]['size'].to_list())
     ga_score = sum(dataframe[dataframe['class']]['value'].to_list())
 
+    gr_size = sum(dataframe[greedy_selection]['size'].to_list())
+    gr_score = sum(dataframe[greedy_selection]['value'].to_list())
+
     print("---[Results]---")
-    print(f"[Size: \t{cur_size:0.2f}][Score: \t{cur_score:0.2f}][Greedy]")
+    print(f"[Size: \t{gr_size:0.2f}][Score: \t{gr_score:0.2f}][Greedy]")
     print(f"[Size: \t{ga_size:0.2f}][Score: \t{ga_score:0.2f}][GA]")
