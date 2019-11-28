@@ -219,6 +219,10 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			copy(args, args[2:])
 			args = args[:len(args)-1]
 
+			if aiQLearn {
+				cacheType += "RL"
+			}
+
 			baseName := strings.Join([]string{
 				cacheType,
 				fmt.Sprintf("%0.0fT", cacheSize/(1024.*1024.)),
