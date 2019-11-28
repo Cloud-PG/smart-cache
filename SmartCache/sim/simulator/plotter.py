@@ -177,7 +177,6 @@ def plot_column(tools: list,
             cur_line = cur_fig.line(
                 dates,
                 points,
-                legend=cache_name,
                 color=color_table[cache_name],
                 line_width=5.,
             )
