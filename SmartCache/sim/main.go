@@ -219,12 +219,13 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			copy(args, args[2:])
 			args = args[:len(args)-1]
 
+			cacheBaseName := cacheType
 			if aiQLearn {
-				cacheType += "RL"
+				cacheBaseName += "_RL"
 			}
 
 			baseName := strings.Join([]string{
-				cacheType,
+				cacheBaseName,
 				fmt.Sprintf("%0.0fT", cacheSize/(1024.*1024.)),
 				simRegion,
 			},
@@ -610,7 +611,7 @@ func genCache(cacheType string) cache.Cache {
 		}
 		cacheInstance.Init()
 	default:
-		fmt.Println("ERR: You need to specify a cache type.")
+		fmt.Printf("ERR: '%s' is not a valid cache type...\n", cacheType)
 		os.Exit(-2)
 	}
 	return cacheInstance
