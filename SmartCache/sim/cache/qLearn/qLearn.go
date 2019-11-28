@@ -18,16 +18,16 @@ const (
 
 // QTable used in Qlearning
 type QTable struct {
-	states           map[string][]float64
-	learningRate     float64
-	DecayRate        float64
-	DecayRateEpsilon float64
-	Epsilon          float64
-	MaxEpsilon       float64
-	MinEpsilon       float64
-	episodeCounter   float64
-	Actions          []ActionType
-	rGenerator       *rand.Rand
+	States           map[string][]float64 `json:"states"`
+	LearningRate     float64              `json:"learning_rate"`
+	DecayRate        float64              `json:"decay_rate"`
+	DecayRateEpsilon float64              `json:"decay_rate_epsilon"`
+	Epsilon          float64              `json:"epsilon"`
+	MaxEpsilon       float64              `json:"max_epsilon"`
+	MinEpsilon       float64              `json:"min_epsilon"`
+	EpisodeCounter   float64              `json:"episode_counter"`
+	Actions          []ActionType         `json:"actions"`
+	RGenerator       *rand.Rand           `json:"r_generator"`
 }
 
 func getArgMax(array []float64) int {
@@ -93,7 +93,7 @@ func (table QTable) genAllStates(featureLenghts []int) chan []float64 {
 
 // Init initilizes the QTable struct
 func (table *QTable) Init(featureLenghts []int) {
-	table.learningRate = 0.9
+	table.LearningRate = 0.9
 	table.DecayRate = 0.0 // No discount
 	table.DecayRateEpsilon = 0.000001
 	table.Epsilon = 1.0
@@ -103,14 +103,14 @@ func (table *QTable) Init(featureLenghts []int) {
 		ActionNotStore,
 		ActionStore,
 	}
-	table.rGenerator = rand.New(rand.NewSource(42))
+	table.RGenerator = rand.New(rand.NewSource(42))
 
-	table.states = make(map[string][]float64, 0)
+	table.States = make(map[string][]float64, 0)
 	for state := range table.genAllStates(featureLenghts) {
 		stateIdx := table.GetStateIdx(state)
-		_, inMap := table.states[stateIdx]
+		_, inMap := table.States[stateIdx]
 		if !inMap {
-			table.states[stateIdx] = make([]float64, len(table.Actions))
+			table.States[stateIdx] = make([]float64, len(table.Actions))
 		} else {
 			fmt.Printf("State %v with idx %s already present...\n", state, stateIdx)
 			panic("Insert state error!!!")
@@ -120,14 +120,14 @@ func (table *QTable) Init(featureLenghts []int) {
 
 }
 
-// PrintTable outputs the state values
+// GetRandomTradeOff generates a random number
 func (table QTable) GetRandomTradeOff() float64 {
-	return table.rGenerator.Float64()
+	return table.RGenerator.Float64()
 }
 
 // PrintTable outputs the state values
 func (table QTable) PrintTable() {
-	for state, actions := range table.states {
+	for state, actions := range table.States {
 		fmt.Printf("[%s]\t[", state)
 		for idx, action := range actions {
 			fmt.Printf("%09.2f", action)
@@ -154,7 +154,7 @@ func (table QTable) GetStateIdx(state []float64) string {
 
 // GetAction returns the possible environment action from a state
 func (table QTable) GetAction(stateIdx string, action ActionType) float64 {
-	values := table.states[stateIdx]
+	values := table.States[stateIdx]
 	outIdx := 0
 	for idx := 0; idx < len(table.Actions); idx++ {
 		if table.Actions[idx] == action {
@@ -168,7 +168,7 @@ func (table QTable) GetAction(stateIdx string, action ActionType) float64 {
 // GetBestAction returns the action of the best action for the given state
 func (table QTable) GetBestAction(state []float64) ActionType {
 	stateIdx := table.GetStateIdx(state)
-	values := table.states[stateIdx]
+	values := table.States[stateIdx]
 	return table.Actions[getArgMax(values)]
 }
 
@@ -176,12 +176,12 @@ func (table QTable) GetBestAction(state []float64) ActionType {
 func (table *QTable) Update(state []float64, action ActionType, reward float64) {
 	stateIdx := table.GetStateIdx(state)
 	actionValue := table.GetAction(stateIdx, action)
-	maxValue := getArgMax(table.states[stateIdx])
-	table.states[stateIdx][action] = actionValue + table.learningRate*(reward+table.DecayRate*table.states[stateIdx][maxValue]-actionValue)
-	table.episodeCounter += 1.0
+	maxValue := getArgMax(table.States[stateIdx])
+	table.States[stateIdx][action] = actionValue + table.LearningRate*(reward+table.DecayRate*table.States[stateIdx][maxValue]-actionValue)
+	table.EpisodeCounter += 1.0
 }
 
 // UpdateEpsilon upgrades the epsilon variable
 func (table *QTable) UpdateEpsilon() {
-	table.Epsilon = table.MinEpsilon + (table.MaxEpsilon-table.MinEpsilon)*math.Exp(-table.DecayRate*float64(table.episodeCounter))
+	table.Epsilon = table.MinEpsilon + (table.MaxEpsilon-table.MinEpsilon)*math.Exp(-table.DecayRate*float64(table.EpisodeCounter))
 }

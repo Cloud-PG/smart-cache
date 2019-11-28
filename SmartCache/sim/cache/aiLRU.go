@@ -324,7 +324,7 @@ func (cache *AILRU) Dumps() *[][]byte {
 	outData := make([][]byte, 0)
 	var newLine = []byte("\n")
 
-	// Files
+	// ----- Files -----
 	for filename, size := range cache.files {
 		dumpInfo, _ := json.Marshal(DumpInfo{Type: "FILES"})
 		dumpFile, _ := json.Marshal(FileDump{
@@ -338,7 +338,7 @@ func (cache *AILRU) Dumps() *[][]byte {
 		record = append(record, newLine...)
 		outData = append(outData, record)
 	}
-	// Stats
+	// ----- Stats -----
 	for _, stats := range cache.stats {
 		dumpInfo, _ := json.Marshal(DumpInfo{Type: "STATS"})
 		dumpStats, _ := json.Marshal(stats)
@@ -349,6 +349,16 @@ func (cache *AILRU) Dumps() *[][]byte {
 		record = append(record, newLine...)
 		outData = append(outData, record)
 	}
+	// ----- qtable -----
+	dumpInfo, _ := json.Marshal(DumpInfo{Type: "QTABLE"})
+	dumpStats, _ := json.Marshal(cache.qTable)
+	record, _ := json.Marshal(DumpRecord{
+		Info: string(dumpInfo),
+		Data: string(dumpStats),
+	})
+	record = append(record, newLine...)
+	outData = append(outData, record)
+
 	return &outData
 }
 
@@ -386,6 +396,8 @@ func (cache *AILRU) Loads(inputString *[][]byte) {
 			var curStats WeightedFileStats
 			json.Unmarshal([]byte(curRecord.Data), &curStats)
 			cache.stats = append(cache.stats, &curStats)
+		case "QTABLE":
+			json.Unmarshal([]byte(curRecord.Data), cache.qTable)
 		}
 	}
 }
