@@ -657,7 +657,7 @@ def main():
                 f"dataset_best_solution-window_{winIdx:02d}.json.gz"
             )
 
-            # get 42% of the requests
+            # get 30% of the requests
             len_dataset = int(cur_df.shape[0] * 0.30)
 
             sample = cur_df.sample(n=len_dataset, random_state=42)
