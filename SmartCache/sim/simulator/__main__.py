@@ -424,6 +424,9 @@ def main():
             wait_jobs(processes)
 
     elif args.action == "plot":
+        if not path.exists(args.source):
+            print(f"Cannot find folder '{args.source}'")
+            exit(-1)
         filters = [elm for elm in args.plot_filters.split(",") if elm]
         results = load_results(args.source)
         plot_width, plot_height = [
