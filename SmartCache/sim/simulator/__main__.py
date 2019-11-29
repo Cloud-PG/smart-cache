@@ -40,7 +40,7 @@ def main():
                         default="./simulation_results",
                         help='The folder where the simulation results will be stored [DEFAULT: "simulation_results"]')
     parser.add_argument('--read-on-hit', type='bool',
-                        default=True,
+                        default=False,
                         help='Use read on hit data [DEFAULT: True]')
     parser.add_argument('--simulation-steps', type=str,
                         default='single,normal,nextW,nextP',
