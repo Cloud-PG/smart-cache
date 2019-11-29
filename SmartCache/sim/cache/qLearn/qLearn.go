@@ -98,7 +98,7 @@ func (table *QTable) Init(featureLenghts []int) {
 	table.DecayRateEpsilon = 0.000001
 	table.Epsilon = 1.0
 	table.MaxEpsilon = 1.0
-	table.MinEpsilon = 0.001
+	table.MinEpsilon = 0.1
 	table.Actions = []ActionType{
 		ActionNotStore,
 		ActionStore,
