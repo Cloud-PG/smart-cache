@@ -684,9 +684,9 @@ def main():
                 Spinners.bouncingBall,
                 text=f"[Store labeleled stage dataset][{dataset_labels_out_file}]"
             ):
-                with gzip.GzipFile(dataset_labels_out_file, "wb") as out_file:
-                    # dataset_df.to_feather(out_file)
-                    dataset_df.to_pickle(out_file)
+                # with gzip.GzipFile(dataset_labels_out_file, "wb") as out_file:
+                #     dataset_df.to_feather(out_file)
+                dataset_df.to_pickle(dataset_labels_out_file, compression='gzip')
 
             with yaspin(
                 Spinners.bouncingBall,
