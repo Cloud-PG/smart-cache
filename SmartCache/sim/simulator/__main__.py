@@ -88,7 +88,7 @@ def main():
                         choices=['greedy', 'ga'], default="greedy",
                         help='The method used to create the dataset [DEFAULT: "greedy"]')
     parser.add_argument('--dataset-folder', type=str,
-                        default="./datasets",
+                        default="datasets",
                         help='Folder where datasets are stored [DEFAULT: "./datasets"]')
     parser.add_argument('--dataset-prefix', type=str,
                         default="dataset_best_solution",
@@ -471,7 +471,7 @@ def main():
 
     elif args.action == "create_dataset":
         base_dir = path.join(
-            path.dirname(path.abspath(args.source)), "datasets"
+            path.dirname(path.abspath(args.source)), args.dataset_folder
         )
         os.makedirs(base_dir, exist_ok=True)
 
