@@ -221,7 +221,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 
 			cacheBaseName := cacheType
 			if aiQLearn {
-				cacheBaseName += "_RL"
+				cacheBaseName += "-RL"
 			}
 
 			baseName := strings.Join([]string{
@@ -231,6 +231,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			},
 				"_",
 			)
+
 			dumpFileName := baseName + ".json.gz"
 			resultFileName := baseName + "_results.csv"
 
@@ -292,6 +293,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			if simOutFile == "" {
 				simOutFile = resultFileName
 			}
+
 			outputFile, _ := os.Create(simOutFile)
 			defer outputFile.Close()
 			csvOutput := csv.NewWriter(outputFile)

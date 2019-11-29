@@ -148,7 +148,7 @@ def main():
                 for cache_type in cache_types:
                     working_dir = path.join(
                         single_window_run_dir,
-                        f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}",
+                        f"{cache_type+'-RL' if args.use_qlearn else ''}_{int(args.cache_size/1024**2)}T_{args.region}",
                         f"window_{window_idx}",
                     )
                     os.makedirs(working_dir, exist_ok=True)
@@ -217,7 +217,7 @@ def main():
             for cache_type in cache_types:
                 working_dir = path.join(
                     normal_run_dir,
-                    f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}"
+                    f"{cache_type+'-RL' if args.use_qlearn else ''}_{int(args.cache_size/1024**2)}T_{args.region}"
                 )
                 os.makedirs(working_dir, exist_ok=True)
                 # Create base command
@@ -286,12 +286,12 @@ def main():
                 for cache_type in cache_types:
                     working_dir = path.join(
                         nexxt_window_run_dir,
-                        f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}",
+                        f"{cache_type+'-RL' if args.use_qlearn else ''}_{int(args.cache_size/1024**2)}T_{args.region}",
                         f"window_{window_idx+1}",
                     )
                     dump_dir = path.join(
                         single_window_run_dir,
-                        f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}",
+                        f"{cache_type+'-RL' if args.use_qlearn else ''}_{int(args.cache_size/1024**2)}T_{args.region}",
                         f"window_{window_idx}",
                     )
                     os.makedirs(working_dir, exist_ok=True)
@@ -361,12 +361,12 @@ def main():
                 for cache_type in cache_types:
                     working_dir = path.join(
                         next_period_run_dir,
-                        f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}",
+                        f"{cache_type+'-RL' if args.use_qlearn else ''}_{int(args.cache_size/1024**2)}T_{args.region}",
                         f"windows_{window_idx+1}-{args.window_stop}",
                     )
                     dump_dir = path.join(
                         single_window_run_dir,
-                        f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}",
+                        f"{cache_type+'-RL' if args.use_qlearn else ''}_{int(args.cache_size/1024**2)}T_{args.region}",
                         f"window_{window_idx}",
                     )
                     os.makedirs(working_dir, exist_ok=True)
