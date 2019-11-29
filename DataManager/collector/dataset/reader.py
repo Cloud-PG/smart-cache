@@ -35,7 +35,7 @@ class SimulatorDatasetReader(object):
                         with gzip.GzipFile(filename, "rb") as cur_file:
                             self._df = pd.read_feather(cur_file)
                     elif tail == ".pickle":
-                        self._df = pd.read_pickle(cur_file, compression='gzip')
+                        self._df = pd.read_pickle(filename, compression='gzip')
                     else:
                         raise Exception(f"Unknow extension '{tail}'")
                     self._data_dir = path.dirname(path.abspath(filename))
