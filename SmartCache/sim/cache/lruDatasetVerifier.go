@@ -104,7 +104,7 @@ func (cache *LRUDatasetVerifier) ClearHitMissStats() {
 	cache.miss = 0.
 	// Special case: it has not to be cleared with this cache simulation
 	// cache.dataWritten = 0.
-	// cache.dataRead = 0.
+	cache.dataRead = 0.
 	cache.dataReadOnHit = 0.
 	cache.dataReadOnMiss = 0.
 	cache.dataDeleted = 0.
