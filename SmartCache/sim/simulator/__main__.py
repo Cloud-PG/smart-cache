@@ -658,8 +658,8 @@ def main():
                 f"dataset_best_solution-window_{winIdx:02d}.json.gz"
             )
 
-            # get 30% of the requests
-            len_dataset = int(cur_df.shape[0] * 0.30)
+            # get 25% of the requests
+            len_dataset = int(cur_df.shape[0] * 0.25)
 
             sample = cur_df.sample(n=len_dataset, random_state=42)
             sample.rename(columns={'size': 'fileSize'}, inplace=True)
