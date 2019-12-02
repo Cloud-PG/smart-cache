@@ -50,6 +50,14 @@ func createOneHot(lenght int, targetIdx int) []float64 {
 
 func (table QTable) genAllStates(featureLenghts []int) chan []float64 {
 	genChan := make(chan []float64)
+
+	numStates := 1
+	for _, featureLen := range featureLenghts {
+		numStates *= featureLen
+	}
+
+	fmt.Printf("[Generate %d states][...]\n", numStates)
+
 	go func() {
 		defer close(genChan)
 		partials := make([][]float64, 0)

@@ -145,12 +145,12 @@ func (cache *AILRU) Init(args ...interface{}) interface{} {
 		}
 	} else {
 		cache.aiFeatureSelection = []bool{
-			false,
-			false,
 			true,
 			false,
 			true,
-			true,
+			false,
+			false,
+			false,
 			true,
 			true,
 			true,
