@@ -207,5 +207,5 @@ func (table *QTable) Update(state []float64, action ActionType, reward float64) 
 
 // UpdateEpsilon upgrades the epsilon variable
 func (table *QTable) UpdateEpsilon() {
-	table.Epsilon = table.MinEpsilon + (table.MaxEpsilon-table.MinEpsilon)*math.Exp(-table.DecayRate*float64(table.EpisodeCounter))
+	table.Epsilon = table.MinEpsilon + (table.MaxEpsilon-table.MinEpsilon)*math.Exp(-table.DecayRateEpsilon*float64(table.EpisodeCounter))
 }
