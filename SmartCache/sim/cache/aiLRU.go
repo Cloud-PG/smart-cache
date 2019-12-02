@@ -149,7 +149,7 @@ func (cache *AILRU) Init(args ...interface{}) interface{} {
 			false,
 			true,
 			false,
-			false,
+			true,
 			false,
 			true,
 			true,
