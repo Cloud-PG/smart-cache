@@ -19,6 +19,8 @@ const (
 // QTable used in Qlearning
 type QTable struct {
 	States           map[string][]float64 `json:"states"`
+	numStates        int64                `json:"num_states"`
+	numVars          int64                `json:"num_vars"`
 	LearningRate     float64              `json:"learning_rate"`
 	DecayRate        float64              `json:"decay_rate"`
 	DecayRateEpsilon float64              `json:"decay_rate_epsilon"`
@@ -51,10 +53,11 @@ func createOneHot(lenght int, targetIdx int) []float64 {
 func (table QTable) genAllStates(featureLenghts []int) chan []float64 {
 	genChan := make(chan []float64)
 
-	numStates := 1
+	var numStates int64 = 1
 	for _, featureLen := range featureLenghts {
-		numStates *= featureLen
+		numStates *= int64(featureLen)
 	}
+	table.numStates = numStates
 
 	fmt.Printf("[Generate %d states][...]\n", numStates)
 
@@ -125,6 +128,7 @@ func (table *QTable) Init(featureLenghts []int) {
 		}
 
 	}
+	table.numVars = table.numStates * int64(len(table.Actions))
 
 }
 
@@ -145,6 +149,19 @@ func (table QTable) PrintTable() {
 		}
 		fmt.Println("]")
 	}
+}
+
+// GetCoveragePercentage returns the exploration result of the QTable
+func (table QTable) GetCoveragePercentage() float64 {
+	numSetVariables := 0
+	for _, actions := range table.States {
+		for _, action := range actions {
+			if action != 0.0 {
+				numSetVariables++
+			}
+		}
+	}
+	return (float64(numSetVariables) / float64(table.numVars)) * 100.
 }
 
 // GetStateIdx returns the index of a given state

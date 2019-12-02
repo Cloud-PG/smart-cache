@@ -426,3 +426,8 @@ func (cache LRUDatasetVerifier) check(key string) bool {
 	_, ok := cache.files[key]
 	return ok
 }
+
+// ExtraStats for output
+func (cache LRUDatasetVerifier) ExtraStats() string {
+	return "NONE"
+}

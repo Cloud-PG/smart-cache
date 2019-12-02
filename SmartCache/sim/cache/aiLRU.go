@@ -149,7 +149,7 @@ func (cache *AILRU) Init(args ...interface{}) interface{} {
 			false,
 			true,
 			false,
-			true,
+			false,
 			false,
 			true,
 			true,
@@ -801,6 +801,7 @@ func (cache *AILRU) updatePolicy(filename string, size float32, hit bool, vars .
 			cache.queue.MoveToBack(elm2move)
 		}
 	}
+
 	return added
 }
 
@@ -889,4 +890,9 @@ func (cache *AILRU) DataDeleted() float32 {
 func (cache *AILRU) check(key string) bool {
 	_, ok := cache.files[key]
 	return ok
+}
+
+// ExtraStats for output
+func (cache *AILRU) ExtraStats() string {
+	return fmt.Sprintf("Cov: %0.2f, Epsilon: %0.2f", cache.qTable.GetCoveragePercentage(), cache.qTable.Epsilon)
 }

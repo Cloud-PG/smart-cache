@@ -38,6 +38,8 @@ type Cache interface {
 	ClearFiles()
 	ClearHitMissStats()
 
+	ExtraStats() string
+
 	HitRate() float32
 	HitOverMiss() float32
 	WeightedHitRate() float32

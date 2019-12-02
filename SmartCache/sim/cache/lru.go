@@ -412,3 +412,8 @@ func (cache LRUCache) check(key string) bool {
 	_, ok := cache.files[key]
 	return ok
 }
+
+// ExtraStats for output
+func (cache LRUCache) ExtraStats() string {
+	return "NONE"
+}

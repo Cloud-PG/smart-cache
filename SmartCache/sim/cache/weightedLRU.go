@@ -562,3 +562,8 @@ func (cache *WeightedLRU) check(key string) bool {
 	_, ok := cache.files[key]
 	return ok
 }
+
+// ExtraStats for output
+func (cache WeightedLRU) ExtraStats() string {
+	return "NONE"
+}

@@ -415,6 +415,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 								fmt.Sprintf("[Num.Records %d]", numRecords),
 								fmt.Sprintf("[HitRate %.2f]", curCacheInstance.HitRate()),
 								fmt.Sprintf("[Capacity %.2f]", curCacheInstance.Capacity()),
+								fmt.Sprintf("[Extra-> %s]", curCacheInstance.ExtraStats()),
 								fmt.Sprintf("[%0.0f it/s]", float64(numIterations)/time.Now().Sub(start).Seconds()),
 								"\r",
 							},
