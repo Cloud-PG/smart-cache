@@ -52,15 +52,6 @@ func createOneHot(lenght int, targetIdx int) []float64 {
 
 func (table QTable) genAllStates(featureLenghts []int) chan []float64 {
 	genChan := make(chan []float64)
-
-	var numStates int64 = 1
-	for _, featureLen := range featureLenghts {
-		numStates *= int64(featureLen)
-	}
-	table.numStates = numStates
-
-	fmt.Printf("[Generate %d states][...]\n", numStates)
-
 	go func() {
 		defer close(genChan)
 		partials := make([][]float64, 0)
@@ -116,7 +107,15 @@ func (table *QTable) Init(featureLenghts []int) {
 	}
 	table.RGenerator = rand.New(rand.NewSource(42))
 
-	table.States = make(map[string][]float64, 0)
+	var numStates int64 = 1
+	for _, featureLen := range featureLenghts {
+		numStates *= int64(featureLen)
+	}
+	table.numStates = numStates
+
+	fmt.Printf("[Generate %d states][...]\n", numStates)
+	table.States = make(map[string][]float64, numStates)
+
 	for state := range table.genAllStates(featureLenghts) {
 		stateIdx := table.GetStateIdx(state)
 		_, inMap := table.States[stateIdx]
@@ -129,7 +128,7 @@ func (table *QTable) Init(featureLenghts []int) {
 
 	}
 	table.numVars = table.numStates * int64(len(table.Actions))
-
+	fmt.Printf("[Tot. Vars: %d]\n", table.numVars)
 }
 
 // GetRandomTradeOff generates a random number
