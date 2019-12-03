@@ -109,8 +109,8 @@ func (table *QTable) Init(featureLenghts []int) {
 	table.MaxEpsilon = 1.0
 	table.MinEpsilon = 0.1
 	table.Actions = []ActionType{
+		ActionStore, // With argmax is the default choice
 		ActionNotStore,
-		ActionStore,
 	}
 	table.UpdateFunction = RLBellmanEquation
 	table.RGenerator = rand.New(rand.NewSource(42))
