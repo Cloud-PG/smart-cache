@@ -31,7 +31,7 @@ var (
 	githash             string
 	limitStatsPolicy    string
 	memprofile          string
-	outputUpdateDelay   float32
+	outputUpdateDelay   float64
 	serviceHost         string
 	servicePort         int32
 	simColdStart        bool
@@ -92,7 +92,7 @@ func main() {
 		&servicePort, "port", 5432,
 		"[Simulation] cache sim service port",
 	)
-	rootCmd.PersistentFlags().Float32Var(
+	rootCmd.PersistentFlags().Float64Var(
 		&outputUpdateDelay, "outputUpdateDelay", 5.,
 		"[Simulation] time delay for cmd output",
 	)
