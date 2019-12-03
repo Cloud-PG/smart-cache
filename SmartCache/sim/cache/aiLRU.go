@@ -894,5 +894,5 @@ func (cache *AILRU) check(key string) bool {
 
 // ExtraStats for output
 func (cache *AILRU) ExtraStats() string {
-	return fmt.Sprintf("Cov: %0.2f%, Epsilon: %0.2f", cache.qTable.GetCoveragePercentage(), cache.qTable.Epsilon)
+	return fmt.Sprintf("Cov: %0.2f%%, Epsilon: %0.2f", cache.qTable.GetCoveragePercentage(), cache.qTable.Epsilon)
 }
