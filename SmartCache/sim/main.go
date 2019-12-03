@@ -31,6 +31,7 @@ var (
 	githash             string
 	limitStatsPolicy    string
 	memprofile          string
+	outputUpdateDelay   float32
 	serviceHost         string
 	servicePort         int32
 	simColdStart        bool
@@ -51,7 +52,6 @@ var (
 type simDetailCmd int
 
 const (
-	outputUpdateDelay                = 5.0
 	normalSimulationCmd simDetailCmd = iota
 	testAICmd
 	testDatasetCmd
@@ -91,6 +91,10 @@ func main() {
 	rootCmd.PersistentFlags().Int32Var(
 		&servicePort, "port", 5432,
 		"[Simulation] cache sim service port",
+	)
+	rootCmd.PersistentFlags().Float32Var(
+		&outputUpdateDelay, "outputUpdateDelay", 5.,
+		"[Simulation] time delay for cmd output",
 	)
 	rootCmd.PersistentFlags().StringVar(
 		&weightedFunc, "weightFunction", "FuncWeightedRequests",
@@ -441,7 +445,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 					windowStepCounter = 0
 					numRecords = 0
 				} else {
-					if time.Now().Sub(start).Seconds() >= 1. {
+					if time.Now().Sub(start).Seconds() >= outputUpdateDelay {
 						fmt.Printf("[Jump %d records of window %d]\r",
 							numRecords,
 							windowCounter,
