@@ -168,7 +168,7 @@ func (table QTable) GetCoveragePercentage() float64 {
 			}
 		}
 	}
-	return (float64(numSetVariables) / float64(table.numVars)) * 100.
+	return (float64(numSetVariables) / float64(table.NumVars)) * 100.
 }
 
 // GetStateIdx returns the index of a given state
