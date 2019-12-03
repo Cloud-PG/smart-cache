@@ -2,6 +2,7 @@ package cache
 
 import (
 	"encoding/json"
+	"math"
 	"time"
 )
 
@@ -40,6 +41,7 @@ type WeightedFileStats struct {
 	TotRequests       uint32                     `json:"totRequests"`
 	NHits             uint32                     `json:"nHits"`
 	NMiss             uint32                     `json:"nMiss"`
+	InCacheSince      time.Time                  `json:"inCacheSince`
 	LastTimeRequested time.Time                  `json:"lastTimeRequested"`
 	RequestTicksMean  float32                    `json:"requestTicksMean"`
 	RequestTicks      [StatsMemorySize]time.Time `json:"requestTicks"`
@@ -54,6 +56,15 @@ func (stats WeightedFileStats) dumps() []byte {
 func (stats *WeightedFileStats) loads(inString string) *WeightedFileStats {
 	json.Unmarshal([]byte(inString), &stats)
 	return stats
+}
+
+func (stats *WeightedFileStats) addInCache(curTime time.Time) {
+	stats.InCacheSince = curTime
+}
+
+func (stats WeightedFileStats) getWeightedTotRequests(curTime time.Time) float64 {
+	diff := math.Floor(curTime.Sub(stats.InCacheSince).Hours() / 24.)
+	return float64(stats.TotRequests) * math.Exp(-diff)
 }
 
 func (stats *WeightedFileStats) updateStats(hit bool, size float32, curTime time.Time) {

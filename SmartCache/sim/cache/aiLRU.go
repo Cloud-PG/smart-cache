@@ -88,6 +88,7 @@ func (curMap featureMapObj) GetKeys() chan featureMapKey {
 
 // AILRU cache
 type AILRU struct {
+	curTime                            time.Time
 	files                              map[string]float32
 	stats                              []*WeightedFileStats
 	statsFilenames                     map[string]int
@@ -645,8 +646,8 @@ func (cache AILRU) getPoints() float64 {
 	points := 0.0
 	for filename, size := range cache.files {
 		idx, _ := cache.statsFilenames[filename]
-		nReq := cache.stats[idx].TotRequests
-		points += float64(nReq) * float64(size)
+		nReq := cache.stats[idx].getWeightedTotRequests(cache.curTime)
+		points += nReq * float64(size)
 	}
 	return float64(points)
 }
@@ -661,6 +662,8 @@ func (cache *AILRU) updatePolicy(filename string, size float32, hit bool, vars .
 
 	day := vars[0].(int64)
 	currentTime := time.Unix(day, 0)
+	cache.curTime = currentTime
+
 	_, curStats := cache.getOrInsertStats(filename)
 	curStats.updateStats(hit, size, currentTime)
 
@@ -777,6 +780,7 @@ func (cache *AILRU) updatePolicy(filename string, size float32, hit bool, vars .
 			cache.files[filename] = size
 			cache.queue.PushBack(filename)
 			cache.size += size
+			curStats.addInCache(currentTime)
 			added = true
 		}
 

@@ -275,6 +275,7 @@ func (cache *WeightedCache) updatePolicy(filename string, size float32, hit bool
 			0,
 			0,
 			0,
+			time.Time{},
 			curTime,
 			0.,
 			[StatsMemorySize]time.Time{},
