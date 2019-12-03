@@ -41,7 +41,7 @@ type WeightedFileStats struct {
 	TotRequests       uint32                     `json:"totRequests"`
 	NHits             uint32                     `json:"nHits"`
 	NMiss             uint32                     `json:"nMiss"`
-	InCacheSince      time.Time                  `json:"inCacheSince`
+	InCacheSince      time.Time                  `json:"inCacheSince"`
 	LastTimeRequested time.Time                  `json:"lastTimeRequested"`
 	RequestTicksMean  float32                    `json:"requestTicksMean"`
 	RequestTicks      [StatsMemorySize]time.Time `json:"requestTicks"`
