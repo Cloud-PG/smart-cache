@@ -51,6 +51,7 @@ var (
 type simDetailCmd int
 
 const (
+	outputUpdateDelay                = 5.0
 	normalSimulationCmd simDetailCmd = iota
 	testAICmd
 	testDatasetCmd
@@ -400,7 +401,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 
 					numIterations++
 
-					if time.Now().Sub(start).Seconds() >= 1. {
+					if time.Now().Sub(start).Seconds() >= outputUpdateDelay {
 						elapsedTime := time.Now().Sub(simBeginTime)
 						outString := strings.Join(
 							[]string{
