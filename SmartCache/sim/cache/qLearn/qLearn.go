@@ -22,7 +22,7 @@ type QTable struct {
 	numStates        int64                `json:"num_states"`
 	numVars          int64                `json:"num_vars"`
 	LearningRate     float64              `json:"learning_rate"`
-	DecayRate        float64              `json:"decay_rate"`
+	DiscountFactor   float64              `json:"discount_factor"`
 	DecayRateEpsilon float64              `json:"decay_rate_epsilon"`
 	Epsilon          float64              `json:"epsilon"`
 	MaxEpsilon       float64              `json:"max_epsilon"`
@@ -95,8 +95,8 @@ func (table QTable) genAllStates(featureLenghts []int) chan []float64 {
 
 // Init initilizes the QTable struct
 func (table *QTable) Init(featureLenghts []int) {
-	table.LearningRate = 0.9
-	table.DecayRate = 0.0 // No discount
+	table.LearningRate = 0.9 // also named Alpha
+	table.DiscountFactor = 0.1
 	table.DecayRateEpsilon = 0.000005
 	table.Epsilon = 1.0
 	table.MaxEpsilon = 1.0
@@ -199,9 +199,9 @@ func (table QTable) GetBestAction(state []float64) ActionType {
 // Update change the Q-table values of the given action
 func (table *QTable) Update(state []float64, action ActionType, reward float64) {
 	stateIdx := table.GetStateIdx(state)
-	actionValue := table.GetAction(stateIdx, action)
+	oldValue := table.GetAction(stateIdx, action)
 	maxValue := getArgMax(table.States[stateIdx])
-	table.States[stateIdx][action] = actionValue + table.LearningRate*(reward+table.DecayRate*table.States[stateIdx][maxValue]-actionValue)
+	table.States[stateIdx][action] = (1.0-table.LearningRate)*oldValue + table.LearningRate*(reward+table.DiscountFactor*table.States[stateIdx][maxValue])
 	table.EpisodeCounter += 1.0
 }
 
