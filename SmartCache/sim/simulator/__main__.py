@@ -722,7 +722,7 @@ def main():
                 ],
                 map_type=int,
                 sort_keys=True,
-                buckets=[5, 10, 50, 100, 250, 500, 1000, 2000, 4000, 10000, '...'],
+                buckets=[50, 100, 250, 500, 1000, 2000, 4000, '...'],
             ).make_converter_map(
                 [
                     'numReq',
@@ -736,7 +736,7 @@ def main():
                 ],
                 map_type=int,
                 sort_keys=True,
-                buckets=list(range(0, 6*1000, 100)) + ['...'],
+                buckets=list(range(0, 8*1000, 1000)) + ['...'],
             ).make_converter_map(
                 [
                     'siteName',
