@@ -8,19 +8,25 @@ import (
 
 // ActionType are cache possible actions
 type ActionType int
+type RLUpdateType int
 
 const (
 	// ActionStore indicates to store an element in cache
 	ActionStore ActionType = iota
 	// ActionNotStore indicates to not store an element in cache
 	ActionNotStore
+
+	// ActionStore indicates to store an element in cache
+	RLStandardUpdate RLUpdateType = iota
+	// ActionNotStore indicates to not store an element in cache
+	RLBellmanEquation
 )
 
 // QTable used in Qlearning
 type QTable struct {
 	States           map[string][]float64 `json:"states"`
-	numStates        int64                `json:"num_states"`
-	numVars          int64                `json:"num_vars"`
+	NumStates        int64                `json:"num_states"`
+	NumVars          int64                `json:"num_vars"`
 	LearningRate     float64              `json:"learning_rate"`
 	DiscountFactor   float64              `json:"discount_factor"`
 	DecayRateEpsilon float64              `json:"decay_rate_epsilon"`
@@ -30,6 +36,7 @@ type QTable struct {
 	EpisodeCounter   float64              `json:"episode_counter"`
 	Actions          []ActionType         `json:"actions"`
 	RGenerator       *rand.Rand           `json:"r_generator"`
+	UpdateFunction   RLUpdateType         `json:"update_function"`
 }
 
 func getArgMax(array []float64) int {
@@ -105,13 +112,14 @@ func (table *QTable) Init(featureLenghts []int) {
 		ActionNotStore,
 		ActionStore,
 	}
+	table.UpdateFunction = RLBellmanEquation
 	table.RGenerator = rand.New(rand.NewSource(42))
 
 	var numStates int64 = 1
 	for _, featureLen := range featureLenghts {
 		numStates *= int64(featureLen)
 	}
-	table.numStates = numStates
+	table.NumStates = numStates
 
 	fmt.Printf("[Generate %d states][...]\n", numStates)
 	table.States = make(map[string][]float64, numStates)
@@ -127,8 +135,8 @@ func (table *QTable) Init(featureLenghts []int) {
 		}
 
 	}
-	table.numVars = table.numStates * int64(len(table.Actions))
-	fmt.Printf("[Tot. Vars: %d]\n", table.numVars)
+	table.NumVars = table.NumStates * int64(len(table.Actions))
+	fmt.Printf("[Tot. Vars: %d]\n", table.NumVars)
 }
 
 // GetRandomTradeOff generates a random number
@@ -200,8 +208,13 @@ func (table QTable) GetBestAction(state []float64) ActionType {
 func (table *QTable) Update(state []float64, action ActionType, reward float64) {
 	stateIdx := table.GetStateIdx(state)
 	oldValue := table.GetAction(stateIdx, action)
-	maxValue := getArgMax(table.States[stateIdx])
-	table.States[stateIdx][action] = (1.0-table.LearningRate)*oldValue + table.LearningRate*(reward+table.DiscountFactor*table.States[stateIdx][maxValue])
+	maxValue := getArgMax(table.States[stateIdx]) // The next state is the same
+	switch table.UpdateFunction {
+	case RLStandardUpdate:
+		table.States[stateIdx][action] = (1.0-table.LearningRate)*oldValue + table.LearningRate*(reward+table.DiscountFactor*table.States[stateIdx][maxValue])
+	case RLBellmanEquation:
+		table.States[stateIdx][action] = oldValue + table.LearningRate*(reward+table.DiscountFactor*table.States[stateIdx][maxValue]-oldValue)
+	}
 	table.EpisodeCounter += 1.0
 }
 
