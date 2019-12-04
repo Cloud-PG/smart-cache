@@ -2,7 +2,6 @@ package cache
 
 import (
 	"encoding/json"
-	"math"
 	"time"
 )
 
@@ -60,11 +59,6 @@ func (stats *WeightedFileStats) loads(inString string) *WeightedFileStats {
 
 func (stats *WeightedFileStats) addInCache(curTime time.Time) {
 	stats.InCacheSince = curTime
-}
-
-func (stats WeightedFileStats) getWeightedTotRequests(curTime time.Time) float64 {
-	diff := math.Floor(curTime.Sub(stats.InCacheSince).Hours() / 24.)
-	return float64(stats.TotRequests) * math.Exp(-diff)
 }
 
 func (stats *WeightedFileStats) updateStats(hit bool, size float32, curTime time.Time) {

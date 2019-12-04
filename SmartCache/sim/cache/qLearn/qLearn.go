@@ -103,8 +103,8 @@ func (table QTable) genAllStates(featureLenghts []int) chan []float64 {
 // Init initilizes the QTable struct
 func (table *QTable) Init(featureLenghts []int) {
 	table.LearningRate = 0.9 // also named Alpha
-	table.DiscountFactor = 0.1
-	table.DecayRateEpsilon = 0.000005
+	table.DiscountFactor = 0.5
+	table.DecayRateEpsilon = 0.000001
 	table.Epsilon = 1.0
 	table.MaxEpsilon = 1.0
 	table.MinEpsilon = 0.1

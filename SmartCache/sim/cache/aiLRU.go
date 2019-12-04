@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -642,12 +643,14 @@ func (cache *AILRU) composeFeatures(vars ...interface{}) []float64 {
 	return inputVector
 }
 
-func (cache AILRU) getPoints() float64 {
+func (cache AILRU) getPoints(curTime time.Time) float64 {
 	points := 0.0
 	for filename, size := range cache.files {
 		idx, _ := cache.statsFilenames[filename]
-		nReq := cache.stats[idx].getWeightedTotRequests(cache.curTime)
-		points += nReq * float64(size)
+		nReq := cache.stats[idx].TotRequests
+		points += float64(nReq) * float64(size)
+		dayDiff := math.Floor(curTime.Sub(cache.stats[idx].InCacheSince).Hours() / 24.)
+		points = points * math.Exp(-dayDiff)
 	}
 	return float64(points)
 }
@@ -722,7 +725,7 @@ func (cache *AILRU) updatePolicy(filename string, size float32, hit bool, vars .
 			}
 		} else if cache.qTable != nil {
 			curState = featureVector
-			prevPoints = cache.getPoints()
+			prevPoints = cache.getPoints(currentTime)
 
 			// QLearn - Check action
 			expTradeoff := cache.qTable.GetRandomTradeOff()
@@ -740,7 +743,7 @@ func (cache *AILRU) updatePolicy(filename string, size float32, hit bool, vars .
 
 			// QLearn - Take the action
 			if curAction == qlearn.ActionNotStore {
-				reward := cache.getPoints() - prevPoints
+				reward := cache.getPoints(currentTime) - prevPoints
 				// Update table
 				cache.qTable.Update(curState, curAction, reward)
 				// Update epsilon
@@ -786,7 +789,7 @@ func (cache *AILRU) updatePolicy(filename string, size float32, hit bool, vars .
 
 		// QLearn - Take the action
 		if cache.qTable != nil && curAction == qlearn.ActionStore {
-			reward := cache.getPoints() - prevPoints
+			reward := cache.getPoints(currentTime) - prevPoints
 			// Update table
 			cache.qTable.Update(curState, curAction, reward)
 			// Update epsilon
