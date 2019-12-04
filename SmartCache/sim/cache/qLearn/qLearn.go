@@ -8,6 +8,8 @@ import (
 
 // ActionType are cache possible actions
 type ActionType int
+
+// RLUpdateType are the possible update functions
 type RLUpdateType int
 
 const (
@@ -16,9 +18,9 @@ const (
 	// ActionNotStore indicates to not store an element in cache
 	ActionNotStore
 
-	// ActionStore indicates to store an element in cache
+	// RLStandardUpdate indicates the standard RL update function
 	RLStandardUpdate RLUpdateType = iota
-	// ActionNotStore indicates to not store an element in cache
+	// RLBellmanEquation indicates the Bellman equation
 	RLBellmanEquation
 )
 
@@ -42,7 +44,7 @@ type QTable struct {
 func getArgMax(array []float64) int {
 	maxIdx := 0
 	maxElm := array[maxIdx]
-	for idx := 0; idx < len(array); idx++ {
+	for idx := 1; idx < len(array); idx++ {
 		if array[idx] > maxElm {
 			maxElm = array[idx]
 			maxIdx = idx
@@ -108,8 +110,9 @@ func (table *QTable) Init(featureLenghts []int) {
 	table.Epsilon = 1.0
 	table.MaxEpsilon = 1.0
 	table.MinEpsilon = 0.1
+	// With getArgMax the first action is the default choice
 	table.Actions = []ActionType{
-		ActionStore, // With argmax is the default choice
+		ActionStore,
 		ActionNotStore,
 	}
 	table.UpdateFunction = RLBellmanEquation
