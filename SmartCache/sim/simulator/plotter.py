@@ -281,6 +281,8 @@ def plot_read_on_write_data(tools: list,
                             datetimes: list = [],
                             plot_width: int = 640,
                             plot_height: int = 480,
+                            diff: bool=False,
+                            cache_size: float=0.0,
                             ) -> 'Figure':
     read_on_write_data_fig = figure(
         tools=tools,
@@ -306,7 +308,10 @@ def plot_read_on_write_data(tools: list,
         results, run_type, filters
     ):
         if run_type == "run_full_normal":
-            points = values[read_data_type] / values['written data']
+            if diff:
+                points = (values[read_data_type] - values['written data']) / cache_size
+            else:
+                points = values[read_data_type] / values['written data']
             cur_line = read_on_write_data_fig.line(
                 dates,
                 points,
@@ -501,7 +506,7 @@ def plot_read_on_write_data(tools: list,
     return read_on_write_data_fig
 
 
-def plot_results(folder: str, results: dict,
+def plot_results(folder: str, results: dict, cache_size: float,
                  filters: list = [], window_size: int = 1,
                  html: bool = True, png: bool = False,
                  plot_width: int = 640,
@@ -552,7 +557,7 @@ def plot_results(folder: str, results: dict,
     run_single_window_figs = []
     run_next_period_figs = []
 
-    pbar = tqdm(total=11, desc="Plot results", ascii=True)
+    pbar = tqdm(total=12, desc="Plot results", ascii=True)
 
     ###########################################################################
     # Hit Rate plot of full normal run
@@ -589,6 +594,27 @@ def plot_results(folder: str, results: dict,
         read_on_hit=read_on_hit,
     )
     run_full_normal_hit_rate_figs.append(read_on_write_data_fig)
+    pbar.update(1)
+
+    ###########################################################################
+    # Read and Write data diff plot of full normal run
+    ###########################################################################
+    read_and_write_diff_data_fig = plot_read_on_write_data(
+        tools,
+        results,
+        dates,
+        filters,
+        color_table,
+        window_size,
+        x_range=hit_rate_fig.x_range,
+        title=f"{'Read on hit data' if read_on_hit else 'Read data'} - Written data with cache size {cache_size}",
+        plot_width=plot_width,
+        plot_height=plot_height,
+        read_on_hit=read_on_hit,
+        diff=True,
+        cache_size=cache_size,
+    )
+    run_full_normal_hit_rate_figs.append(read_and_write_diff_data_fig)
     pbar.update(1)
 
     ###########################################################################

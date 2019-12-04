@@ -434,7 +434,7 @@ def main():
             if elm
         ]
         plot_results(
-            args.source, results,
+            args.source, results, args.cache_size,
             window_size=args.window_size,
             filters=filters,
             html=args.out_html,
