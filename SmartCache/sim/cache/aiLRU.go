@@ -91,8 +91,7 @@ func (curMap featureMapObj) GetKeys() chan featureMapKey {
 type AILRU struct {
 	curTime                            time.Time
 	files                              map[string]float32
-	stats                              []*WeightedFileStats
-	statsFilenames                     map[string]int
+	stats                              map[string]*WeightedFileStats
 	queue                              *list.List
 	hit, miss, size, MaxSize, Exp      float32
 	dataWritten, dataRead, dataDeleted float32
@@ -161,9 +160,8 @@ func (cache *AILRU) Init(args ...interface{}) interface{} {
 
 	cache.files = make(map[string]float32)
 	cache.queue = list.New()
-	cache.stats = make([]*WeightedFileStats, 0)
+	cache.stats = make(map[string]*WeightedFileStats, 0)
 	cache.aiFeatureMap = make(map[string]featureMapObj, 0)
-	cache.statsFilenames = make(map[string]int)
 
 	featureMapFile, errOpenFile := os.Open(featureMapFilePath)
 	if errOpenFile != nil {
@@ -287,8 +285,7 @@ func (cache *AILRU) ClearFiles() {
 // Clear the AILRU struct
 func (cache *AILRU) Clear() {
 	cache.ClearFiles()
-	cache.stats = make([]*WeightedFileStats, 0)
-	cache.statsFilenames = make(map[string]int)
+	cache.stats = make(map[string]*WeightedFileStats, 0)
 	tmpVal := cache.queue.Front()
 	for {
 		if tmpVal == nil {
@@ -395,9 +392,7 @@ func (cache *AILRU) Loads(inputString *[][]byte) {
 			cache.files[curFile.Filename] = curFile.Size
 			cache.size += curFile.Size
 		case "STATS":
-			var curStats WeightedFileStats
-			json.Unmarshal([]byte(curRecord.Data), &curStats)
-			cache.stats = append(cache.stats, &curStats)
+			json.Unmarshal([]byte(curRecord.Data), &cache.stats)
 		case "QTABLE":
 			json.Unmarshal([]byte(curRecord.Data), cache.qTable)
 		}
@@ -513,16 +508,11 @@ func (cache *AILRU) SimLoads(stream pb.SimService_SimLoadsServer) error {
 	return nil
 }
 
-func (cache *AILRU) getOrInsertStats(filename string) (int, *WeightedFileStats) {
-	var (
-		resultIdx int
-		stats     *WeightedFileStats
-	)
-
-	idx, inStats := cache.statsFilenames[filename]
+func (cache *AILRU) getOrInsertStats(filename string) *WeightedFileStats {
+	curStats, inStats := cache.stats[filename]
 
 	if !inStats {
-		cache.stats = append(cache.stats, &WeightedFileStats{
+		curStats = &WeightedFileStats{
 			Filename:          filename,
 			Weight:            0.,
 			Size:              0.,
@@ -533,16 +523,11 @@ func (cache *AILRU) getOrInsertStats(filename string) (int, *WeightedFileStats) 
 			RequestTicksMean:  0.,
 			RequestTicks:      [StatsMemorySize]time.Time{},
 			RequestLastIdx:    0,
-		})
-		resultIdx = len(cache.stats) - 1
-		stats = cache.stats[resultIdx]
-		cache.statsFilenames[filename] = resultIdx
-	} else {
-		resultIdx = idx
-		stats = cache.stats[resultIdx]
+		}
+		cache.stats[filename] = curStats
 	}
 
-	return resultIdx, stats
+	return curStats
 }
 
 func (cache *AILRU) getCategory(catKey string, value interface{}) []float64 {
@@ -646,10 +631,10 @@ func (cache *AILRU) composeFeatures(vars ...interface{}) []float64 {
 func (cache AILRU) getPoints(curTime time.Time) float64 {
 	points := 0.0
 	for filename, size := range cache.files {
-		idx, _ := cache.statsFilenames[filename]
-		nReq := cache.stats[idx].TotRequests
+		curStats := cache.stats[filename]
+		nReq := curStats.TotRequests
 		points += float64(nReq) * float64(size)
-		dayDiff := math.Floor(curTime.Sub(cache.stats[idx].InCacheSince).Hours() / 24.)
+		dayDiff := math.Floor(curTime.Sub(curStats.InCacheSince).Hours() / 24.)
 		points = points * math.Exp(-dayDiff)
 	}
 	return float64(points)
@@ -667,7 +652,7 @@ func (cache *AILRU) updatePolicy(filename string, size float32, hit bool, vars .
 	currentTime := time.Unix(day, 0)
 	cache.curTime = currentTime
 
-	_, curStats := cache.getOrInsertStats(filename)
+	curStats := cache.getOrInsertStats(filename)
 	curStats.updateStats(hit, size, currentTime)
 
 	if !hit {
