@@ -1,7 +1,16 @@
 import subprocess
+from contextlib import contextmanager
 from os import path, walk
 
 import pandas as pd
+
+
+@contextmanager
+def ignored(*exceptions):
+    try:
+        yield
+    except exceptions:
+        pass
 
 
 def str2bool(v):

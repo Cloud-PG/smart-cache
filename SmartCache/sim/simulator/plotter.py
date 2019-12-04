@@ -11,6 +11,8 @@ from bokeh.palettes import Accent
 from bokeh.plotting import Figure, figure, output_file, save
 from tqdm import tqdm
 
+from .utils import ignored
+
 
 def update_colors(new_name: str, color_table: dict):
     names = list(color_table.keys()) + [new_name]
@@ -281,8 +283,8 @@ def plot_read_on_write_data(tools: list,
                             datetimes: list = [],
                             plot_width: int = 640,
                             plot_height: int = 480,
-                            diff: bool=False,
-                            cache_size: float=0.0,
+                            diff: bool = False,
+                            cache_size: float = 0.0,
                             ) -> 'Figure':
     read_on_write_data_fig = figure(
         tools=tools,
@@ -309,7 +311,8 @@ def plot_read_on_write_data(tools: list,
     ):
         if run_type == "run_full_normal":
             if diff:
-                points = (values[read_data_type] - values['written data']) / cache_size
+                points = (values[read_data_type] -
+                          values['written data']) / cache_size
             else:
                 points = values[read_data_type] / values['written data']
             cur_line = read_on_write_data_fig.line(
@@ -562,236 +565,248 @@ def plot_results(folder: str, results: dict, cache_size: float,
     ###########################################################################
     # Hit Rate plot of full normal run
     ###########################################################################
-    hit_rate_fig = plot_column(
-        tools,
-        results,
-        dates,
-        filters,
-        color_table,
-        window_size,
-        column="hit rate",
-        title="Hit Rate - Full Normal Run",
-        plot_width=plot_width,
-        plot_height=plot_height,
-    )
-    run_full_normal_hit_rate_figs.append(hit_rate_fig)
+    with ignored(Exception):
+        hit_rate_fig = plot_column(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            column="hit rate",
+            title="Hit Rate - Full Normal Run",
+            plot_width=plot_width,
+            plot_height=plot_height,
+        )
+        run_full_normal_hit_rate_figs.append(hit_rate_fig)
     pbar.update(1)
 
     ###########################################################################
     # Read on Write data plot of full normal run
     ###########################################################################
-    read_on_write_data_fig = plot_read_on_write_data(
-        tools,
-        results,
-        dates,
-        filters,
-        color_table,
-        window_size,
-        x_range=hit_rate_fig.x_range,
-        title=f"{'Read on hit data / Written data' if read_on_hit else 'Read data / Written data'} - Full Normal Run",
-        plot_width=plot_width,
-        plot_height=plot_height,
-        read_on_hit=read_on_hit,
-    )
-    run_full_normal_hit_rate_figs.append(read_on_write_data_fig)
+    with ignored(Exception):
+        read_on_write_data_fig = plot_read_on_write_data(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            x_range=hit_rate_fig.x_range,
+            title=f"{'Read on hit data / Written data' if read_on_hit else 'Read data / Written data'} - Full Normal Run",
+            plot_width=plot_width,
+            plot_height=plot_height,
+            read_on_hit=read_on_hit,
+        )
+        run_full_normal_hit_rate_figs.append(read_on_write_data_fig)
     pbar.update(1)
 
     ###########################################################################
     # Read and Write data diff plot of full normal run
     ###########################################################################
-    read_and_write_diff_data_fig = plot_read_on_write_data(
-        tools,
-        results,
-        dates,
-        filters,
-        color_table,
-        window_size,
-        x_range=hit_rate_fig.x_range,
-        title=f"{'Read on hit data' if read_on_hit else 'Read data'} - Written data with cache size {cache_size}",
-        plot_width=plot_width,
-        plot_height=plot_height,
-        read_on_hit=read_on_hit,
-        diff=True,
-        cache_size=cache_size,
-    )
-    run_full_normal_hit_rate_figs.append(read_and_write_diff_data_fig)
+    with ignored(Exception):
+        read_and_write_diff_data_fig = plot_read_on_write_data(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            x_range=hit_rate_fig.x_range,
+            title=f"{'Read on hit data' if read_on_hit else 'Read data'} - Written data with cache size {cache_size}",
+            plot_width=plot_width,
+            plot_height=plot_height,
+            read_on_hit=read_on_hit,
+            diff=True,
+            cache_size=cache_size,
+        )
+        run_full_normal_hit_rate_figs.append(read_and_write_diff_data_fig)
     pbar.update(1)
 
     ###########################################################################
     # Written data plot of full normal run
     ###########################################################################
-    written_data_fig = plot_column(
-        tools,
-        results,
-        dates,
-        filters,
-        color_table,
-        window_size,
-        column="written data",
-        title="Written data - Full Normal Run",
-        y_axis_label="Written data (MB)",
-        plot_width=plot_width,
-        plot_height=plot_height,
-    )
-    run_full_normal_data_rw_figs.append(written_data_fig)
+    with ignored(Exception):
+        written_data_fig = plot_column(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            column="written data",
+            title="Written data - Full Normal Run",
+            y_axis_label="Written data (MB)",
+            plot_width=plot_width,
+            plot_height=plot_height,
+        )
+        run_full_normal_data_rw_figs.append(written_data_fig)
     pbar.update(1)
 
     ###########################################################################
     # Read data plot of full normal run
     ###########################################################################
-    read_data_fig = plot_column(
-        tools,
-        results,
-        dates,
-        filters,
-        color_table,
-        window_size,
-        column="read data",
-        title="Read data - Full Normal Run",
-        y_axis_label="Read data (MB)",
-        plot_width=plot_width,
-        plot_height=plot_height,
-    )
-    run_full_normal_data_rw_figs.append(read_data_fig)
+    with ignored(Exception):
+        read_data_fig = plot_column(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            column="read data",
+            title="Read data - Full Normal Run",
+            y_axis_label="Read data (MB)",
+            plot_width=plot_width,
+            plot_height=plot_height,
+        )
+        run_full_normal_data_rw_figs.append(read_data_fig)
     pbar.update(1)
 
     ###########################################################################
     # Deleted data plot of full normal run
     ###########################################################################
-    deleted_data_fig = plot_column(
-        tools,
-        results,
-        dates,
-        filters,
-        color_table,
-        window_size,
-        column="deleted data",
-        title="Deleted data - Full Normal Run",
-        y_axis_label="Deleted data (MB)",
-        plot_width=plot_width,
-        plot_height=plot_height,
-    )
-    run_full_normal_data_rw_figs.append(deleted_data_fig)
+    with ignored(Exception):
+        deleted_data_fig = plot_column(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            column="deleted data",
+            title="Deleted data - Full Normal Run",
+            y_axis_label="Deleted data (MB)",
+            plot_width=plot_width,
+            plot_height=plot_height,
+        )
+        run_full_normal_data_rw_figs.append(deleted_data_fig)
     pbar.update(1)
 
     ###########################################################################
     # Read on hit data plot of full normal run
     ###########################################################################
-    read_data_fig = plot_column(
-        tools,
-        results,
-        dates,
-        filters,
-        color_table,
-        window_size,
-        column="read on hit data",
-        title="Read on hit data - Full Normal Run",
-        y_axis_label="Read on hit data (MB)",
-        plot_width=plot_width,
-        plot_height=plot_height,
-    )
-    run_full_normal_data_read_stats_figs.append(read_data_fig)
+    with ignored(Exception):
+        read_data_fig = plot_column(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            column="read on hit data",
+            title="Read on hit data - Full Normal Run",
+            y_axis_label="Read on hit data (MB)",
+            plot_width=plot_width,
+            plot_height=plot_height,
+        )
+        run_full_normal_data_read_stats_figs.append(read_data_fig)
     pbar.update(1)
 
     ###########################################################################
     # Read on miss data plot of full normal run
     ###########################################################################
-    read_data_fig = plot_column(
-        tools,
-        results,
-        dates,
-        filters,
-        color_table,
-        window_size,
-        column="read on miss data",
-        title="Read on miss data - Full Normal Run",
-        y_axis_label="Read on miss data (MB)",
-        plot_width=plot_width,
-        plot_height=plot_height,
-    )
-    run_full_normal_data_read_stats_figs.append(read_data_fig)
+    with ignored(Exception):
+        read_data_fig = plot_column(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            column="read on miss data",
+            title="Read on miss data - Full Normal Run",
+            y_axis_label="Read on miss data (MB)",
+            plot_width=plot_width,
+            plot_height=plot_height,
+        )
+        run_full_normal_data_read_stats_figs.append(read_data_fig)
     pbar.update(1)
 
     ###########################################################################
     # Hit Rate compare single and next window plot
     ###########################################################################
-    hit_rate_comp_snw_fig = plot_column(
-        tools,
-        results,
-        dates,
-        filters,
-        color_table,
-        window_size,
-        x_range=hit_rate_fig.x_range,
-        column="hit rate",
-        title="Hit Rate - Compare single and next window",
-        run_type="run_single_window",
-        plot_width=plot_width,
-        plot_height=plot_height,
-    )
-    run_single_window_figs.append(hit_rate_comp_snw_fig)
+    with ignored(Exception):
+        hit_rate_comp_snw_fig = plot_column(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            x_range=hit_rate_fig.x_range,
+            column="hit rate",
+            title="Hit Rate - Compare single and next window",
+            run_type="run_single_window",
+            plot_width=plot_width,
+            plot_height=plot_height,
+        )
+        run_single_window_figs.append(hit_rate_comp_snw_fig)
     pbar.update(1)
 
     ###########################################################################
     # Read on Write data data compare single and next window plot
     ###########################################################################
-    ronwdata_comp_snw_fig = plot_read_on_write_data(
-        tools,
-        results,
-        dates,
-        filters,
-        color_table,
-        window_size,
-        x_range=hit_rate_fig.x_range,
-        title=f"{'Read on hit data / Written data' if read_on_hit else 'Read data / Written data'} - Compare single and next window",
-        run_type="run_single_window",
-        plot_width=plot_width,
-        plot_height=plot_height,
-        read_on_hit=read_on_hit,
-    )
-    run_single_window_figs.append(ronwdata_comp_snw_fig)
+    with ignored(Exception):
+        ronwdata_comp_snw_fig = plot_read_on_write_data(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            x_range=hit_rate_fig.x_range,
+            title=f"{'Read on hit data / Written data' if read_on_hit else 'Read data / Written data'} - Compare single and next window",
+            run_type="run_single_window",
+            plot_width=plot_width,
+            plot_height=plot_height,
+            read_on_hit=read_on_hit,
+        )
+        run_single_window_figs.append(ronwdata_comp_snw_fig)
     pbar.update(1)
 
     ###########################################################################
     # Hit Rate compare single window and next period plot
     ###########################################################################
-    hit_rate_comp_swnp_fig = plot_column(
-        tools,
-        results,
-        dates,
-        filters,
-        color_table,
-        window_size,
-        x_range=hit_rate_fig.x_range,
-        column="hit rate",
-        title="Hit Rate - Compare single window and next period",
-        run_type="run_next_period",
-        datetimes=datetimes,
-        plot_width=plot_width,
-        plot_height=plot_height,
-    )
-    run_next_period_figs.append(hit_rate_comp_swnp_fig)
+    with ignored(Exception):
+        hit_rate_comp_swnp_fig = plot_column(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            x_range=hit_rate_fig.x_range,
+            column="hit rate",
+            title="Hit Rate - Compare single window and next period",
+            run_type="run_next_period",
+            datetimes=datetimes,
+            plot_width=plot_width,
+            plot_height=plot_height,
+        )
+        run_next_period_figs.append(hit_rate_comp_swnp_fig)
     pbar.update(1)
 
     ###########################################################################
     # Read on Write data data compare single window and next period plot
     ###########################################################################
-    ronwdata_comp_swnp_fig = plot_read_on_write_data(
-        tools,
-        results,
-        dates,
-        filters,
-        color_table,
-        window_size,
-        x_range=hit_rate_fig.x_range,
-        title=f"{'Read on hit data / Written data' if read_on_hit else 'Read data / Written data'} - Compare single window and next period",
-        run_type="run_next_period",
-        datetimes=datetimes,
-        plot_width=plot_width,
-        plot_height=plot_height,
-        read_on_hit=read_on_hit,
-    )
-    run_next_period_figs.append(ronwdata_comp_swnp_fig)
+    with ignored(Exception):
+        ronwdata_comp_swnp_fig = plot_read_on_write_data(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            x_range=hit_rate_fig.x_range,
+            title=f"{'Read on hit data / Written data' if read_on_hit else 'Read data / Written data'} - Compare single window and next period",
+            run_type="run_next_period",
+            datetimes=datetimes,
+            plot_width=plot_width,
+            plot_height=plot_height,
+            read_on_hit=read_on_hit,
+        )
+        run_next_period_figs.append(ronwdata_comp_swnp_fig)
     pbar.update(1)
 
     figs.append(column(
