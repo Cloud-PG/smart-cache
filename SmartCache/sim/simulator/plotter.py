@@ -28,7 +28,7 @@ def update_colors(new_name: str, color_table: dict):
 def add_window_lines(cur_fig, dates: list, window_size: int):
     cur_fig.renderers.extend([
         Span(
-            location=idx+0.5, dimension='height',
+            location=idx-0.5, dimension='height',
             line_color='black', line_width=0.9
         )
         for idx in range(0, len(dates), window_size)
