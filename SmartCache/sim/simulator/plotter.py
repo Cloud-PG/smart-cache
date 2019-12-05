@@ -33,6 +33,13 @@ def add_window_lines(cur_fig, dates: list, window_size: int):
         )
         for idx in range(0, len(dates), window_size)
     ])
+    cur_fig.renderers.extend([
+        Span(
+            location=idx-0.5, dimension='height',
+            line_color='red', line_width=2.42
+        )
+        for idx in range(0, len(dates), window_size*4)
+    ])
 
 
 def filter_results(results: dict, key: str, filters: list):
