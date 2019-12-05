@@ -284,14 +284,13 @@ def plot_read_on_write_data(tools: list,
                             plot_width: int = 640,
                             plot_height: int = 480,
                             diff: bool = False,
-                            cache_size: float = 0.0,
                             ) -> 'Figure':
     read_on_write_data_fig = figure(
         tools=tools,
         title=title,
         x_axis_label="Day",
         y_axis_label="Ratio (Read on hit/Write)" if read_on_hit else "Ratio (Read/Write)",
-        y_axis_type="auto" if diff else "log",
+        y_axis_type="log",
         x_range=x_range if x_range else dates,
         plot_width=plot_width,
         plot_height=plot_height,
@@ -311,8 +310,7 @@ def plot_read_on_write_data(tools: list,
     ):
         if run_type == "run_full_normal":
             if diff:
-                points = (values[read_data_type] -
-                          values['written data']) / cache_size
+                points = values[read_data_type] - values['written data']
             else:
                 points = values[read_data_type] / values['written data']
             cur_line = read_on_write_data_fig.line(
@@ -613,12 +611,11 @@ def plot_results(folder: str, results: dict, cache_size: float,
             color_table,
             window_size,
             x_range=hit_rate_fig.x_range,
-            title=f"{'Read on hit data' if read_on_hit else 'Read data'} - Written data respect cache size of {int(cache_size/1024**2)}T",
+            title=f"{'Read on hit data' if read_on_hit else 'Read data'} - Written data",
             plot_width=plot_width,
             plot_height=plot_height,
             read_on_hit=read_on_hit,
             diff=True,
-            cache_size=cache_size,
         )
         run_full_normal_hit_rate_figs.append(read_and_write_diff_data_fig)
     pbar.update(1)
