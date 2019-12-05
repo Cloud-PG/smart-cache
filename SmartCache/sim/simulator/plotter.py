@@ -313,7 +313,6 @@ def plot_read_on_write_data(tools: list,
             if diff:
                 points = (values[read_data_type] -
                           values['written data']) / cache_size
-                print(points)
             else:
                 points = values[read_data_type] / values['written data']
             cur_line = read_on_write_data_fig.line(
@@ -614,7 +613,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             color_table,
             window_size,
             x_range=hit_rate_fig.x_range,
-            title=f"{'Read on hit data' if read_on_hit else 'Read data'} - Written data respect cache size of {cache_size/1024**2}T",
+            title=f"{'Read on hit data' if read_on_hit else 'Read data'} - Written data respect cache size of {int(cache_size/1024**2)}T",
             plot_width=plot_width,
             plot_height=plot_height,
             read_on_hit=read_on_hit,
