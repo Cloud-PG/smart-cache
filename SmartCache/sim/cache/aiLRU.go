@@ -730,7 +730,7 @@ func (cache *AILRU) updatePolicy(filename string, size float32, hit bool, vars .
 				}
 			}
 
-			// QLearn - Take the action
+			// QLearn - Take the action NOT STORE
 			if curAction == qlearn.ActionNotStore {
 				reward := cache.getPoints(currentTime) - prevPoints
 				// Update table
@@ -776,7 +776,7 @@ func (cache *AILRU) updatePolicy(filename string, size float32, hit bool, vars .
 			added = true
 		}
 
-		// QLearn - Take the action
+		// QLearn - Take the action STORE
 		if cache.qTable != nil && curAction == qlearn.ActionStore {
 			reward := cache.getPoints(currentTime) - prevPoints
 			// Update table
