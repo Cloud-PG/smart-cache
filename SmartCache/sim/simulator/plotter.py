@@ -303,10 +303,12 @@ def plot_read_on_write_data(tools: list,
         plot_height=plot_height,
     )
 
-    hline_1 = Span(
-        location=1.0, dimension='width', line_dash="dashed",
-        line_color="black", line_width=5.,
-    )
+    if not diff:
+        hline_1 = Span(
+            location=1.0, dimension='width', line_dash="dashed",
+            line_color="black", line_width=5.,
+        )
+
     read_on_write_data_fig.renderers.extend([hline_1])
 
     read_data_type = 'read on hit data' if read_on_hit else 'read data'
