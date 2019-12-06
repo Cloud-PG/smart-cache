@@ -653,7 +653,11 @@ func (cache *AILRU) updatePolicy(filename string, size float32, hit bool, vars .
 	cache.curTime = currentTime
 
 	curStats := cache.getOrInsertStats(filename)
-	curStats.updateStats(hit, size, nil)
+	if cache.qTable == nil {
+		curStats.updateStats(hit, size, &currentTime)
+	} else {
+		curStats.updateStats(hit, size, nil)
+	}
 
 	if !hit {
 		siteName := vars[1].(string)
