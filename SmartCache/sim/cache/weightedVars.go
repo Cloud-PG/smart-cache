@@ -61,7 +61,7 @@ func (stats *WeightedFileStats) addInCache(curTime time.Time) {
 	stats.InCacheSince = curTime
 }
 
-func (stats *WeightedFileStats) updateStats(hit bool, size float32, curTime time.Time) {
+func (stats *WeightedFileStats) updateStats(hit bool, size float32, curTime *time.Time) {
 	stats.TotRequests++
 	stats.Size = size
 
@@ -71,11 +71,12 @@ func (stats *WeightedFileStats) updateStats(hit bool, size float32, curTime time
 		stats.NMiss++
 	}
 
-	stats.LastTimeRequested = curTime
-
-	stats.RequestTicks[stats.RequestLastIdx] = curTime
-	stats.RequestLastIdx = (stats.RequestLastIdx + 1) % int(StatsMemorySize)
-	stats.RequestTicksMean = stats.getMeanReqTimes()
+	if curTime != nil {
+		stats.LastTimeRequested = *curTime
+		stats.RequestTicks[stats.RequestLastIdx] = *curTime
+		stats.RequestLastIdx = (stats.RequestLastIdx + 1) % int(StatsMemorySize)
+		stats.RequestTicksMean = stats.getMeanReqTimes()
+	}
 }
 
 func (stats *WeightedFileStats) updateWeight(functionType FunctionType, exp float32) float32 {

@@ -405,7 +405,7 @@ func (cache *WeightedLRU) updatePolicy(filename string, size float32, hit bool, 
 
 	if cache.SelUpdateStatPolicyType == UpdateStatsOnRequest {
 		statsIdx, curStats = cache.getOrInsertStats(filename)
-		curStats.updateStats(hit, size, currentTime)
+		curStats.updateStats(hit, size, &currentTime)
 		newWeight := curStats.updateWeight(cache.SelFunctionType, cache.Exp)
 		cache.fileWeights[statsIdx] = newWeight
 		cache.moveStat(statsIdx, curStats)
@@ -414,7 +414,7 @@ func (cache *WeightedLRU) updatePolicy(filename string, size float32, hit bool, 
 	if !hit {
 		if cache.SelUpdateStatPolicyType == UpdateStatsOnMiss {
 			statsIdx, curStats = cache.getOrInsertStats(filename)
-			curStats.updateStats(hit, size, currentTime)
+			curStats.updateStats(hit, size, &currentTime)
 			newWeight := curStats.updateWeight(cache.SelFunctionType, cache.Exp)
 			cache.fileWeights[statsIdx] = newWeight
 			cache.moveStat(statsIdx, curStats)

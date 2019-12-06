@@ -284,7 +284,7 @@ func (cache *WeightedCache) updatePolicy(filename string, size float32, hit bool
 	}
 
 	cache.stats[filename].updateStats(
-		hit, size, curTime,
+		hit, size, &curTime,
 	)
 
 	if !hit {
