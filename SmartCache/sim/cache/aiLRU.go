@@ -772,7 +772,7 @@ func (cache *AILRU) updatePolicy(filename string, size float32, hit bool, vars .
 			cache.files[filename] = size
 			cache.queue.PushBack(filename)
 			cache.size += size
-			curStats.addInCache(currentTime)
+			curStats.addInCache(&currentTime)
 			added = true
 		}
 

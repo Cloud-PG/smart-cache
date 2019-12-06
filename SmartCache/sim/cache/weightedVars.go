@@ -57,8 +57,8 @@ func (stats *WeightedFileStats) loads(inString string) *WeightedFileStats {
 	return stats
 }
 
-func (stats *WeightedFileStats) addInCache(curTime time.Time) {
-	stats.InCacheSince = curTime
+func (stats *WeightedFileStats) addInCache(curTime *time.Time) {
+	stats.InCacheSince = *curTime
 }
 
 func (stats *WeightedFileStats) updateStats(hit bool, size float32, curTime *time.Time) {
