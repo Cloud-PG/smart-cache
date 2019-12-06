@@ -290,24 +290,23 @@ def plot_read_on_write_data(tools: list,
                             datetimes: list = [],
                             plot_width: int = 640,
                             plot_height: int = 480,
-                            diff: bool = False,
+                            invert: bool = False,
                             ) -> 'Figure':
     read_on_write_data_fig = figure(
         tools=tools,
         title=title,
         x_axis_label="Day",
         y_axis_label="Ratio (Read on hit/Write)" if read_on_hit else "Ratio (Read/Write)",
-        y_axis_type="log",
+        y_axis_type="auto" if invert else "log",
         x_range=x_range if x_range else dates,
         plot_width=plot_width,
         plot_height=plot_height,
     )
 
-    if not diff:
-        hline_1 = Span(
-            location=1.0, dimension='width', line_dash="dashed",
-            line_color="black", line_width=5.,
-        )
+    hline_1 = Span(
+        location=1.0, dimension='width', line_dash="dashed",
+        line_color="black", line_width=5.,
+    )
 
     read_on_write_data_fig.renderers.extend([hline_1])
 
@@ -318,8 +317,8 @@ def plot_read_on_write_data(tools: list,
         results, run_type, filters
     ):
         if run_type == "run_full_normal":
-            if diff:
-                points = values[read_data_type] - values['written data']
+            if invert:
+                points = 1.0 - values['written data'] / values[read_data_type]
             else:
                 points = values[read_data_type] / values['written data']
             cur_line = read_on_write_data_fig.line(
@@ -567,7 +566,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
     run_single_window_figs = []
     run_next_period_figs = []
 
-    pbar = tqdm(total=12, desc="Plot results", ascii=True)
+    pbar = tqdm(total=14, desc="Plot results", ascii=True)
 
     ###########################################################################
     # Hit Rate plot of full normal run
@@ -600,19 +599,19 @@ def plot_results(folder: str, results: dict, cache_size: float,
             color_table,
             window_size,
             x_range=hit_rate_fig.x_range,
-            title=f"{'Read on hit data / Written data' if read_on_hit else 'Read data / Written data'} - Full Normal Run",
+            title="Read data / Written data - Full Normal Run",
             plot_width=plot_width,
             plot_height=plot_height,
-            read_on_hit=read_on_hit,
+            read_on_hit=False,
         )
         run_full_normal_hit_rate_figs.append(read_on_write_data_fig)
     pbar.update(1)
-
+    
     ###########################################################################
-    # Read and Write data diff plot of full normal run
+    # Read on Hit data on Write data plot of full normal run
     ###########################################################################
     with ignored(Exception):
-        read_and_write_diff_data_fig = plot_read_on_write_data(
+        read_hit_on_write_data_fig = plot_read_on_write_data(
             tools,
             results,
             dates,
@@ -620,13 +619,54 @@ def plot_results(folder: str, results: dict, cache_size: float,
             color_table,
             window_size,
             x_range=hit_rate_fig.x_range,
-            title=f"{'Read on hit data' if read_on_hit else 'Read data'} - Written data",
+            title="Read on hit data / Written data - Full Normal Run",
             plot_width=plot_width,
             plot_height=plot_height,
-            read_on_hit=read_on_hit,
-            diff=True,
+            read_on_hit=True,
         )
-        run_full_normal_hit_rate_figs.append(read_and_write_diff_data_fig)
+        run_full_normal_hit_rate_figs.append(read_hit_on_write_data_fig)
+    pbar.update(1)
+
+    ###########################################################################
+    # Read and Write data invert plot of full normal run
+    ###########################################################################
+    with ignored(Exception):
+        write_on_read_data_fig = plot_read_on_write_data(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            x_range=hit_rate_fig.x_range,
+            title="1 - (Written data / Read data)",
+            plot_width=plot_width,
+            plot_height=plot_height,
+            read_on_hit=True,
+            invert=True,
+        )
+        run_full_normal_hit_rate_figs.append(write_on_read_data_fig)
+    pbar.update(1)
+    
+    ###########################################################################
+    # Read on Hit data and Write data invert plot of full normal run
+    ###########################################################################
+    with ignored(Exception):
+        write_on_read_on_hit_data_fig = plot_read_on_write_data(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            x_range=hit_rate_fig.x_range,
+            title="1 - (Written data / Read on hit data)",
+            plot_width=plot_width,
+            plot_height=plot_height,
+            read_on_hit=False,
+            invert=True,
+        )
+        run_full_normal_hit_rate_figs.append(write_on_read_on_hit_data_fig)
     pbar.update(1)
 
     ###########################################################################

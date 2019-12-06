@@ -9,7 +9,8 @@ import pandas as pd
 def ignored(*exceptions):
     try:
         yield
-    except exceptions:
+    except exceptions as exc:
+        print(exc)
         pass
 
 
