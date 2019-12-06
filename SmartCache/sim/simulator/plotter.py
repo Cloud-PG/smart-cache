@@ -520,7 +520,6 @@ def plot_results(folder: str, results: dict, cache_size: float,
                  html: bool = True, png: bool = False,
                  plot_width: int = 640,
                  plot_height: int = 480,
-                 read_on_hit: bool = True,
                  ):
     color_table = {}
     dates = []
@@ -566,7 +565,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
     run_single_window_figs = []
     run_next_period_figs = []
 
-    pbar = tqdm(total=14, desc="Plot results", ascii=True)
+    pbar = tqdm(total=16, desc="Plot results", ascii=True)
 
     ###########################################################################
     # Hit Rate plot of full normal run
@@ -802,13 +801,34 @@ def plot_results(folder: str, results: dict, cache_size: float,
             color_table,
             window_size,
             x_range=hit_rate_fig.x_range,
-            title=f"{'Read on hit data / Written data' if read_on_hit else 'Read data / Written data'} - Compare single and next window",
+            title="Read data / Written data Compare single and next window",
             run_type="run_single_window",
             plot_width=plot_width,
             plot_height=plot_height,
-            read_on_hit=read_on_hit,
+            read_on_hit=False,
         )
         run_single_window_figs.append(ronwdata_comp_snw_fig)
+    pbar.update(1)
+    
+    ###########################################################################
+    # Read on Hit on Write data data compare single and next window plot
+    ###########################################################################
+    with ignored(Exception):
+        rhonwdata_comp_snw_fig = plot_read_on_write_data(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            x_range=hit_rate_fig.x_range,
+            title="Read on Hit data / Written data Compare single and next window",
+            run_type="run_single_window",
+            plot_width=plot_width,
+            plot_height=plot_height,
+            read_on_hit=True,
+        )
+        run_single_window_figs.append(rhonwdata_comp_snw_fig)
     pbar.update(1)
 
     ###########################################################################
@@ -845,14 +865,36 @@ def plot_results(folder: str, results: dict, cache_size: float,
             color_table,
             window_size,
             x_range=hit_rate_fig.x_range,
-            title=f"{'Read on hit data / Written data' if read_on_hit else 'Read data / Written data'} - Compare single window and next period",
+            title="Read data / Written data - Compare single window and next period",
             run_type="run_next_period",
             datetimes=datetimes,
             plot_width=plot_width,
             plot_height=plot_height,
-            read_on_hit=read_on_hit,
+            read_on_hit=False,
         )
         run_next_period_figs.append(ronwdata_comp_swnp_fig)
+    pbar.update(1)
+    
+    ###########################################################################
+    # Read on Hit on Write data data compare single window and next period plot
+    ###########################################################################
+    with ignored(Exception):
+        rhonwdata_comp_swnp_fig = plot_read_on_write_data(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            x_range=hit_rate_fig.x_range,
+            title="Read on hit data / Written data - Compare single window and next period",
+            run_type="run_next_period",
+            datetimes=datetimes,
+            plot_width=plot_width,
+            plot_height=plot_height,
+            read_on_hit=True,
+        )
+        run_next_period_figs.append(rhonwdata_comp_swnp_fig)
     pbar.update(1)
 
     figs.append(column(

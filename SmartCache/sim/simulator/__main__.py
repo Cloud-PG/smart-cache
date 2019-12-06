@@ -39,9 +39,6 @@ def main():
     parser.add_argument('--out-folder', type=str,
                         default="./simulation_results",
                         help='The folder where the simulation results will be stored [DEFAULT: "simulation_results"]')
-    parser.add_argument('--read-on-hit', type='bool',
-                        default=False,
-                        help='Use read on hit data [DEFAULT: True]')
     parser.add_argument('--simulation-steps', type=str,
                         default='single,normal,nextW,nextP',
                         help='Select the simulation steps [DEFAULT: "single,normal,nextW,next"]')
@@ -441,7 +438,6 @@ def main():
             png=args.out_png,
             plot_width=plot_width,
             plot_height=plot_height,
-            read_on_hit=args.read_on_hit,
         )
 
     elif args.action == "train":
