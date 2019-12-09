@@ -9,9 +9,9 @@ import pandas as pd
 def ignored(*exceptions):
     try:
         yield
-    except exceptions as exc:
-        print(exc)
-        pass
+    except KeyError as exc:
+        if exc.args[0] not in ["run_single_window", "run_next_period"]:
+            raise
 
 
 def str2bool(v):
