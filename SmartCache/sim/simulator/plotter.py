@@ -290,14 +290,14 @@ def plot_read_on_write_data(tools: list,
                             datetimes: list = [],
                             plot_width: int = 640,
                             plot_height: int = 480,
-                            invert: bool = False,
+                            target: str = None,
                             ) -> 'Figure':
     read_on_write_data_fig = figure(
         tools=tools,
         title=title,
         x_axis_label="Day",
-        y_axis_label="Ratio (Read on hit/Write)" if read_on_hit else "Ratio (Read/Write)",
-        y_axis_type="auto" if invert else "log",
+        y_axis_label="%",
+        y_axis_type="auto" if target else "log",
         x_range=x_range if x_range else dates,
         plot_width=plot_width,
         plot_height=plot_height,
@@ -317,10 +317,16 @@ def plot_read_on_write_data(tools: list,
         results, run_type, filters
     ):
         if run_type == "run_full_normal":
-            if invert:
-                points = 1.0 - values['written data'] / values[read_data_type]
+            if target == "throughput":
+                points = ((values['read on hit data'] - values['written data']) / values['read data']) * 100.
+            elif target == "loss":
+                points = ((values['read on miss data']) / values['read data']) * 100.
+            elif target == "gain":
+                throughput = values['read on hit data'] - values['written data']
+                loss = values['read on miss data'] 
+                points = ((throughput - loss) / values['read data']) * 100.
             else:
-                points = values[read_data_type] / values['written data']
+                raise Exception(f"Unknown target '{target}'")
             cur_line = read_on_write_data_fig.line(
                 dates,
                 points,
@@ -565,7 +571,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
     run_single_window_figs = []
     run_next_period_figs = []
 
-    pbar = tqdm(total=16, desc="Plot results", ascii=True)
+    pbar = tqdm(total=15, desc="Plot results", ascii=True)
 
     ###########################################################################
     # Hit Rate plot of full normal run
@@ -587,47 +593,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
     pbar.update(1)
 
     ###########################################################################
-    # Read on Write data plot of full normal run
-    ###########################################################################
-    with ignored(Exception):
-        read_on_write_data_fig = plot_read_on_write_data(
-            tools,
-            results,
-            dates,
-            filters,
-            color_table,
-            window_size,
-            x_range=hit_rate_fig.x_range,
-            title="Read data / Written data - Full Normal Run",
-            plot_width=plot_width,
-            plot_height=plot_height,
-            read_on_hit=False,
-        )
-        run_full_normal_hit_rate_figs.append(read_on_write_data_fig)
-    pbar.update(1)
-    
-    ###########################################################################
-    # Read on Hit data on Write data plot of full normal run
-    ###########################################################################
-    with ignored(Exception):
-        read_hit_on_write_data_fig = plot_read_on_write_data(
-            tools,
-            results,
-            dates,
-            filters,
-            color_table,
-            window_size,
-            x_range=hit_rate_fig.x_range,
-            title="Read on hit data / Written data - Full Normal Run",
-            plot_width=plot_width,
-            plot_height=plot_height,
-            read_on_hit=True,
-        )
-        run_full_normal_hit_rate_figs.append(read_hit_on_write_data_fig)
-    pbar.update(1)
-
-    ###########################################################################
-    # Read and Write data invert plot of full normal run
+    # Throughput plot of full normal run
     ###########################################################################
     with ignored(Exception):
         write_on_read_data_fig = plot_read_on_write_data(
@@ -638,17 +604,17 @@ def plot_results(folder: str, results: dict, cache_size: float,
             color_table,
             window_size,
             x_range=hit_rate_fig.x_range,
-            title="1 - (Written data / Read data)",
+            title="Throughput",
             plot_width=plot_width,
             plot_height=plot_height,
             read_on_hit=True,
-            invert=True,
+            target="throughput",
         )
         run_full_normal_hit_rate_figs.append(write_on_read_data_fig)
     pbar.update(1)
     
     ###########################################################################
-    # Read on Hit data and Write data invert plot of full normal run
+    # Loss plot of full normal run
     ###########################################################################
     with ignored(Exception):
         write_on_read_on_hit_data_fig = plot_read_on_write_data(
@@ -659,11 +625,32 @@ def plot_results(folder: str, results: dict, cache_size: float,
             color_table,
             window_size,
             x_range=hit_rate_fig.x_range,
-            title="1 - (Written data / Read on hit data)",
+            title="Loss",
             plot_width=plot_width,
             plot_height=plot_height,
             read_on_hit=False,
-            invert=True,
+            target="loss",
+        )
+        run_full_normal_hit_rate_figs.append(write_on_read_on_hit_data_fig)
+    pbar.update(1)
+    
+    ###########################################################################
+    # Gain plot of full normal run
+    ###########################################################################
+    with ignored(Exception):
+        write_on_read_on_hit_data_fig = plot_read_on_write_data(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            x_range=hit_rate_fig.x_range,
+            title="Gain",
+            plot_width=plot_width,
+            plot_height=plot_height,
+            read_on_hit=False,
+            target="gain",
         )
         run_full_normal_hit_rate_figs.append(write_on_read_on_hit_data_fig)
     pbar.update(1)
