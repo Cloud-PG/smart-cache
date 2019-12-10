@@ -61,6 +61,7 @@ def plot_column(tools: list,
                 color_table: dict,
                 window_size: int,
                 x_range=None,
+                normalize: str = None,
                 column: str = "hit rate",
                 title: str = "Hit Rate",
                 y_axis_label: str = "Hit rate %",
@@ -75,6 +76,7 @@ def plot_column(tools: list,
         x_axis_label="Day",
         y_axis_label=y_axis_label,
         x_range=x_range if x_range else dates,
+        y_range=None if not normalize else Range1d(0, 100),
         plot_width=plot_width,
         plot_height=plot_height,
     )
@@ -89,6 +91,9 @@ def plot_column(tools: list,
     ):
         if run_type == "run_full_normal":
             points = values[column]
+            if normalize:
+                points /= values[normalize]
+                points *= 100.
             cur_line = cur_fig.line(
                 dates,
                 points,
@@ -105,7 +110,8 @@ def plot_column(tools: list,
                 line_width=3.,
             )
             legend_items.append(
-                (f"Mean {cache_name} -> {mean_point:0.2f}", [cur_line])
+                (f"Mean {cache_name} -> {mean_point:0.2f}{'%' if normalize else ''}",
+                 [cur_line])
             )
         elif run_type == "run_single_window":
             points = results['run_full_normal'][cache_name][column]
@@ -284,8 +290,8 @@ def plot_read_on_write_data(tools: list,
                             color_table: dict,
                             window_size: int,
                             x_range=None,
-                            y_axis_label: str="MB",
-                            y_axis_type: str="auto",
+                            y_axis_label: str = "MB",
+                            y_axis_type: str = "auto",
                             read_on_hit: bool = True,
                             title: str = "Read on Write data",
                             run_type: str = "run_full_normal",
@@ -294,7 +300,7 @@ def plot_read_on_write_data(tools: list,
                             plot_height: int = 480,
                             target: str = None,
                             ) -> 'Figure':
-    read_on_write_data_fig = figure(
+    cur_fig = figure(
         tools=tools,
         title=title,
         x_axis_label="Day",
@@ -310,22 +316,35 @@ def plot_read_on_write_data(tools: list,
         line_color="black", line_width=5.,
     )
 
-    read_on_write_data_fig.renderers.extend([hline_1])
+    cur_fig.renderers.extend([hline_1])
 
     read_data_type = 'read on hit data' if read_on_hit else 'read data'
     legend_items = []
+
+    y_range_min = 0.
+    y_range_max = 0.
 
     for cache_name, values in filter_results(
         results, run_type, filters
     ):
         if run_type == "run_full_normal":
             if target == "loss":
-                points = values['written data'] + values['deleted data'] + values['read on miss data']
+                points = values['written data'] + \
+                    values['deleted data'] + values['read on miss data']
             elif target == "gain":
-                points = (1.0 - (values['written data'] + values['deleted data'] + values['read on miss data']) / values['read data']) * 100.
+                points = (1.0 - (values['written data'] + values['deleted data'] +
+                                 values['read on miss data']) / values['read data']) * 100.
+                range_points = [100., -100.] + points.to_list()
+                tmp_y_range_min, tmp_y_range_max = min(
+                    range_points), max(range_points)
+                if tmp_y_range_min < y_range_min:
+                    y_range_min = tmp_y_range_min
+                if tmp_y_range_max > y_range_max:
+                    y_range_max = tmp_y_range_max
+                cur_fig.y_range = Range1d(y_range_min, y_range_max)
             else:
                 raise Exception(f"Unknown target '{target}'")
-            cur_line = read_on_write_data_fig.line(
+            cur_line = cur_fig.line(
                 dates,
                 points,
                 color=color_table[cache_name],
@@ -333,7 +352,7 @@ def plot_read_on_write_data(tools: list,
             )
             legend_items.append((cache_name, [cur_line]))
             mean_point = sum(points) / len(points)
-            cur_line = read_on_write_data_fig.line(
+            cur_line = cur_fig.line(
                 dates,
                 [mean_point for _ in range(len(dates))],
                 line_color=color_table[cache_name],
@@ -346,7 +365,7 @@ def plot_read_on_write_data(tools: list,
         elif run_type == "run_single_window":
             points = results['run_full_normal'][cache_name][read_data_type] / \
                 results['run_full_normal'][cache_name]['written data']
-            cur_line = read_on_write_data_fig.line(
+            cur_line = cur_fig.line(
                 dates,
                 points,
                 color=color_table[cache_name],
@@ -354,7 +373,7 @@ def plot_read_on_write_data(tools: list,
             )
             legend_items.append((cache_name, [cur_line]))
             mean_point = sum(points) / len(points)
-            cur_line = read_on_write_data_fig.line(
+            cur_line = cur_fig.line(
                 dates,
                 [mean_point for _ in range(len(dates))],
                 line_color=color_table[cache_name],
@@ -377,7 +396,7 @@ def plot_read_on_write_data(tools: list,
             ).sort_values(by=['date'])
             points = single_windows[read_data_type] / \
                 single_windows['written data']
-            cur_line = read_on_write_data_fig.line(
+            cur_line = cur_fig.line(
                 dates,
                 points,
                 color=color_table[f'{cache_name}_single'],
@@ -400,7 +419,7 @@ def plot_read_on_write_data(tools: list,
             ]
             points = next_windows[read_data_type] / \
                 next_windows['written data']
-            cur_line = read_on_write_data_fig.line(
+            cur_line = cur_fig.line(
                 cur_dates,
                 points,
                 line_color="red",
@@ -410,7 +429,7 @@ def plot_read_on_write_data(tools: list,
             )
             legend_items.append((next_window_name, [cur_line]))
             mean_point = sum(points) / len(points)
-            cur_line = read_on_write_data_fig.line(
+            cur_line = cur_fig.line(
                 cur_dates,
                 [mean_point for _ in range(len(cur_dates))],
                 line_color="red",
@@ -423,7 +442,7 @@ def plot_read_on_write_data(tools: list,
         elif run_type == "run_next_period":
             points = results['run_full_normal'][cache_name][read_data_type] / \
                 results['run_full_normal'][cache_name]['written data']
-            cur_line = read_on_write_data_fig.line(
+            cur_line = cur_fig.line(
                 dates,
                 points,
                 color=color_table[cache_name],
@@ -431,7 +450,7 @@ def plot_read_on_write_data(tools: list,
             )
             legend_items.append((cache_name, [cur_line]))
             mean_point = sum(points) / len(points)
-            cur_line = read_on_write_data_fig.line(
+            cur_line = cur_fig.line(
                 dates,
                 [mean_point for _ in range(len(dates))],
                 line_color=color_table[cache_name],
@@ -453,7 +472,7 @@ def plot_read_on_write_data(tools: list,
             )
             points = single_windows.sort_values(by=['date'])
             points = points[read_data_type] / points['written data']
-            cur_line = read_on_write_data_fig.line(
+            cur_line = cur_fig.line(
                 dates,
                 points,
                 color=color_table[f'{cache_name}_single'],
@@ -485,7 +504,7 @@ def plot_read_on_write_data(tools: list,
                 ]
                 if len(cur_dates) > 0:
                     cur_line_style = next(line_styles)
-                    cur_line = read_on_write_data_fig.line(
+                    cur_line = cur_fig.line(
                         cur_dates,
                         points,
                         line_color="red",
@@ -495,7 +514,7 @@ def plot_read_on_write_data(tools: list,
                     )
                     legend_items.append((cur_period_name, [cur_line]))
                     mean_point = sum(points) / len(points)
-                    cur_line = read_on_write_data_fig.line(
+                    cur_line = cur_fig.line(
                         cur_dates,
                         [mean_point for _ in range(len(cur_dates))],
                         line_color="red",
@@ -509,14 +528,14 @@ def plot_read_on_write_data(tools: list,
     legend = Legend(items=legend_items, location=(0, 0))
     legend.location = "top_right"
     legend.click_policy = "hide"
-    read_on_write_data_fig.add_layout(legend, 'right')
-    read_on_write_data_fig.yaxis.formatter = BasicTickFormatter(
+    cur_fig.add_layout(legend, 'right')
+    cur_fig.yaxis.formatter = BasicTickFormatter(
         use_scientific=False)
-    read_on_write_data_fig.xaxis.major_label_orientation = np.pi / 4.
-    read_on_write_data_fig.add_tools(SaveTool())
-    add_window_lines(read_on_write_data_fig, dates, window_size)
+    cur_fig.xaxis.major_label_orientation = np.pi / 4.
+    cur_fig.add_tools(SaveTool())
+    add_window_lines(cur_fig, dates, window_size)
 
-    return read_on_write_data_fig
+    return cur_fig
 
 
 def plot_results(folder: str, results: dict, cache_size: float,
@@ -611,7 +630,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
         )
         run_full_normal_hit_rate_figs.append(write_on_read_data_fig)
     pbar.update(1)
-    
+
     ###########################################################################
     # Gain plot of full normal run
     ###########################################################################
@@ -706,8 +725,9 @@ def plot_results(folder: str, results: dict, cache_size: float,
             color_table,
             window_size,
             column="read on hit data",
+            normalize="read data",
             title="Read on hit data - Full Normal Run",
-            y_axis_label="Read on hit data (MB)",
+            y_axis_label="%",
             plot_width=plot_width,
             plot_height=plot_height,
         )
@@ -726,8 +746,9 @@ def plot_results(folder: str, results: dict, cache_size: float,
             color_table,
             window_size,
             column="read on miss data",
+            normalize="read data",
             title="Read on miss data - Full Normal Run",
-            y_axis_label="Read on miss data (MB)",
+            y_axis_label="%",
             plot_width=plot_width,
             plot_height=plot_height,
         )
@@ -775,7 +796,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
         )
         run_single_window_figs.append(ronwdata_comp_snw_fig)
     pbar.update(1)
-    
+
     ###########################################################################
     # Read on Hit on Write data data compare single and next window plot
     ###########################################################################
@@ -840,7 +861,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
         )
         run_next_period_figs.append(ronwdata_comp_swnp_fig)
     pbar.update(1)
-    
+
     ###########################################################################
     # Read on Hit on Write data data compare single window and next period plot
     ###########################################################################
