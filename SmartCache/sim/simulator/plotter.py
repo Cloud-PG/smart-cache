@@ -346,11 +346,11 @@ def plot_measure(tools: list,
                 points = values['written data'] + \
                     values['deleted data'] + values['read on miss data']
             elif target == "network_in_saturation":
-                points = values['written data'] / \
-                    ((10000. / 8.) * 60. * 60. * 24.)  # 10Gbit x 1 day
+                points = (values['written data'] /
+                          ((10000. / 8.) * 60. * 60. * 24.)) * 100.  # 10Gbit x 1 day
             elif target == "network_out_saturation":
-                points = values['read on hit data'] / \
-                    ((10000. / 8.) * 60. * 60. * 24.)  # 10Gbit x 1 day
+                points = (values['read on hit data'] /
+                          ((10000. / 8.) * 60. * 60. * 24.)) * 100.  # 10Gbit x 1 day
             elif target == "gain":
                 points = (
                     1.0 - (
