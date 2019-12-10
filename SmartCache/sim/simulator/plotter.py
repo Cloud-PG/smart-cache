@@ -101,10 +101,10 @@ def plot_column(tools: list,
         results, run_type, filters
     ):
         if run_type == "run_full_normal":
-            points = values[column]
             if normalize:
-                points /= values[normalize]
-                points *= 100.
+                points = (values[column] / values[normalize]) * 100.
+            else:
+                points = values[column]
             cur_line = cur_fig.line(
                 dates,
                 points,
@@ -325,12 +325,11 @@ def plot_measure(tools: list,
         plot_height=plot_height,
     )
 
-    if not target and target != 'cpu_eff':
+    if target != None and target != 'cpu_eff':
         hline_1 = Span(
             location=1.0, dimension='width', line_dash="dashed",
             line_color="black", line_width=5.,
         )
-
         cur_fig.renderers.extend([hline_1])
 
     read_data_type = 'read on hit data' if read_on_hit else 'read data'
@@ -370,33 +369,27 @@ def plot_measure(tools: list,
                         (
                             values['read on hit data'] -
                             lru_values['read on hit data']
-                        ) /
-                        (10000. / 8.)
+                        ) / (1000. / 8.)
                     ) * 0.15
                 else:
                     points = (
                         (
                             values['read on miss data'] -
                             lru_values['read on miss data']
-                        ) /
-                        (10000. / 8.)
+                        ) / (1000. / 8.)
                     ) * 0.15
-                range_points = points.to_list()
-                y_range_min = min([y_range_min] + range_points)
-                y_range_max = max([y_range_max] + range_points)
-                cur_fig.y_range = Range1d(y_range_min, y_range_max)
             elif target == "read_diff":
                 lru_values = get_lru(results, run_type)
                 if read_on_hit:
                     points = (
                         values['read on hit data'] -
                         lru_values['read on hit data']
-                    ) / values['read data']
+                    )  # / values['read data']
                 else:
                     points = (
                         values['read on miss data'] -
                         lru_values['read on miss data']
-                    ) / values['read data']
+                    )  # / values['read data']
                 range_points = points.to_list()
                 y_range_min = min([y_range_min] + range_points)
                 y_range_max = max([y_range_min] + range_points)
@@ -715,9 +708,9 @@ def plot_results(folder: str, results: dict, cache_size: float,
         )
         run_full_normal_hit_rate_figs.append(write_on_read_data_fig)
     pbar.update(1)
-    
+
     ###########################################################################
-    # Network input saturation full normal run
+    # Day network input saturation full normal run
     ###########################################################################
     with ignored(Exception):
         net_in = plot_measure(
@@ -729,7 +722,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             window_size,
             x_range=hit_rate_fig.x_range,
             y_axis_label="%",
-            title="Network input saturation - 10Gbit/s",
+            title="Day network input saturation - 10Gbit/s",
             plot_width=plot_width,
             plot_height=plot_height,
             read_on_hit=False,
@@ -737,9 +730,9 @@ def plot_results(folder: str, results: dict, cache_size: float,
         )
         run_full_normal_net_figs.append(net_in)
     pbar.update(1)
-    
+
     ###########################################################################
-    # Network output saturation full normal run
+    # Day network output saturation full normal run
     ###########################################################################
     with ignored(Exception):
         net_in = plot_measure(
@@ -751,7 +744,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             window_size,
             x_range=hit_rate_fig.x_range,
             y_axis_label="%",
-            title="Network output saturation - 10Gbit/s",
+            title="Day network output saturation - 10Gbit/s",
             plot_width=plot_width,
             plot_height=plot_height,
             read_on_hit=False,
@@ -876,7 +869,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             color_table,
             window_size,
             x_range=hit_rate_fig.x_range,
-            y_axis_label="%",
+            y_axis_label="MB",
             title="Read on hit diff",
             plot_width=plot_width,
             plot_height=plot_height,
@@ -897,7 +890,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             color_table,
             window_size,
             x_range=hit_rate_fig.x_range,
-            y_axis_label="%",
+            y_axis_label="MB",
             title="Read on miss diff",
             plot_width=plot_width,
             plot_height=plot_height,
@@ -920,7 +913,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             window_size,
             x_range=hit_rate_fig.x_range,
             y_axis_label="sec.",
-            title="Read on hit CPU Eff. 10Gbit/s",
+            title="Read on hit CPU Eff. 1Gbit/s",
             plot_width=plot_width,
             plot_height=plot_height,
             read_on_hit=True,
@@ -942,7 +935,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             window_size,
             x_range=hit_rate_fig.x_range,
             y_axis_label="sec.",
-            title="Read on miss CPU Eff. 10Gbit/s",
+            title="Read on miss CPU Eff. 1Gbit/s",
             plot_width=plot_width,
             plot_height=plot_height,
             read_on_hit=False,
