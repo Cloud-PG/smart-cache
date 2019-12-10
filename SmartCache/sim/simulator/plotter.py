@@ -413,7 +413,7 @@ def plot_measure(tools: list,
                 line_width=3.,
             )
             legend_items.append(
-                (f"Mean {cache_name} -> {mean_point:0.2f}", [cur_line])
+                (f"Mean {cache_name} -> {mean_point:0.2f}{'%' if target == 'gain' else ''}", [cur_line])
             )
         elif run_type == "run_single_window":
             points = results['run_full_normal'][cache_name][read_data_type] / \
