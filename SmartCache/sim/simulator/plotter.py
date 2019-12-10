@@ -54,6 +54,16 @@ def filter_results(results: dict, key: str, filters: list):
             yield cache_name, values
 
 
+def get_lru(results: dict, key: str):
+    for cache_name, values in results[key].items():
+        try:
+            if cache_name.index("lru_") == 0:
+                return values
+        except ValueError:
+            pass
+    raise Exception(f"Cannot find lru cache values for '{key}''")
+
+
 def plot_column(tools: list,
                 results: dict,
                 dates: list,
@@ -76,7 +86,7 @@ def plot_column(tools: list,
         x_axis_label="Day",
         y_axis_label=y_axis_label,
         x_range=x_range if x_range else dates,
-        y_range=None if not normalize else Range1d(0, 100),
+        y_range=None,
         plot_width=plot_width,
         plot_height=plot_height,
     )
@@ -85,6 +95,7 @@ def plot_column(tools: list,
         cur_fig.y_range = Range1d(0, 100)
 
     legend_items = []
+    y_max_range = 100.
 
     for cache_name, values in filter_results(
         results, run_type, filters
@@ -113,6 +124,9 @@ def plot_column(tools: list,
                 (f"Mean {cache_name} -> {mean_point:0.2f}{'%' if normalize else ''}",
                  [cur_line])
             )
+            if normalize:
+                y_max_range = max([y_max_range] + points.to_list())
+                cur_fig.y_range = Range1d(0, y_max_range)
         elif run_type == "run_single_window":
             points = results['run_full_normal'][cache_name][column]
             cur_line = cur_fig.line(
@@ -283,23 +297,23 @@ def plot_column(tools: list,
     return cur_fig
 
 
-def plot_read_on_write_data(tools: list,
-                            results: dict,
-                            dates: list,
-                            filters: list,
-                            color_table: dict,
-                            window_size: int,
-                            x_range=None,
-                            y_axis_label: str = "MB",
-                            y_axis_type: str = "auto",
-                            read_on_hit: bool = True,
-                            title: str = "Read on Write data",
-                            run_type: str = "run_full_normal",
-                            datetimes: list = [],
-                            plot_width: int = 640,
-                            plot_height: int = 480,
-                            target: str = None,
-                            ) -> 'Figure':
+def plot_measure(tools: list,
+                 results: dict,
+                 dates: list,
+                 filters: list,
+                 color_table: dict,
+                 window_size: int,
+                 x_range=None,
+                 y_axis_label: str = "MB",
+                 y_axis_type: str = "auto",
+                 read_on_hit: bool = True,
+                 title: str = "Read on Write data",
+                 run_type: str = "run_full_normal",
+                 datetimes: list = [],
+                 plot_width: int = 640,
+                 plot_height: int = 480,
+                 target: str = None,
+                 ) -> 'Figure':
     cur_fig = figure(
         tools=tools,
         title=title,
@@ -311,18 +325,19 @@ def plot_read_on_write_data(tools: list,
         plot_height=plot_height,
     )
 
-    hline_1 = Span(
-        location=1.0, dimension='width', line_dash="dashed",
-        line_color="black", line_width=5.,
-    )
+    if not target and target != 'cpu_eff':
+        hline_1 = Span(
+            location=1.0, dimension='width', line_dash="dashed",
+            line_color="black", line_width=5.,
+        )
 
-    cur_fig.renderers.extend([hline_1])
+        cur_fig.renderers.extend([hline_1])
 
     read_data_type = 'read on hit data' if read_on_hit else 'read data'
     legend_items = []
 
     y_range_min = 0.
-    y_range_max = 0.
+    y_range_max = 100.
 
     for cache_name, values in filter_results(
         results, run_type, filters
@@ -332,15 +347,53 @@ def plot_read_on_write_data(tools: list,
                 points = values['written data'] + \
                     values['deleted data'] + values['read on miss data']
             elif target == "gain":
-                points = (1.0 - (values['written data'] + values['deleted data'] +
-                                 values['read on miss data']) / values['read data']) * 100.
-                range_points = [100., -100.] + points.to_list()
-                tmp_y_range_min, tmp_y_range_max = min(
-                    range_points), max(range_points)
-                if tmp_y_range_min < y_range_min:
-                    y_range_min = tmp_y_range_min
-                if tmp_y_range_max > y_range_max:
-                    y_range_max = tmp_y_range_max
+                points = (
+                    1.0 - (
+                        values['written data'] + values['deleted data'] +
+                        values['read on miss data']
+                    ) / values['read data']
+                ) * 100.
+                range_points = points.to_list()
+                y_range_min = min([y_range_min] + range_points)
+                y_range_max = max([y_range_min] + range_points)
+                cur_fig.y_range = Range1d(y_range_min, y_range_max)
+            elif target == "cpu_eff":
+                lru_values = get_lru(results, run_type)
+                if read_on_hit:
+                    points = (
+                        (
+                            values['read on hit data'] -
+                            lru_values['read on hit data']
+                        ) /
+                        (1000. / 8. / 1024.)
+                    ) * 0.15
+                else:
+                    points = (
+                        (
+                            values['read on miss data'] -
+                            lru_values['read on miss data']
+                        ) /
+                        (1000. / 8. / 1024.)
+                    ) * 0.15
+                range_points = points.to_list()
+                y_range_min = min([y_range_min] + range_points)
+                y_range_max = max([y_range_max] + range_points)
+                cur_fig.y_range = Range1d(y_range_min, y_range_max)
+            elif target == "read_diff":
+                lru_values = get_lru(results, run_type)
+                if read_on_hit:
+                    points = (
+                        values['read on hit data'] -
+                        lru_values['read on hit data']
+                    ) / values['read data']
+                else:
+                    points = (
+                        values['read on miss data'] -
+                        lru_values['read on miss data']
+                    ) / values['read data']
+                range_points = points.to_list()
+                y_range_min = min([y_range_min] + range_points)
+                y_range_max = max([y_range_min] + range_points)
                 cur_fig.y_range = Range1d(y_range_min, y_range_max)
             else:
                 raise Exception(f"Unknown target '{target}'")
@@ -585,10 +638,12 @@ def plot_results(folder: str, results: dict, cache_size: float,
     run_full_normal_hit_rate_figs = []
     run_full_normal_data_rw_figs = []
     run_full_normal_data_read_stats_figs = []
+    run_full_normal_read_diff_figs = []
+    run_full_normal_cpu_eff_figs = []
     run_single_window_figs = []
     run_next_period_figs = []
 
-    pbar = tqdm(total=14, desc="Plot results", ascii=True)
+    pbar = tqdm(total=18, desc="Plot results", ascii=True)
 
     ###########################################################################
     # Hit Rate plot of full normal run
@@ -608,12 +663,12 @@ def plot_results(folder: str, results: dict, cache_size: float,
         )
         run_full_normal_hit_rate_figs.append(hit_rate_fig)
     pbar.update(1)
-    
+
     ###########################################################################
     # Gain plot of full normal run
     ###########################################################################
     with ignored(Exception):
-        write_on_read_on_hit_data_fig = plot_read_on_write_data(
+        write_on_read_on_hit_data_fig = plot_measure(
             tools,
             results,
             dates,
@@ -635,7 +690,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
     # Loss plot of full normal run
     ###########################################################################
     with ignored(Exception):
-        write_on_read_data_fig = plot_read_on_write_data(
+        write_on_read_data_fig = plot_measure(
             tools,
             results,
             dates,
@@ -665,8 +720,9 @@ def plot_results(folder: str, results: dict, cache_size: float,
             color_table,
             window_size,
             column="written data",
-            title="Written data - Full Normal Run",
-            y_axis_label="Written data (MB)",
+            normalize="read data",
+            title="Written data / Read data - Full Normal Run",
+            y_axis_label="Written data %",
             plot_width=plot_width,
             plot_height=plot_height,
         )
@@ -705,8 +761,9 @@ def plot_results(folder: str, results: dict, cache_size: float,
             color_table,
             window_size,
             column="deleted data",
-            title="Deleted data - Full Normal Run",
-            y_axis_label="Deleted data (MB)",
+            normalize="read data",
+            title="Deleted data / Read data - Full Normal Run",
+            y_axis_label="Deleted data %",
             plot_width=plot_width,
             plot_height=plot_height,
         )
@@ -726,7 +783,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             window_size,
             column="read on hit data",
             normalize="read data",
-            title="Read on hit data - Full Normal Run",
+            title="Read on hit data / Read data - Full Normal Run",
             y_axis_label="%",
             plot_width=plot_width,
             plot_height=plot_height,
@@ -747,12 +804,99 @@ def plot_results(folder: str, results: dict, cache_size: float,
             window_size,
             column="read on miss data",
             normalize="read data",
-            title="Read on miss data - Full Normal Run",
+            title="Read on miss data / Read data - Full Normal Run",
             y_axis_label="%",
             plot_width=plot_width,
             plot_height=plot_height,
         )
         run_full_normal_data_read_stats_figs.append(read_data_fig)
+    pbar.update(1)
+
+    ###########################################################################
+    # Read on hit diff full normal run
+    ###########################################################################
+    with ignored(Exception):
+        read_on_hit_eff = plot_measure(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            x_range=hit_rate_fig.x_range,
+            y_axis_label="%",
+            title="Read on hit diff",
+            plot_width=plot_width,
+            plot_height=plot_height,
+            read_on_hit=True,
+            target="read_diff",
+        )
+        run_full_normal_read_diff_figs.append(read_on_hit_eff)
+    pbar.update(1)
+    ###########################################################################
+    # Read on miss diff full normal run
+    ###########################################################################
+    with ignored(Exception):
+        read_on_hit_eff = plot_measure(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            x_range=hit_rate_fig.x_range,
+            y_axis_label="%",
+            title="Read on miss diff",
+            plot_width=plot_width,
+            plot_height=plot_height,
+            read_on_hit=False,
+            target="read_diff",
+        )
+        run_full_normal_read_diff_figs.append(read_on_hit_eff)
+    pbar.update(1)
+
+    ###########################################################################
+    # Read on hit CPU eff full normal run
+    ###########################################################################
+    with ignored(Exception):
+        read_on_hit_eff = plot_measure(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            x_range=hit_rate_fig.x_range,
+            y_axis_label="sec.",
+            title="Read on hit CPU Eff. 1Mbit/s",
+            plot_width=plot_width,
+            plot_height=plot_height,
+            read_on_hit=True,
+            target="cpu_eff",
+        )
+        run_full_normal_cpu_eff_figs.append(read_on_hit_eff)
+    pbar.update(1)
+
+    ###########################################################################
+    # Read on miss CPU eff full normal run
+    ###########################################################################
+    with ignored(Exception):
+        read_on_miss_eff = plot_measure(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            x_range=hit_rate_fig.x_range,
+            y_axis_label="sec.",
+            title="Read on miss CPU Eff. 1Mbit/s",
+            plot_width=plot_width,
+            plot_height=plot_height,
+            read_on_hit=False,
+            target="cpu_eff",
+        )
+        run_full_normal_cpu_eff_figs.append(read_on_miss_eff)
     pbar.update(1)
 
     ###########################################################################
@@ -780,7 +924,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
     # Read on Write data data compare single and next window plot
     ###########################################################################
     with ignored(Exception):
-        ronwdata_comp_snw_fig = plot_read_on_write_data(
+        ronwdata_comp_snw_fig = plot_measure(
             tools,
             results,
             dates,
@@ -801,7 +945,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
     # Read on Hit on Write data data compare single and next window plot
     ###########################################################################
     with ignored(Exception):
-        rhonwdata_comp_snw_fig = plot_read_on_write_data(
+        rhonwdata_comp_snw_fig = plot_measure(
             tools,
             results,
             dates,
@@ -844,7 +988,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
     # Read on Write data data compare single window and next period plot
     ###########################################################################
     with ignored(Exception):
-        ronwdata_comp_swnp_fig = plot_read_on_write_data(
+        ronwdata_comp_swnp_fig = plot_measure(
             tools,
             results,
             dates,
@@ -866,7 +1010,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
     # Read on Hit on Write data data compare single window and next period plot
     ###########################################################################
     with ignored(Exception):
-        rhonwdata_comp_swnp_fig = plot_read_on_write_data(
+        rhonwdata_comp_swnp_fig = plot_measure(
             tools,
             results,
             dates,
@@ -888,6 +1032,8 @@ def plot_results(folder: str, results: dict, cache_size: float,
         row(*run_full_normal_hit_rate_figs),
         row(*run_full_normal_data_rw_figs),
         row(*run_full_normal_data_read_stats_figs),
+        row(*run_full_normal_read_diff_figs),
+        row(*run_full_normal_cpu_eff_figs),
         row(*run_single_window_figs),
         row(*run_next_period_figs),
     ))
