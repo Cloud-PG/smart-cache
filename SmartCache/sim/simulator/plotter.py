@@ -346,6 +346,12 @@ def plot_measure(tools: list,
             if target == "loss":
                 points = values['written data'] + \
                     values['deleted data'] + values['read on miss data']
+            elif target == "network_in_saturation":
+                points = values['written data'] / \
+                    ((10000. / 8.) * 60. * 60. * 24.)  # 10Gbit x 1 day
+            elif target == "network_out_saturation":
+                points = values['read on hit data'] / \
+                    ((10000. / 8.) * 60. * 60. * 24.)  # 10Gbit x 1 day
             elif target == "gain":
                 points = (
                     1.0 - (
@@ -365,7 +371,7 @@ def plot_measure(tools: list,
                             values['read on hit data'] -
                             lru_values['read on hit data']
                         ) /
-                        (1000. / 8. / 1024.)
+                        (10000. / 8.)
                     ) * 0.15
                 else:
                     points = (
@@ -373,7 +379,7 @@ def plot_measure(tools: list,
                             values['read on miss data'] -
                             lru_values['read on miss data']
                         ) /
-                        (1000. / 8. / 1024.)
+                        (10000. / 8.)
                     ) * 0.15
                 range_points = points.to_list()
                 y_range_min = min([y_range_min] + range_points)
@@ -413,7 +419,8 @@ def plot_measure(tools: list,
                 line_width=3.,
             )
             legend_items.append(
-                (f"Mean {cache_name} -> {mean_point:0.2f}{'%' if target == 'gain' else ''}", [cur_line])
+                (f"Mean {cache_name} -> {mean_point:0.2f}{'%' if target == 'gain' else ''}",
+                 [cur_line])
             )
         elif run_type == "run_single_window":
             points = results['run_full_normal'][cache_name][read_data_type] / \
@@ -636,6 +643,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
 
     figs = []
     run_full_normal_hit_rate_figs = []
+    run_full_normal_net_figs = []
     run_full_normal_data_rw_figs = []
     run_full_normal_data_read_stats_figs = []
     run_full_normal_read_diff_figs = []
@@ -643,7 +651,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
     run_single_window_figs = []
     run_next_period_figs = []
 
-    pbar = tqdm(total=18, desc="Plot results", ascii=True)
+    pbar = tqdm(total=20, desc="Plot results", ascii=True)
 
     ###########################################################################
     # Hit Rate plot of full normal run
@@ -706,6 +714,50 @@ def plot_results(folder: str, results: dict, cache_size: float,
             target="loss",
         )
         run_full_normal_hit_rate_figs.append(write_on_read_data_fig)
+    pbar.update(1)
+    
+    ###########################################################################
+    # Network input saturation full normal run
+    ###########################################################################
+    with ignored(Exception):
+        net_in = plot_measure(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            x_range=hit_rate_fig.x_range,
+            y_axis_label="%",
+            title="Network input saturation - 10Gbit/s",
+            plot_width=plot_width,
+            plot_height=plot_height,
+            read_on_hit=False,
+            target="network_in_saturation",
+        )
+        run_full_normal_net_figs.append(net_in)
+    pbar.update(1)
+    
+    ###########################################################################
+    # Network output saturation full normal run
+    ###########################################################################
+    with ignored(Exception):
+        net_in = plot_measure(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            x_range=hit_rate_fig.x_range,
+            y_axis_label="%",
+            title="Network output saturation - 10Gbit/s",
+            plot_width=plot_width,
+            plot_height=plot_height,
+            read_on_hit=False,
+            target="network_out_saturation",
+        )
+        run_full_normal_net_figs.append(net_in)
     pbar.update(1)
 
     ###########################################################################
@@ -868,7 +920,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             window_size,
             x_range=hit_rate_fig.x_range,
             y_axis_label="sec.",
-            title="Read on hit CPU Eff. 1Mbit/s",
+            title="Read on hit CPU Eff. 10Gbit/s",
             plot_width=plot_width,
             plot_height=plot_height,
             read_on_hit=True,
@@ -890,7 +942,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             window_size,
             x_range=hit_rate_fig.x_range,
             y_axis_label="sec.",
-            title="Read on miss CPU Eff. 1Mbit/s",
+            title="Read on miss CPU Eff. 10Gbit/s",
             plot_width=plot_width,
             plot_height=plot_height,
             read_on_hit=False,
@@ -1030,6 +1082,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
 
     figs.append(column(
         row(*run_full_normal_hit_rate_figs),
+        row(*run_full_normal_net_figs),
         row(*run_full_normal_data_rw_figs),
         row(*run_full_normal_data_read_stats_figs),
         row(*run_full_normal_read_diff_figs),
