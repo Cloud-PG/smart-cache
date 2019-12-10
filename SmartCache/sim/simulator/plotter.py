@@ -608,6 +608,28 @@ def plot_results(folder: str, results: dict, cache_size: float,
         )
         run_full_normal_hit_rate_figs.append(hit_rate_fig)
     pbar.update(1)
+    
+    ###########################################################################
+    # Gain plot of full normal run
+    ###########################################################################
+    with ignored(Exception):
+        write_on_read_on_hit_data_fig = plot_read_on_write_data(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            x_range=hit_rate_fig.x_range,
+            y_axis_label="%",
+            title="Gain",
+            plot_width=plot_width,
+            plot_height=plot_height,
+            read_on_hit=False,
+            target="gain",
+        )
+        run_full_normal_hit_rate_figs.append(write_on_read_on_hit_data_fig)
+    pbar.update(1)
 
     ###########################################################################
     # Loss plot of full normal run
@@ -629,28 +651,6 @@ def plot_results(folder: str, results: dict, cache_size: float,
             target="loss",
         )
         run_full_normal_hit_rate_figs.append(write_on_read_data_fig)
-    pbar.update(1)
-
-    ###########################################################################
-    # Gain plot of full normal run
-    ###########################################################################
-    with ignored(Exception):
-        write_on_read_on_hit_data_fig = plot_read_on_write_data(
-            tools,
-            results,
-            dates,
-            filters,
-            color_table,
-            window_size,
-            x_range=hit_rate_fig.x_range,
-            y_axis_label="%",
-            title="Gain",
-            plot_width=plot_width,
-            plot_height=plot_height,
-            read_on_hit=False,
-            target="gain",
-        )
-        run_full_normal_hit_rate_figs.append(write_on_read_on_hit_data_fig)
     pbar.update(1)
 
     ###########################################################################
