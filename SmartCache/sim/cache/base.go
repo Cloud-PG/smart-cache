@@ -50,10 +50,13 @@ type Cache interface {
 	DataReadOnHit() float32
 	DataReadOnMiss() float32
 	DataDeleted() float32
+	CPUEff() float32
+	CPUHitEff() float32
+	CPUMissEff() float32
 
 	check(string) bool
 	updatePolicy(filename string, size float32, hit bool, vars ...interface{}) bool
-	Get(filename string, size float32, vars ...interface{}) bool
+	Get(filename string, size float32, wTime float32, cpuTime float32, vars ...interface{}) bool
 
 	SimGet(context.Context, *pb.SimCommonFile) (*pb.ActionResult, error)
 	SimClear(context.Context, *empty.Empty) (*pb.SimCacheStatus, error)

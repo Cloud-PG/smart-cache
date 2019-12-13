@@ -20,10 +20,10 @@ func TestWeightedLRUBaseMultipleInsert(t *testing.T) {
 	}
 	testCache.Init()
 
-	res := testCache.Get("/a/b/c/d/file0", 1.0)
-	testCache.Get("/a/b/c/d/file0", 1.0)
-	testCache.Get("/a/b/c/d/file0", 1.0)
-	testCache.Get("/a/b/c/d/file0", 1.0)
+	res := testCache.Get("/a/b/c/d/file0", 1.0, 0.0, 0.0)
+	testCache.Get("/a/b/c/d/file0", 1.0, 0.0, 0.0)
+	testCache.Get("/a/b/c/d/file0", 1.0, 0.0, 0.0)
+	testCache.Get("/a/b/c/d/file0", 1.0, 0.0, 0.0)
 
 	if !res {
 		t.Fatalf("First insert error -> Expected %t but got %t", true, res)
@@ -47,10 +47,10 @@ func TestWeightedLRUClear(t *testing.T) {
 	}
 	testCache.Init()
 
-	testCache.Get("/a/b/c/d/file0", 1.0)
-	testCache.Get("/a/b/c/d/file0", 1.0)
-	testCache.Get("/a/b/c/d/file0", 1.0)
-	testCache.Get("/a/b/c/d/file0", 1.0)
+	testCache.Get("/a/b/c/d/file0", 1.0, 0.0, 0.0)
+	testCache.Get("/a/b/c/d/file0", 1.0, 0.0, 0.0)
+	testCache.Get("/a/b/c/d/file0", 1.0, 0.0, 0.0)
+	testCache.Get("/a/b/c/d/file0", 1.0, 0.0, 0.0)
 
 	testCache.Clear()
 
@@ -78,16 +78,16 @@ func TestWeightedLRUInsert(t *testing.T) {
 	}
 	testCache.Init()
 
-	testCache.Get("/a/b/c/d/file0", 1.0)
-	testCache.Get("/a/b/c/d/file1", 2.0)
-	testCache.Get("/a/b/c/d/file2", 1.0)
-	testCache.Get("/a/b/c/d/file3", 1.0)
-	testCache.Get("/a/b/c/d/file1", 2.0)
-	testCache.Get("/a/b/c/d/file1", 2.0)
-	testCache.Get("/a/b/c/d/file1", 2.0)
-	testCache.Get("/a/b/c/d/file4", 1.0)
-	testCache.Get("/a/b/c/d/file3", 1.0)
-	testCache.Get("/a/b/c/d/file4", 1.0)
+	testCache.Get("/a/b/c/d/file0", 1.0, 0.0, 0.0)
+	testCache.Get("/a/b/c/d/file1", 2.0, 0.0, 0.0)
+	testCache.Get("/a/b/c/d/file2", 1.0, 0.0, 0.0)
+	testCache.Get("/a/b/c/d/file3", 1.0, 0.0, 0.0)
+	testCache.Get("/a/b/c/d/file1", 2.0, 0.0, 0.0)
+	testCache.Get("/a/b/c/d/file1", 2.0, 0.0, 0.0)
+	testCache.Get("/a/b/c/d/file1", 2.0, 0.0, 0.0)
+	testCache.Get("/a/b/c/d/file4", 1.0, 0.0, 0.0)
+	testCache.Get("/a/b/c/d/file3", 1.0, 0.0, 0.0)
+	testCache.Get("/a/b/c/d/file4", 1.0, 0.0, 0.0)
 
 	if testCache.HitRate() != 40. {
 		t.Fatalf("Hit rate error -> Expected %f but got %f", 40., testCache.HitRate())
@@ -118,6 +118,6 @@ func BenchmarkWeightedLRU(b *testing.B) {
 	testCache.Init(FuncWeightedRequests, UpdateStatsPolicy, WeightedLRUEXP)
 
 	for n := 0; n < b.N; n++ {
-		testCache.Get(genRandomFilePath(5), rand.Float32()*maxSize)
+		testCache.Get(genRandomFilePath(5), rand.Float32()*maxSize, 0.0, 0.0)
 	}
 }

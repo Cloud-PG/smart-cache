@@ -27,6 +27,8 @@ type LRUDatasetVerifier struct {
 	stats                              map[string]*LRUFileStats
 	queue                              *list.List
 	hit, miss, size, MaxSize           float32
+	hitCPUTime, missCPUTime            float32
+	hitWTime, missWTime                float32
 	dataWritten, dataRead, dataDeleted float32
 	dataReadOnHit, dataReadOnMiss      float32
 	lastFileHitted                     bool
@@ -96,6 +98,10 @@ func (cache *LRUDatasetVerifier) Clear() {
 	cache.dataReadOnHit = 0.
 	cache.dataReadOnMiss = 0.
 	cache.dataDeleted = 0.
+	cache.hitCPUTime = 0.
+	cache.missCPUTime = 0.
+	cache.hitWTime = 0.
+	cache.missWTime = 0.
 }
 
 // ClearHitMissStats the cache stats
@@ -107,6 +113,10 @@ func (cache *LRUDatasetVerifier) ClearHitMissStats() {
 	cache.dataReadOnHit = 0.
 	cache.dataReadOnMiss = 0.
 	cache.dataDeleted = 0.
+	cache.hitCPUTime = 0.
+	cache.missCPUTime = 0.
+	cache.hitWTime = 0.
+	cache.missWTime = 0.
 }
 
 // Dumps the LRUDatasetVerifier cache
@@ -205,7 +215,7 @@ func (cache LRUDatasetVerifier) Load(filename string) {
 
 // SimGet updates the cache from a protobuf message
 func (cache *LRUDatasetVerifier) SimGet(ctx context.Context, commonFile *pb.SimCommonFile) (*pb.ActionResult, error) {
-	added := cache.Get(commonFile.Filename, commonFile.Size)
+	added := cache.Get(commonFile.Filename, commonFile.Size, 0.0, 0.0)
 	return &pb.ActionResult{
 		Filename: commonFile.Filename,
 		Added:    added,
@@ -327,7 +337,7 @@ func (cache *LRUDatasetVerifier) updatePolicy(filename string, size float32, hit
 }
 
 // Get a file from the cache updating the statistics
-func (cache *LRUDatasetVerifier) Get(filename string, size float32, _ ...interface{}) bool {
+func (cache *LRUDatasetVerifier) Get(filename string, size float32, wTime float32, cpuTime float32, _ ...interface{}) bool {
 	if _, ok := cache.stats[filename]; !ok {
 		cache.stats[filename] = &LRUFileStats{
 			size,
@@ -346,9 +356,13 @@ func (cache *LRUDatasetVerifier) Get(filename string, size float32, _ ...interfa
 	if hit {
 		cache.hit += 1.
 		cache.dataReadOnHit += size
+		cache.hitCPUTime += cpuTime
+		cache.hitWTime += wTime
 	} else {
 		cache.miss += 1.
 		cache.dataReadOnMiss += size
+		cache.missCPUTime += cpuTime
+		cache.missWTime += wTime
 	}
 
 	// Always true because of LRU policy
@@ -429,4 +443,20 @@ func (cache LRUDatasetVerifier) check(key string) bool {
 // ExtraStats for output
 func (cache LRUDatasetVerifier) ExtraStats() string {
 	return "NONE"
+}
+
+// CPUEff returns the CPU efficiency
+func (cache LRUDatasetVerifier) CPUEff() float32 {
+	return cache.CPUHitEff() + cache.CPUMissEff()
+}
+
+// CPUHitEff returns the CPU efficiency for hit data
+func (cache LRUDatasetVerifier) CPUHitEff() float32 {
+	return cache.hitCPUTime / cache.hitWTime
+}
+
+// CPUMissEff returns the CPU efficiency for miss data
+func (cache LRUDatasetVerifier) CPUMissEff() float32 {
+	efficiency := (cache.missCPUTime / cache.missWTime)
+	return efficiency - (efficiency * 0.15) // subtract the 15%
 }

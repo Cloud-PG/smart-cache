@@ -393,6 +393,8 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 							record.Filename,
 							sizeInMbytes,
 							record.Day,
+							record.CPUTime+record.IOTime, // WTime
+							record.CPUTime,
 							record.SiteName,
 							record.UserID,
 						)
@@ -400,7 +402,10 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 						curCacheInstance.Get(
 							record.Filename,
 							sizeInMbytes,
-							record.Day)
+							record.Day,
+							record.CPUTime+record.IOTime, // WTime
+							record.CPUTime,
+						)
 					}
 
 					numIterations++

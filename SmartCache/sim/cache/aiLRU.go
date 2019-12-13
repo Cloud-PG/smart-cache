@@ -94,6 +94,8 @@ type AILRU struct {
 	stats                              map[string]*WeightedFileStats
 	queue                              *list.List
 	hit, miss, size, MaxSize, Exp      float32
+	hitCPUTime, missCPUTime            float32
+	hitWTime, missWTime                float32
 	dataWritten, dataRead, dataDeleted float32
 	dataReadOnHit, dataReadOnMiss      float32
 	lastFileHitted                     bool
@@ -305,6 +307,11 @@ func (cache *AILRU) Clear() {
 	cache.dataReadOnHit = 0.
 	cache.dataReadOnMiss = 0.
 	cache.dataDeleted = 0.
+	cache.hitCPUTime = 0.
+	cache.missCPUTime = 0.
+	cache.hitWTime = 0.
+	cache.missWTime = 0.
+
 }
 
 // ClearHitMissStats the cache stats
@@ -316,6 +323,10 @@ func (cache *AILRU) ClearHitMissStats() {
 	cache.dataReadOnHit = 0.
 	cache.dataReadOnMiss = 0.
 	cache.dataDeleted = 0.
+	cache.hitCPUTime = 0.
+	cache.missCPUTime = 0.
+	cache.hitWTime = 0.
+	cache.missWTime = 0.
 }
 
 // Dumps the AILRU cache
@@ -440,7 +451,7 @@ func (cache *AILRU) Load(filename string) {
 
 // SimGet updates the cache from a protobuf message
 func (cache *AILRU) SimGet(ctx context.Context, commonFile *pb.SimCommonFile) (*pb.ActionResult, error) {
-	added := cache.Get(commonFile.Filename, commonFile.Size)
+	added := cache.Get(commonFile.Filename, commonFile.Size, 0.0, 0.0)
 	return &pb.ActionResult{
 		Filename: commonFile.Filename,
 		Added:    added,
@@ -802,7 +813,7 @@ func (cache *AILRU) updatePolicy(filename string, size float32, hit bool, vars .
 }
 
 // Get a file from the cache updating the statistics
-func (cache *AILRU) Get(filename string, size float32, vars ...interface{}) bool {
+func (cache *AILRU) Get(filename string, size float32, wTime float32, cpuTime float32, vars ...interface{}) bool {
 	hit := cache.check(filename)
 
 	added := cache.updatePolicy(filename, size, hit, vars...)
@@ -810,9 +821,13 @@ func (cache *AILRU) Get(filename string, size float32, vars ...interface{}) bool
 	if hit {
 		cache.hit += 1.
 		cache.dataReadOnHit += size
+		cache.hitCPUTime += cpuTime
+		cache.hitWTime += wTime
 	} else {
 		cache.miss += 1.
 		cache.dataReadOnMiss += size
+		cache.missCPUTime += cpuTime
+		cache.missWTime += wTime
 	}
 
 	if added {
@@ -891,4 +906,20 @@ func (cache *AILRU) check(key string) bool {
 // ExtraStats for output
 func (cache *AILRU) ExtraStats() string {
 	return fmt.Sprintf("Cov: %0.2f%%, Epsilon: %0.2f", cache.qTable.GetCoveragePercentage(), cache.qTable.Epsilon)
+}
+
+// CPUEff returns the CPU efficiency
+func (cache AILRU) CPUEff() float32 {
+	return cache.CPUHitEff() + cache.CPUMissEff()
+}
+
+// CPUHitEff returns the CPU efficiency for hit data
+func (cache AILRU) CPUHitEff() float32 {
+	return cache.hitCPUTime / cache.hitWTime
+}
+
+// CPUMissEff returns the CPU efficiency for miss data
+func (cache AILRU) CPUMissEff() float32 {
+	efficiency := (cache.missCPUTime / cache.missWTime)
+	return efficiency - (efficiency * 0.15) // subtract the 15%
 }

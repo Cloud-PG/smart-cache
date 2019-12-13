@@ -21,6 +21,8 @@ type WeightedCache struct {
 	stats                              map[string]*WeightedFileStats
 	queue                              []*WeightedFileStats
 	hit, miss, size, MaxSize, Exp      float32
+	hitCPUTime, missCPUTime            float32
+	hitWTime, missWTime                float32
 	dataWritten, dataRead, dataDeleted float32
 	dataReadOnHit, dataReadOnMiss      float32
 	SelFunctionType                    FunctionType
@@ -55,6 +57,10 @@ func (cache *WeightedCache) Clear() {
 	cache.dataReadOnHit = 0.
 	cache.dataReadOnMiss = 0.
 	cache.dataDeleted = 0.
+	cache.hitCPUTime = 0.
+	cache.missCPUTime = 0.
+	cache.hitWTime = 0.
+	cache.missWTime = 0.
 }
 
 // ClearHitMissStats the cache stats
@@ -66,6 +72,10 @@ func (cache *WeightedCache) ClearHitMissStats() {
 	cache.dataReadOnHit = 0.
 	cache.dataReadOnMiss = 0.
 	cache.dataDeleted = 0.
+	cache.hitCPUTime = 0.
+	cache.missCPUTime = 0.
+	cache.hitWTime = 0.
+	cache.missWTime = 0.
 }
 
 // Dumps the WeightedCache cache
@@ -181,7 +191,7 @@ func (cache WeightedCache) Load(filename string) {
 
 // SimGet updates the cache from a protobuf message
 func (cache *WeightedCache) SimGet(ctx context.Context, commonFile *pb.SimCommonFile) (*pb.ActionResult, error) {
-	added := cache.Get(commonFile.Filename, commonFile.Size)
+	added := cache.Get(commonFile.Filename, commonFile.Size, 0.0, 0.0)
 	return &pb.ActionResult{
 		Filename: commonFile.Filename,
 		Added:    added,
@@ -331,16 +341,20 @@ func (cache *WeightedCache) updatePolicy(filename string, size float32, hit bool
 }
 
 // Get a file from the cache updating the statistics
-func (cache *WeightedCache) Get(filename string, size float32, vars ...interface{}) bool {
+func (cache *WeightedCache) Get(filename string, size float32, wTime float32, cpuTime float32, vars ...interface{}) bool {
 	hit := cache.check(filename)
 	added := cache.updatePolicy(filename, size, hit)
 
 	if hit {
 		cache.hit += 1.
 		cache.dataReadOnHit += size
+		cache.hitCPUTime += cpuTime
+		cache.hitWTime += wTime
 	} else {
 		cache.miss += 1.
 		cache.dataReadOnMiss += size
+		cache.missCPUTime += cpuTime
+		cache.missWTime += wTime
 	}
 
 	if added {
@@ -419,4 +433,20 @@ func (cache WeightedCache) check(key string) bool {
 // ExtraStats for output
 func (cache WeightedCache) ExtraStats() string {
 	return "NONE"
+}
+
+// CPUEff returns the CPU efficiency
+func (cache WeightedCache) CPUEff() float32 {
+	return cache.CPUHitEff() + cache.CPUMissEff()
+}
+
+// CPUHitEff returns the CPU efficiency for hit data
+func (cache WeightedCache) CPUHitEff() float32 {
+	return cache.hitCPUTime / cache.hitWTime
+}
+
+// CPUMissEff returns the CPU efficiency for miss data
+func (cache WeightedCache) CPUMissEff() float32 {
+	efficiency := (cache.missCPUTime / cache.missWTime)
+	return efficiency - (efficiency * 0.15) // subtract the 15%
 }
