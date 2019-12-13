@@ -622,7 +622,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
     run_single_window_figs = []
     run_next_period_figs = []
 
-    pbar = tqdm(total=19, desc="Plot results", ascii=True)
+    pbar = tqdm(total=17, desc="Plot results", ascii=True)
 
     ###########################################################################
     # Hit Rate plot of full normal run
@@ -991,7 +991,6 @@ def plot_results(folder: str, results: dict, cache_size: float,
         row(*run_full_normal_net_figs),
         row(*run_full_normal_data_rw_figs),
         row(*run_full_normal_data_read_stats_figs),
-        row(*run_full_normal_read_diff_figs),
         row(*run_full_normal_cpu_eff_figs),
         row(*run_single_window_figs),
         row(*run_next_period_figs),
