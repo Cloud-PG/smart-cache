@@ -348,26 +348,15 @@ def plot_measure(tools: list,
         results, run_type, filters
     ):
         if run_type == "run_full_normal":
-            if target == "loss":
+            if target == "cost":
                 points = values['written data'] + \
                     values['deleted data'] + values['read on miss data']
             elif target == "network_in_saturation":
-                points = (values['written data'] /
+                points = (values['read on miss data'] /
                           ((10000. / 8.) * 60. * 60. * 24.)) * 100.  # 10Gbit x 1 day
             elif target == "network_out_saturation":
-                points = (values['read on hit data'] /
+                points = (values['read data'] /
                           ((10000. / 8.) * 60. * 60. * 24.)) * 100.  # 10Gbit x 1 day
-            elif target == "gain":
-                points = (
-                    1.0 - (
-                        values['written data'] + values['deleted data'] +
-                        values['read on miss data']
-                    ) / values['read data']
-                ) * 100.
-                range_points = points.to_list()
-                y_range_min = min([y_range_min] + range_points)
-                y_range_max = max([y_range_min] + range_points)
-                cur_fig.y_range = Range1d(y_range_min, y_range_max)
             elif target == "cpu_eff":
                 lru_values = get_lru(results, run_type)
                 if read_on_hit:
@@ -650,7 +639,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
     run_single_window_figs = []
     run_next_period_figs = []
 
-    pbar = tqdm(total=20, desc="Plot results", ascii=True)
+    pbar = tqdm(total=19, desc="Plot results", ascii=True)
 
     ###########################################################################
     # Hit Rate plot of full normal run
@@ -672,28 +661,6 @@ def plot_results(folder: str, results: dict, cache_size: float,
     pbar.update(1)
 
     ###########################################################################
-    # Gain plot of full normal run
-    ###########################################################################
-    with ignored(Exception):
-        write_on_read_on_hit_data_fig = plot_measure(
-            tools,
-            results,
-            dates,
-            filters,
-            color_table,
-            window_size,
-            x_range=hit_rate_fig.x_range,
-            y_axis_label="%",
-            title="Gain",
-            plot_width=plot_width,
-            plot_height=plot_height,
-            read_on_hit=False,
-            target="gain",
-        )
-        run_full_normal_hit_rate_figs.append(write_on_read_on_hit_data_fig)
-    pbar.update(1)
-
-    ###########################################################################
     # Loss plot of full normal run
     ###########################################################################
     with ignored(Exception):
@@ -706,11 +673,11 @@ def plot_results(folder: str, results: dict, cache_size: float,
             window_size,
             x_range=hit_rate_fig.x_range,
             y_axis_type="log",
-            title="Loss",
+            title="Cost",
             plot_width=plot_width,
             plot_height=plot_height,
             read_on_hit=True,
-            target="loss",
+            target="cost",
         )
         run_full_normal_hit_rate_figs.append(write_on_read_data_fig)
     pbar.update(1)
