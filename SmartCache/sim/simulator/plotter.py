@@ -373,22 +373,6 @@ def plot_measure(tools: list,
                             lru_values['read on miss data']
                         ) / (1000. / 8.)
                     ) * 0.15
-            elif target == "read_diff":
-                lru_values = get_lru(results, run_type)
-                if read_on_hit:
-                    points = (
-                        values['read on hit data'] -
-                        lru_values['read on hit data']
-                    )  # / values['read data']
-                else:
-                    points = (
-                        values['read on miss data'] -
-                        lru_values['read on miss data']
-                    )  # / values['read data']
-                range_points = points.to_list()
-                y_range_min = min([y_range_min] + range_points)
-                y_range_max = max([y_range_min] + range_points)
-                cur_fig.y_range = Range1d(y_range_min, y_range_max)
             else:
                 raise Exception(f"Unknown target '{target}'")
             cur_line = cur_fig.line(
@@ -634,7 +618,6 @@ def plot_results(folder: str, results: dict, cache_size: float,
     run_full_normal_net_figs = []
     run_full_normal_data_rw_figs = []
     run_full_normal_data_read_stats_figs = []
-    run_full_normal_read_diff_figs = []
     run_full_normal_cpu_eff_figs = []
     run_single_window_figs = []
     run_next_period_figs = []
@@ -828,49 +811,6 @@ def plot_results(folder: str, results: dict, cache_size: float,
             plot_height=plot_height,
         )
         run_full_normal_data_read_stats_figs.append(read_data_fig)
-    pbar.update(1)
-
-    ###########################################################################
-    # Read on hit diff full normal run
-    ###########################################################################
-    with ignored(Exception):
-        read_on_hit_eff = plot_measure(
-            tools,
-            results,
-            dates,
-            filters,
-            color_table,
-            window_size,
-            x_range=hit_rate_fig.x_range,
-            y_axis_label="MB",
-            title="Read on hit diff",
-            plot_width=plot_width,
-            plot_height=plot_height,
-            read_on_hit=True,
-            target="read_diff",
-        )
-        run_full_normal_read_diff_figs.append(read_on_hit_eff)
-    pbar.update(1)
-    ###########################################################################
-    # Read on miss diff full normal run
-    ###########################################################################
-    with ignored(Exception):
-        read_on_hit_eff = plot_measure(
-            tools,
-            results,
-            dates,
-            filters,
-            color_table,
-            window_size,
-            x_range=hit_rate_fig.x_range,
-            y_axis_label="MB",
-            title="Read on miss diff",
-            plot_width=plot_width,
-            plot_height=plot_height,
-            read_on_hit=False,
-            target="read_diff",
-        )
-        run_full_normal_read_diff_figs.append(read_on_hit_eff)
     pbar.update(1)
 
     ###########################################################################
