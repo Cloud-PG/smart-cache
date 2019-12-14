@@ -31,12 +31,14 @@ class SimulatorDatasetReader(object):
                 head, tail = path.splitext(filename)
                 if tail in [".gzip", ".gz"]:
                     head, tail = path.splitext(head)
-                    with gzip.GzipFile(filename, "rb") as cur_file:
-                        if tail == ".feather":
+                    if tail == ".feather":
+                        with gzip.GzipFile(filename, "rb") as cur_file:
                             self._df = pd.read_feather(cur_file)
-                            self._data_dir = path.dirname(path.abspath(filename))
-                        else:
-                            raise Exception(f"Unknow extension '{tail}'")
+                    elif tail == ".pickle":
+                        self._df = pd.read_pickle(filename, compression='gzip')
+                    else:
+                        raise Exception(f"Unknow extension '{tail}'")
+                    self._data_dir = path.dirname(path.abspath(filename))
                 else:
                     raise Exception(f"Unknow extension '{tail}'")
                 sp.text = "[Dataset loaded...]"

@@ -39,9 +39,6 @@ def main():
     parser.add_argument('--out-folder', type=str,
                         default="./simulation_results",
                         help='The folder where the simulation results will be stored [DEFAULT: "simulation_results"]')
-    parser.add_argument('--read-on-hit', type='bool',
-                        default=True,
-                        help='Use read on hit data [DEFAULT: True]')
     parser.add_argument('--simulation-steps', type=str,
                         default='single,normal,nextW,nextP',
                         help='Select the simulation steps [DEFAULT: "single,normal,nextW,next"]')
@@ -88,7 +85,7 @@ def main():
                         choices=['greedy', 'ga'], default="greedy",
                         help='The method used to create the dataset [DEFAULT: "greedy"]')
     parser.add_argument('--dataset-folder', type=str,
-                        default="./datasets",
+                        default="datasets",
                         help='Folder where datasets are stored [DEFAULT: "./datasets"]')
     parser.add_argument('--dataset-prefix', type=str,
                         default="dataset_best_solution",
@@ -102,6 +99,9 @@ def main():
     parser.add_argument('--feature-prefix', type=str,
                         default="featureConverter",
                         help='Ai Model feature converter name prefix [DEFAULT: "featureConverter"]')
+    parser.add_argument('--use-qlearn', type='bool',
+                        default=False,
+                        help='Force to use Q-Learning method [DEFAULT: False]')
 
     args, _ = parser.parse_known_args()
 
@@ -145,7 +145,7 @@ def main():
                 for cache_type in cache_types:
                     working_dir = path.join(
                         single_window_run_dir,
-                        f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}",
+                        f"{cache_type+'-RL' if args.use_qlearn else cache_type}_{int(args.cache_size/1024**2)}T_{args.region}",
                         f"window_{window_idx}",
                     )
                     os.makedirs(working_dir, exist_ok=True)
@@ -174,10 +174,13 @@ def main():
                         model_weights_file = path.abspath(
                             f"{args.ai_model_basename.split('.h5')[0]}-window_{window_idx:02d}.dump.json.gz"
                         )
-                        exe_args.append("--aiHost=127.0.0.1")
-                        exe_args.append(f"--aiPort=4242")
                         exe_args.append(f"--aiFeatureMap={feature_map_file}")
-                        exe_args.append(f"--aiModel={model_weights_file}")
+                        if args.use_qlearn:
+                            exe_args.append("--aiQLearn=true")
+                        else:
+                            exe_args.append("--aiHost=127.0.0.1")
+                            exe_args.append(f"--aiPort=4242")
+                            exe_args.append(f"--aiModel={model_weights_file}")
                     elif cache_type == 'lruDatasetVerifier':
                         dataset_file = path.abspath(
                             path.join(
@@ -211,7 +214,7 @@ def main():
             for cache_type in cache_types:
                 working_dir = path.join(
                     normal_run_dir,
-                    f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}"
+                    f"{cache_type+'-RL' if args.use_qlearn else cache_type}_{int(args.cache_size/1024**2)}T_{args.region}"
                 )
                 os.makedirs(working_dir, exist_ok=True)
                 # Create base command
@@ -237,10 +240,13 @@ def main():
                     model_weights_file = path.abspath(
                         f"{args.ai_model_basename.split('.h5')[0]}-window_00.dump.json.gz"
                     )
-                    exe_args.append("--aiHost=127.0.0.1")
-                    exe_args.append(f"--aiPort=4242")
                     exe_args.append(f"--aiFeatureMap={feature_map_file}")
-                    exe_args.append(f"--aiModel={model_weights_file}")
+                    if args.use_qlearn:
+                        exe_args.append("--aiQLearn=true")
+                    else:
+                        exe_args.append("--aiHost=127.0.0.1")
+                        exe_args.append(f"--aiPort=4242")
+                        exe_args.append(f"--aiModel={model_weights_file}")
                 elif cache_type == 'lruDatasetVerifier':
                     dataset_file = path.abspath(
                         path.join(
@@ -277,12 +283,12 @@ def main():
                 for cache_type in cache_types:
                     working_dir = path.join(
                         nexxt_window_run_dir,
-                        f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}",
+                        f"{cache_type+'-RL' if args.use_qlearn else cache_type}_{int(args.cache_size/1024**2)}T_{args.region}",
                         f"window_{window_idx+1}",
                     )
                     dump_dir = path.join(
                         single_window_run_dir,
-                        f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}",
+                        f"{cache_type+'-RL' if args.use_qlearn else cache_type}_{int(args.cache_size/1024**2)}T_{args.region}",
                         f"window_{window_idx}",
                     )
                     os.makedirs(working_dir, exist_ok=True)
@@ -311,10 +317,13 @@ def main():
                         model_weights_file = path.abspath(
                             f"{args.ai_model_basename.split('.h5')[0]}-window_{window_idx:02d}.dump.json.gz"
                         )
-                        exe_args.append("--aiHost=127.0.0.1")
-                        exe_args.append(f"--aiPort=4242")
                         exe_args.append(f"--aiFeatureMap={feature_map_file}")
-                        exe_args.append(f"--aiModel={model_weights_file}")
+                        if args.use_qlearn:
+                            exe_args.append("--aiQLearn=true")
+                        else:
+                            exe_args.append("--aiHost=127.0.0.1")
+                            exe_args.append(f"--aiPort=4242")
+                            exe_args.append(f"--aiModel={model_weights_file}")
                     elif cache_type == 'lruDatasetVerifier':
                         dataset_file = path.abspath(
                             path.join(
@@ -349,12 +358,12 @@ def main():
                 for cache_type in cache_types:
                     working_dir = path.join(
                         next_period_run_dir,
-                        f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}",
+                        f"{cache_type+'-RL' if args.use_qlearn else cache_type}_{int(args.cache_size/1024**2)}T_{args.region}",
                         f"windows_{window_idx+1}-{args.window_stop}",
                     )
                     dump_dir = path.join(
                         single_window_run_dir,
-                        f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}",
+                        f"{cache_type+'-RL' if args.use_qlearn else cache_type}_{int(args.cache_size/1024**2)}T_{args.region}",
                         f"window_{window_idx}",
                     )
                     os.makedirs(working_dir, exist_ok=True)
@@ -383,10 +392,13 @@ def main():
                         model_weights_file = path.abspath(
                             f"{args.ai_model_basename.split('.h5')[0]}-window_{window_idx:02d}.dump.json.gz"
                         )
-                        exe_args.append("--aiHost=127.0.0.1")
-                        exe_args.append(f"--aiPort=4242")
                         exe_args.append(f"--aiFeatureMap={feature_map_file}")
-                        exe_args.append(f"--aiModel={model_weights_file}")
+                        if args.use_qlearn:
+                            exe_args.append("--aiQLearn=true")
+                        else:
+                            exe_args.append("--aiHost=127.0.0.1")
+                            exe_args.append(f"--aiPort=4242")
+                            exe_args.append(f"--aiModel={model_weights_file}")
                     elif cache_type == 'lruDatasetVerifier':
                         dataset_file = path.abspath(
                             path.join(
@@ -409,6 +421,9 @@ def main():
             wait_jobs(processes)
 
     elif args.action == "plot":
+        if not path.exists(args.source):
+            print(f"Cannot find folder '{args.source}'")
+            exit(-1)
         filters = [elm for elm in args.plot_filters.split(",") if elm]
         results = load_results(args.source)
         plot_width, plot_height = [
@@ -416,14 +431,13 @@ def main():
             if elm
         ]
         plot_results(
-            args.source, results,
+            args.source, results, args.cache_size,
             window_size=args.window_size,
             filters=filters,
             html=args.out_html,
             png=args.out_png,
             plot_width=plot_width,
             plot_height=plot_height,
-            read_on_hit=args.read_on_hit,
         )
 
     elif args.action == "train":
@@ -453,7 +467,7 @@ def main():
 
     elif args.action == "create_dataset":
         base_dir = path.join(
-            path.dirname(path.abspath(args.source)), "datasets"
+            path.dirname(path.abspath(args.source)), args.dataset_folder
         )
         os.makedirs(base_dir, exist_ok=True)
 
@@ -631,7 +645,8 @@ def main():
 
             dataset_labels_out_file = path.join(
                 base_dir,
-                f"dataset_labels-window_{winIdx:02d}.feather.gz"
+                # f"dataset_labels-window_{winIdx:02d}.feather.gz"
+                f"dataset_labels-window_{winIdx:02d}.pickle.gz"
             )
 
             dataset_best_solution_out_file = path.join(
@@ -639,8 +654,8 @@ def main():
                 f"dataset_best_solution-window_{winIdx:02d}.json.gz"
             )
 
-            # get 42% of the requests
-            len_dataset = int(cur_df.shape[0] * 0.30)
+            # get 25% of the requests
+            len_dataset = int(cur_df.shape[0] * 0.25)
 
             sample = cur_df.sample(n=len_dataset, random_state=42)
             sample.rename(columns={'size': 'fileSize'}, inplace=True)
@@ -665,8 +680,9 @@ def main():
                 Spinners.bouncingBall,
                 text=f"[Store labeleled stage dataset][{dataset_labels_out_file}]"
             ):
-                with gzip.GzipFile(dataset_labels_out_file, "wb") as out_file:
-                    dataset_df.to_feather(out_file)
+                # with gzip.GzipFile(dataset_labels_out_file, "wb") as out_file:
+                #     dataset_df.to_feather(out_file)
+                dataset_df.to_pickle(dataset_labels_out_file, compression='gzip')
 
             with yaspin(
                 Spinners.bouncingBall,
@@ -702,7 +718,7 @@ def main():
                 ],
                 map_type=int,
                 sort_keys=True,
-                buckets=[5, 10, 50, 100, 250, 500, 1000, 2000, 4000, 10000, '...'],
+                buckets=[50, 100, 250, 500, 1000, 2000, 4000, '...'],
             ).make_converter_map(
                 [
                     'numReq',
@@ -716,7 +732,7 @@ def main():
                 ],
                 map_type=int,
                 sort_keys=True,
-                buckets=list(range(0, 6*1000, 100)) + ['...'],
+                buckets=list(range(0, 8*1000, 1000)) + ['...'],
             ).make_converter_map(
                 [
                     'siteName',

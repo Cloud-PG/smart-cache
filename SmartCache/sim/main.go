@@ -23,6 +23,7 @@ var (
 	aiHost              string
 	aiModel             string
 	aiPort              string
+	aiQLearn            bool
 	buildstamp          string
 	cacheSize           float32
 	cpuprofile          string
@@ -30,6 +31,7 @@ var (
 	githash             string
 	limitStatsPolicy    string
 	memprofile          string
+	outputUpdateDelay   float64
 	serviceHost         string
 	servicePort         int32
 	simColdStart        bool
@@ -89,6 +91,10 @@ func main() {
 	rootCmd.PersistentFlags().Int32Var(
 		&servicePort, "port", 5432,
 		"[Simulation] cache sim service port",
+	)
+	rootCmd.PersistentFlags().Float64Var(
+		&outputUpdateDelay, "outputUpdateDelay", 5.,
+		"[Simulation] time delay for cmd output",
 	)
 	rootCmd.PersistentFlags().StringVar(
 		&weightedFunc, "weightFunction", "FuncWeightedRequests",
@@ -218,13 +224,19 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			copy(args, args[2:])
 			args = args[:len(args)-1]
 
+			cacheBaseName := cacheType
+			if aiQLearn {
+				cacheBaseName += "-RL"
+			}
+
 			baseName := strings.Join([]string{
-				cacheType,
+				cacheBaseName,
 				fmt.Sprintf("%0.0fT", cacheSize/(1024.*1024.)),
 				simRegion,
 			},
 				"_",
 			)
+
 			dumpFileName := baseName + ".json.gz"
 			resultFileName := baseName + "_results.csv"
 
@@ -238,7 +250,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 					fmt.Println("ERR: No feature map indicated...")
 					os.Exit(-1)
 				}
-				grpcConn = curCacheInstance.Init(aiHost, aiPort, aiFeatureMap, aiModel)
+				grpcConn = curCacheInstance.Init(aiHost, aiPort, aiFeatureMap, aiModel, aiQLearn)
 				if grpcConn != nil {
 					defer grpcConn.(*grpc.ClientConn).Close()
 				}
@@ -286,6 +298,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			if simOutFile == "" {
 				simOutFile = resultFileName
 			}
+
 			outputFile, _ := os.Create(simOutFile)
 			defer outputFile.Close()
 			csvOutput := csv.NewWriter(outputFile)
@@ -301,6 +314,9 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				"read on hit data",
 				"read on miss data",
 				"deleted data",
+				"CPU efficiency",
+				"CPU hit efficiency",
+				"CPU miss efficiency",
 			})
 			csvOutput.Flush()
 
@@ -359,6 +375,9 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 								fmt.Sprintf("%f", curCacheInstance.DataReadOnHit()),
 								fmt.Sprintf("%f", curCacheInstance.DataReadOnMiss()),
 								fmt.Sprintf("%f", curCacheInstance.DataDeleted()),
+								fmt.Sprintf("%f", curCacheInstance.CPUEff()),
+								fmt.Sprintf("%f", curCacheInstance.CPUHitEff()),
+								fmt.Sprintf("%f", curCacheInstance.CPUMissEff()),
 							})
 							csvOutput.Flush()
 							curCacheInstance.ClearHitMissStats()
@@ -379,6 +398,8 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 						curCacheInstance.Get(
 							record.Filename,
 							sizeInMbytes,
+							record.CPUTime+record.IOTime, // WTime
+							record.CPUTime,
 							record.Day,
 							record.SiteName,
 							record.UserID,
@@ -387,12 +408,15 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 						curCacheInstance.Get(
 							record.Filename,
 							sizeInMbytes,
-							record.Day)
+							record.CPUTime+record.IOTime, // WTime
+							record.CPUTime,
+							record.Day,
+						)
 					}
 
 					numIterations++
 
-					if time.Now().Sub(start).Seconds() >= 1. {
+					if time.Now().Sub(start).Seconds() >= outputUpdateDelay {
 						elapsedTime := time.Now().Sub(simBeginTime)
 						outString := strings.Join(
 							[]string{
@@ -405,8 +429,10 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 								fmt.Sprintf("[Window %d]", windowCounter),
 								fmt.Sprintf("[Step %d/%d]", windowStepCounter+1, simWindowSize),
 								fmt.Sprintf("[Num.Records %d]", numRecords),
-								fmt.Sprintf("[HitRate %.2f]", curCacheInstance.HitRate()),
-								fmt.Sprintf("[Capacity %.2f]", curCacheInstance.Capacity()),
+								fmt.Sprintf("[HitRate %.2f%%]", curCacheInstance.HitRate()),
+								fmt.Sprintf("[Capacity %.2f%%]", curCacheInstance.Capacity()),
+								// TODO: add as parameter
+								// fmt.Sprintf("[Extra-> %s]", curCacheInstance.ExtraStats()),
 								fmt.Sprintf("[%0.0f it/s]", float64(numIterations)/time.Now().Sub(start).Seconds()),
 								"\r",
 							},
@@ -431,7 +457,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 					windowStepCounter = 0
 					numRecords = 0
 				} else {
-					if time.Now().Sub(start).Seconds() >= 1. {
+					if time.Now().Sub(start).Seconds() >= outputUpdateDelay {
 						fmt.Printf("[Jump %d records of window %d]\r",
 							numRecords,
 							windowCounter,
@@ -484,6 +510,10 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 		cmd.PersistentFlags().StringVar(
 			&aiModel, "aiModel", "",
 			"the model to load into the simulator",
+		)
+		cmd.PersistentFlags().BoolVar(
+			&aiQLearn, "aiQLearn", false,
+			"Use Q-Learning",
 		)
 	case testDatasetCmd:
 		cmd.PersistentFlags().StringVar(
@@ -601,7 +631,7 @@ func genCache(cacheType string) cache.Cache {
 		}
 		cacheInstance.Init()
 	default:
-		fmt.Println("ERR: You need to specify a cache type.")
+		fmt.Printf("ERR: '%s' is not a valid cache type...\n", cacheType)
 		os.Exit(-2)
 	}
 	return cacheInstance

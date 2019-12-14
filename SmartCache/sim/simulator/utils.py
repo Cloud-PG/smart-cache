@@ -1,7 +1,17 @@
 import subprocess
+from contextlib import contextmanager
 from os import path, walk
 
 import pandas as pd
+
+
+@contextmanager
+def ignored(*exceptions):
+    try:
+        yield
+    except KeyError as exc:
+        if exc.args[0] not in ["run_single_window", "run_next_period"]:
+            raise
 
 
 def str2bool(v):
