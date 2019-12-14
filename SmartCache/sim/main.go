@@ -314,6 +314,9 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				"read on hit data",
 				"read on miss data",
 				"deleted data",
+				"CPU efficiency",
+				"CPU hit efficiency",
+				"CPU miss efficiency",
 			})
 			csvOutput.Flush()
 
@@ -372,6 +375,9 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 								fmt.Sprintf("%f", curCacheInstance.DataReadOnHit()),
 								fmt.Sprintf("%f", curCacheInstance.DataReadOnMiss()),
 								fmt.Sprintf("%f", curCacheInstance.DataDeleted()),
+								fmt.Sprintf("%f", curCacheInstance.CPUEff()),
+								fmt.Sprintf("%f", curCacheInstance.CPUHitEff()),
+								fmt.Sprintf("%f", curCacheInstance.CPUMissEff()),
 							})
 							csvOutput.Flush()
 							curCacheInstance.ClearHitMissStats()
