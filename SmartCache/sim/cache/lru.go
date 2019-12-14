@@ -8,47 +8,22 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"time"
 
 	pb "simulator/v2/cache/simService"
 
 	empty "github.com/golang/protobuf/ptypes/empty"
 )
 
-// LRUFileStats contain file statistics collected by LRU cache
-type LRUFileStats struct {
-	size              float32
-	totRequests       uint32
-	nHits             uint32
-	nMiss             uint32
-	lastTimeRequested time.Time
-}
-
-func (stats *LRUFileStats) updateRequests(hit bool, newTime time.Time) {
-	stats.totRequests++
-
-	if hit {
-		stats.nHits++
-	} else {
-		stats.nMiss++
-	}
-
-	stats.lastTimeRequested = newTime
-}
-
 // LRUCache cache
 type LRUCache struct {
+	LRUStats
 	files                              map[string]float32
-	stats                              map[string]*LRUFileStats
 	queue                              *list.List
 	hit, miss, size, MaxSize           float32
 	hitCPUTime, missCPUTime            float32
 	hitWTime, missWTime                float32
 	dataWritten, dataRead, dataDeleted float32
 	dataReadOnHit, dataReadOnMiss      float32
-	lastFileHitted                     bool
-	lastFileAdded                      bool
-	lastFileName                       string
 }
 
 // Init the LRU struct
@@ -325,20 +300,12 @@ func (cache *LRUCache) updatePolicy(filename string, size float32, hit bool, _ .
 
 // Get a file from the cache updating the statistics
 func (cache *LRUCache) Get(filename string, size float32, wTime float32, cpuTime float32, _ ...interface{}) bool {
-	if _, ok := cache.stats[filename]; !ok {
-		cache.stats[filename] = &LRUFileStats{
-			size,
-			0,
-			0,
-			0,
-			time.Now(),
-		}
-	}
+	curFileStats := cache.GetOrCreate(filename, size)
 
 	hit := cache.check(filename)
-	added := cache.updatePolicy(filename, size, hit)
+	curFileStats.updateRequests(hit)
 
-	cache.stats[filename].updateRequests(hit, time.Now())
+	added := cache.updatePolicy(filename, size, hit)
 
 	if hit {
 		cache.hit += 1.
@@ -358,10 +325,6 @@ func (cache *LRUCache) Get(filename string, size float32, wTime float32, cpuTime
 		cache.dataWritten += size
 	}
 	cache.dataRead += size
-
-	cache.lastFileHitted = hit
-	cache.lastFileAdded = added
-	cache.lastFileName = filename
 
 	return added
 }
