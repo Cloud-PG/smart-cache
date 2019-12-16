@@ -104,7 +104,7 @@ func (statStruct WeightedStats) getFilePoints(filename string, curTime *time.Tim
 	dayDiffInCache := math.Floor(curTime.Sub(curStats.InCacheSince).Hours() / 24.)
 
 	numReq := float64(curStats.TotRequests)
-	numReq = numReq * math.Exp(-dayDiffFirstTime) // Decay num. requests
+	numReq = numReq * math.Exp(-(dayDiffFirstTime / 7.0)) // Decay num. requests
 
 	points := numReq * float64(curStats.Size)
 	points = points * math.Exp(-dayDiffInCache) // Decay points
