@@ -53,7 +53,8 @@ func (cache *LRUDatasetVerifier) Init(args ...interface{}) interface{} {
 	return cache
 }
 
-func (cache *LRUDatasetVerifier) updatePolicy(filename string, size float32, hit bool, _ ...interface{}) bool {
+// UpdatePolicy of LRUDatasetVerifier cache
+func (cache *LRUDatasetVerifier) UpdatePolicy(filename string, size float32, hit bool, _ ...interface{}) bool {
 	var added = false
 	_, inDataset := cache.datasetFileMap[filename]
 	if inDataset {
