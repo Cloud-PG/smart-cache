@@ -28,9 +28,10 @@ type LRUCache struct {
 
 // Init the LRU struct
 func (cache *LRUCache) Init(_ ...interface{}) interface{} {
+	cache.LRUStats.Init()
 	cache.files = make(map[string]float32)
-	cache.stats = make(map[string]*LRUFileStats)
 	cache.queue = list.New()
+
 	return cache
 }
 
@@ -42,8 +43,8 @@ func (cache *LRUCache) ClearFiles() {
 
 // Clear the LRU struct
 func (cache *LRUCache) Clear() {
+	cache.LRUStats.Init()
 	cache.ClearFiles()
-	cache.stats = make(map[string]*LRUFileStats)
 	tmpVal := cache.queue.Front()
 	for {
 		if tmpVal == nil {
