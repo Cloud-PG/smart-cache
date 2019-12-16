@@ -460,7 +460,7 @@ func (cache *AILRU) UpdatePolicy(filename string, size float32, hit bool, vars .
 	currentTime := time.Unix(day, 0)
 	cache.curTime = currentTime
 
-	curStats, _ := cache.GetOrCreate(filename, size)
+	curStats, _ := cache.GetOrCreate(filename, size, &currentTime)
 	if cache.qTable == nil {
 		curStats.updateStats(hit, size, &currentTime)
 	} else {

@@ -384,6 +384,7 @@ func (cache LRUCache) DataDeleted() float32 {
 	return cache.dataDeleted
 }
 
+// Check returns if a file is in cache or not
 func (cache LRUCache) Check(key string) bool {
 	_, ok := cache.files[key]
 	return ok
