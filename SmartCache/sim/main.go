@@ -559,30 +559,6 @@ func genCache(cacheType string) cache.Cache {
 				MaxSize: cacheSize,
 			},
 		}
-	case "weighted":
-		fmt.Printf("[Create Weighted Cache][Size: %f]\n", cacheSize)
-
-		var functionType cache.FunctionType
-
-		switch weightedFunc {
-		case "FuncFileWeight":
-			functionType = cache.FuncFileWeight
-		case "FuncFileWeightAndTime":
-			functionType = cache.FuncFileWeightAndTime
-		case "FuncFileWeightOnlyTime":
-			functionType = cache.FuncFileWeightOnlyTime
-		case "FuncWeightedRequests":
-			functionType = cache.FuncWeightedRequests
-		default:
-			fmt.Println("ERR: You need to specify a weight function.")
-			os.Exit(-1)
-		}
-		cacheInstance = &cache.WeightedCache{
-			MaxSize:         cacheSize,
-			Exp:             weightExp,
-			SelFunctionType: functionType,
-		}
-		cacheInstance.Init()
 	case "weightedLRU":
 		fmt.Printf("[Create Weighted Cache][Size: %f]\n", cacheSize)
 
