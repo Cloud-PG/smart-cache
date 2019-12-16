@@ -87,11 +87,13 @@ func (cache *WeightedLRU) Loads(inputString *[][]byte) {
 // UpdatePolicy of WeightedLRU cache
 func (cache *WeightedLRU) UpdatePolicy(filename string, size float32, hit bool, vars ...interface{}) bool {
 	var (
-		added       = false
-		currentTime = vars[0].(time.Time)
-		curStats    *WeightedFileStats
-		newFile     bool
+		added    = false
+		curStats *WeightedFileStats
+		newFile  bool
 	)
+
+	day := vars[0].(int64)
+	currentTime := time.Unix(day, 0)
 
 	if cache.SelUpdateStatPolicyType == UpdateStatsOnRequest {
 		curStats, newFile = cache.GetOrCreate(filename, size)
