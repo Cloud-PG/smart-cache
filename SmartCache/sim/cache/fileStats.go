@@ -2,6 +2,7 @@ package cache
 
 import (
 	"encoding/json"
+	"math"
 	"time"
 )
 
@@ -93,6 +94,15 @@ func (statStruct *WeightedStats) UpdateWeight(stats *WeightedFileStats, newFile 
 // GetWeightMedian returns the mean of the weight of all files
 func (statStruct *WeightedStats) GetWeightMedian() float32 {
 	return statStruct.weightSum / float32(len(statStruct.stats))
+}
+
+// getFilePoints returns the points for a single file
+func (statStruct WeightedStats) getFilePoints(filename string, curTime *time.Time) float64 {
+	curStats, _ := statStruct.stats[filename]
+	points := float64(curStats.TotRequests) * float64(curStats.Size)
+	dayDiff := math.Floor(curTime.Sub(curStats.InCacheSince).Hours() / 24.)
+	points = points * math.Exp(-dayDiff)
+	return points
 }
 
 const (
