@@ -181,7 +181,7 @@ func (cache LRUCache) Load(filename string) {
 
 // SimGet updates the cache from a protobuf message
 func (cache *LRUCache) SimGet(ctx context.Context, commonFile *pb.SimCommonFile) (*pb.ActionResult, error) {
-	added := cache.Get(commonFile.Filename, commonFile.Size, 0.0, 0.0)
+	added := GetFile(cache, commonFile.Filename, commonFile.Size, 0.0, 0.0)
 	return &pb.ActionResult{
 		Filename: commonFile.Filename,
 		Added:    added,
@@ -300,15 +300,14 @@ func (cache *LRUCache) UpdatePolicy(filename string, size float32, hit bool, _ .
 	return added
 }
 
-// Get a file from the cache updating the statistics
-func (cache *LRUCache) Get(filename string, size float32, wTime float32, cpuTime float32, _ ...interface{}) bool {
+// BeforeRequest of LRU cache
+func (cache *LRUCache) BeforeRequest(hit bool, filename string, size float32, vars ...interface{}) {
 	curFileStats := cache.GetOrCreate(filename, size)
-
-	hit := cache.check(filename)
 	curFileStats.updateRequests(hit)
+}
 
-	added := cache.UpdatePolicy(filename, size, hit)
-
+// AfterRequest of LRU cache
+func (cache *LRUCache) AfterRequest(hit bool, added bool, size float32, wTime float32, cpuTime float32) {
 	if hit {
 		cache.hit += 1.
 		cache.dataReadOnHit += size
@@ -327,8 +326,6 @@ func (cache *LRUCache) Get(filename string, size float32, wTime float32, cpuTime
 		cache.dataWritten += size
 	}
 	cache.dataRead += size
-
-	return added
 }
 
 // HitRate of the cache
@@ -387,7 +384,7 @@ func (cache LRUCache) DataDeleted() float32 {
 	return cache.dataDeleted
 }
 
-func (cache LRUCache) check(key string) bool {
+func (cache LRUCache) Check(key string) bool {
 	_, ok := cache.files[key]
 	return ok
 }

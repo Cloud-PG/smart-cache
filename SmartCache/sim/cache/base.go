@@ -54,9 +54,10 @@ type Cache interface {
 	CPUHitEff() float32
 	CPUMissEff() float32
 
-	check(string) bool
+	Check(string) bool
+	BeforeRequest(hit bool, filename string, size float32, vars ...interface{})
 	UpdatePolicy(filename string, size float32, hit bool, vars ...interface{}) bool
-	Get(filename string, size float32, wTime float32, cpuTime float32, vars ...interface{}) bool
+	AfterRequest(hit bool, added bool, size float32, wTime float32, cpuTime float32)
 
 	SimGet(context.Context, *pb.SimCommonFile) (*pb.ActionResult, error)
 	SimClear(context.Context, *empty.Empty) (*pb.SimCacheStatus, error)
@@ -81,4 +82,13 @@ func GetSimCacheStatus(cache Cache) *pb.SimCacheStatus {
 		DataReadOnMiss:  cache.DataReadOnMiss(),
 		DataDeleted:     cache.DataDeleted(),
 	}
+}
+
+// GetFile requests a file to the cache
+func GetFile(cache Cache, filename string, size float32, wTime float32, cpuTime float32, vars ...interface{}) bool {
+	hit := cache.Check(filename)
+	cache.BeforeRequest(hit, filename, size, vars...)
+	added := cache.UpdatePolicy(filename, size, hit, vars)
+	cache.AfterRequest(hit, added, size, wTime, cpuTime)
+	return added
 }
