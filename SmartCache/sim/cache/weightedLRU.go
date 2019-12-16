@@ -84,7 +84,8 @@ func (cache *WeightedLRU) Loads(inputString *[][]byte) {
 	}
 }
 
-func (cache *WeightedLRU) updatePolicy(filename string, size float32, hit bool, vars ...interface{}) bool {
+// UpdatePolicy of WeightedLRU cache
+func (cache *WeightedLRU) UpdatePolicy(filename string, size float32, hit bool, vars ...interface{}) bool {
 	var (
 		added       = false
 		currentTime = vars[0].(time.Time)
