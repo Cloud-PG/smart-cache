@@ -548,12 +548,16 @@ func genCache(cacheType string) cache.Cache {
 	case "lruDatasetVerifier":
 		fmt.Printf("[Create lruDatasetVerifier Cache][Size: %f]\n", cacheSize)
 		cacheInstance = &cache.LRUDatasetVerifier{
-			MaxSize: cacheSize,
+			LRUCache: cache.LRUCache{
+				MaxSize: cacheSize,
+			},
 		}
 	case "aiLRU":
 		fmt.Printf("[Create aiLRU Cache][Size: %f]\n", cacheSize)
 		cacheInstance = &cache.AILRU{
-			MaxSize: cacheSize,
+			LRUCache: cache.LRUCache{
+				MaxSize: cacheSize,
+			},
 		}
 	case "weighted":
 		fmt.Printf("[Create Weighted Cache][Size: %f]\n", cacheSize)
@@ -623,7 +627,9 @@ func genCache(cacheType string) cache.Cache {
 		}
 
 		cacheInstance = &cache.WeightedLRU{
-			MaxSize:                 cacheSize,
+			LRUCache: cache.LRUCache{
+				MaxSize: cacheSize,
+			},
 			Exp:                     weightExp,
 			SelFunctionType:         selFunctionType,
 			SelUpdateStatPolicyType: selUpdateStatPolicyType,

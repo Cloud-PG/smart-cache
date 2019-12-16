@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"math"
 	"os"
@@ -17,9 +16,7 @@ import (
 	aiPb "simulator/v2/cache/aiService"
 	"simulator/v2/cache/neuralnet"
 	qlearn "simulator/v2/cache/qLearn"
-	pb "simulator/v2/cache/simService"
 
-	empty "github.com/golang/protobuf/ptypes/empty"
 	"gonum.org/v1/gonum/mat"
 	"google.golang.org/grpc"
 )
@@ -89,33 +86,29 @@ func (curMap featureMapObj) GetKeys() chan featureMapKey {
 
 // AILRU cache
 type AILRU struct {
-	curTime                            time.Time
-	files                              map[string]float32
-	stats                              map[string]*WeightedFileStats
-	queue                              *list.List
-	hit, miss, size, MaxSize, Exp      float32
-	hitCPUTime, missCPUTime            float32
-	hitWTime, missWTime                float32
-	dataWritten, dataRead, dataDeleted float32
-	dataReadOnHit, dataReadOnMiss      float32
-	lastFileHitted                     bool
-	lastFileAdded                      bool
-	lastFileName                       string
-	aiClientHost                       string
-	aiClientPort                       string
-	aiClient                           aiPb.AIServiceClient
-	aiFeatureMap                       map[string]featureMapObj
-	aiFeatureOrder                     []string
-	aiFeatureSelection                 []bool
-	aiModel                            *neuralnet.AIModel
-	grpcConn                           *grpc.ClientConn
-	grpcContext                        context.Context
-	grpcCxtCancel                      context.CancelFunc
-	qTable                             *qlearn.QTable
+	LRUCache
+	WeightedStats
+	curTime            time.Time
+	stats              map[string]*WeightedFileStats
+	Exp                float32
+	aiClientHost       string
+	aiClientPort       string
+	aiClient           aiPb.AIServiceClient
+	aiFeatureMap       map[string]featureMapObj
+	aiFeatureOrder     []string
+	aiFeatureSelection []bool
+	aiModel            *neuralnet.AIModel
+	grpcConn           *grpc.ClientConn
+	grpcContext        context.Context
+	grpcCxtCancel      context.CancelFunc
+	qTable             *qlearn.QTable
 }
 
 // Init the AILRU struct
 func (cache *AILRU) Init(args ...interface{}) interface{} {
+	cache.WeightedStats.Init()
+	cache.LRUCache.Init()
+
 	cache.aiClientHost = args[0].(string)
 	cache.aiClientPort = args[1].(string)
 	featureMapFilePath := args[2].(string)
@@ -278,55 +271,10 @@ func (cache *AILRU) Init(args ...interface{}) interface{} {
 	return nil
 }
 
-// ClearFiles remove the cache files
-func (cache *AILRU) ClearFiles() {
-	cache.files = make(map[string]float32)
-	cache.size = 0.
-}
-
 // Clear the AILRU struct
 func (cache *AILRU) Clear() {
-	cache.ClearFiles()
-	cache.stats = make(map[string]*WeightedFileStats, 0)
-	tmpVal := cache.queue.Front()
-	for {
-		if tmpVal == nil {
-			break
-		} else if tmpVal.Next() == nil {
-			cache.queue.Remove(tmpVal)
-			break
-		}
-		tmpVal = tmpVal.Next()
-		cache.queue.Remove(tmpVal.Prev())
-	}
-	cache.queue = list.New()
-	cache.hit = 0.
-	cache.miss = 0.
-	cache.dataWritten = 0.
-	cache.dataRead = 0.
-	cache.dataReadOnHit = 0.
-	cache.dataReadOnMiss = 0.
-	cache.dataDeleted = 0.
-	cache.hitCPUTime = 0.
-	cache.missCPUTime = 0.
-	cache.hitWTime = 0.
-	cache.missWTime = 0.
-
-}
-
-// ClearHitMissStats the cache stats
-func (cache *AILRU) ClearHitMissStats() {
-	cache.hit = 0.
-	cache.miss = 0.
-	cache.dataWritten = 0.
-	cache.dataRead = 0.
-	cache.dataReadOnHit = 0.
-	cache.dataReadOnMiss = 0.
-	cache.dataDeleted = 0.
-	cache.hitCPUTime = 0.
-	cache.missCPUTime = 0.
-	cache.hitWTime = 0.
-	cache.missWTime = 0.
+	cache.WeightedStats.Init()
+	cache.LRUCache.Init()
 }
 
 // Dumps the AILRU cache
@@ -372,21 +320,6 @@ func (cache *AILRU) Dumps() *[][]byte {
 	return &outData
 }
 
-// Dump the AILRU cache
-func (cache *AILRU) Dump(filename string) {
-	outFile, osErr := os.Create(filename)
-	if osErr != nil {
-		panic(fmt.Sprintf("Error dump file creation: %s", osErr))
-	}
-	gwriter := gzip.NewWriter(outFile)
-
-	for _, record := range *cache.Dumps() {
-		gwriter.Write(record)
-	}
-
-	gwriter.Close()
-}
-
 // Loads the AILRU cache
 func (cache *AILRU) Loads(inputString *[][]byte) {
 	var curRecord DumpRecord
@@ -408,137 +341,6 @@ func (cache *AILRU) Loads(inputString *[][]byte) {
 			json.Unmarshal([]byte(curRecord.Data), cache.qTable)
 		}
 	}
-}
-
-// Load the AILRU cache
-func (cache *AILRU) Load(filename string) {
-	inFile, err := os.Open(filename)
-	if err != nil {
-		panic(fmt.Sprintf("Error dump file opening: %s", err))
-	}
-	greader, gzipErr := gzip.NewReader(inFile)
-	if gzipErr != nil {
-		panic(gzipErr)
-	}
-
-	var records [][]byte
-	var buffer []byte
-	var charBuffer []byte
-
-	records = make([][]byte, 0)
-	buffer = make([]byte, 0)
-	charBuffer = make([]byte, 1)
-
-	for {
-		curChar, err := greader.Read(charBuffer)
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			panic(err)
-		}
-		if string(curChar) == "\n" {
-			records = append(records, buffer)
-			buffer = buffer[:0]
-		} else {
-			buffer = append(buffer, charBuffer...)
-		}
-	}
-	greader.Close()
-
-	cache.Loads(&records)
-}
-
-// SimGet updates the cache from a protobuf message
-func (cache *AILRU) SimGet(ctx context.Context, commonFile *pb.SimCommonFile) (*pb.ActionResult, error) {
-	added := cache.Get(commonFile.Filename, commonFile.Size, 0.0, 0.0)
-	return &pb.ActionResult{
-		Filename: commonFile.Filename,
-		Added:    added,
-	}, nil
-}
-
-// SimClear deletes all cache content
-func (cache *AILRU) SimClear(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
-	cache.Clear()
-	curStatus := GetSimCacheStatus(cache)
-	return curStatus, nil
-}
-
-// SimClearFiles deletes all cache content
-func (cache *AILRU) SimClearFiles(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
-	cache.ClearFiles()
-	curStatus := GetSimCacheStatus(cache)
-	return curStatus, nil
-}
-
-// SimClearHitMissStats deletes all cache content
-func (cache *AILRU) SimClearHitMissStats(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
-	cache.ClearHitMissStats()
-	curStatus := GetSimCacheStatus(cache)
-	return curStatus, nil
-}
-
-// SimGetInfoCacheStatus returns the current simulation status
-func (cache *AILRU) SimGetInfoCacheStatus(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
-	curStatus := GetSimCacheStatus(cache)
-	return curStatus, nil
-}
-
-// SimDumps returns the content of the cache
-func (cache *AILRU) SimDumps(_ *empty.Empty, stream pb.SimService_SimDumpsServer) error {
-	for _, record := range *cache.Dumps() {
-		curRecord := &pb.SimDumpRecord{
-			Raw: record,
-		}
-		if err := stream.Send(curRecord); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// SimLoads loads a cache state
-func (cache *AILRU) SimLoads(stream pb.SimService_SimLoadsServer) error {
-	var records [][]byte
-	records = make([][]byte, 0)
-
-	for {
-		record, err := stream.Recv()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return err
-		}
-		records = append(records, record.Raw)
-	}
-
-	cache.Loads(&records)
-
-	return nil
-}
-
-func (cache *AILRU) getOrInsertStats(filename string) *WeightedFileStats {
-	curStats, inStats := cache.stats[filename]
-
-	if !inStats {
-		curStats = &WeightedFileStats{
-			Filename:          filename,
-			Weight:            0.,
-			Size:              0.,
-			TotRequests:       0,
-			NHits:             0,
-			NMiss:             0,
-			LastTimeRequested: time.Now(),
-			RequestTicksMean:  0.,
-			RequestTicks:      [StatsMemorySize]time.Time{},
-			RequestLastIdx:    0,
-		}
-		cache.stats[filename] = curStats
-	}
-
-	return curStats
 }
 
 func (cache *AILRU) getCategory(catKey string, value interface{}) []float64 {
@@ -663,7 +465,7 @@ func (cache *AILRU) updatePolicy(filename string, size float32, hit bool, vars .
 	currentTime := time.Unix(day, 0)
 	cache.curTime = currentTime
 
-	curStats := cache.getOrInsertStats(filename)
+	curStats, _ := cache.GetOrCreate(filename, size)
 	if cache.qTable == nil {
 		curStats.updateStats(hit, size, &currentTime)
 	} else {
@@ -810,116 +612,4 @@ func (cache *AILRU) updatePolicy(filename string, size float32, hit bool, vars .
 	}
 
 	return added
-}
-
-// Get a file from the cache updating the statistics
-func (cache *AILRU) Get(filename string, size float32, wTime float32, cpuTime float32, vars ...interface{}) bool {
-	hit := cache.check(filename)
-
-	added := cache.updatePolicy(filename, size, hit, vars...)
-
-	if hit {
-		cache.hit += 1.
-		cache.dataReadOnHit += size
-		cache.hitCPUTime += cpuTime
-		cache.hitWTime += wTime
-	} else {
-		cache.miss += 1.
-		cache.dataReadOnMiss += size
-		cache.missCPUTime += cpuTime
-		cache.missWTime += wTime
-	}
-
-	if added {
-		cache.dataWritten += size
-	}
-	cache.dataRead += size
-
-	cache.lastFileHitted = hit
-	cache.lastFileAdded = added
-	cache.lastFileName = filename
-
-	return added
-}
-
-// HitRate of the cache
-func (cache *AILRU) HitRate() float32 {
-	if cache.hit == 0. {
-		return 0.
-	}
-	return (cache.hit / (cache.hit + cache.miss)) * 100.
-}
-
-// HitOverMiss of the cache
-func (cache *AILRU) HitOverMiss() float32 {
-	if cache.hit == 0. || cache.miss == 0. {
-		return 0.
-	}
-	return cache.hit / cache.miss
-}
-
-// WeightedHitRate of the cache
-func (cache *AILRU) WeightedHitRate() float32 {
-	return cache.HitRate() * cache.dataReadOnHit
-}
-
-// Size of the cache
-func (cache *AILRU) Size() float32 {
-	return cache.size
-}
-
-// Capacity of the cache
-func (cache *AILRU) Capacity() float32 {
-	return (cache.Size() / cache.MaxSize) * 100.
-}
-
-// DataWritten of the cache
-func (cache *AILRU) DataWritten() float32 {
-	return cache.dataWritten
-}
-
-// DataRead of the cache
-func (cache *AILRU) DataRead() float32 {
-	return cache.dataRead
-}
-
-// DataReadOnHit of the cache
-func (cache *AILRU) DataReadOnHit() float32 {
-	return cache.dataReadOnHit
-}
-
-// DataReadOnMiss of the cache
-func (cache *AILRU) DataReadOnMiss() float32 {
-	return cache.dataReadOnMiss
-}
-
-// DataDeleted of the cache
-func (cache *AILRU) DataDeleted() float32 {
-	return cache.dataDeleted
-}
-
-func (cache *AILRU) check(key string) bool {
-	_, ok := cache.files[key]
-	return ok
-}
-
-// ExtraStats for output
-func (cache *AILRU) ExtraStats() string {
-	return fmt.Sprintf("Cov: %0.2f%%, Epsilon: %0.2f", cache.qTable.GetCoveragePercentage(), cache.qTable.Epsilon)
-}
-
-// CPUEff returns the CPU efficiency
-func (cache AILRU) CPUEff() float32 {
-	return cache.CPUHitEff() + cache.CPUMissEff()
-}
-
-// CPUHitEff returns the CPU efficiency for hit data
-func (cache AILRU) CPUHitEff() float32 {
-	return cache.hitCPUTime / cache.hitWTime
-}
-
-// CPUMissEff returns the CPU efficiency for miss data
-func (cache AILRU) CPUMissEff() float32 {
-	efficiency := (cache.missCPUTime / cache.missWTime)
-	return efficiency - (efficiency * 0.15) // subtract the 15%
 }

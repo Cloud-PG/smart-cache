@@ -13,7 +13,9 @@ const (
 
 func TestWeightedLRUBaseMultipleInsert(t *testing.T) {
 	testCache := WeightedLRU{
-		MaxSize:                 3.0,
+		LRUCache: LRUCache{
+			MaxSize: 3.0,
+		},
 		SelFunctionType:         FuncWeightedRequests,
 		SelUpdateStatPolicyType: UpdateStatsPolicy,
 		Exp:                     WeightedCacheEXP,
@@ -40,7 +42,9 @@ func TestWeightedLRUBaseMultipleInsert(t *testing.T) {
 
 func TestWeightedLRUClear(t *testing.T) {
 	testCache := WeightedLRU{
-		MaxSize:                 3.0,
+		LRUCache: LRUCache{
+			MaxSize: 3.0,
+		},
 		SelFunctionType:         FuncWeightedRequests,
 		SelUpdateStatPolicyType: UpdateStatsPolicy,
 		Exp:                     WeightedCacheEXP,
@@ -71,7 +75,9 @@ func TestWeightedLRUClear(t *testing.T) {
 
 func TestWeightedLRUInsert(t *testing.T) {
 	testCache := WeightedLRU{
-		MaxSize:                 5.0,
+		LRUCache: LRUCache{
+			MaxSize: 5.0,
+		},
 		SelFunctionType:         FuncWeightedRequests,
 		SelUpdateStatPolicyType: UpdateStatsPolicy,
 		Exp:                     WeightedCacheEXP,
@@ -113,7 +119,9 @@ func BenchmarkWeightedLRU(b *testing.B) {
 	}
 
 	testCache := WeightedLRU{
-		MaxSize: maxSize,
+		LRUCache: LRUCache{
+			MaxSize: maxSize,
+		},
 	}
 	testCache.Init(FuncWeightedRequests, UpdateStatsPolicy, WeightedLRUEXP)
 

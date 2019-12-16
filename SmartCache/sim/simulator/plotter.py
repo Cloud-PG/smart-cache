@@ -622,7 +622,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
     run_single_window_figs = []
     run_next_period_figs = []
 
-    pbar = tqdm(total=17, desc="Plot results", ascii=True)
+    pbar = tqdm(total=18, desc="Plot results", ascii=True)
 
     ###########################################################################
     # Hit Rate plot of full normal run
@@ -814,23 +814,41 @@ def plot_results(folder: str, results: dict, cache_size: float,
     pbar.update(1)
 
     ###########################################################################
-    # Read on hit CPU eff full normal run
+    # CPU eff full normal run
     ###########################################################################
     with ignored(Exception):
-        read_on_hit_eff = plot_measure(
+        cpu_eff = plot_column(
             tools,
             results,
             dates,
             filters,
             color_table,
             window_size,
-            x_range=hit_rate_fig.x_range,
-            y_axis_label="sec.",
-            title="Read on hit CPU Eff. 1Gbit/s",
+            column="CPU efficiency",
+            title="CPU efficiency",
+            y_axis_label="",
             plot_width=plot_width,
             plot_height=plot_height,
-            read_on_hit=True,
-            target="cpu_eff",
+        )
+        run_full_normal_cpu_eff_figs.append(cpu_eff)
+    pbar.update(1)
+
+    ###########################################################################
+    # Read on hit CPU eff full normal run
+    ###########################################################################
+    with ignored(Exception):
+        read_on_hit_eff = plot_column(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            column="CPU hit efficiency",
+            title="CPU efficiency on hit",
+            y_axis_label="",
+            plot_width=plot_width,
+            plot_height=plot_height,
         )
         run_full_normal_cpu_eff_figs.append(read_on_hit_eff)
     pbar.update(1)
@@ -839,20 +857,18 @@ def plot_results(folder: str, results: dict, cache_size: float,
     # Read on miss CPU eff full normal run
     ###########################################################################
     with ignored(Exception):
-        read_on_miss_eff = plot_measure(
+        read_on_miss_eff = plot_column(
             tools,
             results,
             dates,
             filters,
             color_table,
             window_size,
-            x_range=hit_rate_fig.x_range,
-            y_axis_label="sec.",
-            title="Read on miss CPU Eff. 1Gbit/s",
+            column="CPU miss efficiency",
+            title="CPU efficiency on miss",
+            y_axis_label="",
             plot_width=plot_width,
             plot_height=plot_height,
-            read_on_hit=False,
-            target="cpu_eff",
         )
         run_full_normal_cpu_eff_figs.append(read_on_miss_eff)
     pbar.update(1)
