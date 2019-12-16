@@ -395,7 +395,8 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 
 					switch typeCmd {
 					case testAICmd:
-						curCacheInstance.Get(
+						cache.GetFile(
+							curCacheInstance,
 							record.Filename,
 							sizeInMbytes,
 							record.CPUTime+record.IOTime, // WTime
@@ -405,7 +406,8 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 							record.UserID,
 						)
 					default:
-						curCacheInstance.Get(
+						cache.GetFile(
+							curCacheInstance,
 							record.Filename,
 							sizeInMbytes,
 							record.CPUTime+record.IOTime, // WTime
