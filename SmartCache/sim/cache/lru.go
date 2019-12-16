@@ -398,7 +398,10 @@ func (cache LRUCache) ExtraStats() string {
 
 // CPUEff returns the CPU efficiency
 func (cache LRUCache) CPUEff() float32 {
-	return cache.CPUHitEff() + cache.CPUMissEff()
+	lostEff := (cache.missCPUTime * 0.15)
+	totEff := cache.hitCPUTime + cache.missCPUTime - lostEff
+	totWtime := cache.hitWTime + cache.missWTime
+	return (totEff / totWtime) * 100.
 }
 
 // CPUHitEff returns the CPU efficiency for hit data
@@ -408,6 +411,6 @@ func (cache LRUCache) CPUHitEff() float32 {
 
 // CPUMissEff returns the CPU efficiency for miss data
 func (cache LRUCache) CPUMissEff() float32 {
-	efficiency := (cache.missCPUTime / cache.missWTime) * 100.
-	return efficiency - (efficiency * 0.15) // subtract the 15%
+	lostEff := (cache.missCPUTime * 0.15)
+	return ((cache.missCPUTime - lostEff) / cache.missWTime) * 100. // subtract the 15%
 }
