@@ -402,11 +402,11 @@ func (cache LRUCache) CPUEff() float32 {
 
 // CPUHitEff returns the CPU efficiency for hit data
 func (cache LRUCache) CPUHitEff() float32 {
-	return cache.hitCPUTime / cache.hitWTime
+	return (cache.hitCPUTime / cache.hitWTime) * 100.
 }
 
 // CPUMissEff returns the CPU efficiency for miss data
 func (cache LRUCache) CPUMissEff() float32 {
-	efficiency := (cache.missCPUTime / cache.missWTime)
+	efficiency := (cache.missCPUTime / cache.missWTime) * 100.
 	return efficiency - (efficiency * 0.15) // subtract the 15%
 }
