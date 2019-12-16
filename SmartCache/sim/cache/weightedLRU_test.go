@@ -13,7 +13,7 @@ const (
 )
 
 func TestWeightedLRUBaseMultipleInsert(t *testing.T) {
-	testCache := WeightedLRU{
+	testCache := &WeightedLRU{
 		LRUCache: LRUCache{
 			MaxSize: 3.0,
 		},
@@ -23,10 +23,10 @@ func TestWeightedLRUBaseMultipleInsert(t *testing.T) {
 	}
 	testCache.Init()
 
-	res := GetFile(&testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0)
-	GetFile(&testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0)
-	GetFile(&testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0)
-	GetFile(&testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0)
+	res := GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0)
+	GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0)
+	GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0)
+	GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0)
 
 	if !res {
 		t.Fatalf("First insert error -> Expected %t but got %t", true, res)
@@ -42,7 +42,7 @@ func TestWeightedLRUBaseMultipleInsert(t *testing.T) {
 }
 
 func TestWeightedLRUClear(t *testing.T) {
-	testCache := WeightedLRU{
+	testCache := &WeightedLRU{
 		LRUCache: LRUCache{
 			MaxSize: 3.0,
 		},
@@ -52,10 +52,10 @@ func TestWeightedLRUClear(t *testing.T) {
 	}
 	testCache.Init()
 
-	GetFile(&testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0)
-	GetFile(&testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0)
-	GetFile(&testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0)
-	GetFile(&testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0)
+	GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0)
+	GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0)
+	GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0)
+	GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0)
 
 	testCache.Clear()
 
@@ -75,7 +75,7 @@ func TestWeightedLRUClear(t *testing.T) {
 }
 
 func TestWeightedLRUInsert(t *testing.T) {
-	testCache := WeightedLRU{
+	testCache := &WeightedLRU{
 		LRUCache: LRUCache{
 			MaxSize: 5.0,
 		},
@@ -85,16 +85,16 @@ func TestWeightedLRUInsert(t *testing.T) {
 	}
 	testCache.Init()
 
-	GetFile(&testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0)
-	GetFile(&testCache, "/a/b/c/d/file1", 2.0, 0.0, 0.0)
-	GetFile(&testCache, "/a/b/c/d/file2", 1.0, 0.0, 0.0)
-	GetFile(&testCache, "/a/b/c/d/file3", 1.0, 0.0, 0.0)
-	GetFile(&testCache, "/a/b/c/d/file1", 2.0, 0.0, 0.0)
-	GetFile(&testCache, "/a/b/c/d/file1", 2.0, 0.0, 0.0)
-	GetFile(&testCache, "/a/b/c/d/file1", 2.0, 0.0, 0.0)
-	GetFile(&testCache, "/a/b/c/d/file4", 1.0, 0.0, 0.0)
-	GetFile(&testCache, "/a/b/c/d/file3", 1.0, 0.0, 0.0)
-	GetFile(&testCache, "/a/b/c/d/file4", 1.0, 0.0, 0.0)
+	GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0)
+	GetFile(testCache, "/a/b/c/d/file1", 2.0, 0.0, 0.0)
+	GetFile(testCache, "/a/b/c/d/file2", 1.0, 0.0, 0.0)
+	GetFile(testCache, "/a/b/c/d/file3", 1.0, 0.0, 0.0)
+	GetFile(testCache, "/a/b/c/d/file1", 2.0, 0.0, 0.0)
+	GetFile(testCache, "/a/b/c/d/file1", 2.0, 0.0, 0.0)
+	GetFile(testCache, "/a/b/c/d/file1", 2.0, 0.0, 0.0)
+	GetFile(testCache, "/a/b/c/d/file4", 1.0, 0.0, 0.0)
+	GetFile(testCache, "/a/b/c/d/file3", 1.0, 0.0, 0.0)
+	GetFile(testCache, "/a/b/c/d/file4", 1.0, 0.0, 0.0)
 
 	if testCache.HitRate() != 40. {
 		t.Fatalf("Hit rate error -> Expected %f but got %f", 40., testCache.HitRate())
@@ -119,7 +119,7 @@ func BenchmarkWeightedLRU(b *testing.B) {
 		return string(filepath)
 	}
 
-	testCache := WeightedLRU{
+	testCache := &WeightedLRU{
 		LRUCache: LRUCache{
 			MaxSize: maxSize,
 		},
@@ -127,6 +127,6 @@ func BenchmarkWeightedLRU(b *testing.B) {
 	testCache.Init(FuncWeightedRequests, UpdateStatsPolicy, WeightedLRUEXP)
 
 	for n := 0; n < b.N; n++ {
-		GetFile(&testCache, genRandomFilePath(5), rand.Float32()*maxSize, 0.0, 0.0)
+		GetFile(testCache, genRandomFilePath(5), rand.Float32()*maxSize, 0.0, 0.0)
 	}
 }
