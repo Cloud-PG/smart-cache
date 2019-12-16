@@ -52,7 +52,8 @@ func (stats *LRUFileStats) updateRequests(hit bool) {
 
 // WeightedStats collector of statistics for weighted cache
 type WeightedStats struct {
-	stats map[string]*WeightedFileStats
+	stats     map[string]*WeightedFileStats
+	weightSum float32
 }
 
 // Init initialize WeightedStats
@@ -61,7 +62,7 @@ func (statStruct *WeightedStats) Init() {
 }
 
 // GetOrCreate add the file into stats and returns it
-func (statStruct *WeightedStats) GetOrCreate(filename string, size float32) *WeightedFileStats {
+func (statStruct *WeightedStats) GetOrCreate(filename string, size float32) (*WeightedFileStats, bool) {
 	curStats, inStats := statStruct.stats[filename]
 	if !inStats {
 		curStats = &WeightedFileStats{
@@ -69,7 +70,22 @@ func (statStruct *WeightedStats) GetOrCreate(filename string, size float32) *Wei
 		}
 		statStruct.stats[filename] = curStats
 	}
-	return curStats
+	return curStats, !inStats
+}
+
+// UpdateWeight update the weight of a file and also the sum of all weights
+func (statStruct *WeightedStats) UpdateWeight(stats *WeightedFileStats, newFile bool, functionType FunctionType, exp float32) {
+	if newFile {
+		statStruct.weightSum += stats.updateWeight(functionType, exp)
+	} else {
+		statStruct.weightSum -= stats.Weight
+		statStruct.weightSum += stats.updateWeight(functionType, exp)
+	}
+}
+
+// GetWeightMedian returns the mean of the weight of all files
+func (statStruct *WeightedStats) GetWeightMedian() float32 {
+	return statStruct.weightSum / float32(len(statStruct.stats))
 }
 
 const (
