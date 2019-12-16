@@ -9,6 +9,7 @@ import (
 const (
 	UpdateStatsPolicy UpdateStatsPolicyType = UpdateStatsOnRequest
 	WeightedLRUEXP    float32               = 2.0
+	WeightedCacheEXP  float32               = 2.0
 )
 
 func TestWeightedLRUBaseMultipleInsert(t *testing.T) {
