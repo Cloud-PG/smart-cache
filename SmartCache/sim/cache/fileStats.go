@@ -70,11 +70,12 @@ func (statStruct *WeightedStats) Init() {
 }
 
 // GetOrCreate add the file into stats and returns it
-func (statStruct *WeightedStats) GetOrCreate(filename string, size float32) (*WeightedFileStats, bool) {
+func (statStruct *WeightedStats) GetOrCreate(filename string, size float32, curTime *time.Time) (*WeightedFileStats, bool) {
 	curStats, inStats := statStruct.stats[filename]
 	if !inStats {
 		curStats = &WeightedFileStats{
-			Size: size,
+			Size:      size,
+			FirstTime: *curTime,
 		}
 		statStruct.stats[filename] = curStats
 	}
@@ -99,9 +100,14 @@ func (statStruct *WeightedStats) GetWeightMedian() float32 {
 // getFilePoints returns the points for a single file
 func (statStruct WeightedStats) getFilePoints(filename string, curTime *time.Time) float64 {
 	curStats, _ := statStruct.stats[filename]
-	points := float64(curStats.TotRequests) * float64(curStats.Size)
-	dayDiff := math.Floor(curTime.Sub(curStats.InCacheSince).Hours() / 24.)
-	points = points * math.Exp(-dayDiff)
+	dayDiffFirstTime := math.Floor(curTime.Sub(curStats.FirstTime).Hours() / 24.)
+	dayDiffInCache := math.Floor(curTime.Sub(curStats.InCacheSince).Hours() / 24.)
+
+	numReq := float64(curStats.TotRequests)
+	numReq = numReq * math.Exp(-dayDiffFirstTime) // Decay num. requests
+
+	points := numReq * float64(curStats.Size)
+	points = points * math.Exp(-dayDiffInCache) // Decay points
 	return points
 }
 
@@ -140,6 +146,7 @@ type WeightedFileStats struct {
 	TotRequests       uint32                     `json:"totRequests"`
 	NHits             uint32                     `json:"nHits"`
 	NMiss             uint32                     `json:"nMiss"`
+	FirstTime         time.Time                  `json:"firstTime"`
 	InCacheSince      time.Time                  `json:"inCacheSince"`
 	LastTimeRequested time.Time                  `json:"lastTimeRequested"`
 	RequestTicksMean  float32                    `json:"requestTicksMean"`
