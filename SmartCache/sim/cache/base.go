@@ -88,7 +88,7 @@ func GetSimCacheStatus(cache Cache) *pb.SimCacheStatus {
 func GetFile(cache Cache, filename string, size float32, wTime float32, cpuTime float32, vars ...interface{}) bool {
 	hit := cache.Check(filename)
 	cache.BeforeRequest(hit, filename, size, vars...)
-	added := cache.UpdatePolicy(filename, size, hit, vars)
+	added := cache.UpdatePolicy(filename, size, hit, vars...)
 	cache.AfterRequest(hit, added, size, wTime, cpuTime)
 	return added
 }
