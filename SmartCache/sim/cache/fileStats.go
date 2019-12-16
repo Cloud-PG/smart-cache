@@ -5,6 +5,10 @@ import (
 	"time"
 )
 
+//##############################################################################
+//                                LRU Statistics                               #
+//##############################################################################
+
 // LRUStats collector of statistics for LRU cache
 type LRUStats struct {
 	stats map[string]*LRUFileStats
@@ -48,7 +52,9 @@ func (stats *LRUFileStats) updateRequests(hit bool) {
 	}
 }
 
-// ############################## Weighted files ###############################
+//##############################################################################
+//                                Weighted files                               #
+//##############################################################################
 
 // WeightedStats collector of statistics for weighted cache
 type WeightedStats struct {
@@ -59,6 +65,7 @@ type WeightedStats struct {
 // Init initialize WeightedStats
 func (statStruct *WeightedStats) Init() {
 	statStruct.stats = make(map[string]*WeightedFileStats)
+	statStruct.weightSum = 0.0
 }
 
 // GetOrCreate add the file into stats and returns it
