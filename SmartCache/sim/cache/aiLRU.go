@@ -441,7 +441,7 @@ func (cache *AILRU) composeFeatures(vars ...interface{}) []float64 {
 	return inputVector
 }
 
-func (cache AILRU) getPoints(curTime time.Time) float64 {
+func (cache *AILRU) getPoints(curTime time.Time) float64 {
 	points := 0.0
 	for filename, size := range cache.files {
 		curStats := cache.stats[filename]
