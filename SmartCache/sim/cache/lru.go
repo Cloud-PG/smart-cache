@@ -249,7 +249,8 @@ func (cache *LRUCache) SimLoads(stream pb.SimService_SimLoadsServer) error {
 	return nil
 }
 
-func (cache *LRUCache) updatePolicy(filename string, size float32, hit bool, _ ...interface{}) bool {
+// UpdatePolicy of LRU cache
+func (cache *LRUCache) UpdatePolicy(filename string, size float32, hit bool, _ ...interface{}) bool {
 	var added = false
 	if !hit {
 		if cache.Size()+size > cache.MaxSize {
@@ -306,7 +307,7 @@ func (cache *LRUCache) Get(filename string, size float32, wTime float32, cpuTime
 	hit := cache.check(filename)
 	curFileStats.updateRequests(hit)
 
-	added := cache.updatePolicy(filename, size, hit)
+	added := cache.UpdatePolicy(filename, size, hit)
 
 	if hit {
 		cache.hit += 1.

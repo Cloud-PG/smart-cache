@@ -453,7 +453,8 @@ func (cache AILRU) getPoints(curTime time.Time) float64 {
 	return float64(points)
 }
 
-func (cache *AILRU) updatePolicy(filename string, size float32, hit bool, vars ...interface{}) bool {
+// UpdatePolicy of AILRU cache
+func (cache *AILRU) UpdatePolicy(filename string, size float32, hit bool, vars ...interface{}) bool {
 	var (
 		added      = false
 		curAction  qlearn.ActionType
