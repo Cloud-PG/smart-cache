@@ -83,7 +83,7 @@ func (statStruct *WeightedStats) GetOrCreate(filename string, size float32, curT
 }
 
 // UpdateWeight update the weight of a file and also the sum of all weights
-func (statStruct *WeightedStats) UpdateWeight(stats *WeightedFileStats, newFile bool, functionType FunctionType, exp float32) {
+func (statStruct *WeightedStats) updateWeight(stats *WeightedFileStats, newFile bool, functionType FunctionType, exp float32) {
 	if newFile {
 		statStruct.weightSum += stats.updateWeight(functionType, exp)
 	} else {
@@ -97,18 +97,15 @@ func (statStruct *WeightedStats) GetWeightMedian() float32 {
 	return statStruct.weightSum / float32(len(statStruct.stats))
 }
 
-// getFilePoints returns the points for a single file
-func (statStruct WeightedStats) getFilePoints(filename string, curTime *time.Time) float64 {
+func (statStruct *WeightedStats) getPoints(filename string) float64 {
+	stats, _ := statStruct.stats[filename]
+	return stats.Points
+}
+
+// updateFilePoints returns the points for a single file
+func (statStruct WeightedStats) updateFilesPoints(filename string, curTime *time.Time) float64 {
 	curStats, _ := statStruct.stats[filename]
-	dayDiffFirstTime := math.Floor(curTime.Sub(curStats.FirstTime).Hours() / 24.)
-	dayDiffInCache := math.Floor(curTime.Sub(curStats.InCacheSince).Hours() / 24.)
-
-	numReq := float64(curStats.TotRequests)
-	numReq = numReq * math.Exp(-(dayDiffFirstTime / 7.0)) // Decay num. requests
-
-	points := numReq * float64(curStats.Size)
-	points = points * math.Exp(-dayDiffInCache) // Decay points
-	return points
+	return curStats.updateFilePoints(curTime)
 }
 
 const (
@@ -142,6 +139,7 @@ type cacheEmptyMsg struct{}
 type WeightedFileStats struct {
 	Filename          string                     `json:"filename"`
 	Weight            float32                    `json:"weight"`
+	Points            float64                    `json:"points"`
 	Size              float32                    `json:"size"`
 	TotRequests       uint32                     `json:"totRequests"`
 	NHits             uint32                     `json:"nHits"`
@@ -184,6 +182,22 @@ func (stats *WeightedFileStats) updateStats(hit bool, size float32, curTime *tim
 		stats.RequestLastIdx = (stats.RequestLastIdx + 1) % int(StatsMemorySize)
 		stats.RequestTicksMean = stats.getMeanReqTimes()
 	}
+}
+
+// updateFilePoints returns the points for a single file
+func (stats *WeightedFileStats) updateFilePoints(curTime *time.Time) float64 {
+	dayDiffFirstTime := math.Floor(curTime.Sub(stats.FirstTime).Hours() / 24.)
+	dayDiffInCache := math.Floor(curTime.Sub(stats.InCacheSince).Hours() / 24.)
+
+	numReq := float64(stats.TotRequests)
+	numReq = numReq * math.Exp(-(dayDiffFirstTime / 7.0)) // Decay num. requests
+
+	points := numReq * float64(stats.Size)
+	points = points * math.Exp(-dayDiffInCache) // Decay points
+
+	stats.Points = points
+
+	return points
 }
 
 func (stats *WeightedFileStats) updateWeight(functionType FunctionType, exp float32) float32 {

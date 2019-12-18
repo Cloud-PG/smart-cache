@@ -98,14 +98,14 @@ func (cache *WeightedLRU) UpdatePolicy(filename string, size float32, hit bool, 
 	if cache.SelUpdateStatPolicyType == UpdateStatsOnRequest {
 		curStats, newFile = cache.GetOrCreate(filename, size, &currentTime)
 		curStats.updateStats(hit, size, &currentTime)
-		cache.UpdateWeight(curStats, newFile, cache.SelFunctionType, cache.Exp)
+		cache.updateWeight(curStats, newFile, cache.SelFunctionType, cache.Exp)
 	}
 
 	if !hit {
 		if cache.SelUpdateStatPolicyType == UpdateStatsOnMiss {
 			curStats, newFile = cache.GetOrCreate(filename, size, &currentTime)
 			curStats.updateStats(hit, size, &currentTime)
-			cache.UpdateWeight(curStats, newFile, cache.SelFunctionType, cache.Exp)
+			cache.updateWeight(curStats, newFile, cache.SelFunctionType, cache.Exp)
 		}
 
 		// If weight is higher exit and return added = false

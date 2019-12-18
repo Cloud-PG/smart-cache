@@ -87,6 +87,7 @@ func (curMap featureMapObj) GetKeys() chan featureMapKey {
 type AILRU struct {
 	LRUCache
 	WeightedStats
+	prevTime           time.Time
 	curTime            time.Time
 	stats              map[string]*WeightedFileStats
 	Exp                float32
@@ -101,7 +102,7 @@ type AILRU struct {
 	grpcContext        context.Context
 	grpcCxtCancel      context.CancelFunc
 	qTable             *qlearn.QTable
-	curCachePoints     float64
+	points             float64
 }
 
 // Init the AILRU struct
@@ -439,10 +440,10 @@ func (cache *AILRU) composeFeatures(vars ...interface{}) []float64 {
 }
 
 // GetPoints returns the total amount of points for the files in cache
-func (cache AILRU) GetPoints(curTime *time.Time) float64 {
+func (cache AILRU) GetPoints() float64 {
 	points := 0.0
 	for filename := range cache.files {
-		points += cache.getFilePoints(filename, curTime)
+		points += cache.updateFilesPoints(filename, &cache.curTime)
 	}
 	return float64(points)
 }
@@ -458,13 +459,28 @@ func (cache *AILRU) UpdatePolicy(filename string, size float32, hit bool, vars .
 
 	day := vars[0].(int64)
 	currentTime := time.Unix(day, 0)
+
+	cache.prevTime = cache.curTime
 	cache.curTime = currentTime
+
+	if !cache.curTime.Equal(cache.prevTime) {
+		cache.points = cache.GetPoints()
+	}
 
 	curStats, _ := cache.GetOrCreate(filename, size, &currentTime)
 	if cache.qTable == nil {
 		curStats.updateStats(hit, size, &currentTime)
-	} else {
-		curStats.updateStats(hit, size, nil)
+	} else { // Q-Learning
+		prevPoints = cache.points
+		if !hit {
+			curStats.updateStats(hit, size, nil)
+			curStats.updateFilePoints(&cache.curTime)
+		} else {
+			cache.points -= curStats.Points
+			curStats.updateStats(hit, size, nil)
+			curStats.updateFilePoints(&cache.curTime)
+			cache.points += curStats.Points
+		}
 	}
 
 	if !hit {
@@ -522,11 +538,6 @@ func (cache *AILRU) UpdatePolicy(filename string, size float32, hit bool, vars .
 			}
 		} else if cache.qTable != nil {
 			curState = featureVector
-			if cache.curCachePoints == 0.0 {
-				prevPoints = cache.GetPoints(&currentTime)
-			} else {
-				prevPoints = cache.curCachePoints
-			}
 
 			// QLearn - Check action
 			expTradeoff := cache.qTable.GetRandomTradeOff()
@@ -544,8 +555,8 @@ func (cache *AILRU) UpdatePolicy(filename string, size float32, hit bool, vars .
 
 			// QLearn - Take the action NOT STORE
 			if curAction == qlearn.ActionNotStore {
-				newScore := cache.GetPoints(&currentTime)
-				cache.curCachePoints = newScore
+				// TODO: the reward is 0 when we want to not store
+				newScore := cache.points
 				reward := newScore - prevPoints
 				// Update table
 				cache.qTable.Update(curState, curAction, reward)
@@ -563,12 +574,14 @@ func (cache *AILRU) UpdatePolicy(filename string, size float32, hit bool, vars .
 				if tmpVal == nil {
 					break
 				}
-				fileSize := cache.files[tmpVal.Value.(string)]
+				curFilename2Delete := tmpVal.Value.(string)
+				cache.points -= cache.getPoints(curFilename2Delete) // Q-Learning
+				fileSize := cache.files[curFilename2Delete]
 				cache.size -= fileSize
 				cache.dataDeleted += size
 
 				totalDeleted += fileSize
-				delete(cache.files, tmpVal.Value.(string))
+				delete(cache.files, curFilename2Delete)
 
 				tmpVal = tmpVal.Next()
 				// Check if all files are deleted
@@ -587,13 +600,14 @@ func (cache *AILRU) UpdatePolicy(filename string, size float32, hit bool, vars .
 			cache.queue.PushBack(filename)
 			cache.size += size
 			curStats.addInCache(&currentTime)
+			curStats.updateFilePoints(&cache.curTime)
+			cache.points += curStats.Points // Q-Learning
 			added = true
 		}
 
 		// QLearn - Take the action STORE
 		if cache.qTable != nil && curAction == qlearn.ActionStore {
-			newScore := cache.GetPoints(&currentTime)
-			cache.curCachePoints = newScore
+			newScore := cache.points
 			reward := newScore - prevPoints
 			// Update table
 			cache.qTable.Update(curState, curAction, reward)
