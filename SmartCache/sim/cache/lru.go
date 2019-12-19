@@ -410,6 +410,6 @@ func (cache LRUCache) CPUHitEff() float32 {
 
 // CPUMissEff returns the CPU efficiency for miss data
 func (cache LRUCache) CPUMissEff() float32 {
-	lostEff := (cache.missCPUTime * 0.15)
-	return ((cache.missCPUTime - lostEff) / cache.missWTime) * 100. // subtract the 15%
+	// Add the 15% to wall time -> estimated loss time to retrieve the files
+	return (cache.missCPUTime / (cache.missWTime * 1.15)) * 100.
 }
