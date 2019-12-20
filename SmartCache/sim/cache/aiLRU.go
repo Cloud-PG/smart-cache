@@ -555,9 +555,7 @@ func (cache *AILRU) UpdatePolicy(filename string, size float32, hit bool, vars .
 
 			// QLearn - Take the action NOT STORE
 			if curAction == qlearn.ActionNotStore {
-				// TODO: the reward is 0 when we want to not store
-				newScore := cache.points
-				reward := newScore - prevPoints
+				reward := -curStats.Points
 				// Update table
 				cache.qTable.Update(curState, curAction, reward)
 				// Update epsilon
