@@ -12,76 +12,14 @@ import (
 	"strings"
 	"time"
 
+	"simulator/v2/cache/ai/featuremap"
+	"simulator/v2/cache/ai/neuralnet"
 	aiPb "simulator/v2/cache/aiService"
-	"simulator/v2/cache/neuralnet"
 	qlearn "simulator/v2/cache/qLearn"
 
 	"gonum.org/v1/gonum/mat"
 	"google.golang.org/grpc"
 )
-
-type mapType int
-
-const (
-	typeInt mapType = iota
-	typeFloat
-	typeString
-	typeBool
-)
-
-type featureMapObj struct {
-	Feature         string
-	Type            mapType
-	Keys            []interface{}
-	KeysB           []bool
-	KeysI           []int64
-	KeysF           []float64
-	KeysS           []string
-	Values          map[string]int
-	UnknownValues   bool
-	Buckets         bool
-	BucketOpenRight bool
-}
-
-type featureMapKey struct {
-	ValueI int64
-	ValueF float64
-	ValueS string
-}
-
-func (curMap featureMapObj) GetLenKeys() int {
-	var lenght int
-	switch curMap.Type {
-	case typeInt:
-		lenght = len(curMap.KeysI)
-	case typeFloat:
-		lenght = len(curMap.KeysF)
-	case typeString:
-		lenght = len(curMap.KeysS)
-	}
-	return lenght
-}
-
-func (curMap featureMapObj) GetKeys() chan featureMapKey {
-	channel := make(chan featureMapKey)
-	go func() {
-		defer close(channel)
-		numKeys := curMap.GetLenKeys()
-		for idx := 0; idx < numKeys; idx++ {
-			curKey := featureMapKey{}
-			switch curMap.Type {
-			case typeInt:
-				curKey.ValueI = curMap.KeysI[idx]
-			case typeFloat:
-				curKey.ValueF = curMap.KeysF[idx]
-			case typeString:
-				curKey.ValueS = curMap.KeysS[idx]
-			}
-			channel <- curKey
-		}
-	}()
-	return channel
-}
 
 // AILRU cache
 type AILRU struct {
@@ -94,7 +32,7 @@ type AILRU struct {
 	aiClientHost       string
 	aiClientPort       string
 	aiClient           aiPb.AIServiceClient
-	aiFeatureMap       map[string]featureMapObj
+	aiFeatureMap       map[string]featuremap.Obj
 	aiFeatureOrder     []string
 	aiFeatureSelection []bool
 	aiModel            *neuralnet.AIModel
@@ -154,7 +92,7 @@ func (cache *AILRU) Init(args ...interface{}) interface{} {
 		}
 	}
 
-	cache.aiFeatureMap = make(map[string]featureMapObj, 0)
+	cache.aiFeatureMap = make(map[string]featuremap.Obj, 0)
 
 	featureMapFile, errOpenFile := os.Open(featureMapFilePath)
 	if errOpenFile != nil {
@@ -172,61 +110,8 @@ func (cache *AILRU) Init(args ...interface{}) interface{} {
 		log.Fatalf("Cannot unmarshal json from file '%s'\nError: %s\n", featureMapFilePath, errJSONUnmarshal)
 	}
 
-	// Parse feature map
-	lvl0 := tmpMap.(map[string]interface{})
-	for k0, v0 := range lvl0 {
-		curObj := v0.(map[string]interface{})
-		curStruct := featureMapObj{}
-		for objK, objV := range curObj {
-			switch objK {
-			case "feature":
-				curStruct.Feature = objV.(string)
-			case "type":
-				curType := objV.(string)
-				switch curType {
-				case "int":
-					curStruct.Type = typeInt
-				case "float":
-					curStruct.Type = typeFloat
-				case "string":
-					curStruct.Type = typeString
-				case "bool":
-					curStruct.Type = typeBool
-				}
-			case "keys":
-				curStruct.Keys = objV.([]interface{})
-			case "values":
-				curValues := objV.(map[string]interface{})
-				curStruct.Values = make(map[string]int)
-				for vK, vV := range curValues {
-					curStruct.Values[vK] = int(vV.(float64))
-				}
-			case "unknown_values":
-				curStruct.UnknownValues = objV.(bool)
-			case "buckets":
-				curStruct.Buckets = objV.(bool)
-			case "bucket_open_right":
-				curStruct.BucketOpenRight = objV.(bool)
-			}
-		}
-
-		for _, elm := range curStruct.Keys {
-			switch curStruct.Type {
-			case typeInt:
-				curStruct.KeysI = append(curStruct.KeysI, int64(elm.(float64)))
-			case typeFloat:
-				curStruct.KeysF = append(curStruct.KeysF, elm.(float64))
-			case typeString:
-				curStruct.KeysS = append(curStruct.KeysS, elm.(string))
-			case typeBool:
-				curStruct.KeysB = append(curStruct.KeysB, elm.(bool))
-			}
-		}
-
-		// Output the structure
-		// fmt.Println(curStruct)
-
-		cache.aiFeatureMap[k0] = curStruct
+	for entry := range featuremap.Parse(tmpMap) {
+		cache.aiFeatureMap[entry.Key] = entry.Value
 	}
 
 	if modelFilePath == "" && !enableQLearn && cache.aiClientHost != "" && cache.aiClientPort != "" {
@@ -368,19 +253,19 @@ func (cache *AILRU) getCategory(catKey string, value interface{}) []float64 {
 
 	for curKey := range curCategory.GetKeys() {
 		switch curCategory.Type {
-		case typeInt:
+		case featuremap.TypeInt:
 			inputValue := int64(value.(float64))
 			if inputValue <= curKey.ValueI {
 				res[curCategory.Values[fmt.Sprintf("%d", curKey.ValueI)]] = 1.0
 				return res
 			}
-		case typeFloat:
+		case featuremap.TypeFloat:
 			inputValue := value.(float64)
 			if inputValue <= curKey.ValueF {
 				res[curCategory.Values[fmt.Sprintf("%0.2f", curKey.ValueF)]] = 1.0
 				return res
 			}
-		case typeString:
+		case featuremap.TypeString:
 			inputValue := value.(string)
 			if inputValue <= curKey.ValueS {
 				res[curCategory.Values[fmt.Sprintf("%s", curKey.ValueS)]] = 1.0
