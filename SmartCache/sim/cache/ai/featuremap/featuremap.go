@@ -1,5 +1,11 @@
 package featuremap
 
+import {
+	"os"
+	"path/filepath"
+	"encoding/json"
+}
+
 type mapType int
 
 const (
@@ -42,10 +48,39 @@ type Entry struct {
 }
 
 // Parse returns the entries of a feature map
-func Parse(tmpMap interface{}) chan Entry {
+func Parse(featureMapFilePath string) chan Entry {
+	var tmpMap interface{}
+	fileExtension := filepath.Ext(featureMapFilePath)
+
+	featureMapFile, errOpenFile := os.Open(featureMapFilePath)
+	if errOpenFile != nil {
+		log.Fatalf("Cannot open file '%s'\n", errOpenFile)
+	}
+
+	if fileExtension == ".gzip" || fileExtension == ".gz" {
+		featureMapFileGz, errOpenZipFile := gzip.NewReader(featureMapFile)
+		if errOpenZipFile != nil {
+			log.Fatalf("Cannot open zip stream from file '%s'\nError: %s\n", featureMapFilePath, errOpenZipFile)
+		}
+
+		
+		errJSONUnmarshal := json.NewDecoder(featureMapFileGz).Decode(&tmpMap)
+		if errJSONUnmarshal != nil {
+			log.Fatalf("Cannot unmarshal gzipped json from file '%s'\nError: %s\n", featureMapFilePath, errJSONUnmarshal)
+		}
+	} else {
+		errJSONUnmarshal := json.NewDecoder(featureMapFile).Decode(&tmpMap)
+		if errJSONUnmarshal != nil {
+			log.Fatalf("Cannot unmarshal plain json from file '%s'\nError: %s\n", featureMapFilePath, errJSONUnmarshal)
+		}
+	}
+
 	channel := make(chan Entry)
 	go func() {
+		
 		defer close(channel)
+		defer close(featureMapFile)
+
 		lvl0 := tmpMap.(map[string]interface{})
 		for k0, v0 := range lvl0 {
 			curObj := v0.(map[string]interface{})

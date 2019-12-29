@@ -250,9 +250,13 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 					fmt.Println("ERR: No feature map indicated...")
 					os.Exit(-1)
 				}
-				grpcConn = curCacheInstance.Init(aiHost, aiPort, aiFeatureMap, aiModel, aiQLearn)
-				if grpcConn != nil {
-					defer grpcConn.(*grpc.ClientConn).Close()
+				if !aiQLearn {
+					grpcConn = curCacheInstance.Init(aiHost, aiPort, aiFeatureMap, aiModel)
+					if grpcConn != nil {
+						defer grpcConn.(*grpc.ClientConn).Close()
+					}
+				} else {
+					curCacheInstance.Init(aiFeatureMap)
 				}
 			case testDatasetCmd:
 				curCacheInstance.Init(dataset2TestPath)
@@ -553,9 +557,16 @@ func genCache(cacheType string) cache.Cache {
 				MaxSize: cacheSize,
 			},
 		}
-	case "aiLRU":
-		fmt.Printf("[Create aiLRU Cache][Size: %f]\n", cacheSize)
-		cacheInstance = &cache.AILRU{
+	case "aiNN":
+		fmt.Printf("[Create aiNN Cache][Size: %f]\n", cacheSize)
+		cacheInstance = &cache.AINN{
+			LRUCache: cache.LRUCache{
+				MaxSize: cacheSize,
+			},
+		}
+	case "aiRL":
+		fmt.Printf("[Create aiRL Cache][Size: %f]\n", cacheSize)
+		cacheInstance = &cache.AIRL{
 			LRUCache: cache.LRUCache{
 				MaxSize: cacheSize,
 			},

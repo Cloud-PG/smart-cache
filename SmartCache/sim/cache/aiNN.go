@@ -1,13 +1,11 @@
 package cache
 
 import (
-	"compress/gzip"
 	"container/list"
 	"context"
 	"encoding/json"
 	"fmt"
 	"log"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -21,8 +19,8 @@ import (
 	"google.golang.org/grpc"
 )
 
-// AILRU cache
-type AILRU struct {
+// AINN cache
+type AINN struct {
 	LRUCache
 	WeightedStats
 	prevTime           time.Time
@@ -39,12 +37,10 @@ type AILRU struct {
 	grpcConn           *grpc.ClientConn
 	grpcContext        context.Context
 	grpcCxtCancel      context.CancelFunc
-	qTable             *qlearn.QTable
-	points             float64
 }
 
-// Init the AILRU struct
-func (cache *AILRU) Init(args ...interface{}) interface{} {
+// Init the AINN struct
+func (cache *AINN) Init(args ...interface{}) interface{} {
 	cache.LRUCache.Init()
 	cache.WeightedStats.Init()
 
@@ -52,7 +48,6 @@ func (cache *AILRU) Init(args ...interface{}) interface{} {
 	cache.aiClientPort = args[1].(string)
 	featureMapFilePath := args[2].(string)
 	modelFilePath := args[3].(string)
-	enableQLearn := args[4].(bool)
 
 	cache.aiFeatureOrder = []string{
 		"siteName",
@@ -66,55 +61,25 @@ func (cache *AILRU) Init(args ...interface{}) interface{} {
 		"size",
 	}
 
-	if !enableQLearn {
-		cache.aiFeatureSelection = []bool{
-			true,
-			true,
-			true,
-			true,
-			true,
-			true,
-			true,
-			true,
-			true,
-		}
-	} else {
-		cache.aiFeatureSelection = []bool{
-			false,
-			false,
-			false,
-			false,
-			false,
-			false,
-			true,
-			false,
-			true,
-		}
+	cache.aiFeatureSelection = []bool{
+		true,
+		true,
+		true,
+		true,
+		true,
+		true,
+		true,
+		true,
+		true,
 	}
 
 	cache.aiFeatureMap = make(map[string]featuremap.Obj, 0)
 
-	featureMapFile, errOpenFile := os.Open(featureMapFilePath)
-	if errOpenFile != nil {
-		log.Fatalf("Cannot open file '%s'\n", errOpenFile)
-	}
-
-	featureMapFileGz, errOpenZipFile := gzip.NewReader(featureMapFile)
-	if errOpenZipFile != nil {
-		log.Fatalf("Cannot open zip stream from file '%s'\nError: %s\n", featureMapFilePath, errOpenZipFile)
-	}
-
-	var tmpMap interface{}
-	errJSONUnmarshal := json.NewDecoder(featureMapFileGz).Decode(&tmpMap)
-	if errJSONUnmarshal != nil {
-		log.Fatalf("Cannot unmarshal json from file '%s'\nError: %s\n", featureMapFilePath, errJSONUnmarshal)
-	}
-
-	for entry := range featuremap.Parse(tmpMap) {
+	for entry := range featuremap.Parse(featureMapFilePath) {
 		cache.aiFeatureMap[entry.Key] = entry.Value
 	}
 
-	if modelFilePath == "" && !enableQLearn && cache.aiClientHost != "" && cache.aiClientPort != "" {
+	if modelFilePath == "" && cache.aiClientHost != "" && cache.aiClientPort != "" {
 		var opts []grpc.DialOption
 		opts = append(opts, grpc.WithInsecure())
 		opts = append(opts, grpc.WithBlock())
@@ -131,37 +96,21 @@ func (cache *AILRU) Init(args ...interface{}) interface{} {
 		cache.aiClient = aiPb.NewAIServiceClient(cache.grpcConn)
 
 		return cache.grpcConn
-	} else if modelFilePath != "" && !enableQLearn {
+	} else if modelFilePath != "" {
 		cache.aiModel = neuralnet.LoadModel(modelFilePath)
-	} else if enableQLearn {
-		cache.qTable = &qlearn.QTable{}
-		inputLenghts := []int{}
-		for idx, featureName := range cache.aiFeatureOrder {
-			if cache.aiFeatureSelection[idx] {
-				curFeature, _ := cache.aiFeatureMap[featureName]
-				curLen := len(curFeature.Values)
-				if curFeature.UnknownValues {
-					curLen++
-				}
-				inputLenghts = append(inputLenghts, curLen)
-			}
-		}
-		fmt.Print("[Generate QTable]")
-		cache.qTable.Init(inputLenghts)
-		fmt.Println("[Done]")
 	}
 
 	return nil
 }
 
-// Clear the AILRU struct
-func (cache *AILRU) Clear() {
+// Clear the AINN struct
+func (cache *AINN) Clear() {
 	cache.LRUCache.Init()
 	cache.WeightedStats.Init()
 }
 
-// Dumps the AILRU cache
-func (cache *AILRU) Dumps() *[][]byte {
+// Dumps the AINN cache
+func (cache *AINN) Dumps() *[][]byte {
 	outData := make([][]byte, 0)
 	var newLine = []byte("\n")
 
@@ -190,21 +139,12 @@ func (cache *AILRU) Dumps() *[][]byte {
 		record = append(record, newLine...)
 		outData = append(outData, record)
 	}
-	// ----- qtable -----
-	dumpInfo, _ := json.Marshal(DumpInfo{Type: "QTABLE"})
-	dumpStats, _ := json.Marshal(cache.qTable)
-	record, _ := json.Marshal(DumpRecord{
-		Info: string(dumpInfo),
-		Data: string(dumpStats),
-	})
-	record = append(record, newLine...)
-	outData = append(outData, record)
 
 	return &outData
 }
 
-// Loads the AILRU cache
-func (cache *AILRU) Loads(inputString *[][]byte) {
+// Loads the AINN cache
+func (cache *AINN) Loads(inputString *[][]byte) {
 	var curRecord DumpRecord
 	var curRecordInfo DumpInfo
 
@@ -220,13 +160,11 @@ func (cache *AILRU) Loads(inputString *[][]byte) {
 			cache.size += curFile.Size
 		case "STATS":
 			json.Unmarshal([]byte(curRecord.Data), &cache.stats)
-		case "QTABLE":
-			json.Unmarshal([]byte(curRecord.Data), cache.qTable)
 		}
 	}
 }
 
-func (cache *AILRU) getCategory(catKey string, value interface{}) []float64 {
+func (cache *AINN) getCategory(catKey string, value interface{}) []float64 {
 	var res []float64
 	curCategory := cache.aiFeatureMap[catKey]
 
@@ -282,7 +220,7 @@ func (cache *AILRU) getCategory(catKey string, value interface{}) []float64 {
 	panic(fmt.Sprintf("Cannot convert a value '%v' of category %s", value, catKey))
 }
 
-func (cache *AILRU) composeFeatures(vars ...interface{}) []float64 {
+func (cache *AINN) composeFeatures(vars ...interface{}) []float64 {
 	var inputVector []float64
 	var tmpArr []float64
 
@@ -325,7 +263,7 @@ func (cache *AILRU) composeFeatures(vars ...interface{}) []float64 {
 }
 
 // GetPoints returns the total amount of points for the files in cache
-func (cache AILRU) GetPoints() float64 {
+func (cache AINN) GetPoints() float64 {
 	points := 0.0
 	for filename := range cache.files {
 		points += cache.updateFilesPoints(filename, &cache.curTime)
@@ -333,8 +271,8 @@ func (cache AILRU) GetPoints() float64 {
 	return float64(points)
 }
 
-// UpdatePolicy of AILRU cache
-func (cache *AILRU) UpdatePolicy(filename string, size float32, hit bool, vars ...interface{}) bool {
+// UpdatePolicy of AINN cache
+func (cache *AINN) UpdatePolicy(filename string, size float32, hit bool, vars ...interface{}) bool {
 	var (
 		added      = false
 		curAction  qlearn.ActionType
@@ -348,25 +286,9 @@ func (cache *AILRU) UpdatePolicy(filename string, size float32, hit bool, vars .
 	cache.prevTime = cache.curTime
 	cache.curTime = currentTime
 
-	if !cache.curTime.Equal(cache.prevTime) {
-		cache.points = cache.GetPoints()
-	}
-
 	curStats, _ := cache.GetOrCreate(filename, size, &currentTime)
-	if cache.qTable == nil {
-		curStats.updateStats(hit, size, &currentTime)
-	} else { // Q-Learning
-		prevPoints = cache.points
-		if !hit {
-			curStats.updateStats(hit, size, nil)
-			curStats.updateFilePoints(&cache.curTime)
-		} else {
-			cache.points -= curStats.Points
-			curStats.updateStats(hit, size, nil)
-			curStats.updateFilePoints(&cache.curTime)
-			cache.points += curStats.Points
-		}
-	}
+	curStats.updateStats(hit, size, &currentTime)
+	
 
 	if !hit {
 		siteName := vars[1].(string)
@@ -389,7 +311,7 @@ func (cache *AILRU) UpdatePolicy(filename string, size float32, hit bool, vars .
 			size,
 		)
 
-		if cache.aiModel == nil && cache.qTable == nil {
+		if cache.aiModel == nil {
 			ctx, ctxCancel := context.WithTimeout(context.Background(), 24*time.Hour)
 			defer ctxCancel()
 
@@ -421,33 +343,7 @@ func (cache *AILRU) UpdatePolicy(filename string, size float32, hit bool, vars .
 			if store == 0 {
 				return added
 			}
-		} else if cache.qTable != nil {
-			curState = featureVector
-
-			// QLearn - Check action
-			expTradeoff := cache.qTable.GetRandomTradeOff()
-			if expTradeoff > cache.qTable.Epsilon {
-				// action
-				curAction = cache.qTable.GetBestAction(curState)
-			} else {
-				// random choice
-				if expTradeoff > 0.5 {
-					curAction = qlearn.ActionStore
-				} else {
-					curAction = qlearn.ActionNotStore
-				}
-			}
-
-			// QLearn - Take the action NOT STORE
-			if curAction == qlearn.ActionNotStore {
-				reward := -curStats.Points
-				// Update table
-				cache.qTable.Update(curState, curAction, reward)
-				// Update epsilon
-				cache.qTable.UpdateEpsilon()
-				return added
-			}
-		}
+		} 
 
 		// Insert with LRU mechanism
 		if cache.Size()+size > cache.MaxSize {
@@ -458,7 +354,6 @@ func (cache *AILRU) UpdatePolicy(filename string, size float32, hit bool, vars .
 					break
 				}
 				curFilename2Delete := tmpVal.Value.(string)
-				cache.points -= cache.getPoints(curFilename2Delete) // Q-Learning
 				fileSize := cache.files[curFilename2Delete]
 				cache.size -= fileSize
 				cache.dataDeleted += size
@@ -482,20 +377,7 @@ func (cache *AILRU) UpdatePolicy(filename string, size float32, hit bool, vars .
 			cache.files[filename] = size
 			cache.queue.PushBack(filename)
 			cache.size += size
-			curStats.addInCache(&currentTime)
-			curStats.updateFilePoints(&cache.curTime)
-			cache.points += curStats.Points // Q-Learning
 			added = true
-		}
-
-		// QLearn - Take the action STORE
-		if cache.qTable != nil && curAction == qlearn.ActionStore {
-			newScore := cache.points
-			reward := newScore - prevPoints
-			// Update table
-			cache.qTable.Update(curState, curAction, reward)
-			// Update epsilon
-			cache.qTable.UpdateEpsilon()
 		}
 
 	} else {
@@ -512,9 +394,4 @@ func (cache *AILRU) UpdatePolicy(filename string, size float32, hit bool, vars .
 	}
 
 	return added
-}
-
-// ExtraStats for output
-func (cache *AILRU) ExtraStats() string {
-	return fmt.Sprintf("Cov: %0.2f%%, Epsilon: %0.2f", cache.qTable.GetCoveragePercentage(), cache.qTable.Epsilon)
 }
