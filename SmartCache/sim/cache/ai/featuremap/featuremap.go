@@ -1,10 +1,12 @@
 package featuremap
 
-import {
+import (
+	"compress/gzip"
+	"encoding/json"
+	"log"
 	"os"
 	"path/filepath"
-	"encoding/json"
-}
+)
 
 type mapType int
 
@@ -63,7 +65,6 @@ func Parse(featureMapFilePath string) chan Entry {
 			log.Fatalf("Cannot open zip stream from file '%s'\nError: %s\n", featureMapFilePath, errOpenZipFile)
 		}
 
-		
 		errJSONUnmarshal := json.NewDecoder(featureMapFileGz).Decode(&tmpMap)
 		if errJSONUnmarshal != nil {
 			log.Fatalf("Cannot unmarshal gzipped json from file '%s'\nError: %s\n", featureMapFilePath, errJSONUnmarshal)
@@ -77,9 +78,9 @@ func Parse(featureMapFilePath string) chan Entry {
 
 	channel := make(chan Entry)
 	go func() {
-		
+
 		defer close(channel)
-		defer close(featureMapFile)
+		defer featureMapFile.Close()
 
 		lvl0 := tmpMap.(map[string]interface{})
 		for k0, v0 := range lvl0 {

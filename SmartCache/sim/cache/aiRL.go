@@ -1,24 +1,15 @@
 package cache
 
 import (
-	"compress/gzip"
 	"container/list"
-	"context"
 	"encoding/json"
 	"fmt"
-	"log"
-	"os"
 	"strconv"
 	"strings"
 	"time"
 
 	"simulator/v2/cache/ai/featuremap"
-	"simulator/v2/cache/ai/neuralnet"
-	aiPb "simulator/v2/cache/aiService"
 	qlearn "simulator/v2/cache/qLearn"
-
-	"gonum.org/v1/gonum/mat"
-	"google.golang.org/grpc"
 )
 
 // AIRL cache
@@ -55,7 +46,6 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 		"size",
 	}
 
-
 	cache.aiFeatureSelection = []bool{
 		false,
 		false,
@@ -67,14 +57,13 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 		false,
 		true,
 	}
-	
 
 	cache.aiFeatureMap = make(map[string]featuremap.Obj, 0)
 
 	for entry := range featuremap.Parse(featureMapFilePath) {
 		cache.aiFeatureMap[entry.Key] = entry.Value
 	}
-	
+
 	cache.qTable = &qlearn.QTable{}
 	inputLenghts := []int{}
 	for idx, featureName := range cache.aiFeatureOrder {
@@ -90,7 +79,6 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 	fmt.Print("[Generate QTable]")
 	cache.qTable.Init(inputLenghts)
 	fmt.Println("[Done]")
-	
 
 	return nil
 }
@@ -305,7 +293,6 @@ func (cache *AIRL) UpdatePolicy(filename string, size float32, hit bool, vars ..
 		curStats.updateFilePoints(&cache.curTime)
 		cache.points += curStats.Points
 	}
-	
 
 	if !hit {
 		siteName := vars[1].(string)
@@ -328,7 +315,6 @@ func (cache *AIRL) UpdatePolicy(filename string, size float32, hit bool, vars ..
 			size,
 		)
 
-		
 		curState = featureVector
 
 		// QLearn - Check action
@@ -354,7 +340,6 @@ func (cache *AIRL) UpdatePolicy(filename string, size float32, hit bool, vars ..
 			cache.qTable.UpdateEpsilon()
 			return added
 		}
-		
 
 		// Insert with LRU mechanism
 		if cache.Size()+size > cache.MaxSize {

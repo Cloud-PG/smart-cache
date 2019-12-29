@@ -13,7 +13,6 @@ import (
 	"simulator/v2/cache/ai/featuremap"
 	"simulator/v2/cache/ai/neuralnet"
 	aiPb "simulator/v2/cache/aiService"
-	qlearn "simulator/v2/cache/qLearn"
 
 	"gonum.org/v1/gonum/mat"
 	"google.golang.org/grpc"
@@ -273,12 +272,7 @@ func (cache AINN) GetPoints() float64 {
 
 // UpdatePolicy of AINN cache
 func (cache *AINN) UpdatePolicy(filename string, size float32, hit bool, vars ...interface{}) bool {
-	var (
-		added      = false
-		curAction  qlearn.ActionType
-		prevPoints float64
-		curState   []float64
-	)
+	var added = false
 
 	day := vars[0].(int64)
 	currentTime := time.Unix(day, 0)
@@ -288,7 +282,6 @@ func (cache *AINN) UpdatePolicy(filename string, size float32, hit bool, vars ..
 
 	curStats, _ := cache.GetOrCreate(filename, size, &currentTime)
 	curStats.updateStats(hit, size, &currentTime)
-	
 
 	if !hit {
 		siteName := vars[1].(string)
@@ -343,7 +336,7 @@ func (cache *AINN) UpdatePolicy(filename string, size float32, hit bool, vars ..
 			if store == 0 {
 				return added
 			}
-		} 
+		}
 
 		// Insert with LRU mechanism
 		if cache.Size()+size > cache.MaxSize {

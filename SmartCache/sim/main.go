@@ -53,7 +53,7 @@ type simDetailCmd int
 
 const (
 	normalSimulationCmd simDetailCmd = iota
-	testAICmd
+	aiSimCmd
 	testDatasetCmd
 )
 
@@ -203,8 +203,8 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 		useDesc = `simulate cacheType fileOrFolderPath`
 		shortDesc = "Simulate a session"
 		longDesc = "Simulate a session from data input"
-	case testAICmd:
-		useDesc = `testAI cacheType fileOrFolderPath`
+	case aiSimCmd:
+		useDesc = `aiSim cacheType fileOrFolderPath`
 		shortDesc = "Simulate a session with AI"
 		longDesc = "Simulate a session from data input using an AI model"
 	case testDatasetCmd:
@@ -245,7 +245,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			curCacheInstance := genCache(cacheType)
 
 			switch typeCmd {
-			case testAICmd:
+			case aiSimCmd:
 				if aiFeatureMap == "" {
 					fmt.Println("ERR: No feature map indicated...")
 					os.Exit(-1)
@@ -398,7 +398,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 					sizeInMbytes := record.Size / (1024 * 1024)
 
 					switch typeCmd {
-					case testAICmd:
+					case aiSimCmd:
 						cache.GetFile(
 							curCacheInstance,
 							record.Filename,
@@ -499,7 +499,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 	}
 	addSimFlags(cmd)
 	switch typeCmd {
-	case testAICmd:
+	case aiSimCmd:
 		cmd.PersistentFlags().StringVar(
 			&aiHost, "aiHost", "localhost",
 			"indicate the filter for record region",
@@ -534,7 +534,7 @@ func commandSimulate() *cobra.Command {
 }
 
 func testAI() *cobra.Command {
-	return simulationCmd(testAICmd)
+	return simulationCmd(aiSimCmd)
 }
 
 func testDataset() *cobra.Command {
