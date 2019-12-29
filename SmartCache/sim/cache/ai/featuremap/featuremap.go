@@ -11,14 +11,14 @@ import (
 type mapType int
 
 const (
+	// TypeBool is the type bool for the feature map
+	TypeBool mapType = iota
 	// TypeInt is the type int for the feature map
-	TypeInt mapType = iota
+	TypeInt
 	// TypeFloat is the type float for the feature map
 	TypeFloat
 	// TypeString is the type string for the feature map
 	TypeString
-	// TypeBool is the type bool for the feature map
-	TypeBool
 )
 
 // Obj represents a map object
@@ -38,6 +38,7 @@ type Obj struct {
 
 // Key is a key of the map
 type Key struct {
+	ValueB bool
 	ValueI int64
 	ValueF float64
 	ValueS string
@@ -157,6 +158,8 @@ func (curMap Obj) GetLenKeys() int {
 		lenght = len(curMap.KeysF)
 	case TypeString:
 		lenght = len(curMap.KeysS)
+	case TypeBool:
+		lenght = len(curMap.KeysB)
 	}
 	return lenght
 }
@@ -170,6 +173,8 @@ func (curMap Obj) GetKeys() chan Key {
 		for idx := 0; idx < numKeys; idx++ {
 			curKey := Key{}
 			switch curMap.Type {
+			case TypeBool:
+				curKey.ValueB = curMap.KeysB[idx]
 			case TypeInt:
 				curKey.ValueI = curMap.KeysI[idx]
 			case TypeFloat:
