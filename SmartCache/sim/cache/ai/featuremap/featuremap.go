@@ -69,11 +69,13 @@ func Parse(featureMapFilePath string) chan Entry {
 		if errJSONUnmarshal != nil {
 			log.Fatalf("Cannot unmarshal gzipped json from file '%s'\nError: %s\n", featureMapFilePath, errJSONUnmarshal)
 		}
-	} else {
+	} else if fileExtension == ".json" {
 		errJSONUnmarshal := json.NewDecoder(featureMapFile).Decode(&tmpMap)
 		if errJSONUnmarshal != nil {
 			log.Fatalf("Cannot unmarshal plain json from file '%s'\nError: %s\n", featureMapFilePath, errJSONUnmarshal)
 		}
+	} else {
+		log.Fatalf("Cannot unmarshal file '%s' with extension '%s'", featureMapFilePath, fileExtension)
 	}
 
 	channel := make(chan Entry)

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"os"
 
 	pb "simulator/v2/cache/simService"
@@ -330,10 +331,11 @@ func (cache *LRUCache) AfterRequest(hit bool, added bool, size float32, wTime fl
 
 // HitRate of the cache
 func (cache LRUCache) HitRate() float32 {
-	if cache.hit == 0. {
-		return 0.
+	perc := (cache.hit / (cache.hit + cache.miss)) * 100.
+	if math.IsNaN(float64(perc)) {
+		return 0.0
 	}
-	return (cache.hit / (cache.hit + cache.miss)) * 100.
+	return perc
 }
 
 // HitOverMiss of the cache

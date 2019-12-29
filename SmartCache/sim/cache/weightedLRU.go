@@ -25,6 +25,7 @@ func (cache *WeightedLRU) Init(_ ...interface{}) interface{} {
 
 // Clear the WeightedLRU struct
 func (cache *WeightedLRU) Clear() {
+	cache.LRUCache.Clear()
 	cache.LRUCache.Init()
 	cache.WeightedStats.Init()
 }

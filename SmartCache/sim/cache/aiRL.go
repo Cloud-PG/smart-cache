@@ -85,6 +85,7 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 
 // Clear the AIRL struct
 func (cache *AIRL) Clear() {
+	cache.LRUCache.Clear()
 	cache.LRUCache.Init()
 	cache.WeightedStats.Init()
 }

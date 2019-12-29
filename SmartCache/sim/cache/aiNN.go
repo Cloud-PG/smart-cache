@@ -104,6 +104,7 @@ func (cache *AINN) Init(args ...interface{}) interface{} {
 
 // Clear the AINN struct
 func (cache *AINN) Clear() {
+	cache.LRUCache.Clear()
 	cache.LRUCache.Init()
 	cache.WeightedStats.Init()
 }

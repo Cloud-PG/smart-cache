@@ -4,6 +4,7 @@ import (
 	_ "fmt"
 	"math/rand"
 	"testing"
+	"time"
 )
 
 func TestLRUCacheBaseMultipleInsert(t *testing.T) {
@@ -12,11 +13,11 @@ func TestLRUCacheBaseMultipleInsert(t *testing.T) {
 	}
 	testCache.Init()
 
-	res := GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0)
+	res := GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0, time.Now().Unix())
 
-	GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0)
-	GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0)
-	GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0)
+	GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0, time.Now().Unix())
 
 	if !res {
 		t.Fatalf("First insert error -> Expected %t but got %t", true, res)
@@ -37,10 +38,10 @@ func TestLRUCacheClear(t *testing.T) {
 	}
 	testCache.Init()
 
-	GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0)
-	GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0)
-	GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0)
-	GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0)
+	GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0, time.Now().Unix())
 
 	testCache.Clear()
 
@@ -65,16 +66,16 @@ func TestLRUCacheInsert(t *testing.T) {
 	}
 	testCache.Init()
 
-	GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0)
-	GetFile(testCache, "/a/b/c/d/file1", 2.0, 0.0, 0.0)
-	GetFile(testCache, "/a/b/c/d/file2", 1.0, 0.0, 0.0)
-	GetFile(testCache, "/a/b/c/d/file3", 1.0, 0.0, 0.0)
-	GetFile(testCache, "/a/b/c/d/file1", 2.0, 0.0, 0.0)
-	GetFile(testCache, "/a/b/c/d/file1", 2.0, 0.0, 0.0)
-	GetFile(testCache, "/a/b/c/d/file1", 2.0, 0.0, 0.0)
-	GetFile(testCache, "/a/b/c/d/file4", 1.0, 0.0, 0.0)
-	GetFile(testCache, "/a/b/c/d/file3", 1.0, 0.0, 0.0)
-	GetFile(testCache, "/a/b/c/d/file4", 1.0, 0.0, 0.0)
+	GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file1", 2.0, 0.0, 0.0, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file2", 1.0, 0.0, 0.0, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file3", 1.0, 0.0, 0.0, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file1", 2.0, 0.0, 0.0, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file1", 2.0, 0.0, 0.0, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file1", 2.0, 0.0, 0.0, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file4", 1.0, 0.0, 0.0, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file3", 1.0, 0.0, 0.0, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file4", 1.0, 0.0, 0.0, time.Now().Unix())
 
 	// for tmpVal := testCache.queue.Front(); tmpVal != nil; tmpVal = tmpVal.Next() {
 	// 	println(tmpVal.Value.(string))
@@ -114,6 +115,6 @@ func BenchmarkLRUCache(b *testing.B) {
 	testCache.Init()
 
 	for n := 0; n < b.N; n++ {
-		GetFile(testCache, genRandomFilePath(5), rand.Float32()*maxSize, 0.0, 0.0)
+		GetFile(testCache, genRandomFilePath(5), rand.Float32()*maxSize, 0.0, 0.0, time.Now().Unix())
 	}
 }
