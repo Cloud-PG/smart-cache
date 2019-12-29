@@ -123,16 +123,6 @@ const (
 	UpdateStatsOnMiss
 )
 
-// LimitStatsPolicyType is used to limit the amount of stats collected
-type LimitStatsPolicyType int
-
-const (
-	// NoLimitStats indicates to not delete stats ever
-	NoLimitStats LimitStatsPolicyType = iota
-	// Q1IsDoubleQ2LimitStats indicates to remove stats with weight >= Q1 if Q1 > 2*Q2
-	Q1IsDoubleQ2LimitStats
-)
-
 type cacheEmptyMsg struct{}
 
 // WeightedFileStats contains file statistics collected by weighted caches

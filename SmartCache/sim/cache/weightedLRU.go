@@ -13,7 +13,6 @@ type WeightedLRU struct {
 	Exp                     float32
 	SelFunctionType         FunctionType
 	SelUpdateStatPolicyType UpdateStatsPolicyType
-	SelLimitStatsPolicyType LimitStatsPolicyType
 }
 
 // Init the WeightedLRU struct

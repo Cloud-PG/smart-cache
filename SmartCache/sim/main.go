@@ -29,7 +29,6 @@ var (
 	cpuprofile          string
 	dataset2TestPath    string
 	githash             string
-	limitStatsPolicy    string
 	memprofile          string
 	outputUpdateDelay   float64
 	serviceHost         string
@@ -107,10 +106,6 @@ func main() {
 	rootCmd.PersistentFlags().StringVar(
 		&statUpdatePolicy, "statUpdatePolicy", "request",
 		"[WeightedLRU] when to update the file stats: ['miss', 'request']. Default: request",
-	)
-	rootCmd.PersistentFlags().StringVar(
-		&limitStatsPolicy, "limitStatsPolicy", "Q1IsDoubleQ2LimitStats",
-		"[WeightedLRU] how to maintain the file stats ['noLimit', 'Q1IsDoubleQ2LimitStats']. Default: single",
 	)
 
 	if err := rootCmd.Execute(); err != nil {
@@ -577,7 +572,6 @@ func genCache(cacheType string) cache.Cache {
 		var (
 			selFunctionType         cache.FunctionType
 			selUpdateStatPolicyType cache.UpdateStatsPolicyType
-			selLimitStatsPolicyType cache.LimitStatsPolicyType
 		)
 
 		switch weightedFunc {
@@ -604,16 +598,6 @@ func genCache(cacheType string) cache.Cache {
 			os.Exit(-1)
 		}
 
-		switch limitStatsPolicy {
-		case "noLimit":
-			selLimitStatsPolicyType = cache.NoLimitStats
-		case "Q1IsDoubleQ2LimitStats":
-			selLimitStatsPolicyType = cache.Q1IsDoubleQ2LimitStats
-		default:
-			fmt.Println("ERR: You need to specify a weight function.")
-			os.Exit(-1)
-		}
-
 		cacheInstance = &cache.WeightedLRU{
 			LRUCache: cache.LRUCache{
 				MaxSize: cacheSize,
@@ -621,7 +605,6 @@ func genCache(cacheType string) cache.Cache {
 			Exp:                     weightExp,
 			SelFunctionType:         selFunctionType,
 			SelUpdateStatPolicyType: selUpdateStatPolicyType,
-			SelLimitStatsPolicyType: selLimitStatsPolicyType,
 		}
 		cacheInstance.Init()
 	default:
