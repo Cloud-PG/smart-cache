@@ -128,7 +128,7 @@ func (table *QTable) Init(featureLenghts []int) {
 	table.States = make(map[string][]float64, numStates)
 
 	for state := range table.genAllStates(featureLenghts) {
-		stateIdx := table.GetStateIdx(state)
+		stateIdx := table.GetStateStr(state)
 		_, inMap := table.States[stateIdx]
 		if !inMap {
 			table.States[stateIdx] = make([]float64, len(table.Actions))
@@ -174,8 +174,8 @@ func (table QTable) GetCoveragePercentage() float64 {
 	return (float64(numSetVariables) / float64(table.NumVars)) * 100.
 }
 
-// GetStateIdx returns the index of a given state
-func (table QTable) GetStateIdx(state []float64) string {
+// GetStateStr returns the index of a given state
+func (table QTable) GetStateStr(state []float64) string {
 	var resIdx string
 	for idx := 0; idx < len(state); idx++ {
 		if state[idx] != 0.0 {
@@ -202,14 +202,14 @@ func (table QTable) GetAction(stateIdx string, action ActionType) float64 {
 
 // GetBestAction returns the action of the best action for the given state
 func (table QTable) GetBestAction(state []float64) ActionType {
-	stateIdx := table.GetStateIdx(state)
+	stateIdx := table.GetStateStr(state)
 	values := table.States[stateIdx]
 	return table.Actions[getArgMax(values)]
 }
 
 // Update change the Q-table values of the given action
 func (table *QTable) Update(state []float64, action ActionType, reward float64) {
-	stateIdx := table.GetStateIdx(state)
+	stateIdx := table.GetStateStr(state)
 	oldValue := table.GetAction(stateIdx, action)
 	maxValue := getArgMax(table.States[stateIdx]) // The next state is the same
 	switch table.UpdateFunction {
