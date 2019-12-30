@@ -156,26 +156,26 @@ func (cache *AIRL) Loads(inputString *[][]byte) {
 	}
 }
 
-func (cache *AIRL) getCategory(catKey string, value interface{}) []float64 {
-	var res []float64
+func (cache *AIRL) getCategory(catKey string, value interface{}) []bool {
+	var res []bool
 	curCategory := cache.aiFeatureMap[catKey]
 
 	if curCategory.UnknownValues == true || curCategory.BucketOpenRight == true {
-		res = make([]float64, curCategory.GetLenKeys()+1)
+		res = make([]bool, curCategory.GetLenKeys()+1)
 	} else {
-		res = make([]float64, curCategory.GetLenKeys())
+		res = make([]bool, curCategory.GetLenKeys())
 	}
 
 	if curCategory.Buckets == false {
 		if curCategory.UnknownValues {
 			oneHot, inMap := curCategory.Values[value.(string)]
 			if inMap {
-				res[oneHot] = 1.0
+				res[oneHot] = true
 			} else {
-				res[0] = 1.0
+				res[0] = true
 			}
 		} else {
-			res[curCategory.Values[value.(string)]] = 1.0
+			res[curCategory.Values[value.(string)]] = true
 		}
 		return res
 
@@ -186,35 +186,35 @@ func (cache *AIRL) getCategory(catKey string, value interface{}) []float64 {
 		case featuremap.TypeInt:
 			inputValue := int64(value.(float64))
 			if inputValue <= curKey.ValueI {
-				res[curCategory.Values[fmt.Sprintf("%d", curKey.ValueI)]] = 1.0
+				res[curCategory.Values[fmt.Sprintf("%d", curKey.ValueI)]] = true
 				return res
 			}
 		case featuremap.TypeFloat:
 			inputValue := value.(float64)
 			if inputValue <= curKey.ValueF {
-				res[curCategory.Values[fmt.Sprintf("%0.2f", curKey.ValueF)]] = 1.0
+				res[curCategory.Values[fmt.Sprintf("%0.2f", curKey.ValueF)]] = true
 				return res
 			}
 		case featuremap.TypeString:
 			inputValue := value.(string)
 			if inputValue <= curKey.ValueS {
-				res[curCategory.Values[fmt.Sprintf("%s", curKey.ValueS)]] = 1.0
+				res[curCategory.Values[fmt.Sprintf("%s", curKey.ValueS)]] = true
 				return res
 			}
 		}
 	}
 
 	if curCategory.BucketOpenRight == true {
-		res[curCategory.Values["max"]] = 1.0
+		res[curCategory.Values["max"]] = true
 		return res
 	}
 
 	panic(fmt.Sprintf("Cannot convert a value '%v' of category %s", value, catKey))
 }
 
-func (cache *AIRL) composeFeatures(vars ...interface{}) []float64 {
-	var inputVector []float64
-	var tmpArr []float64
+func (cache *AIRL) composeFeatures(vars ...interface{}) []bool {
+	var inputVector []bool
+	var tmpArr []bool
 
 	siteName := vars[0].(string)
 	userID := strconv.Itoa(vars[1].(int))
@@ -246,7 +246,7 @@ func (cache *AIRL) composeFeatures(vars ...interface{}) []float64 {
 				inputVector = append(inputVector, tmpArr...)
 				continue
 			}
-			inputVector = append(inputVector, curInputs[idx].(float64))
+			inputVector = append(inputVector, curInputs[idx].(bool))
 		}
 
 	}
@@ -269,7 +269,7 @@ func (cache *AIRL) UpdatePolicy(filename string, size float32, hit bool, vars ..
 		added      = false
 		curAction  qlearn.ActionType
 		prevPoints float64
-		curState   []float64
+		curState   []bool
 	)
 
 	day := vars[0].(int64)

@@ -53,35 +53,35 @@ func getArgMax(array []float64) int {
 	return maxIdx
 }
 
-func createOneHot(lenght int, targetIdx int) []float64 {
-	res := make([]float64, lenght)
-	res[targetIdx] = 1.0
+func createOneHot(lenght int, targetIdx int) []bool {
+	res := make([]bool, lenght)
+	res[targetIdx] = true
 	return res
 }
 
-func (table QTable) genAllStates(featureLenghts []int) chan []float64 {
-	genChan := make(chan []float64)
+func (table QTable) genAllStates(featureLenghts []int) chan []bool {
+	genChan := make(chan []bool)
 	go func() {
 		defer close(genChan)
-		partials := make([][]float64, 0)
+		partials := make([][]bool, 0)
 
 		for _, featureLenght := range featureLenghts {
-			var newEntries [][]float64
+			var newEntries [][]bool
 			for idx := 0; idx < featureLenght; idx++ {
 				oneHot := createOneHot(featureLenght, idx)
 				newEntries = append(newEntries, oneHot)
 			}
 			if len(partials) == 0 {
 				for idx := 0; idx < len(newEntries); idx++ {
-					partials = append(partials, make([]float64, len(newEntries[idx])))
+					partials = append(partials, make([]bool, len(newEntries[idx])))
 					copy(partials[idx], newEntries[idx])
 				}
 			} else {
-				curPartials := make([][]float64, len(partials))
+				curPartials := make([][]bool, len(partials))
 				copy(curPartials, partials)
 				for idx0 := 0; idx0 < len(newEntries)-1; idx0++ {
 					for idx1 := 0; idx1 < len(curPartials); idx1++ {
-						partials = append(partials, make([]float64, len(curPartials[idx1])))
+						partials = append(partials, make([]bool, len(curPartials[idx1])))
 						copy(partials[len(partials)-1], curPartials[idx1])
 					}
 				}
@@ -175,10 +175,10 @@ func (table QTable) GetCoveragePercentage() float64 {
 }
 
 // GetStateStr returns the index of a given state
-func (table QTable) GetStateStr(state []float64) string {
+func (table QTable) GetStateStr(state []bool) string {
 	var resIdx string
 	for idx := 0; idx < len(state); idx++ {
-		if state[idx] != 0.0 {
+		if state[idx] {
 			resIdx += "1"
 		} else {
 			resIdx += "0"
@@ -201,14 +201,14 @@ func (table QTable) GetAction(stateIdx string, action ActionType) float64 {
 }
 
 // GetBestAction returns the action of the best action for the given state
-func (table QTable) GetBestAction(state []float64) ActionType {
+func (table QTable) GetBestAction(state []bool) ActionType {
 	stateIdx := table.GetStateStr(state)
 	values := table.States[stateIdx]
 	return table.Actions[getArgMax(values)]
 }
 
 // Update change the Q-table values of the given action
-func (table *QTable) Update(state []float64, action ActionType, reward float64) {
+func (table *QTable) Update(state []bool, action ActionType, reward float64) {
 	stateIdx := table.GetStateStr(state)
 	oldValue := table.GetAction(stateIdx, action)
 	maxValue := getArgMax(table.States[stateIdx]) // The next state is the same

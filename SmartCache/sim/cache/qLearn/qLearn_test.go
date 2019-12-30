@@ -14,7 +14,7 @@ func TestOneHotVector(t *testing.T) {
 		size := rand.Intn(idx) + 2
 		pos := rand.Intn(size - 1)
 		res := createOneHot(size, pos)
-		if res[pos] != 1.0 {
+		if res[pos] != true {
 			t.Fatalf("Error: creating one hot vector of len %d with one at pos %d\nVector->%v", size, pos, res)
 		}
 	}
@@ -29,7 +29,17 @@ func TestGetStateStr(t *testing.T) {
 		res := createOneHot(size, pos)
 		tmpStr := fmt.Sprintf("%v", res)
 		expectedRes := strings.Join(
-			strings.Split(tmpStr[1:len(tmpStr)-1], " "),
+			strings.Split(
+				strings.ReplaceAll(
+					strings.ReplaceAll(
+						tmpStr[1:len(tmpStr)-1],
+						"false",
+						"0",
+					),
+					"true",
+					"1",
+				),
+				" "),
 			"",
 		)
 		resStr := table.GetStateStr(res)
@@ -44,7 +54,8 @@ func TestGetArgMax(t *testing.T) {
 	for idx := 16; idx < 1024; idx++ {
 		size := rand.Intn(idx) + 2
 		pos := rand.Intn(size - 1)
-		res := createOneHot(size, pos)
+		res := make([]float64, size)
+		res[pos] = 1.0
 		resIdx := getArgMax(res)
 		if resIdx != pos {
 			t.Fatalf("Error: max value have to be in position %d and not in %d\nVector->%v", pos, resIdx, res)
