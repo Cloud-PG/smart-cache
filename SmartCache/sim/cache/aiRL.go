@@ -16,15 +16,14 @@ import (
 type AIRL struct {
 	LRUCache
 	WeightedStats
-	prevTime           time.Time
-	curTime            time.Time
-	stats              map[string]*WeightedFileStats
-	Exp                float32
-	aiFeatureMap       map[string]featuremap.Obj
-	aiFeatureOrder     []string
-	aiFeatureSelection []bool
-	qTable             *qlearn.QTable
-	points             float64
+	prevTime          time.Time
+	curTime           time.Time
+	stats             map[string]*WeightedFileStats
+	Exp               float32
+	aiFeatureMap      map[string]featuremap.Obj
+	aiFeatureMapOrder []string
+	qTable            *qlearn.QTable
+	points            float64
 }
 
 // Init the AIRL struct
@@ -34,43 +33,21 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 
 	featureMapFilePath := args[0].(string)
 
-	cache.aiFeatureOrder = []string{
-		"siteName",
-		"userID",
-		"fileType",
-		"dataType",
-		"campain",
-		"process",
-		"numReq",
-		"avgTime",
-		"size",
-	}
-
-	cache.aiFeatureSelection = []bool{
-		false,
-		false,
-		false,
-		false,
-		false,
-		false,
-		true,
-		false,
-		true,
-	}
-
 	cache.aiFeatureMap = featuremap.Parse(featureMapFilePath)
+
+	for key := range cache.aiFeatureMap {
+		cache.aiFeatureMapOrder = append(cache.aiFeatureMapOrder, key)
+	}
 
 	cache.qTable = &qlearn.QTable{}
 	inputLenghts := []int{}
-	for idx, featureName := range cache.aiFeatureOrder {
-		if cache.aiFeatureSelection[idx] {
-			curFeature, _ := cache.aiFeatureMap[featureName]
-			curLen := len(curFeature.Values)
-			if curFeature.UnknownValues {
-				curLen++
-			}
-			inputLenghts = append(inputLenghts, curLen)
+	for _, featureName := range cache.aiFeatureMapOrder {
+		curFeature, _ := cache.aiFeatureMap[featureName]
+		curLen := len(curFeature.Values)
+		if curFeature.UnknownValues {
+			curLen++
 		}
+		inputLenghts = append(inputLenghts, curLen)
 	}
 	fmt.Print("[Generate QTable]")
 	cache.qTable.Init(inputLenghts)
@@ -234,16 +211,14 @@ func (cache *AIRL) composeFeatures(vars ...interface{}) []bool {
 		size,
 	}
 
-	for idx, featureName := range cache.aiFeatureOrder {
-		if cache.aiFeatureSelection[idx] {
-			_, inFeatureMap := cache.aiFeatureMap[featureName]
-			if inFeatureMap {
-				tmpArr = cache.getCategory(featureName, curInputs[idx])
-				inputVector = append(inputVector, tmpArr...)
-				continue
-			}
-			inputVector = append(inputVector, curInputs[idx].(bool))
+	for idx, featureName := range cache.aiFeatureMapOrder {
+		_, inFeatureMap := cache.aiFeatureMap[featureName]
+		if inFeatureMap {
+			tmpArr = cache.getCategory(featureName, curInputs[idx])
+			inputVector = append(inputVector, tmpArr...)
+			continue
 		}
+		inputVector = append(inputVector, curInputs[idx].(bool))
 
 	}
 
