@@ -50,8 +50,19 @@ type Entry struct {
 	Value Obj
 }
 
-// Parse returns the entries of a feature map
-func Parse(featureMapFilePath string) chan Entry {
+// Parse a feature map file and returns the map of keys and objects
+func Parse(featureMapFilePath string) map[string]Obj {
+	tmpMap := make(map[string]Obj, 0)
+
+	for entry := range GetEntries(featureMapFilePath) {
+		tmpMap[entry.Key] = entry.Value
+	}
+
+	return tmpMap
+}
+
+// GetEntries returns the entries of a feature map
+func GetEntries(featureMapFilePath string) chan Entry {
 	var tmpMap interface{}
 	fileExtension := filepath.Ext(featureMapFilePath)
 

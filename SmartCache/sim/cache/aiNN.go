@@ -72,11 +72,7 @@ func (cache *AINN) Init(args ...interface{}) interface{} {
 		true,
 	}
 
-	cache.aiFeatureMap = make(map[string]featuremap.Obj, 0)
-
-	for entry := range featuremap.Parse(featureMapFilePath) {
-		cache.aiFeatureMap[entry.Key] = entry.Value
-	}
+	cache.aiFeatureMap = featuremap.Parse(featureMapFilePath)
 
 	if modelFilePath == "" && cache.aiClientHost != "" && cache.aiClientPort != "" {
 		var opts []grpc.DialOption

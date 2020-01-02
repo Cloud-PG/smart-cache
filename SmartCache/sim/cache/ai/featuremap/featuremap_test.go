@@ -97,11 +97,7 @@ func TestFeatureMapParse(t *testing.T) {
 		"sizeF":    4,
 		"dataType": 2,
 	}
-	entries := make(map[string]Obj, 0)
-
-	for entry := range Parse(tmpFile.Name()) {
-		entries[entry.Key] = entry.Value
-	}
+	entries := Parse(tmpFile.Name())
 
 	for entryName, entryLen := range allKeys {
 		if _, inMap := entries[entryName]; !inMap {

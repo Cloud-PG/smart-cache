@@ -58,11 +58,7 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 		true,
 	}
 
-	cache.aiFeatureMap = make(map[string]featuremap.Obj, 0)
-
-	for entry := range featuremap.Parse(featureMapFilePath) {
-		cache.aiFeatureMap[entry.Key] = entry.Value
-	}
+	cache.aiFeatureMap = featuremap.Parse(featureMapFilePath)
 
 	cache.qTable = &qlearn.QTable{}
 	inputLenghts := []int{}
