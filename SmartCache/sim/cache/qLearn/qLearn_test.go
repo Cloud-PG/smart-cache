@@ -8,6 +8,25 @@ import (
 	"testing"
 )
 
+func TestQTable(t *testing.T) {
+	sizes := []int{}
+	numStates := 1
+	for idx := 0; idx < 5; idx++ {
+		curNum := rand.Intn(10) + 1
+		numStates *= curNum
+		sizes = append(sizes, curNum)
+	}
+
+	qTable := QTable{}
+	qTable.Init(sizes)
+	coverP := qTable.GetCoveragePercentage()
+
+	if len(qTable.States) != numStates {
+		t.Fatalf("Error: created %d states instead of %d", len(qTable.States), numStates)
+	} else if coverP != 0. {
+		t.Fatalf("Error: cover %% have to be 0.0 and not %f at init time", coverP)
+	}
+}
 func TestOneHotVector(t *testing.T) {
 	rand.Seed(42)
 	for idx := 16; idx < 1024; idx++ {
