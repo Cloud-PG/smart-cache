@@ -7,6 +7,7 @@ import (
 	"log"
 	"math"
 	"os"
+	"path/filepath"
 
 	"gonum.org/v1/gonum/mat"
 )
@@ -85,20 +86,30 @@ func softMax(matrix mat.Matrix) *mat.Dense {
 // LoadModel loads an AI model from a gzip file
 func LoadModel(modelFilePath string) *AIModel {
 	var curModel AIModel
+	fileExtension := filepath.Ext(modelFilePath)
 
 	modelFile, errOpenFile := os.Open(modelFilePath)
 	if errOpenFile != nil {
 		log.Fatalf("[Model Error]: Cannot open file '%s'\n", errOpenFile)
 	}
 
-	modelFileGz, errOpenZipFile := gzip.NewReader(modelFile)
-	if errOpenZipFile != nil {
-		log.Fatalf("[Model Error]: Cannot open zip stream from file '%s'\nError: %s\n", modelFilePath, errOpenZipFile)
-	}
+	if fileExtension == ".gzip" || fileExtension == ".gz" {
+		modelFileGz, errOpenZipFile := gzip.NewReader(modelFile)
+		if errOpenZipFile != nil {
+			log.Fatalf("[Model Error]: Cannot open zip stream from file '%s'\nError: %s\n", modelFilePath, errOpenZipFile)
+		}
 
-	errJSONUnmarshal := json.NewDecoder(modelFileGz).Decode(&curModel)
-	if errJSONUnmarshal != nil {
-		log.Fatalf("[Model Error]: Cannot unmarshal json from file '%s'\nError: %s\n", modelFilePath, errJSONUnmarshal)
+		errJSONUnmarshal := json.NewDecoder(modelFileGz).Decode(&curModel)
+		if errJSONUnmarshal != nil {
+			log.Fatalf("[Model Error]: Cannot unmarshal json from file '%s'\nError: %s\n", modelFilePath, errJSONUnmarshal)
+		}
+	} else if fileExtension == ".json" {
+		errJSONUnmarshal := json.NewDecoder(modelFile).Decode(&curModel)
+		if errJSONUnmarshal != nil {
+			log.Fatalf("[Model Error]: Cannot unmarshal json from file '%s'\nError: %s\n", modelFilePath, errJSONUnmarshal)
+		}
+	} else {
+		log.Fatalf("Cannot unmarshal file '%s' with extension '%s'", modelFilePath, fileExtension)
 	}
 
 	for idx, layer := range curModel.Layers {
