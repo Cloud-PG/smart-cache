@@ -625,6 +625,25 @@ def plot_results(folder: str, results: dict, cache_size: float,
     pbar = tqdm(total=18, desc="Plot results", ascii=True)
 
     ###########################################################################
+    # Size plot of full normal run
+    ###########################################################################
+    with ignored(Exception):
+        hit_rate_fig = plot_column(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            column="size",
+            title="Size - Full Normal Run",
+            plot_width=plot_width,
+            plot_height=plot_height,
+        )
+        run_full_normal_hit_rate_figs.append(hit_rate_fig)
+    pbar.update(1)
+    
+    ###########################################################################
     # Hit Rate plot of full normal run
     ###########################################################################
     with ignored(Exception):
