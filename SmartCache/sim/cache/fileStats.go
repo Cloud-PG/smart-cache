@@ -111,6 +111,8 @@ func (statStruct WeightedStats) updateFilesPoints(filename string, curTime *time
 const (
 	// StatsMemorySize represents the  number of slots
 	StatsMemorySize uint64 = 32
+	// NumReqDecayDays is the number of days that requests are maintained
+	NumReqDecayDays = 3.0
 )
 
 // UpdateStatsPolicyType is used to select the update stats policy
@@ -180,7 +182,7 @@ func (stats *WeightedFileStats) updateFilePoints(curTime *time.Time) float64 {
 	dayDiffInCache := math.Floor(curTime.Sub(stats.InCacheSince).Hours() / 24.)
 
 	numReq := float64(stats.TotRequests)
-	numReq = numReq * math.Exp(-(dayDiffFirstTime / 7.0)) // Decay num. requests
+	numReq = numReq * math.Exp(-(dayDiffFirstTime / NumReqDecayDays)) // Decay num. requests
 
 	points := numReq * float64(stats.Size)
 	points = points * math.Exp(-dayDiffInCache) // Decay points
