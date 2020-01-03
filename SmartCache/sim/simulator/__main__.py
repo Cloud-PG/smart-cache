@@ -27,8 +27,8 @@ def main():
 
     parser.register('type', 'bool', str2bool)  # add type keyword to registries
 
-    parser.add_argument('action', choices=['simulate', 'testAI', 'testDataset', 'plot', 'train', 'create_dataset'],
-                        default="simulate",
+    parser.add_argument('action', choices=['sim', 'simAi', 'testDataset', 'plot', 'train', 'create_dataset'],
+                        default="sim",
                         help='Action requested')
     parser.add_argument('source', type=str,
                         default="./results_8w_with_sizes_csv",

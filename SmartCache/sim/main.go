@@ -60,7 +60,7 @@ func main() {
 	rootCmd := &cobra.Command{}
 	rootCmd.AddCommand(commandServe())
 	rootCmd.AddCommand(commandSimulate())
-	rootCmd.AddCommand(testAI())
+	rootCmd.AddCommand(commandSimulateAI())
 	rootCmd.AddCommand(testDataset())
 
 	rootCmd.AddCommand(&cobra.Command{
@@ -195,11 +195,11 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 
 	switch typeCmd {
 	case normalSimulationCmd:
-		useDesc = `simulate cacheType fileOrFolderPath`
+		useDesc = `sim cacheType fileOrFolderPath`
 		shortDesc = "Simulate a session"
 		longDesc = "Simulate a session from data input"
 	case aiSimCmd:
-		useDesc = `aiSim cacheType fileOrFolderPath`
+		useDesc = `simAi cacheType fileOrFolderPath`
 		shortDesc = "Simulate a session with AI"
 		longDesc = "Simulate a session from data input using an AI model"
 	case testDatasetCmd:
@@ -528,7 +528,7 @@ func commandSimulate() *cobra.Command {
 	return simulationCmd(normalSimulationCmd)
 }
 
-func testAI() *cobra.Command {
+func commandSimulateAI() *cobra.Command {
 	return simulationCmd(aiSimCmd)
 }
 
