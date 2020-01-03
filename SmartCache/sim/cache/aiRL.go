@@ -4,7 +4,7 @@ import (
 	"container/list"
 	"encoding/json"
 	"fmt"
-	"strconv"
+	"sort"
 	"strings"
 	"time"
 
@@ -38,6 +38,7 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 	for key := range cache.aiFeatureMap {
 		cache.aiFeatureMapOrder = append(cache.aiFeatureMapOrder, key)
 	}
+	sort.Strings(cache.aiFeatureMapOrder)
 
 	cache.qTable = &qlearn.QTable{}
 	inputLenghts := []int{}
@@ -185,41 +186,36 @@ func (cache *AIRL) getCategory(catKey string, value interface{}) []bool {
 	panic(fmt.Sprintf("Cannot convert a value '%v' of category %s", value, catKey))
 }
 
-func (cache *AIRL) composeFeatures(vars ...interface{}) []bool {
+func (cache *AIRL) getState(vars ...interface{}) []bool {
 	var inputVector []bool
 	var tmpArr []bool
 
-	siteName := vars[0].(string)
-	userID := strconv.Itoa(vars[1].(int))
-	fileType := vars[2].(string)
+	numReq := vars[0].(float64)
+	size := float64(vars[1].(float32))
+
+	siteName := vars[2].(string)
+	sitePieces := strings.Split(siteName, "_")
+	siteType := sitePieces[0]
+
 	dataType := vars[3].(string)
-	campain := vars[4].(string)
-	process := vars[5].(string)
-	totRequests := float64(vars[6].(uint32))
-	avgTime := float64(vars[7].(float32))
-	size := float64(vars[8].(float32))
+	cacheCapacity := cache.Capacity()
 
-	curInputs := []interface{}{
-		siteName,
-		userID,
-		fileType,
-		dataType,
-		campain,
-		process,
-		totRequests,
-		avgTime,
-		size,
-	}
-
-	for idx, featureName := range cache.aiFeatureMapOrder {
-		_, inFeatureMap := cache.aiFeatureMap[featureName]
-		if inFeatureMap {
-			tmpArr = cache.getCategory(featureName, curInputs[idx])
-			inputVector = append(inputVector, tmpArr...)
-			continue
+	for _, featureName := range cache.aiFeatureMapOrder {
+		switch featureName {
+		case "size":
+			tmpArr = cache.getCategory(featureName, size)
+		case "numReq":
+			tmpArr = cache.getCategory(featureName, numReq)
+		case "cacheUsage":
+			tmpArr = cache.getCategory(featureName, cacheCapacity)
+		case "siteType":
+			tmpArr = cache.getCategory(featureName, siteType)
+		case "dataType":
+			tmpArr = cache.getCategory(featureName, dataType)
+		default:
+			panic(fmt.Sprintf("Cannot prepare input %s", featureName))
 		}
-		inputVector = append(inputVector, curInputs[idx].(bool))
-
+		inputVector = append(inputVector, tmpArr...)
 	}
 
 	return inputVector
@@ -241,6 +237,8 @@ func (cache *AIRL) UpdatePolicy(filename string, size float32, hit bool, vars ..
 		curAction  qlearn.ActionType
 		prevPoints float64
 		curState   []bool
+		siteName   = vars[1].(string)
+		userID     = vars[2].(int)
 	)
 
 	day := vars[0].(int64)
@@ -254,8 +252,11 @@ func (cache *AIRL) UpdatePolicy(filename string, size float32, hit bool, vars ..
 	}
 
 	curStats, _ := cache.GetOrCreate(filename, size, &currentTime)
+	curStats.addUser(userID)
+	curStats.addSite(siteName)
 
 	prevPoints = cache.points
+
 	if !hit {
 		curStats.updateStats(hit, size, nil)
 		curStats.updateFilePoints(&cache.curTime)
@@ -267,27 +268,15 @@ func (cache *AIRL) UpdatePolicy(filename string, size float32, hit bool, vars ..
 	}
 
 	if !hit {
-		siteName := vars[1].(string)
-		userID := vars[2].(int)
 		tmpSplit := strings.Split(filename, "/")
 		dataType := tmpSplit[2]
-		campain := tmpSplit[3]
-		process := tmpSplit[4]
-		fileType := tmpSplit[5]
 
-		featureVector := cache.composeFeatures(
-			siteName,
-			userID,
-			fileType,
-			dataType,
-			campain,
-			process,
-			curStats.TotRequests,
-			curStats.RequestTicksMean,
+		curState = cache.getState(
+			curStats.getRealtimeNReq(&currentTime),
 			size,
+			siteName,
+			dataType,
 		)
-
-		curState = featureVector
 
 		// QLearn - Check action
 		expTradeoff := cache.qTable.GetRandomTradeOff()

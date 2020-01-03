@@ -113,6 +113,10 @@ const (
 	StatsMemorySize uint64 = 32
 	// NumReqDecayDays is the number of days that requests are maintained
 	NumReqDecayDays = 3.0
+	// NumUsersDecayDays is the number of days that requests are maintained
+	NumUsersDecayDays = 3.0
+	// NumSitesDecayDays is the number of days that requests are maintained
+	NumSitesDecayDays = 3.0
 )
 
 // UpdateStatsPolicyType is used to select the update stats policy
@@ -142,6 +146,8 @@ type WeightedFileStats struct {
 	RequestTicksMean  float32                    `json:"requestTicksMean"`
 	RequestTicks      [StatsMemorySize]time.Time `json:"requestTicks"`
 	RequestLastIdx    int                        `json:"requestLastIdx"`
+	Users             []int                      `json:"users"`
+	Sites             []string                   `json:"sites"`
 }
 
 func (stats WeightedFileStats) dumps() []byte {
@@ -156,6 +162,32 @@ func (stats *WeightedFileStats) loads(inString string) *WeightedFileStats {
 
 func (stats *WeightedFileStats) addInCache(curTime *time.Time) {
 	stats.InCacheSince = *curTime
+}
+
+func (stats *WeightedFileStats) addUser(userID int) {
+	inList := false
+	for _, val := range stats.Users {
+		if val == userID {
+			inList = true
+			break
+		}
+	}
+	if !inList {
+		stats.Users = append(stats.Users, userID)
+	}
+}
+
+func (stats *WeightedFileStats) addSite(userID string) {
+	inList := false
+	for _, val := range stats.Sites {
+		if val == userID {
+			inList = true
+			break
+		}
+	}
+	if !inList {
+		stats.Sites = append(stats.Sites, userID)
+	}
 }
 
 func (stats *WeightedFileStats) updateStats(hit bool, size float32, curTime *time.Time) {
@@ -176,6 +208,14 @@ func (stats *WeightedFileStats) updateStats(hit bool, size float32, curTime *tim
 	}
 }
 
+// getRealtimeNReq returns the weighted num. of requests
+func (stats *WeightedFileStats) getRealtimeNReq(curTime *time.Time) float64 {
+	dayDiffFirstTime := math.Floor(curTime.Sub(stats.FirstTime).Hours() / 24.)
+	numReq := float64(stats.TotRequests)
+	numReq = numReq * math.Exp(-(dayDiffFirstTime / NumReqDecayDays))
+	return numReq
+}
+
 // updateFilePoints returns the points for a single file
 func (stats *WeightedFileStats) updateFilePoints(curTime *time.Time) float64 {
 	dayDiffFirstTime := math.Floor(curTime.Sub(stats.FirstTime).Hours() / 24.)
@@ -184,7 +224,13 @@ func (stats *WeightedFileStats) updateFilePoints(curTime *time.Time) float64 {
 	numReq := float64(stats.TotRequests)
 	numReq = numReq * math.Exp(-(dayDiffFirstTime / NumReqDecayDays)) // Decay num. requests
 
-	points := numReq * float64(stats.Size)
+	numUsers := float64(len(stats.Users))
+	numUsers = numUsers * math.Exp(-(dayDiffFirstTime / NumUsersDecayDays)) // Decay num. users
+
+	numSites := float64(len(stats.Sites))
+	numSites = numSites * math.Exp(-(dayDiffFirstTime / NumSitesDecayDays)) // Decay num. sites
+
+	points := numUsers * numSites * numReq * float64(stats.Size)
 	points = points * math.Exp(-dayDiffInCache) // Decay points
 
 	stats.Points = points
