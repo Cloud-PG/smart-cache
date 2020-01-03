@@ -10,6 +10,7 @@
 		}
 	],
 	"settings": {
+		"python.pythonPath": "${env:VIRTUAL_ENV}/bin/python",
 		"go.useLanguageServer": true,
 		"[go]": {
 			"editor.snippetSuggestions": "none",
