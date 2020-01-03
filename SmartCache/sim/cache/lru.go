@@ -342,8 +342,10 @@ func (cache *LRUCache) AfterRequest(hit bool, added bool, size float32, wTime fl
 }
 
 // CheckWatermark checks the watermark levels and resolve the situation
-func (cache *LRUCache) CheckWatermark() {
+func (cache *LRUCache) CheckWatermark() bool {
+	ok := true
 	if cache.Capacity() >= cache.HighWaterMark {
+		ok = false
 		var (
 			totalDeleted float32
 			sizeToDelete float32 = (cache.HighWaterMark - cache.LowWaterMark) * (cache.MaxSize / 100.)
@@ -372,6 +374,7 @@ func (cache *LRUCache) CheckWatermark() {
 			}
 		}
 	}
+	return ok
 }
 
 // HitRate of the cache

@@ -368,9 +368,12 @@ func (cache *AIRL) UpdatePolicy(filename string, size float32, hit bool, vars ..
 }
 
 // CheckWatermark checks the watermark levels and resolve the situation
-func (cache *AIRL) CheckWatermark() {
-	cache.LRUCache.CheckWatermark()
-	cache.points = cache.GetPoints()
+func (cache *AIRL) CheckWatermark() bool {
+	goodStatus := cache.LRUCache.CheckWatermark()
+	if !goodStatus {
+		cache.points = cache.GetPoints()
+	}
+	return goodStatus
 }
 
 // ExtraStats for output

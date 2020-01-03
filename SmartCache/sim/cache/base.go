@@ -55,7 +55,7 @@ type Cache interface {
 	CPUMissEff() float32
 
 	Check(string) bool
-	CheckWatermark()
+	CheckWatermark() bool
 	BeforeRequest(hit bool, filename string, size float32, vars ...interface{})
 	UpdatePolicy(filename string, size float32, hit bool, vars ...interface{}) bool
 	AfterRequest(hit bool, added bool, size float32, wTime float32, cpuTime float32)
