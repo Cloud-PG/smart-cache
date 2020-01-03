@@ -367,6 +367,12 @@ func (cache *AIRL) UpdatePolicy(filename string, size float32, hit bool, vars ..
 	return added
 }
 
+// CheckWatermark checks the watermark levels and resolve the situation
+func (cache *AIRL) CheckWatermark() {
+	cache.LRUCache.CheckWatermark()
+	cache.points = cache.GetPoints()
+}
+
 // ExtraStats for output
 func (cache *AIRL) ExtraStats() string {
 	return fmt.Sprintf("Cov: %0.2f%%, Epsilon: %0.2f", cache.qTable.GetCoveragePercentage(), cache.qTable.Epsilon)
