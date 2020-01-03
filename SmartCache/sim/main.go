@@ -199,7 +199,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 		shortDesc = "Simulate a session"
 		longDesc = "Simulate a session from data input"
 	case aiSimCmd:
-		useDesc = `simAi cacheType fileOrFolderPath`
+		useDesc = `simAI cacheType fileOrFolderPath`
 		shortDesc = "Simulate a session with AI"
 		longDesc = "Simulate a session from data input using an AI model"
 	case testDatasetCmd:

@@ -27,7 +27,7 @@ def main():
 
     parser.register('type', 'bool', str2bool)  # add type keyword to registries
 
-    parser.add_argument('action', choices=['sim', 'simAi', 'testDataset', 'plot', 'train', 'create_dataset'],
+    parser.add_argument('action', choices=['sim', 'simAI', 'testDataset', 'plot', 'train', 'create_dataset'],
                         default="sim",
                         help='Action requested')
     parser.add_argument('source', type=str,
@@ -99,9 +99,6 @@ def main():
     parser.add_argument('--feature-prefix', type=str,
                         default="featureConverter",
                         help='Ai Model feature converter name prefix [DEFAULT: "featureConverter"]')
-    parser.add_argument('--use-qlearn', type='bool',
-                        default=False,
-                        help='Force to use Q-Learning method [DEFAULT: False]')
 
     args, _ = parser.parse_known_args()
 
@@ -111,7 +108,7 @@ def main():
         # Make visible only first device
         os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
-    if args.action in ["simulate", "testAI", "testDataset"]:
+    if args.action in ["sim", "simAI", "testDataset"]:
         if not os.path.exists(args.source):
             print(f"Path '{args.source}' does not exist!")
             exit(-1)
@@ -164,23 +161,23 @@ def main():
                         "--simDumpFileName=dump.json.gz",
                     ]
                     # Add custom cache parameters
-                    if cache_type == 'aiLRU':
+                    if cache_type in ['aiNN', 'aiRL']:
                         feature_map_file = path.abspath(
                             path.join(
                                 path.dirname(args.ai_model_basename),
                                 f"{args.feature_prefix}-window_{window_idx:02d}.json.gz"
                             )
                         )
-                        model_weights_file = path.abspath(
-                            f"{args.ai_model_basename.split('.h5')[0]}-window_{window_idx:02d}.dump.json.gz"
-                        )
                         exe_args.append(f"--aiFeatureMap={feature_map_file}")
-                        if args.use_qlearn:
-                            exe_args.append("--aiQLearn=true")
-                        else:
+                        if cache_type == "aiNN":
+                            model_weights_file = path.abspath(
+                                f"{args.ai_model_basename.split('.h5')[0]}-window_{window_idx:02d}.dump.json.gz"
+                            )
                             exe_args.append("--aiHost=127.0.0.1")
                             exe_args.append(f"--aiPort=4242")
                             exe_args.append(f"--aiModel={model_weights_file}")
+                        elif cache_type == "aiRL":
+                            exe_args.append("--aiQLearn=true")
                     elif cache_type == 'lruDatasetVerifier':
                         dataset_file = path.abspath(
                             path.join(
@@ -230,23 +227,23 @@ def main():
                     f"--simStopWindow={args.window_stop}",
                 ]
                 # Add custom cache parameters
-                if cache_type == 'aiLRU':
+                if cache_type in ['aiNN', 'aiRL']:
                     feature_map_file = path.abspath(
                         path.join(
                             path.dirname(args.ai_model_basename),
                             f"{args.feature_prefix}-window_00.json.gz"
                         )
                     )
-                    model_weights_file = path.abspath(
-                        f"{args.ai_model_basename.split('.h5')[0]}-window_00.dump.json.gz"
-                    )
                     exe_args.append(f"--aiFeatureMap={feature_map_file}")
-                    if args.use_qlearn:
-                        exe_args.append("--aiQLearn=true")
-                    else:
+                    if cache_type == "aiNN":
+                        model_weights_file = path.abspath(
+                            f"{args.ai_model_basename.split('.h5')[0]}-window_00.dump.json.gz"
+                        )
                         exe_args.append("--aiHost=127.0.0.1")
                         exe_args.append(f"--aiPort=4242")
                         exe_args.append(f"--aiModel={model_weights_file}")
+                    elif cache_type == "aiRL":
+                        exe_args.append("--aiQLearn=true")
                 elif cache_type == 'lruDatasetVerifier':
                     dataset_file = path.abspath(
                         path.join(
@@ -307,23 +304,23 @@ def main():
                         f"--simLoadDumpFileName={path.join(dump_dir, 'dump.json.gz')}",
                     ]
                     # Add custom cache parameters
-                    if cache_type == 'aiLRU':
+                    if cache_type in ['aiNN', 'aiRL']:
                         feature_map_file = path.abspath(
                             path.join(
                                 path.dirname(args.ai_model_basename),
                                 f"{args.feature_prefix}-window_{window_idx:02d}.json.gz"
                             )
                         )
-                        model_weights_file = path.abspath(
-                            f"{args.ai_model_basename.split('.h5')[0]}-window_{window_idx:02d}.dump.json.gz"
-                        )
                         exe_args.append(f"--aiFeatureMap={feature_map_file}")
-                        if args.use_qlearn:
-                            exe_args.append("--aiQLearn=true")
-                        else:
+                        if cache_type == "aiNN":
+                            model_weights_file = path.abspath(
+                                f"{args.ai_model_basename.split('.h5')[0]}-window_{window_idx:02d}.dump.json.gz"
+                            )
                             exe_args.append("--aiHost=127.0.0.1")
                             exe_args.append(f"--aiPort=4242")
                             exe_args.append(f"--aiModel={model_weights_file}")
+                        elif cache_type == "aiRL":
+                            exe_args.append("--aiQLearn=true")
                     elif cache_type == 'lruDatasetVerifier':
                         dataset_file = path.abspath(
                             path.join(
@@ -382,23 +379,23 @@ def main():
                         f"--simLoadDumpFileName={path.join(dump_dir, 'dump.json.gz')}",
                     ]
                     # Add custom cache parameters
-                    if cache_type == 'aiLRU':
+                    if cache_type in ['aiNN', 'aiRL']:
                         feature_map_file = path.abspath(
                             path.join(
                                 path.dirname(args.ai_model_basename),
                                 f"{args.feature_prefix}-window_{window_idx:02d}.json.gz"
                             )
                         )
-                        model_weights_file = path.abspath(
-                            f"{args.ai_model_basename.split('.h5')[0]}-window_{window_idx:02d}.dump.json.gz"
-                        )
                         exe_args.append(f"--aiFeatureMap={feature_map_file}")
-                        if args.use_qlearn:
-                            exe_args.append("--aiQLearn=true")
-                        else:
+                        if cache_type == "aiNN":
+                            model_weights_file = path.abspath(
+                                f"{args.ai_model_basename.split('.h5')[0]}-window_{window_idx:02d}.dump.json.gz"
+                            )
                             exe_args.append("--aiHost=127.0.0.1")
                             exe_args.append(f"--aiPort=4242")
                             exe_args.append(f"--aiModel={model_weights_file}")
+                        elif cache_type == "aiRL":
+                            exe_args.append("--aiQLearn=true")
                     elif cache_type == 'lruDatasetVerifier':
                         dataset_file = path.abspath(
                             path.join(
@@ -534,7 +531,9 @@ def main():
                 cur_filename = cur_row.filename
                 cur_size = cur_row.size
                 if cur_filename not in files:
-                    data_type, campain, process, file_type = cur_filename.split("/")[2:6]
+                    data_type, campain, process, file_type = cur_filename.split(
+                        "/"
+                    )[2:6]
                     files[cur_filename] = {
                         'size': cur_size,
                         'totReq': 0,
@@ -584,9 +583,9 @@ def main():
                     'dataType': [files[filename]['dataType']
                                  for filename in files],
                     'campain': [files[filename]['campain']
-                               for filename in files],
+                                for filename in files],
                     'process': [files[filename]['process']
-                               for filename in files],
+                                for filename in files],
                 }
             )
 
@@ -663,7 +662,7 @@ def main():
             dataset_df = pd.merge(sample, files_df, on='filename')
             dataset_df = dataset_df[
                 ['site_name', 'user', 'num_req', 'avg_time',
-                 'size', 'fileType', 'dataType', 
+                 'size', 'fileType', 'dataType',
                  'campain', 'process', 'class']
             ]
             dataset_df.rename(
@@ -682,7 +681,8 @@ def main():
             ):
                 # with gzip.GzipFile(dataset_labels_out_file, "wb") as out_file:
                 #     dataset_df.to_feather(out_file)
-                dataset_df.to_pickle(dataset_labels_out_file, compression='gzip')
+                dataset_df.to_pickle(
+                    dataset_labels_out_file, compression='gzip')
 
             with yaspin(
                 Spinners.bouncingBall,
