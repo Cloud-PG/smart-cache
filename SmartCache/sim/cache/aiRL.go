@@ -198,7 +198,7 @@ func (cache *AIRL) getState(vars ...interface{}) []bool {
 	siteType := sitePieces[0]
 
 	dataType := vars[3].(string)
-	cacheCapacity := cache.Capacity()
+	cacheCapacity := float64(cache.Capacity())
 
 	for _, featureName := range cache.aiFeatureMapOrder {
 		switch featureName {

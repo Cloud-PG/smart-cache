@@ -23,7 +23,6 @@ var (
 	aiHost              string
 	aiModel             string
 	aiPort              string
-	aiQLearn            bool
 	buildstamp          string
 	cacheSize           float32
 	cpuprofile          string
@@ -219,13 +218,8 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			copy(args, args[2:])
 			args = args[:len(args)-1]
 
-			cacheBaseName := cacheType
-			if aiQLearn {
-				cacheBaseName += "-RL"
-			}
-
 			baseName := strings.Join([]string{
-				cacheBaseName,
+				cacheType,
 				fmt.Sprintf("%0.0fT", cacheSize/(1024.*1024.)),
 				simRegion,
 			},
@@ -245,12 +239,13 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 					fmt.Println("ERR: No feature map indicated...")
 					os.Exit(-1)
 				}
-				if !aiQLearn {
+				switch cacheType {
+				case "aiNN":
 					grpcConn = curCacheInstance.Init(aiHost, aiPort, aiFeatureMap, aiModel)
 					if grpcConn != nil {
 						defer grpcConn.(*grpc.ClientConn).Close()
 					}
-				} else {
+				case "aiRL":
 					curCacheInstance.Init(aiFeatureMap)
 				}
 			case testDatasetCmd:
@@ -510,10 +505,6 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 		cmd.PersistentFlags().StringVar(
 			&aiModel, "aiModel", "",
 			"the model to load into the simulator",
-		)
-		cmd.PersistentFlags().BoolVar(
-			&aiQLearn, "aiQLearn", false,
-			"Use Q-Learning",
 		)
 	case testDatasetCmd:
 		cmd.PersistentFlags().StringVar(

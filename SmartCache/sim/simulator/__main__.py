@@ -13,7 +13,7 @@ from yaspin.spinners import Spinners
 
 from DataManager.collector.dataset.reader import SimulatorDatasetReader
 from SmartCache.ai.models.generator import DonkeyModel
-from SmartCache.utils import get_simulator_exe
+from SmartCache.sim import get_simulator_exe
 
 from .ga import compare_greedy_solution, get_best_configuration
 from .greedy import get2PTAS
@@ -99,6 +99,9 @@ def main():
     parser.add_argument('--feature-prefix', type=str,
                         default="featureConverter",
                         help='Ai Model feature converter name prefix [DEFAULT: "featureConverter"]')
+    parser.add_argument('--ai-feature-map', type=str,
+                        default="",
+                        help='Ai feature map file [DEFAULT: ""]')
 
     args, _ = parser.parse_known_args()
 
@@ -142,7 +145,7 @@ def main():
                 for cache_type in cache_types:
                     working_dir = path.join(
                         single_window_run_dir,
-                        f"{cache_type+'-RL' if args.use_qlearn else cache_type}_{int(args.cache_size/1024**2)}T_{args.region}",
+                       f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}"
                         f"window_{window_idx}",
                     )
                     os.makedirs(working_dir, exist_ok=True)
@@ -162,22 +165,24 @@ def main():
                     ]
                     # Add custom cache parameters
                     if cache_type in ['aiNN', 'aiRL']:
-                        feature_map_file = path.abspath(
-                            path.join(
-                                path.dirname(args.ai_model_basename),
-                                f"{args.feature_prefix}-window_{window_idx:02d}.json.gz"
-                            )
-                        )
-                        exe_args.append(f"--aiFeatureMap={feature_map_file}")
                         if cache_type == "aiNN":
+                            feature_map_file = path.abspath(
+                                path.join(
+                                    path.dirname(args.ai_model_basename),
+                                    f"{args.feature_prefix}-window_{window_idx:02d}.json.gz"
+                                )
+                            )
                             model_weights_file = path.abspath(
                                 f"{args.ai_model_basename.split('.h5')[0]}-window_{window_idx:02d}.dump.json.gz"
                             )
+                            exe_args.append(
+                                f"--aiFeatureMap={feature_map_file}")
                             exe_args.append("--aiHost=127.0.0.1")
                             exe_args.append(f"--aiPort=4242")
                             exe_args.append(f"--aiModel={model_weights_file}")
                         elif cache_type == "aiRL":
-                            exe_args.append("--aiQLearn=true")
+                            exe_args.append(
+                                f"--aiFeatureMap={path.abspath(args.ai_feature_map)}")
                     elif cache_type == 'lruDatasetVerifier':
                         dataset_file = path.abspath(
                             path.join(
@@ -211,7 +216,7 @@ def main():
             for cache_type in cache_types:
                 working_dir = path.join(
                     normal_run_dir,
-                    f"{cache_type+'-RL' if args.use_qlearn else cache_type}_{int(args.cache_size/1024**2)}T_{args.region}"
+                    f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}"
                 )
                 os.makedirs(working_dir, exist_ok=True)
                 # Create base command
@@ -228,22 +233,24 @@ def main():
                 ]
                 # Add custom cache parameters
                 if cache_type in ['aiNN', 'aiRL']:
-                    feature_map_file = path.abspath(
-                        path.join(
-                            path.dirname(args.ai_model_basename),
-                            f"{args.feature_prefix}-window_00.json.gz"
-                        )
-                    )
-                    exe_args.append(f"--aiFeatureMap={feature_map_file}")
                     if cache_type == "aiNN":
+                        feature_map_file = path.abspath(
+                            path.join(
+                                path.dirname(args.ai_model_basename),
+                                f"{args.feature_prefix}-window_00.json.gz"
+                            )
+                        )
                         model_weights_file = path.abspath(
                             f"{args.ai_model_basename.split('.h5')[0]}-window_00.dump.json.gz"
                         )
+                        exe_args.append(
+                            f"--aiFeatureMap={feature_map_file}")
                         exe_args.append("--aiHost=127.0.0.1")
                         exe_args.append(f"--aiPort=4242")
                         exe_args.append(f"--aiModel={model_weights_file}")
                     elif cache_type == "aiRL":
-                        exe_args.append("--aiQLearn=true")
+                        exe_args.append(
+                            f"--aiFeatureMap={path.abspath(args.ai_feature_map)}")
                 elif cache_type == 'lruDatasetVerifier':
                     dataset_file = path.abspath(
                         path.join(
@@ -280,12 +287,12 @@ def main():
                 for cache_type in cache_types:
                     working_dir = path.join(
                         nexxt_window_run_dir,
-                        f"{cache_type+'-RL' if args.use_qlearn else cache_type}_{int(args.cache_size/1024**2)}T_{args.region}",
+                        f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}"
                         f"window_{window_idx+1}",
                     )
                     dump_dir = path.join(
                         single_window_run_dir,
-                        f"{cache_type+'-RL' if args.use_qlearn else cache_type}_{int(args.cache_size/1024**2)}T_{args.region}",
+                        f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}"
                         f"window_{window_idx}",
                     )
                     os.makedirs(working_dir, exist_ok=True)
@@ -305,22 +312,24 @@ def main():
                     ]
                     # Add custom cache parameters
                     if cache_type in ['aiNN', 'aiRL']:
-                        feature_map_file = path.abspath(
-                            path.join(
-                                path.dirname(args.ai_model_basename),
-                                f"{args.feature_prefix}-window_{window_idx:02d}.json.gz"
-                            )
-                        )
-                        exe_args.append(f"--aiFeatureMap={feature_map_file}")
                         if cache_type == "aiNN":
+                            feature_map_file = path.abspath(
+                                path.join(
+                                    path.dirname(args.ai_model_basename),
+                                    f"{args.feature_prefix}-window_{window_idx:02d}.json.gz"
+                                )
+                            )
                             model_weights_file = path.abspath(
                                 f"{args.ai_model_basename.split('.h5')[0]}-window_{window_idx:02d}.dump.json.gz"
                             )
+                            exe_args.append(
+                                f"--aiFeatureMap={feature_map_file}")
                             exe_args.append("--aiHost=127.0.0.1")
                             exe_args.append(f"--aiPort=4242")
                             exe_args.append(f"--aiModel={model_weights_file}")
                         elif cache_type == "aiRL":
-                            exe_args.append("--aiQLearn=true")
+                            exe_args.append(
+                                f"--aiFeatureMap={path.abspath(args.ai_feature_map)}")
                     elif cache_type == 'lruDatasetVerifier':
                         dataset_file = path.abspath(
                             path.join(
@@ -355,12 +364,12 @@ def main():
                 for cache_type in cache_types:
                     working_dir = path.join(
                         next_period_run_dir,
-                        f"{cache_type+'-RL' if args.use_qlearn else cache_type}_{int(args.cache_size/1024**2)}T_{args.region}",
+                        f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}"
                         f"windows_{window_idx+1}-{args.window_stop}",
                     )
                     dump_dir = path.join(
                         single_window_run_dir,
-                        f"{cache_type+'-RL' if args.use_qlearn else cache_type}_{int(args.cache_size/1024**2)}T_{args.region}",
+                        f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}"
                         f"window_{window_idx}",
                     )
                     os.makedirs(working_dir, exist_ok=True)
@@ -380,22 +389,24 @@ def main():
                     ]
                     # Add custom cache parameters
                     if cache_type in ['aiNN', 'aiRL']:
-                        feature_map_file = path.abspath(
-                            path.join(
-                                path.dirname(args.ai_model_basename),
-                                f"{args.feature_prefix}-window_{window_idx:02d}.json.gz"
-                            )
-                        )
-                        exe_args.append(f"--aiFeatureMap={feature_map_file}")
                         if cache_type == "aiNN":
+                            feature_map_file = path.abspath(
+                                path.join(
+                                    path.dirname(args.ai_model_basename),
+                                    f"{args.feature_prefix}-window_{window_idx:02d}.json.gz"
+                                )
+                            )
                             model_weights_file = path.abspath(
                                 f"{args.ai_model_basename.split('.h5')[0]}-window_{window_idx:02d}.dump.json.gz"
                             )
+                            exe_args.append(
+                                f"--aiFeatureMap={feature_map_file}")
                             exe_args.append("--aiHost=127.0.0.1")
                             exe_args.append(f"--aiPort=4242")
                             exe_args.append(f"--aiModel={model_weights_file}")
                         elif cache_type == "aiRL":
-                            exe_args.append("--aiQLearn=true")
+                            exe_args.append(
+                                f"--aiFeatureMap={path.abspath(args.ai_feature_map)}")
                     elif cache_type == 'lruDatasetVerifier':
                         dataset_file = path.abspath(
                             path.join(
