@@ -25,6 +25,8 @@ type LRUCache struct {
 	hitWTime, missWTime                float32
 	dataWritten, dataRead, dataDeleted float32
 	dataReadOnHit, dataReadOnMiss      float32
+	HighWaterMark                      float32
+	LowWaterMark                       float32
 }
 
 // Init the LRU struct
@@ -32,6 +34,16 @@ func (cache *LRUCache) Init(_ ...interface{}) interface{} {
 	cache.LRUStats.Init()
 	cache.files = make(map[string]float32)
 	cache.queue = list.New()
+	if cache.HighWaterMark == 0.0 {
+		cache.HighWaterMark = 95.0
+	}
+	if cache.LowWaterMark == 0.0 {
+		cache.LowWaterMark = 80.0
+	}
+
+	if cache.HighWaterMark < cache.LowWaterMark {
+		panic(fmt.Sprintf("High watermark is lower then Low waterrmark -> %f < %f", cache.HighWaterMark, cache.LowWaterMark))
+	}
 
 	return cache
 }
@@ -263,7 +275,7 @@ func (cache *LRUCache) UpdatePolicy(filename string, size float32, hit bool, _ .
 				}
 				fileSize := cache.files[tmpVal.Value.(string)]
 				cache.size -= fileSize
-				cache.dataDeleted += size
+				cache.dataDeleted += fileSize
 
 				totalDeleted += fileSize
 				delete(cache.files, tmpVal.Value.(string))
@@ -327,6 +339,39 @@ func (cache *LRUCache) AfterRequest(hit bool, added bool, size float32, wTime fl
 		cache.dataWritten += size
 	}
 	cache.dataRead += size
+}
+
+// CheckWatermark checks the watermark levels and resolve the situation
+func (cache *LRUCache) CheckWatermark() {
+	if cache.Capacity() >= cache.HighWaterMark {
+		var (
+			totalDeleted float32
+			sizeToDelete float32 = (cache.HighWaterMark - cache.LowWaterMark) * (cache.MaxSize / 100.)
+		)
+		tmpVal := cache.queue.Front()
+		for {
+			if tmpVal == nil {
+				break
+			}
+			fileSize := cache.files[tmpVal.Value.(string)]
+			cache.size -= fileSize
+			cache.dataDeleted += fileSize
+
+			totalDeleted += fileSize
+			delete(cache.files, tmpVal.Value.(string))
+
+			tmpVal = tmpVal.Next()
+			// Check if all files are deleted
+			if tmpVal == nil {
+				break
+			}
+			cache.queue.Remove(tmpVal.Prev())
+
+			if totalDeleted >= sizeToDelete {
+				break
+			}
+		}
+	}
 }
 
 // HitRate of the cache
