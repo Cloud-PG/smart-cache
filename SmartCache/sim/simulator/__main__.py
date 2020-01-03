@@ -13,7 +13,7 @@ from yaspin.spinners import Spinners
 
 from DataManager.collector.dataset.reader import SimulatorDatasetReader
 from SmartCache.ai.models.generator import DonkeyModel
-from SmartCache.sim import get_simulator_exe
+from SmartCache.utils import get_simulator_exe
 
 from .ga import compare_greedy_solution, get_best_configuration
 from .greedy import get2PTAS
