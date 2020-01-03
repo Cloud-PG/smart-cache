@@ -166,16 +166,16 @@ func (stats *WeightedFileStats) addInCache(curTime *time.Time) {
 }
 
 func (stats *WeightedFileStats) addUser(userID int) {
-	targetIdx := sort.SearchInts(stats.Users, userID)
-	if targetIdx != len(stats.Users) {
+	idx := sort.Search(len(stats.Users), func(idx int) bool { return userID <= stats.Users[idx] })
+	if idx >= len(stats.Users) || stats.Users[idx] != userID {
 		stats.Users = append(stats.Users, userID)
 		sort.Ints(stats.Users)
 	}
 }
 
 func (stats *WeightedFileStats) addSite(siteName string) {
-	targetIdx := sort.SearchStrings(stats.Sites, siteName)
-	if targetIdx != len(stats.Users) {
+	idx := sort.Search(len(stats.Sites), func(idx int) bool { return siteName <= stats.Sites[idx] })
+	if idx >= len(stats.Sites) || stats.Sites[idx] != siteName {
 		stats.Sites = append(stats.Sites, siteName)
 		sort.Strings(stats.Sites)
 	}
