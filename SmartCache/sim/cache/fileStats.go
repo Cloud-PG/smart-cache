@@ -3,6 +3,7 @@ package cache
 import (
 	"encoding/json"
 	"math"
+	"sort"
 	"time"
 )
 
@@ -165,28 +166,18 @@ func (stats *WeightedFileStats) addInCache(curTime *time.Time) {
 }
 
 func (stats *WeightedFileStats) addUser(userID int) {
-	inList := false
-	for _, val := range stats.Users {
-		if val == userID {
-			inList = true
-			break
-		}
-	}
-	if !inList {
+	targetIdx := sort.SearchInts(stats.Users, userID)
+	if targetIdx != len(stats.Users) {
 		stats.Users = append(stats.Users, userID)
+		sort.Ints(stats.Users)
 	}
 }
 
-func (stats *WeightedFileStats) addSite(userID string) {
-	inList := false
-	for _, val := range stats.Sites {
-		if val == userID {
-			inList = true
-			break
-		}
-	}
-	if !inList {
-		stats.Sites = append(stats.Sites, userID)
+func (stats *WeightedFileStats) addSite(siteName string) {
+	targetIdx := sort.SearchStrings(stats.Sites, siteName)
+	if targetIdx != len(stats.Users) {
+		stats.Sites = append(stats.Sites, siteName)
+		sort.Strings(stats.Sites)
 	}
 }
 
