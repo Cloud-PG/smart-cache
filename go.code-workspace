@@ -4,6 +4,9 @@
 		},
 		{
 			"path": "./SmartCache/sim"
+		},
+		{
+			"path": "../smart-cache-results"
 		}
 	],
 	"settings": {
