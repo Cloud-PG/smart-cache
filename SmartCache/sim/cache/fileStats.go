@@ -113,11 +113,11 @@ const (
 	// StatsMemorySize represents the  number of slots
 	StatsMemorySize uint64 = 32
 	// NumReqDecayDays is the number of days that requests are maintained
-	NumReqDecayDays = 3.0
+	NumReqDecayDays = 7.0
 	// NumUsersDecayDays is the number of days that requests are maintained
-	NumUsersDecayDays = 3.0
+	NumUsersDecayDays = 7.0
 	// NumSitesDecayDays is the number of days that requests are maintained
-	NumSitesDecayDays = 3.0
+	NumSitesDecayDays = 7.0
 )
 
 // UpdateStatsPolicyType is used to select the update stats policy

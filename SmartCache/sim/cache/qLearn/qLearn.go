@@ -18,8 +18,8 @@ const (
 	// ActionNotStore indicates to not store an element in cache
 	ActionNotStore
 
-	// RLStandardUpdate indicates the standard RL update function
-	RLStandardUpdate RLUpdateType = iota
+	// RLSARSA indicates the standard RL update algorithm SARSA
+	RLSARSA RLUpdateType = iota
 	// RLBellmanEquation indicates the Bellman equation
 	RLBellmanEquation
 )
@@ -106,7 +106,7 @@ func (table QTable) genAllStates(featureLenghts []int) chan []bool {
 func (table *QTable) Init(featureLenghts []int) {
 	table.LearningRate = 0.9 // also named Alpha
 	table.DiscountFactor = 0.5
-	table.DecayRateEpsilon = 0.000001
+	table.DecayRateEpsilon = 0.000005
 	table.Epsilon = 1.0
 	table.MaxEpsilon = 1.0
 	table.MinEpsilon = 0.1
@@ -213,7 +213,7 @@ func (table *QTable) Update(state []bool, action ActionType, reward float64) {
 	oldValue := table.GetAction(stateIdx, action)
 	maxValue := getArgMax(table.States[stateIdx]) // The next state is the same
 	switch table.UpdateFunction {
-	case RLStandardUpdate:
+	case RLSARSA:
 		table.States[stateIdx][action] = (1.0-table.LearningRate)*oldValue + table.LearningRate*(reward+table.DiscountFactor*table.States[stateIdx][maxValue])
 	case RLBellmanEquation:
 		table.States[stateIdx][action] = oldValue + table.LearningRate*(reward+table.DiscountFactor*table.States[stateIdx][maxValue]-oldValue)
@@ -225,3 +225,6 @@ func (table *QTable) Update(state []bool, action ActionType, reward float64) {
 func (table *QTable) UpdateEpsilon() {
 	table.Epsilon = table.MinEpsilon + (table.MaxEpsilon-table.MinEpsilon)*math.Exp(-table.DecayRateEpsilon*float64(table.EpisodeCounter))
 }
+
+// TODO: sistemare gli stati per avere current state e next state
+// TODO: sistemare SARSA e QLearning

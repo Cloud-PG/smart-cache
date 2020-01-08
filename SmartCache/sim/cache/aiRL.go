@@ -131,7 +131,12 @@ func (cache *AIRL) Loads(inputString *[][]byte) {
 }
 
 func (cache *AIRL) getCategory(catKey string, value interface{}) []bool {
-	var res []bool
+	var (
+		res         []bool
+		inputValueI int64
+		inputValueF float64
+		inputValueS string
+	)
 	curCategory := cache.aiFeatureMap[catKey]
 
 	if curCategory.UnknownValues == true || curCategory.BucketOpenRight == true {
@@ -152,26 +157,31 @@ func (cache *AIRL) getCategory(catKey string, value interface{}) []bool {
 			res[curCategory.Values[value.(string)]] = true
 		}
 		return res
+	}
 
+	switch curCategory.Type {
+	case featuremap.TypeInt:
+		inputValueI = int64(value.(float64))
+	case featuremap.TypeFloat:
+		inputValueF = value.(float64)
+	case featuremap.TypeString:
+		inputValueS = value.(string)
 	}
 
 	for curKey := range curCategory.GetKeys() {
 		switch curCategory.Type {
 		case featuremap.TypeInt:
-			inputValue := int64(value.(float64))
-			if inputValue <= curKey.ValueI {
+			if inputValueI <= curKey.ValueI {
 				res[curCategory.Values[fmt.Sprintf("%d", curKey.ValueI)]] = true
 				return res
 			}
 		case featuremap.TypeFloat:
-			inputValue := value.(float64)
-			if inputValue <= curKey.ValueF {
+			if inputValueF <= curKey.ValueF {
 				res[curCategory.Values[fmt.Sprintf("%0.2f", curKey.ValueF)]] = true
 				return res
 			}
 		case featuremap.TypeString:
-			inputValue := value.(string)
-			if inputValue <= curKey.ValueS {
+			if inputValueS <= curKey.ValueS {
 				res[curCategory.Values[fmt.Sprintf("%s", curKey.ValueS)]] = true
 				return res
 			}
@@ -193,11 +203,7 @@ func (cache *AIRL) getState(vars ...interface{}) []bool {
 	numReq := vars[0].(float64)
 	size := float64(vars[1].(float32))
 
-	siteName := vars[2].(string)
-	sitePieces := strings.Split(siteName, "_")
-	siteType := sitePieces[0]
-
-	dataType := vars[3].(string)
+	dataType := vars[2].(string)
 	cacheCapacity := float64(cache.Capacity())
 
 	for _, featureName := range cache.aiFeatureMapOrder {
@@ -208,8 +214,6 @@ func (cache *AIRL) getState(vars ...interface{}) []bool {
 			tmpArr = cache.getCategory(featureName, numReq)
 		case "cacheUsage":
 			tmpArr = cache.getCategory(featureName, cacheCapacity)
-		case "siteType":
-			tmpArr = cache.getCategory(featureName, siteType)
 		case "dataType":
 			tmpArr = cache.getCategory(featureName, dataType)
 		default:
@@ -274,7 +278,6 @@ func (cache *AIRL) UpdatePolicy(filename string, size float32, hit bool, vars ..
 		curState = cache.getState(
 			curStats.getRealtimeNReq(&currentTime),
 			size,
-			siteName,
 			dataType,
 		)
 
@@ -294,7 +297,13 @@ func (cache *AIRL) UpdatePolicy(filename string, size float32, hit bool, vars ..
 
 		// QLearn - Take the action NOT STORE
 		if curAction == qlearn.ActionNotStore {
-			reward := -curStats.Points
+			newScore := cache.points
+			reward := 0.0
+			if newScore >= prevPoints {
+				reward += 1.0
+			} else {
+				reward -= 1.0
+			}
 			// Update table
 			cache.qTable.Update(curState, curAction, reward)
 			// Update epsilon
@@ -344,7 +353,12 @@ func (cache *AIRL) UpdatePolicy(filename string, size float32, hit bool, vars ..
 		// QLearn - Take the action STORE
 		if cache.qTable != nil && curAction == qlearn.ActionStore {
 			newScore := cache.points
-			reward := newScore - prevPoints
+			reward := 0.0
+			if newScore >= prevPoints {
+				reward += 1.0
+			} else {
+				reward -= 1.0
+			}
 			// Update table
 			cache.qTable.Update(curState, curAction, reward)
 			// Update epsilon

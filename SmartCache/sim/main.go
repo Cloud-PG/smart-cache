@@ -91,7 +91,7 @@ func main() {
 		"[Simulation] cache sim service port",
 	)
 	rootCmd.PersistentFlags().Float64Var(
-		&outputUpdateDelay, "outputUpdateDelay", 5.,
+		&outputUpdateDelay, "outputUpdateDelay", 2.4,
 		"[Simulation] time delay for cmd output",
 	)
 	rootCmd.PersistentFlags().StringVar(

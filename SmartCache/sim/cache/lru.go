@@ -38,7 +38,7 @@ func (cache *LRUCache) Init(_ ...interface{}) interface{} {
 		cache.HighWaterMark = 95.0
 	}
 	if cache.LowWaterMark == 0.0 {
-		cache.LowWaterMark = 80.0
+		cache.LowWaterMark = 75.0
 	}
 
 	if cache.HighWaterMark < cache.LowWaterMark {
