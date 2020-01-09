@@ -351,11 +351,19 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			for record := range iterator {
 				if strings.Compare(simRegion, "all") != 0 {
 					if strings.Index(strings.ToLower(record.SiteName), selectedRegion) == -1 {
+						// TODO: fix junp output
+						// fmt.Printf("[Jump region %s]\r",
+						// 	record.SiteName,
+						// )
 						continue
 					}
 				}
 				if strings.Compare(simFileType, "all") != 0 {
-					if strings.Index(strings.ToLower(record.FileType), simFileType) == -1 {
+					if strings.Index(strings.ToLower(record.FileType), strings.ToLower(simFileType)) == -1 {
+						// TODO: fix junp output
+						// fmt.Printf("[Jump file type %s]\r",
+						// 	record.FileType,
+						// )
 						continue
 					}
 				}
