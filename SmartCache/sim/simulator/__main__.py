@@ -42,22 +42,25 @@ def main():
     parser.add_argument('--simulation-steps', type=str,
                         default='single,normal,nextW,nextP',
                         help='Select the simulation steps [DEFAULT: "single,normal,nextW,next"]')
-    parser.add_argument('-FEB', '--force-exe-build', type='bool',
+    parser.add_argument('--force-exe-build', type='bool',
                         default=True,
                         help='Force to build the simulation executable [DEFAULT: True]')
-    parser.add_argument('-CS', '--cache-size', type=int,
+    parser.add_argument('--cache-size', type=int,
                         default=104857600,
                         help='Size of the cache to simulate in Mega Bytes [DEFAULT: 104857600]')
     parser.add_argument('-R', '--region', type=str,
                         default="all",
                         help='Region of the data to simulate [DEFAULT: "all"]')
-    parser.add_argument('-WS', '--window-size', type=int,
+    parser.add_argument('--file-type', type=str,
+                        default="all",
+                        help='File type of the data to simulate [DEFAULT: "all"]')
+    parser.add_argument('--window-size', type=int,
                         default=7,
                         help='Size of the window to simulate [DEFAULT: 7]')
-    parser.add_argument('-WSTA', '--window-start', type=int,
+    parser.add_argument('--window-start', type=int,
                         default=0,
                         help='Window where to start from [DEFAULT: 0]')
-    parser.add_argument('-WSTO', '--window-stop', type=int,
+    parser.add_argument('--window-stop', type=int,
                         default=4,
                         help='Window where to stop [DEFAULT: 4]')
     parser.add_argument('--population-size', type=int,
@@ -157,6 +160,7 @@ def main():
                         path.abspath(args.source),
                         f"--size={args.cache_size}",
                         f"--simRegion={args.region}",
+                        f"--simFileType={args.file_type}",
                         f"--simWindowSize={args.window_size}",
                         f"--simStartFromWindow={window_idx}",
                         f"--simStopWindow={window_idx+1}",
@@ -227,6 +231,7 @@ def main():
                     path.abspath(args.source),
                     f"--size={args.cache_size}",
                     f"--simRegion={args.region}",
+                    f"--simFileType={args.file_type}",
                     f"--simWindowSize={args.window_size}",
                     f"--simStartFromWindow={args.window_start}",
                     f"--simStopWindow={args.window_stop}",
@@ -304,6 +309,7 @@ def main():
                         path.abspath(args.source),
                         f"--size={args.cache_size}",
                         f"--simRegion={args.region}",
+                        f"--simFileType={args.file_type}",
                         f"--simWindowSize={args.window_size}",
                         f"--simStartFromWindow={window_idx+1}",
                         f"--simStopWindow={window_idx+2}",
@@ -381,6 +387,7 @@ def main():
                         path.abspath(args.source),
                         f"--size={args.cache_size}",
                         f"--simRegion={args.region}",
+                        f"--simFileType={args.file_type}",
                         f"--simWindowSize={args.window_size}",
                         f"--simStartFromWindow={window_idx+1}",
                         f"--simStopWindow={args.window_stop+1}",
