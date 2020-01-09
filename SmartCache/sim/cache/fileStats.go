@@ -199,28 +199,25 @@ func (stats *WeightedFileStats) updateStats(hit bool, size float32, curTime *tim
 	}
 }
 
-// getRealtimeNReq returns the weighted num. of requests
-func (stats *WeightedFileStats) getRealtimeNReq(curTime *time.Time) float64 {
+// getRealTimeValue returns the weighted num. of requests
+func (stats WeightedFileStats) getRealTimeValue(value float64, dayPassed float64, decayWindow float64) float64 {
+	return value * math.Exp(-(dayPassed / decayWindow))
+}
+
+// getRealTimeStats returns the weighted num. of requests
+func (stats WeightedFileStats) getRealTimeStats(curTime *time.Time) (float64, float64, float64) {
 	dayDiffFirstTime := math.Floor(curTime.Sub(stats.FirstTime).Hours() / 24.)
-	numReq := float64(stats.TotRequests)
-	numReq = numReq * math.Exp(-(dayDiffFirstTime / NumReqDecayDays))
-	return numReq
+	numReq := stats.getRealTimeValue(float64(stats.TotRequests), dayDiffFirstTime, NumReqDecayDays)
+	numUsers := stats.getRealTimeValue(float64(len(stats.Users)), dayDiffFirstTime, NumUsersDecayDays)
+	numSites := stats.getRealTimeValue(float64(len(stats.Sites)), dayDiffFirstTime, NumSitesDecayDays)
+	return numReq, numUsers, numSites
 }
 
 // updateFilePoints returns the points for a single file
 func (stats *WeightedFileStats) updateFilePoints(curTime *time.Time) float64 {
-	dayDiffFirstTime := math.Floor(curTime.Sub(stats.FirstTime).Hours() / 24.)
+	numReq, numUsers, numSites := stats.getRealTimeStats(curTime)
+
 	dayDiffInCache := math.Floor(curTime.Sub(stats.InCacheSince).Hours() / 24.)
-
-	numReq := float64(stats.TotRequests)
-	numReq = numReq * math.Exp(-(dayDiffFirstTime / NumReqDecayDays)) // Decay num. requests
-
-	numUsers := float64(len(stats.Users))
-	numUsers = numUsers * math.Exp(-(dayDiffFirstTime / NumUsersDecayDays)) // Decay num. users
-
-	numSites := float64(len(stats.Sites))
-	numSites = numSites * math.Exp(-(dayDiffFirstTime / NumSitesDecayDays)) // Decay num. sites
-
 	points := numUsers * numSites * numReq * float64(stats.Size)
 	points = points * math.Exp(-dayDiffInCache) // Decay points
 

@@ -20,8 +20,8 @@ const (
 
 	// RLSARSA indicates the standard RL update algorithm SARSA
 	RLSARSA RLUpdateType = iota
-	// RLBellmanEquation indicates the Bellman equation
-	RLBellmanEquation
+	// RLQLearning indicates the Bellman equation
+	RLQLearning
 )
 
 // QTable used in Qlearning
@@ -115,7 +115,7 @@ func (table *QTable) Init(featureLenghts []int) {
 		ActionStore,
 		ActionNotStore,
 	}
-	table.UpdateFunction = RLBellmanEquation
+	table.UpdateFunction = RLQLearning
 	table.RGenerator = rand.New(rand.NewSource(42))
 
 	var numStates int64 = 1
@@ -128,12 +128,12 @@ func (table *QTable) Init(featureLenghts []int) {
 	table.States = make(map[string][]float64, numStates)
 
 	for state := range table.genAllStates(featureLenghts) {
-		stateIdx := table.GetStateStr(state)
-		_, inMap := table.States[stateIdx]
+		stateString := State2String(state)
+		_, inMap := table.States[stateString]
 		if !inMap {
-			table.States[stateIdx] = make([]float64, len(table.Actions))
+			table.States[stateString] = make([]float64, len(table.Actions))
 		} else {
-			fmt.Printf("State %v with idx %s already present...\n", state, stateIdx)
+			fmt.Printf("State %v with idx %s already present...\n", state, stateString)
 			panic("Insert state error!!!")
 		}
 
@@ -174,19 +174,6 @@ func (table QTable) GetCoveragePercentage() float64 {
 	return (float64(numSetVariables) / float64(table.NumVars)) * 100.
 }
 
-// GetStateStr returns the index of a given state
-func (table QTable) GetStateStr(state []bool) string {
-	var resIdx string
-	for idx := 0; idx < len(state); idx++ {
-		if state[idx] {
-			resIdx += "1"
-		} else {
-			resIdx += "0"
-		}
-	}
-	return resIdx
-}
-
 // GetAction returns the possible environment action from a state
 func (table QTable) GetAction(stateIdx string, action ActionType) float64 {
 	values := table.States[stateIdx]
@@ -201,22 +188,23 @@ func (table QTable) GetAction(stateIdx string, action ActionType) float64 {
 }
 
 // GetBestAction returns the action of the best action for the given state
-func (table QTable) GetBestAction(state []bool) ActionType {
-	stateIdx := table.GetStateStr(state)
-	values := table.States[stateIdx]
+func (table QTable) GetBestAction(state string) ActionType {
+
+	values := table.States[state]
 	return table.Actions[getArgMax(values)]
 }
 
 // Update change the Q-table values of the given action
-func (table *QTable) Update(state []bool, action ActionType, reward float64) {
-	stateIdx := table.GetStateStr(state)
-	oldValue := table.GetAction(stateIdx, action)
-	maxValue := getArgMax(table.States[stateIdx]) // The next state is the same
+func (table *QTable) Update(state string, action ActionType, reward float64) {
+	curStateValue := table.GetAction(state, action)
 	switch table.UpdateFunction {
 	case RLSARSA:
-		table.States[stateIdx][action] = (1.0-table.LearningRate)*oldValue + table.LearningRate*(reward+table.DiscountFactor*table.States[stateIdx][maxValue])
-	case RLBellmanEquation:
-		table.States[stateIdx][action] = oldValue + table.LearningRate*(reward+table.DiscountFactor*table.States[stateIdx][maxValue]-oldValue)
+		// TODO: fix next state with a proper one, not the maximum of the same state
+		nextStateIdx := getArgMax(table.States[state]) // The next state is the same
+		table.States[state][action] = (1.0-table.LearningRate)*curStateValue + table.LearningRate*(reward+table.DiscountFactor*table.States[state][nextStateIdx])
+	case RLQLearning:
+		nextStateIdx := getArgMax(table.States[state]) // The next state is the max value
+		table.States[state][action] = curStateValue + table.LearningRate*(reward+table.DiscountFactor*table.States[state][nextStateIdx]-curStateValue)
 	}
 	table.EpisodeCounter += 1.0
 }
@@ -228,3 +216,16 @@ func (table *QTable) UpdateEpsilon() {
 
 // TODO: sistemare gli stati per avere current state e next state
 // TODO: sistemare SARSA e QLearning
+
+// State2String returns the string of a given state
+func State2String(state []bool) string {
+	var resIdx string
+	for idx := 0; idx < len(state); idx++ {
+		if state[idx] {
+			resIdx += "1"
+		} else {
+			resIdx += "0"
+		}
+	}
+	return resIdx
+}

@@ -200,10 +200,12 @@ func (cache *AIRL) getState(vars ...interface{}) []bool {
 	var inputVector []bool
 	var tmpArr []bool
 
-	numReq := vars[0].(float64)
-	size := float64(vars[1].(float32))
+	size := float64(vars[0].(float32))
+	dataType := vars[1].(string)
+	numReq := vars[2].(float64)
+	numUsers := vars[3].(float64)
+	numSites := vars[4].(float64)
 
-	dataType := vars[2].(string)
 	cacheCapacity := float64(cache.Capacity())
 
 	for _, featureName := range cache.aiFeatureMapOrder {
@@ -212,6 +214,10 @@ func (cache *AIRL) getState(vars ...interface{}) []bool {
 			tmpArr = cache.getCategory(featureName, size)
 		case "numReq":
 			tmpArr = cache.getCategory(featureName, numReq)
+		case "numUsers":
+			tmpArr = cache.getCategory(featureName, numUsers)
+		case "numSites":
+			tmpArr = cache.getCategory(featureName, numSites)
 		case "cacheUsage":
 			tmpArr = cache.getCategory(featureName, cacheCapacity)
 		case "dataType":
@@ -240,7 +246,7 @@ func (cache *AIRL) UpdatePolicy(filename string, size float32, hit bool, vars ..
 		added      = false
 		curAction  qlearn.ActionType
 		prevPoints float64
-		curState   []bool
+		curState   string
 		siteName   = vars[1].(string)
 		userID     = vars[2].(int)
 	)
@@ -275,10 +281,16 @@ func (cache *AIRL) UpdatePolicy(filename string, size float32, hit bool, vars ..
 		tmpSplit := strings.Split(filename, "/")
 		dataType := tmpSplit[2]
 
-		curState = cache.getState(
-			curStats.getRealtimeNReq(&currentTime),
-			size,
-			dataType,
+		numReq, numUsers, numSites := curStats.getRealTimeStats(&currentTime)
+
+		curState = qlearn.State2String(
+			cache.getState(
+				size,
+				dataType,
+				numReq,
+				numUsers,
+				numSites,
+			),
 		)
 
 		// QLearn - Check action
