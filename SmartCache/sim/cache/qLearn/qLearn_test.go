@@ -39,8 +39,7 @@ func TestOneHotVector(t *testing.T) {
 	}
 }
 
-func TestGetStateStr(t *testing.T) {
-	table := QTable{}
+func TestState2String(t *testing.T) {
 	rand.Seed(42)
 	for idx := 16; idx < 1024; idx++ {
 		size := rand.Intn(idx) + 2
@@ -61,7 +60,7 @@ func TestGetStateStr(t *testing.T) {
 				" "),
 			"",
 		)
-		resStr := table.GetStateStr(res)
+		resStr := State2String(res)
 		if resStr != expectedRes {
 			t.Fatalf("Error: expected %v but got %v", expectedRes, resStr)
 		}
