@@ -9,12 +9,14 @@ import (
 	"path"
 	"sort"
 	"strconv"
+	"strings"
 )
 
 // CSVRecord is the base record composition readed from the logs
 type CSVRecord struct {
 	Day           int64   `json:"day"`
 	Filename      string  `json:"filename"`
+	FileType      string  `json:"fileType"`
 	Protocol      string  `json:"protocol"`
 	TaskMonitorID string  `json:"taskMonitorID"`
 	TaskID        int     `json:"taskID"`
@@ -53,9 +55,17 @@ func recordGenerator(csvReader *csv.Reader, curFile *os.File) chan CSVRecord {
 			iotime, _ := strconv.ParseFloat(record[12], 32)
 			size, _ := strconv.ParseFloat(record[13], 32)
 
+			filename := record[1]
+			tmpSplit := strings.Split(filename, "/")
+			// dataType := tmpSplit[2]
+			// campain := tmpSplit[3]
+			// process := tmpSplit[4]
+			fileType := tmpSplit[5]
+
 			curRecord := CSVRecord{
 				Day:           int64(day),
-				Filename:      record[1],
+				Filename:      filename,
+				FileType:      fileType,
 				Protocol:      record[2],
 				TaskMonitorID: record[3],
 				TaskID:        int(taskID),
@@ -81,18 +91,29 @@ func OpenSimFile(filePath string) chan CSVRecord {
 	fileExt := path.Ext(filePath)
 	var iterator chan CSVRecord
 
+	curFile, errOpenFile := os.Open(filePath)
+	if errOpenFile != nil {
+		panic(errOpenFile)
+	}
+
 	switch fileExt {
-	case ".csv":
-		println("CSV")
-	case ".gz":
-		gzFile, _ := os.Open(filePath)
+	case ".gz", ".gzip":
 		// Create new reader to decompress gzip.
-		gzReader, _ := gzip.NewReader(gzFile)
-		csvReader := csv.NewReader(gzReader)
+		curCsv, errReadGz := gzip.NewReader(curFile)
+		if errReadGz != nil {
+			panic(errReadGz)
+		}
+		csvReader := csv.NewReader(curCsv)
 		// Discar header
 		csvReader.Read()
-		iterator = recordGenerator(csvReader, gzFile)
+		iterator = recordGenerator(csvReader, curFile)
+	default:
+		csvReader := csv.NewReader(curFile)
+		// Discar header
+		csvReader.Read()
+		iterator = recordGenerator(csvReader, curFile)
 	}
+
 	return iterator
 }
 

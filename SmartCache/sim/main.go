@@ -39,6 +39,7 @@ var (
 	simLoadDumpFileName string
 	simOutFile          string
 	simRegion           string
+	simFileType         string
 	simStartFromWindow  uint32
 	simStopWindow       uint32
 	simWindowSize       uint32
@@ -150,6 +151,10 @@ func addSimFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().StringVar(
 		&simRegion, "simRegion", "all",
 		"indicate the filter for record region",
+	)
+	cmd.PersistentFlags().StringVar(
+		&simFileType, "simFileType", "all",
+		"indicate the filter for record file type",
 	)
 	cmd.PersistentFlags().StringVar(
 		&simOutFile, "simOutFile", "",
@@ -346,6 +351,11 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			for record := range iterator {
 				if strings.Compare(simRegion, "all") != 0 {
 					if strings.Index(strings.ToLower(record.SiteName), selectedRegion) == -1 {
+						continue
+					}
+				}
+				if strings.Compare(simFileType, "all") != 0 {
+					if strings.Index(strings.ToLower(record.FileType), simFileType) == -1 {
 						continue
 					}
 				}
