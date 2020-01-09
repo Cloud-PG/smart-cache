@@ -312,9 +312,9 @@ func (cache *AIRL) UpdatePolicy(filename string, size float32, hit bool, vars ..
 			newScore := cache.points
 			reward := 0.0
 			if newScore >= prevPoints {
-				reward += 1.0
+				reward = newScore - prevPoints
 			} else {
-				reward -= 1.0
+				reward = -curStats.Points
 			}
 			// Update table
 			cache.qTable.Update(curState, curAction, reward)
@@ -367,9 +367,9 @@ func (cache *AIRL) UpdatePolicy(filename string, size float32, hit bool, vars ..
 			newScore := cache.points
 			reward := 0.0
 			if newScore >= prevPoints {
-				reward += 1.0
+				reward = newScore - prevPoints
 			} else {
-				reward -= 1.0
+				reward = -(newScore - prevPoints)
 			}
 			// Update table
 			cache.qTable.Update(curState, curAction, reward)

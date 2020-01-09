@@ -218,7 +218,7 @@ func (stats *WeightedFileStats) updateFilePoints(curTime *time.Time) float64 {
 	numReq, numUsers, numSites := stats.getRealTimeStats(curTime)
 
 	dayDiffInCache := math.Floor(curTime.Sub(stats.InCacheSince).Hours() / 24.)
-	points := numUsers * numSites * numReq * float64(stats.Size)
+	points := numReq*10 + numUsers*100. + numSites*1000. + float64(stats.Size)
 	points = points * math.Exp(-dayDiffInCache) // Decay points
 
 	stats.Points = points
