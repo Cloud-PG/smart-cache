@@ -283,7 +283,7 @@ func (cache *AIRL) UpdatePolicy(filename string, size float32, hit bool, vars ..
 		tmpSplit := strings.Split(filename, "/")
 		dataType := tmpSplit[2]
 
-		numReq, numUsers, numSites := curStats.getRealTimeStats(&currentTime)
+		numReq, numUsers, numSites := curStats.getStats()
 
 		curState = qlearn.State2String(
 			cache.getState(

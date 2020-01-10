@@ -213,6 +213,14 @@ func (stats WeightedFileStats) getRealTimeStats(curTime *time.Time) (float64, fl
 	return numReq, numUsers, numSites
 }
 
+// getStats returns number of requests, users and sites
+func (stats WeightedFileStats) getStats() (float64, float64, float64) {
+	numReq := float64(stats.TotRequests)
+	numUsers := float64(len(stats.Users))
+	numSites := float64(len(stats.Sites))
+	return numReq, numUsers, numSites
+}
+
 // updateFilePoints returns the points for a single file
 func (stats *WeightedFileStats) updateFilePoints(curTime *time.Time) float64 {
 	numReq, numUsers, numSites := stats.getRealTimeStats(curTime)

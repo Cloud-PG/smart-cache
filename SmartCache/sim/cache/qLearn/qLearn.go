@@ -41,22 +41,44 @@ type QTable struct {
 	UpdateFunction   RLUpdateType         `json:"update_function"`
 }
 
-func getArgMax(array []float64) int {
-	maxIdx := 0
-	maxElm := array[maxIdx]
-	for idx := 1; idx < len(array); idx++ {
-		if array[idx] > maxElm {
-			maxElm = array[idx]
-			maxIdx = idx
-		}
+// Init initilizes the QTable struct
+func (table *QTable) Init(featureLenghts []int) {
+	table.LearningRate = 0.9 // also named Alpha
+	table.DiscountFactor = 0.5
+	table.DecayRateEpsilon = 0.000005
+	table.Epsilon = 1.0
+	table.MaxEpsilon = 1.0
+	table.MinEpsilon = 0.1
+	// With getArgMax the first action is the default choice
+	table.Actions = []ActionType{
+		ActionNotStore,
+		ActionStore,
 	}
-	return maxIdx
-}
+	table.UpdateFunction = RLQLearning
+	table.RGenerator = rand.New(rand.NewSource(42))
 
-func createOneHot(lenght int, targetIdx int) []bool {
-	res := make([]bool, lenght)
-	res[targetIdx] = true
-	return res
+	var numStates int64 = 1
+	for _, featureLen := range featureLenghts {
+		numStates *= int64(featureLen)
+	}
+	table.NumStates = numStates
+
+	fmt.Printf("[Generate %d states][...]\n", numStates)
+	table.States = make(map[string][]float64, numStates)
+
+	for state := range table.genAllStates(featureLenghts) {
+		stateString := State2String(state)
+		_, inMap := table.States[stateString]
+		if !inMap {
+			table.States[stateString] = make([]float64, len(table.Actions))
+		} else {
+			fmt.Printf("State %v with idx %s already present...\n", state, stateString)
+			panic("Insert state error!!!")
+		}
+
+	}
+	table.NumVars = table.NumStates * int64(len(table.Actions))
+	fmt.Printf("[Tot. Vars: %d]\n", table.NumVars)
 }
 
 func (table QTable) genAllStates(featureLenghts []int) chan []bool {
@@ -100,46 +122,6 @@ func (table QTable) genAllStates(featureLenghts []int) chan []bool {
 		}
 	}()
 	return genChan
-}
-
-// Init initilizes the QTable struct
-func (table *QTable) Init(featureLenghts []int) {
-	table.LearningRate = 0.9 // also named Alpha
-	table.DiscountFactor = 0.5
-	table.DecayRateEpsilon = 0.000005
-	table.Epsilon = 1.0
-	table.MaxEpsilon = 1.0
-	table.MinEpsilon = 0.1
-	// With getArgMax the first action is the default choice
-	table.Actions = []ActionType{
-		ActionStore,
-		ActionNotStore,
-	}
-	table.UpdateFunction = RLQLearning
-	table.RGenerator = rand.New(rand.NewSource(42))
-
-	var numStates int64 = 1
-	for _, featureLen := range featureLenghts {
-		numStates *= int64(featureLen)
-	}
-	table.NumStates = numStates
-
-	fmt.Printf("[Generate %d states][...]\n", numStates)
-	table.States = make(map[string][]float64, numStates)
-
-	for state := range table.genAllStates(featureLenghts) {
-		stateString := State2String(state)
-		_, inMap := table.States[stateString]
-		if !inMap {
-			table.States[stateString] = make([]float64, len(table.Actions))
-		} else {
-			fmt.Printf("State %v with idx %s already present...\n", state, stateString)
-			panic("Insert state error!!!")
-		}
-
-	}
-	table.NumVars = table.NumStates * int64(len(table.Actions))
-	fmt.Printf("[Tot. Vars: %d]\n", table.NumVars)
 }
 
 // GetRandomTradeOff generates a random number
@@ -216,6 +198,28 @@ func (table *QTable) UpdateEpsilon() {
 
 // TODO: sistemare gli stati per avere current state e next state
 // TODO: sistemare SARSA e QLearning
+
+//##############################################################################
+// Support functions
+//##############################################################################
+
+func getArgMax(array []float64) int {
+	maxIdx := 0
+	maxElm := array[maxIdx]
+	for idx := 1; idx < len(array); idx++ {
+		if array[idx] > maxElm {
+			maxElm = array[idx]
+			maxIdx = idx
+		}
+	}
+	return maxIdx
+}
+
+func createOneHot(lenght int, targetIdx int) []bool {
+	res := make([]bool, lenght)
+	res[targetIdx] = true
+	return res
+}
 
 // State2String returns the string of a given state
 func State2String(state []bool) string {
