@@ -243,12 +243,13 @@ func (cache AIRL) GetPoints() float64 {
 // UpdatePolicy of AIRL cache
 func (cache *AIRL) UpdatePolicy(filename string, size float32, hit bool, vars ...interface{}) bool {
 	var (
-		added      = false
-		curAction  qlearn.ActionType
-		prevPoints float64
-		curState   string
-		siteName   = vars[1].(string)
-		userID     = vars[2].(int)
+		added          = false
+		curAction      qlearn.ActionType
+		prevPoints     float64
+		meanPrevPoints float64
+		curState       string
+		siteName       = vars[1].(string)
+		userID         = vars[2].(int)
 	)
 
 	day := vars[0].(int64)
@@ -266,6 +267,7 @@ func (cache *AIRL) UpdatePolicy(filename string, size float32, hit bool, vars ..
 	curStats.addSite(siteName)
 
 	prevPoints = cache.points
+	meanPrevPoints = prevPoints / float64(len(cache.files))
 
 	if !hit {
 		curStats.updateStats(hit, size, nil)
@@ -307,14 +309,15 @@ func (cache *AIRL) UpdatePolicy(filename string, size float32, hit bool, vars ..
 			}
 		}
 
+		// ----------------------------------
 		// QLearn - Take the action NOT STORE
 		if curAction == qlearn.ActionNotStore {
 			newScore := cache.points
 			reward := 0.0
-			if newScore >= prevPoints {
-				reward = newScore - prevPoints
+			if newScore >= prevPoints && curStats.Points > meanPrevPoints {
+				reward += 1
 			} else {
-				reward = -curStats.Points
+				reward -= 1
 			}
 			// Update table
 			cache.qTable.Update(curState, curAction, reward)
@@ -362,14 +365,15 @@ func (cache *AIRL) UpdatePolicy(filename string, size float32, hit bool, vars ..
 			added = true
 		}
 
+		// ------------------------------
 		// QLearn - Take the action STORE
 		if cache.qTable != nil && curAction == qlearn.ActionStore {
 			newScore := cache.points
 			reward := 0.0
-			if newScore >= prevPoints {
-				reward = newScore - prevPoints
+			if newScore >= prevPoints && curStats.Points > meanPrevPoints {
+				reward += 1
 			} else {
-				reward = -(newScore - prevPoints)
+				reward -= 1
 			}
 			// Update table
 			cache.qTable.Update(curState, curAction, reward)
