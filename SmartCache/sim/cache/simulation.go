@@ -12,6 +12,14 @@ import (
 	"strings"
 )
 
+// SimulationStats is used to output the simulation statistics
+type SimulationStats struct {
+	TimeElapsed   string `json:"timeElapsed"`
+	Extra         string `json:"extra"`
+	TotNumRecords int    `json:"totNumRecords"`
+	AvgSpeed      string `json:"avgSpeed"`
+}
+
 // CSVRecord is the base record composition readed from the logs
 type CSVRecord struct {
 	Day           int64   `json:"day"`

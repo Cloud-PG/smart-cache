@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
@@ -233,6 +234,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 
 			dumpFileName := baseName + ".json.gz"
 			resultFileName := baseName + "_results.csv"
+			resultStatsName := baseName + "_stats.json"
 
 			// Create cache
 			var grpcConn interface{} = nil
@@ -325,6 +327,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 
 			var (
 				numRecords        int
+				totNumRecords     int
 				totIterations     uint32
 				numIterations     uint32
 				windowStepCounter uint32
@@ -349,6 +352,8 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			fmt.Println("[Simulation START]")
 
 			for record := range iterator {
+				totNumRecords++
+
 				if strings.Compare(simRegion, "all") != 0 {
 					if strings.Index(strings.ToLower(record.SiteName), selectedRegion) == -1 {
 						// TODO: fix junp output
@@ -492,13 +497,32 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 
 			}
 			elapsedTime := time.Now().Sub(simBeginTime)
+			elTH := int(elapsedTime.Hours())
+			elTM := int(elapsedTime.Minutes()) % 60
+			elTS := int(elapsedTime.Seconds()) % 60
+			avgSpeed := float64(totIterations) / elapsedTime.Seconds()
 			fmt.Printf("\n[Simulation END][elapsed Time: %02d:%02d:%02d][Num. Records: %d][Mean Records/s: %0.0f]\n",
-				int(elapsedTime.Hours()),
-				int(elapsedTime.Minutes())%60,
-				int(elapsedTime.Seconds())%60,
+				elTH,
+				elTM,
+				elTS,
 				numRecords,
-				float64(totIterations)/elapsedTime.Seconds(),
+				avgSpeed,
 			)
+			statFile, errCreateStat := os.Create(resultStatsName)
+			defer statFile.Close()
+			if errCreateStat != nil {
+				panic(errCreateStat)
+			}
+			jsonBytes, errMarshal := json.Marshal(cache.SimulationStats{
+				TimeElapsed:   fmt.Sprintf("%02d:%02d:%02d", elTH, elTM, elTS),
+				Extra:         curCacheInstance.ExtraStats(),
+				TotNumRecords: totNumRecords,
+				AvgSpeed:      fmt.Sprintf("Num.Records/s = %0.2f", avgSpeed),
+			})
+			if errMarshal != nil {
+				panic(errMarshal)
+			}
+			statFile.Write(jsonBytes)
 		},
 		Use:   useDesc,
 		Short: shortDesc,
