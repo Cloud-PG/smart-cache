@@ -173,26 +173,10 @@ func (output *OutputCSV) Create(filename string) {
 	output.file = outputFile
 
 	output.csvWriter = csv.NewWriter(output.file)
-
-	output.csvWriter.Write([]string{"date",
-		"size",
-		"hit rate",
-		"hit over miss",
-		"weighted hit rate",
-		"written data",
-		"read data",
-		"read on hit data",
-		"read on miss data",
-		"deleted data",
-		"CPU efficiency",
-		"CPU hit efficiency",
-		"CPU miss efficiency",
-	})
-	output.csvWriter.Flush()
 }
 
 // Close the output file after flush the buffer
-func (output *OutputCSV) Write(record []string) {
+func (output OutputCSV) Write(record []string) {
 	if errWriter := output.csvWriter.Write(record); errWriter != nil {
 		panic(errWriter)
 	}
@@ -200,7 +184,7 @@ func (output *OutputCSV) Write(record []string) {
 }
 
 // Close the output file after flush the buffer
-func (output *OutputCSV) Close() {
+func (output OutputCSV) Close() {
 	output.csvWriter.Flush()
 	output.file.Close()
 }
