@@ -155,3 +155,52 @@ func OpenSimFolder(dirPath *os.File) chan CSVRecord {
 
 	return channel
 }
+
+// SimulationOutputCSV
+type OutputCSV struct {
+	filename  string
+	file      *os.File
+	csvWriter *csv.Writer
+}
+
+// Create an output file in CSV format
+func (output *OutputCSV) Create(filename string) {
+	output.filename = filename
+	outputFile, errCreateFile := os.Create(output.filename)
+	if errCreateFile != nil {
+		panic(errCreateFile)
+	}
+	output.file = outputFile
+
+	output.csvWriter = csv.NewWriter(output.file)
+
+	output.csvWriter.Write([]string{"date",
+		"size",
+		"hit rate",
+		"hit over miss",
+		"weighted hit rate",
+		"written data",
+		"read data",
+		"read on hit data",
+		"read on miss data",
+		"deleted data",
+		"CPU efficiency",
+		"CPU hit efficiency",
+		"CPU miss efficiency",
+	})
+	output.csvWriter.Flush()
+}
+
+// Close the output file after flush the buffer
+func (output *OutputCSV) Write(record []string) {
+	if errWriter := output.csvWriter.Write(record); errWriter != nil {
+		panic(errWriter)
+	}
+	output.csvWriter.Flush()
+}
+
+// Close the output file after flush the buffer
+func (output *OutputCSV) Close() {
+	output.csvWriter.Flush()
+	output.file.Close()
+}

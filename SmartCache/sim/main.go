@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -232,9 +231,10 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				"_",
 			)
 
+			// Output files
 			dumpFileName := baseName + ".json.gz"
 			resultFileName := baseName + "_results.csv"
-			resultStatsName := baseName + "_stats.json"
+			resultRunStatsName := baseName + "_run_stats.json"
 
 			// Create cache
 			var grpcConn interface{} = nil
@@ -300,10 +300,9 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				simOutFile = resultFileName
 			}
 
-			outputFile, _ := os.Create(simOutFile)
-			defer outputFile.Close()
-			csvOutput := csv.NewWriter(outputFile)
-			defer csvOutput.Flush()
+			csvOutput := cache.OutputCSV{}
+			csvOutput.Create(simOutFile)
+			defer csvOutput.Close()
 
 			csvOutput.Write([]string{"date",
 				"size",
@@ -319,7 +318,6 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				"CPU hit efficiency",
 				"CPU miss efficiency",
 			})
-			csvOutput.Flush()
 
 			if simDump {
 				defer curCacheInstance.Dump(simDumpFileName)
@@ -396,7 +394,6 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 								fmt.Sprintf("%f", curCacheInstance.CPUHitEff()),
 								fmt.Sprintf("%f", curCacheInstance.CPUMissEff()),
 							})
-							csvOutput.Flush()
 							curCacheInstance.ClearHitMissStats()
 						}
 						latestTime = time.Unix(record.Day, 0.)
@@ -508,7 +505,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				numRecords,
 				avgSpeed,
 			)
-			statFile, errCreateStat := os.Create(resultStatsName)
+			statFile, errCreateStat := os.Create(resultRunStatsName)
 			defer statFile.Close()
 			if errCreateStat != nil {
 				panic(errCreateStat)
