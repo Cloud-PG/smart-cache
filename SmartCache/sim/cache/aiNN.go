@@ -21,10 +21,9 @@ import (
 // AINN cache
 type AINN struct {
 	LRUCache
-	WeightedStats
+	Stats
 	prevTime           time.Time
 	curTime            time.Time
-	stats              map[string]*WeightedFileStats
 	Exp                float32
 	aiClientHost       string
 	aiClientPort       string
@@ -41,7 +40,7 @@ type AINN struct {
 // Init the AINN struct
 func (cache *AINN) Init(args ...interface{}) interface{} {
 	cache.LRUCache.Init()
-	cache.WeightedStats.Init()
+	cache.Stats.Init()
 
 	cache.aiClientHost = args[0].(string)
 	cache.aiClientPort = args[1].(string)
@@ -102,7 +101,7 @@ func (cache *AINN) Init(args ...interface{}) interface{} {
 func (cache *AINN) Clear() {
 	cache.LRUCache.Clear()
 	cache.LRUCache.Init()
-	cache.WeightedStats.Init()
+	cache.Stats.Init()
 }
 
 // Dumps the AINN cache
@@ -125,7 +124,7 @@ func (cache *AINN) Dumps() *[][]byte {
 		outData = append(outData, record)
 	}
 	// ----- Stats -----
-	for _, stats := range cache.stats {
+	for _, stats := range cache.Stats.data {
 		dumpInfo, _ := json.Marshal(DumpInfo{Type: "STATS"})
 		dumpStats, _ := json.Marshal(stats)
 		record, _ := json.Marshal(DumpRecord{
@@ -155,7 +154,7 @@ func (cache *AINN) Loads(inputString *[][]byte) {
 			cache.files[curFile.Filename] = curFile.Size
 			cache.size += curFile.Size
 		case "STATS":
-			json.Unmarshal([]byte(curRecord.Data), &cache.stats)
+			json.Unmarshal([]byte(curRecord.Data), &cache.Stats.data)
 		}
 	}
 }
@@ -281,7 +280,7 @@ func (cache *AINN) UpdatePolicy(filename string, size float32, hit bool, vars ..
 	cache.prevTime = cache.curTime
 	cache.curTime = currentTime
 
-	curStats, _ := cache.GetOrCreate(filename, size, &currentTime)
+	curStats, _ := cache.GetOrCreate(filename, size, currentTime)
 	curStats.updateStats(hit, size, userID, siteName, &currentTime)
 
 	if !hit {

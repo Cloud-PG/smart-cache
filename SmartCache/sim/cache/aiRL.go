@@ -15,10 +15,9 @@ import (
 // AIRL cache
 type AIRL struct {
 	LRUCache
-	WeightedStats
+	Stats
 	prevTime          time.Time
 	curTime           time.Time
-	stats             map[string]*WeightedFileStats
 	Exp               float32
 	aiFeatureMap      map[string]featuremap.Obj
 	aiFeatureMapOrder []string
@@ -29,7 +28,7 @@ type AIRL struct {
 // Init the AIRL struct
 func (cache *AIRL) Init(args ...interface{}) interface{} {
 	cache.LRUCache.Init()
-	cache.WeightedStats.Init()
+	cache.Stats.Init()
 
 	featureMapFilePath := args[0].(string)
 
@@ -61,7 +60,7 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 func (cache *AIRL) Clear() {
 	cache.LRUCache.Clear()
 	cache.LRUCache.Init()
-	cache.WeightedStats.Init()
+	cache.Stats.Init()
 }
 
 // Dumps the AIRL cache
@@ -84,7 +83,7 @@ func (cache *AIRL) Dumps() *[][]byte {
 		outData = append(outData, record)
 	}
 	// ----- Stats -----
-	for _, stats := range cache.stats {
+	for _, stats := range cache.Stats.data {
 		dumpInfo, _ := json.Marshal(DumpInfo{Type: "STATS"})
 		dumpStats, _ := json.Marshal(stats)
 		record, _ := json.Marshal(DumpRecord{
@@ -123,7 +122,7 @@ func (cache *AIRL) Loads(inputString *[][]byte) {
 			cache.files[curFile.Filename] = curFile.Size
 			cache.size += curFile.Size
 		case "STATS":
-			json.Unmarshal([]byte(curRecord.Data), &cache.stats)
+			json.Unmarshal([]byte(curRecord.Data), &cache.Stats.data)
 		case "QTABLE":
 			json.Unmarshal([]byte(curRecord.Data), cache.qTable)
 		}
@@ -240,32 +239,10 @@ func (cache AIRL) GetPoints() float64 {
 	return float64(points)
 }
 
-// UpdatePolicy of AIRL cache
-func (cache *AIRL) UpdatePolicy(filename string, size float32, hit bool, vars ...interface{}) bool {
-	var (
-		added          = false
-		curAction      qlearn.ActionType
-		prevPoints     float64
-		meanPrevPoints float64
-		curState       string
-		day            = vars[0].(int64)
-		siteName       = vars[1].(string)
-		userID         = vars[2].(int)
-	)
-
+// BeforeRequest of LRU cache
+func (cache *AIRL) BeforeRequest(hit bool, filename string, size float32, day int64, siteName string, userID int) *FileStats {
 	currentTime := time.Unix(day, 0)
-
-	cache.prevTime = cache.curTime
-	cache.curTime = currentTime
-
-	if !cache.curTime.Equal(cache.prevTime) {
-		cache.points = cache.GetPoints()
-	}
-
-	curStats, _ := cache.GetOrCreate(filename, size, &currentTime)
-
-	prevPoints = cache.points
-	meanPrevPoints = prevPoints / float64(len(cache.files))
+	curStats, _ := cache.GetOrCreate(filename, size)
 
 	if !hit {
 		curStats.updateStats(hit, size, userID, siteName, nil)
@@ -277,15 +254,46 @@ func (cache *AIRL) UpdatePolicy(filename string, size float32, hit bool, vars ..
 		cache.points += curStats.Points
 	}
 
+	curStats.updateStats(hit, size, userID, siteName, &currentTime)
+	return curStats
+}
+
+// UpdatePolicy of AIRL cache
+func (cache *AIRL) UpdatePolicy(fileStats *FileStats, hit bool, vars ...interface{}) bool {
+	var (
+		added          = false
+		curAction      qlearn.ActionType
+		prevPoints     float64
+		meanPrevPoints float64
+		curState       string
+		// File vars
+		requestedFilename = fileStats.Filename
+		requestedFileSize = fileStats.Size
+		// vars
+		day = vars[0].(int64)
+	)
+
+	currentTime := time.Unix(day, 0)
+
+	cache.prevTime = cache.curTime
+	cache.curTime = currentTime
+
+	if !cache.curTime.Equal(cache.prevTime) {
+		cache.points = cache.GetPoints()
+	}
+
+	prevPoints = cache.points
+	meanPrevPoints = prevPoints / float64(len(cache.files))
+
 	if !hit {
-		tmpSplit := strings.Split(filename, "/")
+		tmpSplit := strings.Split(requestedFilename, "/")
 		dataType := tmpSplit[2]
 
-		numReq, numUsers, numSites := curStats.getRealTimeStats(&currentTime)
+		numReq, numUsers, numSites := fileStats.getRealTimeStats(&currentTime)
 
 		curState = qlearn.State2String(
 			cache.getState(
-				size,
+				requestedFileSize,
 				dataType,
 				numReq,
 				numUsers,
@@ -312,7 +320,7 @@ func (cache *AIRL) UpdatePolicy(filename string, size float32, hit bool, vars ..
 		if curAction == qlearn.ActionNotStore {
 			newScore := cache.points
 			reward := 0.0
-			if newScore >= prevPoints && curStats.Points > meanPrevPoints {
+			if newScore >= prevPoints && fileStats.Points > meanPrevPoints {
 				reward += 1.
 			} else {
 				reward -= 1.
@@ -325,7 +333,7 @@ func (cache *AIRL) UpdatePolicy(filename string, size float32, hit bool, vars ..
 		}
 
 		// Insert with LRU mechanism
-		if cache.Size()+size > cache.MaxSize {
+		if cache.Size()+requestedFileSize > cache.MaxSize {
 			var totalDeleted float32
 			tmpVal := cache.queue.Front()
 			for {
@@ -334,11 +342,11 @@ func (cache *AIRL) UpdatePolicy(filename string, size float32, hit bool, vars ..
 				}
 				curFilename2Delete := tmpVal.Value.(string)
 				cache.points -= cache.getPoints(curFilename2Delete) // Q-Learning
-				fileSize := cache.files[curFilename2Delete]
-				cache.size -= fileSize
-				cache.dataDeleted += size
+				curFileSize := cache.files[curFilename2Delete]
+				cache.size -= curFileSize
+				cache.dataDeleted += curFileSize
 
-				totalDeleted += fileSize
+				totalDeleted += curFileSize
 				delete(cache.files, curFilename2Delete)
 
 				tmpVal = tmpVal.Next()
@@ -348,18 +356,18 @@ func (cache *AIRL) UpdatePolicy(filename string, size float32, hit bool, vars ..
 				}
 				cache.queue.Remove(tmpVal.Prev())
 
-				if totalDeleted >= size {
+				if totalDeleted >= requestedFileSize {
 					break
 				}
 			}
 		}
-		if cache.Size()+size <= cache.MaxSize {
-			cache.files[filename] = size
-			cache.queue.PushBack(filename)
-			cache.size += size
-			curStats.addInCache(&currentTime)
-			curStats.updateFilePoints(&cache.curTime)
-			cache.points += curStats.Points // Q-Learning
+		if cache.Size()+requestedFileSize <= cache.MaxSize {
+			cache.files[requestedFilename] = requestedFileSize
+			cache.queue.PushBack(requestedFilename)
+			cache.size += requestedFileSize
+			fileStats.addInCache(&currentTime)
+			fileStats.updateFilePoints(&cache.curTime)
+			cache.points += fileStats.Points // Q-Learning
 			added = true
 		}
 
@@ -368,7 +376,7 @@ func (cache *AIRL) UpdatePolicy(filename string, size float32, hit bool, vars ..
 		if cache.qTable != nil && curAction == qlearn.ActionStore {
 			newScore := cache.points
 			reward := 0.0
-			if newScore >= prevPoints && curStats.Points > meanPrevPoints {
+			if fileStats.Points > meanPrevPoints || newScore >= prevPoints {
 				reward += 1.
 			} else {
 				reward -= 1.
@@ -382,7 +390,7 @@ func (cache *AIRL) UpdatePolicy(filename string, size float32, hit bool, vars ..
 	} else {
 		var elm2move *list.Element
 		for tmpVal := cache.queue.Front(); tmpVal != nil; tmpVal = tmpVal.Next() {
-			if tmpVal.Value.(string) == filename {
+			if tmpVal.Value.(string) == requestedFilename {
 				elm2move = tmpVal
 				break
 			}

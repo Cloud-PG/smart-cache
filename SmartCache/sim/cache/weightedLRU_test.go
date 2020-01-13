@@ -8,9 +8,8 @@ import (
 )
 
 const (
-	UpdateStatsPolicy UpdateStatsPolicyType = UpdateStatsOnRequest
-	WeightedLRUEXP    float32               = 2.0
-	WeightedCacheEXP  float32               = 2.0
+	WeightedLRUEXP   float32 = 2.0
+	WeightedCacheEXP float32 = 2.0
 )
 
 func TestWeightedLRUBaseMultipleInsert(t *testing.T) {
@@ -18,9 +17,8 @@ func TestWeightedLRUBaseMultipleInsert(t *testing.T) {
 		LRUCache: LRUCache{
 			MaxSize: 3.0,
 		},
-		SelFunctionType:         FuncWeightedRequests,
-		SelUpdateStatPolicyType: UpdateStatsPolicy,
-		Exp:                     WeightedCacheEXP,
+		SelFunctionType: FuncWeightedRequests,
+		Exp:             WeightedCacheEXP,
 	}
 	testCache.Init()
 
@@ -47,9 +45,8 @@ func TestWeightedLRUClear(t *testing.T) {
 		LRUCache: LRUCache{
 			MaxSize: 3.0,
 		},
-		SelFunctionType:         FuncWeightedRequests,
-		SelUpdateStatPolicyType: UpdateStatsPolicy,
-		Exp:                     WeightedCacheEXP,
+		SelFunctionType: FuncWeightedRequests,
+		Exp:             WeightedCacheEXP,
 	}
 	testCache.Init()
 
@@ -80,9 +77,8 @@ func TestWeightedLRUInsert(t *testing.T) {
 		LRUCache: LRUCache{
 			MaxSize: 5.0,
 		},
-		SelFunctionType:         FuncWeightedRequests,
-		SelUpdateStatPolicyType: UpdateStatsPolicy,
-		Exp:                     WeightedCacheEXP,
+		SelFunctionType: FuncWeightedRequests,
+		Exp:             WeightedCacheEXP,
 	}
 	testCache.Init()
 
@@ -125,7 +121,7 @@ func BenchmarkWeightedLRU(b *testing.B) {
 			MaxSize: maxSize,
 		},
 	}
-	testCache.Init(FuncWeightedRequests, UpdateStatsPolicy, WeightedLRUEXP)
+	testCache.Init()
 
 	for n := 0; n < b.N; n++ {
 		GetFile(testCache, genRandomFilePath(5), rand.Float32()*maxSize, 0.0, 0.0)

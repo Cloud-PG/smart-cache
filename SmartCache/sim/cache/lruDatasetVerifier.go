@@ -24,7 +24,7 @@ func (cache *LRUDatasetVerifier) Init(args ...interface{}) interface{} {
 	cache.LRUCache.Init()
 
 	cache.files = make(map[string]float32)
-	cache.stats = make(map[string]*LRUFileStats)
+	cache.Stats.data = make(map[string]*FileStats)
 	cache.queue = list.New()
 
 	cache.datasetFileMap = make(map[string]bool)

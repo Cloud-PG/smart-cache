@@ -39,6 +39,7 @@ type Cache interface {
 	ClearHitMissStats()
 
 	ExtraStats() string
+	Report() []string
 
 	HitRate() float32
 	HitOverMiss() float32
@@ -56,8 +57,8 @@ type Cache interface {
 
 	Check(string) bool
 	CheckWatermark() bool
-	BeforeRequest(hit bool, filename string, size float32, vars ...interface{})
-	UpdatePolicy(filename string, size float32, hit bool, vars ...interface{}) bool
+	BeforeRequest(hit bool, filename string, size float32, day int64, siteName string, userID int) *FileStats
+	UpdatePolicy(fileStats *FileStats, hit bool, vars ...interface{}) bool
 	AfterRequest(hit bool, added bool, size float32, wTime float32, cpuTime float32)
 
 	SimGet(context.Context, *pb.SimCommonFile) (*pb.ActionResult, error)
@@ -86,10 +87,52 @@ func GetSimCacheStatus(cache Cache) *pb.SimCacheStatus {
 }
 
 // GetFile requests a file to the cache
-func GetFile(cache Cache, filename string, size float32, wTime float32, cpuTime float32, vars ...interface{}) bool {
+func GetFile(cache Cache, vars ...interface{}) bool {
+	/* vars:
+	[0] -> filename string
+	[1] -> size     float32
+	[2] -> wTime    float32
+	[3] -> cpuTime  float32
+	[4] -> day      int64
+	[5] -> siteName string
+	[6] -> userID   int
+	*/
+
+	var (
+		filename string
+		size     float32
+		wTime    float32
+		cpuTime  float32
+		day      int64
+		siteName string
+		userID   int
+	)
+
+	filename = vars[0].(string)
+
+	switch {
+	case len(vars) > 6:
+		userID = vars[6].(int)
+		fallthrough
+	case len(vars) > 5:
+		siteName = vars[5].(string)
+		fallthrough
+	case len(vars) > 4:
+		day = vars[4].(int64)
+		fallthrough
+	case len(vars) > 3:
+		cpuTime = vars[3].(float32)
+		fallthrough
+	case len(vars) > 2:
+		wTime = vars[2].(float32)
+		fallthrough
+	case len(vars) > 1:
+		size = vars[1].(float32)
+	}
+
 	hit := cache.Check(filename)
-	cache.BeforeRequest(hit, filename, size, vars...)
-	added := cache.UpdatePolicy(filename, size, hit, vars...)
+	fileStats := cache.BeforeRequest(hit, filename, size, day, siteName, userID)
+	added := cache.UpdatePolicy(fileStats, hit, day)
 	cache.AfterRequest(hit, added, size, wTime, cpuTime)
 	cache.CheckWatermark()
 	return added

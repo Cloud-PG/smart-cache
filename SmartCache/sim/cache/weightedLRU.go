@@ -9,7 +9,7 @@ import (
 // WeightedLRU cache
 type WeightedLRU struct {
 	LRUCache
-	WeightedStats
+	Stats
 	Exp             float32
 	SelFunctionType FunctionType
 }
@@ -17,7 +17,7 @@ type WeightedLRU struct {
 // Init the WeightedLRU struct
 func (cache *WeightedLRU) Init(_ ...interface{}) interface{} {
 	cache.LRUCache.Init()
-	cache.WeightedStats.Init()
+	cache.Stats.Init()
 
 	return cache
 }
@@ -26,7 +26,7 @@ func (cache *WeightedLRU) Init(_ ...interface{}) interface{} {
 func (cache *WeightedLRU) Clear() {
 	cache.LRUCache.Clear()
 	cache.LRUCache.Init()
-	cache.WeightedStats.Init()
+	cache.Stats.Init()
 }
 
 // Dumps the WeightedLRU cache
@@ -49,7 +49,7 @@ func (cache *WeightedLRU) Dumps() *[][]byte {
 		outData = append(outData, record)
 	}
 	// ----- Stats -----
-	for _, stats := range cache.stats {
+	for _, stats := range cache.Stats.data {
 		dumpInfo, _ := json.Marshal(DumpInfo{Type: "STATS"})
 		dumpStats, _ := json.Marshal(stats)
 		record, _ := json.Marshal(DumpRecord{
@@ -78,7 +78,7 @@ func (cache *WeightedLRU) Loads(inputString *[][]byte) {
 			cache.files[curFile.Filename] = curFile.Size
 			cache.size += curFile.Size
 		case "STATS":
-			json.Unmarshal([]byte(curRecord.Data), &cache.stats)
+			json.Unmarshal([]byte(curRecord.Data), &cache.Stats.data)
 		}
 	}
 }
@@ -87,7 +87,7 @@ func (cache *WeightedLRU) Loads(inputString *[][]byte) {
 func (cache *WeightedLRU) UpdatePolicy(filename string, size float32, hit bool, vars ...interface{}) bool {
 	var (
 		added    = false
-		curStats *WeightedFileStats
+		curStats *FileStats
 		newFile  bool
 		day      = vars[0].(int64)
 		siteName = vars[1].(string)

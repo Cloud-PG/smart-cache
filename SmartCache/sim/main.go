@@ -230,6 +230,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			dumpFileName := baseName + ".json.gz"
 			resultFileName := baseName + "_results.csv"
 			resultRunStatsName := baseName + "_run_stats.json"
+			resultReportStatsName := baseName + "_report_stats.json"
 
 			// Create cache
 			var grpcConn interface{} = nil
@@ -295,11 +296,11 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				simOutFile = resultFileName
 			}
 
-			csvOutput := cache.OutputCSV{}
-			csvOutput.Create(simOutFile)
-			defer csvOutput.Close()
+			csvSimOutput := cache.OutputCSV{}
+			csvSimOutput.Create(simOutFile)
+			defer csvSimOutput.Close()
 
-			csvOutput.Write([]string{"date",
+			csvSimOutput.Write([]string{"date",
 				"size",
 				"hit rate",
 				"hit over miss",
@@ -312,6 +313,19 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				"CPU efficiency",
 				"CPU hit efficiency",
 				"CPU miss efficiency",
+			})
+
+			csvSimReport := cache.OutputCSV{}
+			csvSimReport.Create(resultReportStatsName)
+			defer csvSimReport.Close()
+
+			csvSimReport.Write([]string{"numFiles",
+				"avgSize",
+				"avgNumUsers",
+				"avgNumSites",
+				"avgNumRequests",
+				"avgNumHits",
+				"avgNumMiss",
 			})
 
 			if simDump {
@@ -374,7 +388,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 					curTime := time.Unix(record.Day, 0.)
 					if curTime.Sub(latestTime).Hours() >= 24. {
 						if windowCounter >= simStartFromWindow {
-							csvOutput.Write([]string{
+							csvSimOutput.Write([]string{
 								fmt.Sprintf("%s", latestTime),
 								fmt.Sprintf("%f", curCacheInstance.Size()),
 								fmt.Sprintf("%0.2f", curCacheInstance.HitRate()),
@@ -488,6 +502,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				numRecords,
 				avgSpeed,
 			)
+			// Save run statistics
 			statFile, errCreateStat := os.Create(resultRunStatsName)
 			defer statFile.Close()
 			if errCreateStat != nil {

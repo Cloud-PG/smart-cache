@@ -9,6 +9,7 @@ import (
 	"io"
 	"math"
 	"os"
+	"time"
 
 	pb "simulator/v2/cache/simService"
 
@@ -17,7 +18,7 @@ import (
 
 // LRUCache cache
 type LRUCache struct {
-	LRUStats
+	Stats
 	files                              map[string]float32
 	queue                              *list.List
 	hit, miss, size, MaxSize           float32
@@ -31,7 +32,7 @@ type LRUCache struct {
 
 // Init the LRU struct
 func (cache *LRUCache) Init(_ ...interface{}) interface{} {
-	cache.LRUStats.Init()
+	cache.Stats.Init()
 	cache.files = make(map[string]float32)
 	cache.queue = list.New()
 	if cache.HighWaterMark == 0.0 {
@@ -56,7 +57,7 @@ func (cache *LRUCache) ClearFiles() {
 
 // Clear the LRU struct
 func (cache *LRUCache) Clear() {
-	cache.LRUStats.Init()
+	cache.Stats.Init()
 	cache.ClearFiles()
 	tmpVal := cache.queue.Front()
 	for {
@@ -262,22 +263,32 @@ func (cache *LRUCache) SimLoads(stream pb.SimService_SimLoadsServer) error {
 	return nil
 }
 
+// BeforeRequest of LRU cache
+func (cache *LRUCache) BeforeRequest(hit bool, filename string, size float32, day int64, siteName string, userID int) *FileStats {
+	currentTime := time.Unix(day, 0)
+	curStats, _ := cache.GetOrCreate(filename, size)
+	curStats.updateStats(hit, size, userID, siteName, &currentTime)
+	return curStats
+}
+
 // UpdatePolicy of LRU cache
-func (cache *LRUCache) UpdatePolicy(filename string, size float32, hit bool, _ ...interface{}) bool {
+func (cache *LRUCache) UpdatePolicy(fileStats *FileStats, hit bool, vars ...interface{}) bool {
 	var added = false
+	requestedFileSize := fileStats.Size
+	requestedFilename := fileStats.Filename
 	if !hit {
-		if cache.Size()+size > cache.MaxSize {
+		if cache.Size()+requestedFileSize > cache.MaxSize {
 			var totalDeleted float32
 			tmpVal := cache.queue.Front()
 			for {
 				if tmpVal == nil {
 					break
 				}
-				fileSize := cache.files[tmpVal.Value.(string)]
-				cache.size -= fileSize
-				cache.dataDeleted += fileSize
+				curFileSize := cache.files[tmpVal.Value.(string)]
+				cache.size -= curFileSize
+				cache.dataDeleted += curFileSize
 
-				totalDeleted += fileSize
+				totalDeleted += curFileSize
 				delete(cache.files, tmpVal.Value.(string))
 
 				tmpVal = tmpVal.Next()
@@ -287,21 +298,21 @@ func (cache *LRUCache) UpdatePolicy(filename string, size float32, hit bool, _ .
 				}
 				cache.queue.Remove(tmpVal.Prev())
 
-				if totalDeleted >= size {
+				if totalDeleted >= requestedFileSize {
 					break
 				}
 			}
 		}
-		if cache.Size()+size <= cache.MaxSize {
-			cache.files[filename] = size
-			cache.queue.PushBack(filename)
-			cache.size += size
+		if cache.Size()+requestedFileSize <= cache.MaxSize {
+			cache.files[fileStats.Filename] = requestedFileSize
+			cache.queue.PushBack(requestedFilename)
+			cache.size += requestedFileSize
 			added = true
 		}
 	} else {
 		var elm2move *list.Element
 		for tmpVal := cache.queue.Front(); tmpVal != nil; tmpVal = tmpVal.Next() {
-			if tmpVal.Value.(string) == filename {
+			if tmpVal.Value.(string) == requestedFilename {
 				elm2move = tmpVal
 				break
 			}
@@ -311,12 +322,6 @@ func (cache *LRUCache) UpdatePolicy(filename string, size float32, hit bool, _ .
 		}
 	}
 	return added
-}
-
-// BeforeRequest of LRU cache
-func (cache *LRUCache) BeforeRequest(hit bool, filename string, size float32, vars ...interface{}) {
-	curFileStats := cache.GetOrCreate(filename, size)
-	curFileStats.updateRequests(hit)
 }
 
 // AfterRequest of LRU cache
@@ -461,4 +466,24 @@ func (cache LRUCache) CPUHitEff() float32 {
 func (cache LRUCache) CPUMissEff() float32 {
 	// Add the 15% to wall time -> estimated loss time to retrieve the files
 	return (cache.missCPUTime / (cache.missWTime * 1.15)) * 100.
+}
+
+// Report returns the current cache file status and statistics
+func (cache LRUCache) Report() []string {
+	// var (
+	// 	numFiles       = len(cache.files)
+	// 	avgSize        float32
+	// 	avgNumUsers    float32
+	// 	avgNumSites    float32
+	// 	avgNumRequests float32
+	// 	avgNumHits     float32
+	// 	avgNumMiss     float32
+	// )
+	// for filename, size := range cache.files {
+	// 	avgSize += size
+	// 	curStats := cache.GetOrCreate(filename)
+	// 	avgNumUsers += len(curStats.
+	// }
+
+	return []string{""}
 }
