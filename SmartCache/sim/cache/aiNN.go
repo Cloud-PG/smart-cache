@@ -269,16 +269,20 @@ func (cache AINN) GetPoints() float64 {
 
 // UpdatePolicy of AINN cache
 func (cache *AINN) UpdatePolicy(filename string, size float32, hit bool, vars ...interface{}) bool {
-	var added = false
+	var (
+		added    = false
+		day      = vars[0].(int64)
+		siteName = vars[1].(string)
+		userID   = vars[2].(int)
+	)
 
-	day := vars[0].(int64)
 	currentTime := time.Unix(day, 0)
 
 	cache.prevTime = cache.curTime
 	cache.curTime = currentTime
 
 	curStats, _ := cache.GetOrCreate(filename, size, &currentTime)
-	curStats.updateStats(hit, size, &currentTime)
+	curStats.updateStats(hit, size, userID, siteName, &currentTime)
 
 	if !hit {
 		siteName := vars[1].(string)

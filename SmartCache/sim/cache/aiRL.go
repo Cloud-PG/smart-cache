@@ -248,11 +248,11 @@ func (cache *AIRL) UpdatePolicy(filename string, size float32, hit bool, vars ..
 		prevPoints     float64
 		meanPrevPoints float64
 		curState       string
+		day            = vars[0].(int64)
 		siteName       = vars[1].(string)
 		userID         = vars[2].(int)
 	)
 
-	day := vars[0].(int64)
 	currentTime := time.Unix(day, 0)
 
 	cache.prevTime = cache.curTime
@@ -263,18 +263,16 @@ func (cache *AIRL) UpdatePolicy(filename string, size float32, hit bool, vars ..
 	}
 
 	curStats, _ := cache.GetOrCreate(filename, size, &currentTime)
-	curStats.addUser(userID)
-	curStats.addSite(siteName)
 
 	prevPoints = cache.points
 	meanPrevPoints = prevPoints / float64(len(cache.files))
 
 	if !hit {
-		curStats.updateStats(hit, size, nil)
+		curStats.updateStats(hit, size, userID, siteName, nil)
 		curStats.updateFilePoints(&cache.curTime)
 	} else {
 		cache.points -= curStats.Points
-		curStats.updateStats(hit, size, nil)
+		curStats.updateStats(hit, size, userID, siteName, nil)
 		curStats.updateFilePoints(&cache.curTime)
 		cache.points += curStats.Points
 	}

@@ -10,9 +10,8 @@ import (
 type WeightedLRU struct {
 	LRUCache
 	WeightedStats
-	Exp                     float32
-	SelFunctionType         FunctionType
-	SelUpdateStatPolicyType UpdateStatsPolicyType
+	Exp             float32
+	SelFunctionType FunctionType
 }
 
 // Init the WeightedLRU struct
@@ -90,23 +89,18 @@ func (cache *WeightedLRU) UpdatePolicy(filename string, size float32, hit bool, 
 		added    = false
 		curStats *WeightedFileStats
 		newFile  bool
+		day      = vars[0].(int64)
+		siteName = vars[1].(string)
+		userID   = vars[2].(int)
 	)
 
-	day := vars[0].(int64)
 	currentTime := time.Unix(day, 0)
 
-	if cache.SelUpdateStatPolicyType == UpdateStatsOnRequest {
-		curStats, newFile = cache.GetOrCreate(filename, size, &currentTime)
-		curStats.updateStats(hit, size, &currentTime)
-		cache.updateWeight(curStats, newFile, cache.SelFunctionType, cache.Exp)
-	}
+	curStats, newFile = cache.GetOrCreate(filename, size, &currentTime)
+	curStats.updateStats(hit, size, userID, siteName, &currentTime)
+	cache.updateWeight(curStats, newFile, cache.SelFunctionType, cache.Exp)
 
 	if !hit {
-		if cache.SelUpdateStatPolicyType == UpdateStatsOnMiss {
-			curStats, newFile = cache.GetOrCreate(filename, size, &currentTime)
-			curStats.updateStats(hit, size, &currentTime)
-			cache.updateWeight(curStats, newFile, cache.SelFunctionType, cache.Exp)
-		}
 
 		// If weight is higher exit and return added = false
 		// and skip the file insertion

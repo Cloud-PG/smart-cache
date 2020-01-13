@@ -181,9 +181,12 @@ func (stats *WeightedFileStats) addSite(siteName string) {
 	}
 }
 
-func (stats *WeightedFileStats) updateStats(hit bool, size float32, curTime *time.Time) {
+func (stats *WeightedFileStats) updateStats(hit bool, size float32, userID int, siteName string, curTime *time.Time) {
 	stats.TotRequests++
 	stats.Size = size
+
+	stats.addUser(userID)
+	stats.addSite(siteName)
 
 	if hit {
 		stats.NHits++

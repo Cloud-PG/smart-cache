@@ -43,7 +43,6 @@ var (
 	simStartFromWindow  uint32
 	simStopWindow       uint32
 	simWindowSize       uint32
-	statUpdatePolicy    string
 	weightedFunc        string
 	weightExp           float32
 )
@@ -102,10 +101,6 @@ func main() {
 	rootCmd.PersistentFlags().Float32Var(
 		&weightExp, "weightExp", 2.0,
 		"[Simulation] Exponential to use with weighted cache function",
-	)
-	rootCmd.PersistentFlags().StringVar(
-		&statUpdatePolicy, "statUpdatePolicy", "request",
-		"[WeightedLRU] when to update the file stats: ['miss', 'request']. Default: request",
 	)
 
 	if err := rootCmd.Execute(); err != nil {
@@ -407,28 +402,16 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 					// TODO: make size measure a parameter: [K, M, G, P]
 					sizeInMbytes := record.Size / (1024 * 1024)
 
-					switch typeCmd {
-					case aiSimCmd:
-						cache.GetFile(
-							curCacheInstance,
-							record.Filename,
-							sizeInMbytes,
-							record.CPUTime+record.IOTime, // WTime
-							record.CPUTime,
-							record.Day,
-							record.SiteName,
-							record.UserID,
-						)
-					default:
-						cache.GetFile(
-							curCacheInstance,
-							record.Filename,
-							sizeInMbytes,
-							record.CPUTime+record.IOTime, // WTime
-							record.CPUTime,
-							record.Day,
-						)
-					}
+					cache.GetFile(
+						curCacheInstance,
+						record.Filename,
+						sizeInMbytes,
+						record.CPUTime+record.IOTime, // WTime
+						record.CPUTime,
+						record.Day,
+						record.SiteName,
+						record.UserID,
+					)
 
 					numIterations++
 
@@ -600,8 +583,7 @@ func genCache(cacheType string) cache.Cache {
 		fmt.Printf("[Create Weighted Cache][Size: %f]\n", cacheSize)
 
 		var (
-			selFunctionType         cache.FunctionType
-			selUpdateStatPolicyType cache.UpdateStatsPolicyType
+			selFunctionType cache.FunctionType
 		)
 
 		switch weightedFunc {
@@ -618,23 +600,12 @@ func genCache(cacheType string) cache.Cache {
 			os.Exit(-1)
 		}
 
-		switch statUpdatePolicy {
-		case "miss":
-			selUpdateStatPolicyType = cache.UpdateStatsOnMiss
-		case "request":
-			selUpdateStatPolicyType = cache.UpdateStatsOnRequest
-		default:
-			fmt.Println("ERR: You need to specify a weight function.")
-			os.Exit(-1)
-		}
-
 		cacheInstance = &cache.WeightedLRU{
 			LRUCache: cache.LRUCache{
 				MaxSize: cacheSize,
 			},
-			Exp:                     weightExp,
-			SelFunctionType:         selFunctionType,
-			SelUpdateStatPolicyType: selUpdateStatPolicyType,
+			Exp:             weightExp,
+			SelFunctionType: selFunctionType,
 		}
 		cacheInstance.Init()
 	default:
