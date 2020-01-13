@@ -156,7 +156,7 @@ func OpenSimFolder(dirPath *os.File) chan CSVRecord {
 	return channel
 }
 
-// SimulationOutputCSV
+// OutputCSV is an utility to output CSV
 type OutputCSV struct {
 	filename  string
 	file      *os.File
