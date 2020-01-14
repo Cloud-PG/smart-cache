@@ -295,7 +295,7 @@ func (cache *LRUCache) UpdatePolicy(request *Request, fileStats *FileStats, hit 
 	return added
 }
 
-// UpdateFileInQueue
+// UpdateFileInQueue move the file requested on the back of the queue
 func (cache *LRUCache) UpdateFileInQueue(filename string) {
 	var elm2move *list.Element
 	for tmpVal := cache.queue.Front(); tmpVal != nil; tmpVal = tmpVal.Next() {

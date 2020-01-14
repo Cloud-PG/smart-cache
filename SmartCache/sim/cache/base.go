@@ -26,7 +26,7 @@ type FileDump struct {
 	Size     float32 `json:"size"`
 }
 
-// CacheRequest represent an ingestable request for the cache
+// Request represent an ingestable request for the cache
 type Request struct {
 	Filename string
 	Size     float32
