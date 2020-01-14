@@ -22,10 +22,10 @@ func TestWeightedLRUBaseMultipleInsert(t *testing.T) {
 	}
 	testCache.Init()
 
-	res := GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0, time.Now().Unix())
+	res := GetFile(testCache, "/a/b/c/d/file0", size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file0", size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file0", size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file0", size1, floatZero, floatZero, time.Now().Unix())
 
 	if !res {
 		t.Fatalf("First insert error -> Expected %t but got %t", true, res)
@@ -50,10 +50,10 @@ func TestWeightedLRUClear(t *testing.T) {
 	}
 	testCache.Init()
 
-	GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file0", size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file0", size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file0", size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file0", size1, floatZero, floatZero, time.Now().Unix())
 
 	testCache.Clear()
 
@@ -82,21 +82,21 @@ func TestWeightedLRUInsert(t *testing.T) {
 	}
 	testCache.Init()
 
-	GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file1", 2.0, 0.0, 0.0, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file2", 1.0, 0.0, 0.0, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file3", 1.0, 0.0, 0.0, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file1", 2.0, 0.0, 0.0, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file1", 2.0, 0.0, 0.0, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file1", 2.0, 0.0, 0.0, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file4", 1.0, 0.0, 0.0, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file3", 1.0, 0.0, 0.0, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file4", 1.0, 0.0, 0.0, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file0", size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file1", size2, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file2", size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file3", size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file1", size2, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file1", size2, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file1", size2, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file4", size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file3", size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file4", size1, floatZero, floatZero, time.Now().Unix())
 
 	if testCache.HitRate() != 30.000002 {
 		t.Fatalf("Hit rate error -> Expected %f but got %f", 30.000002, testCache.HitRate())
-	} else if testCache.Size() != 5.0 {
-		t.Fatalf("Size error -> Expected %f but got %f", 5.0, testCache.Size())
+	} else if testCache.Size() != 4.0 {
+		t.Fatalf("Size error -> Expected %f but got %f", 4.0, testCache.Size())
 	} else if testCache.DataWritten() != 6. {
 		t.Fatalf("Written data error -> Expected %f but got %f", 6., testCache.DataWritten())
 	} else if testCache.DataReadOnHit() != 5. {

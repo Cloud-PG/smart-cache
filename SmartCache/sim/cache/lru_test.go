@@ -7,17 +7,23 @@ import (
 	"time"
 )
 
+const (
+	floatZero float32 = 0.0
+	size1     float32 = 1.0
+	size2     float32 = 2.0
+)
+
 func TestLRUCacheBaseMultipleInsert(t *testing.T) {
 	testCache := &LRUCache{
 		MaxSize: 3.0,
 	}
 	testCache.Init()
 
-	res := GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0, time.Now().Unix())
+	res := GetFile(testCache, "/a/b/c/d/file0", size1, floatZero, floatZero, time.Now().Unix())
 
-	GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file0", size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file0", size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file0", size1, floatZero, floatZero, time.Now().Unix())
 
 	if !res {
 		t.Fatalf("First insert error -> Expected %t but got %t", true, res)
@@ -38,10 +44,10 @@ func TestLRUCacheClear(t *testing.T) {
 	}
 	testCache.Init()
 
-	GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file0", size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file0", size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file0", size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file0", size1, floatZero, floatZero, time.Now().Unix())
 
 	testCache.Clear()
 
@@ -66,16 +72,16 @@ func TestLRUCacheInsert(t *testing.T) {
 	}
 	testCache.Init()
 
-	GetFile(testCache, "/a/b/c/d/file0", 1.0, 0.0, 0.0, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file1", 2.0, 0.0, 0.0, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file2", 1.0, 0.0, 0.0, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file3", 1.0, 0.0, 0.0, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file1", 2.0, 0.0, 0.0, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file1", 2.0, 0.0, 0.0, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file1", 2.0, 0.0, 0.0, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file4", 1.0, 0.0, 0.0, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file3", 1.0, 0.0, 0.0, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file4", 1.0, 0.0, 0.0, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file0", size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file1", size2, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file2", size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file3", size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file1", size2, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file1", size2, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file1", size2, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file4", size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file3", size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, "/a/b/c/d/file4", size1, floatZero, floatZero, time.Now().Unix())
 
 	// for tmpVal := testCache.queue.Front(); tmpVal != nil; tmpVal = tmpVal.Next() {
 	// 	println(tmpVal.Value.(string))
@@ -84,14 +90,14 @@ func TestLRUCacheInsert(t *testing.T) {
 
 	if testCache.HitRate() != 50. {
 		t.Fatalf("Hit rate error -> Expected %f but got %f", 50., testCache.HitRate())
-	} else if testCache.Size() != 5.0 {
-		t.Fatalf("Size error -> Expected %f but got %f", 5.0, testCache.Size())
+	} else if testCache.Size() != 4.0 {
+		t.Fatalf("Size error -> Expected %f but got %f", 4.0, testCache.Size())
 	} else if testCache.DataWritten() != 6.0 {
 		t.Fatalf("Written data error -> Expected %f but got %f", 6.0, testCache.DataWritten())
 	} else if testCache.DataReadOnHit() != 8. {
 		t.Fatalf("Read on hit error -> Expected %f but got %f", 8., testCache.DataReadOnHit())
-	} else if testCache.queue.Front().Value.(string) != "/a/b/c/d/file2" {
-		t.Fatalf("Written data error -> Expected %s but got %s", "/a/b/c/d/file2", testCache.queue.Front().Value.(string))
+	} else if testCache.queue.Front().Value.(string) != "/a/b/c/d/file1" {
+		t.Fatalf("Written data error -> Expected %s but got %s", "/a/b/c/d/file1", testCache.queue.Front().Value.(string))
 	} else if testCache.queue.Back().Value.(string) != "/a/b/c/d/file4" {
 		t.Fatalf("Written data error -> Expected %s but got %s", "/a/b/c/d/file4", testCache.queue.Back().Value.(string))
 	}

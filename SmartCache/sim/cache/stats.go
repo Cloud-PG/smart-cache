@@ -19,7 +19,7 @@ func (statStruct *Stats) Init() {
 	statStruct.weightSum = 0.0
 }
 
-// GetOrCreate add the file into stats and returns it
+// GetOrCreate add the file into stats and returns (stats, is new file)
 func (statStruct *Stats) GetOrCreate(filename string, vars ...interface{}) (*FileStats, bool) {
 	var (
 		size      float32
@@ -43,7 +43,10 @@ func (statStruct *Stats) GetOrCreate(filename string, vars ...interface{}) (*Fil
 			FirstTime: firstTime,
 		}
 		statStruct.data[filename] = curStats
+	} else {
+		curStats.Size = size
 	}
+
 	return curStats, !inStats
 }
 
@@ -76,12 +79,10 @@ func (statStruct Stats) updateFilesPoints(filename string, curTime *time.Time) f
 const (
 	// StatsMemorySize represents the  number of slots
 	StatsMemorySize uint64 = 32
-	// NumReqDecayDays is the number of days that requests are maintained
-	NumReqDecayDays = 7.0
-	// NumUsersDecayDays is the number of days that requests are maintained
-	NumUsersDecayDays = 7.0
-	// NumSitesDecayDays is the number of days that requests are maintained
-	NumSitesDecayDays = 7.0
+	// NumDaysStatsDecay is the number of days that stats are maintained
+	NumDaysStatsDecay = 7.0
+	// NumDaysPointsDecay is the number of days that points are maintained
+	NumDaysPointsDecay = 5.0
 )
 
 type cacheEmptyMsg struct{}
@@ -156,19 +157,18 @@ func (stats *FileStats) updateStats(hit bool, size float32, userID int, siteName
 	}
 }
 
-// getRealTimeValue returns the weighted num. of requests
-func (stats FileStats) getRealTimeValue(value float64, dayPassed float64, decayWindow float64) float64 {
-	return value * math.Exp(-(dayPassed / decayWindow))
-}
-
 // getRealTimeStats returns the weighted num. of requests
 func (stats FileStats) getRealTimeStats(curTime *time.Time) (float64, float64, float64) {
 	dayDiffFirstTime := math.Floor(curTime.Sub(stats.FirstTime).Hours() / 24.)
 	realNumReq, realNumUsers, realNumSites := stats.getStats()
-	numReq := stats.getRealTimeValue(realNumReq, dayDiffFirstTime, NumReqDecayDays)
-	numUsers := stats.getRealTimeValue(realNumUsers, dayDiffFirstTime, NumUsersDecayDays)
-	numSites := stats.getRealTimeValue(realNumSites, dayDiffFirstTime, NumSitesDecayDays)
-	return numReq, numUsers, numSites
+	if dayDiffFirstTime >= NumDaysStatsDecay {
+		realNumReq, realNumUsers, realNumSites := stats.getStats()
+		numReq := realNumReq * math.Exp(-1.0)
+		numUsers := realNumUsers * math.Exp(-1.0)
+		numSites := realNumSites * math.Exp(-1.0)
+		return numReq, numUsers, numSites
+	}
+	return realNumReq, realNumUsers, realNumSites
 }
 
 // getStats returns number of requests, users and sites
@@ -185,7 +185,10 @@ func (stats *FileStats) updateFilePoints(curTime *time.Time) float64 {
 	dayDiffInCache := math.Floor(curTime.Sub(stats.InCacheSince).Hours() / 24.)
 
 	points := numReq * 10. * numUsers * 100. * numSites * 1000. * float64(stats.Size)
-	points = points * math.Exp(-dayDiffInCache) // Decay points
+
+	if dayDiffInCache >= NumDaysPointsDecay {
+		points = points * math.Exp(-1.0) // Decay points
+	}
 
 	stats.Points = points
 
