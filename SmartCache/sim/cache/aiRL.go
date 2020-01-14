@@ -246,6 +246,13 @@ func (cache AIRL) GetPoints() float64 {
 func (cache *AIRL) BeforeRequest(request *Request, hit bool) *FileStats {
 	fileStats, _ := cache.GetOrCreate(request.Filename, request.Size, request.DayTime)
 
+	cache.prevTime = cache.curTime
+	cache.curTime = request.DayTime
+
+	if !cache.curTime.Equal(cache.prevTime) {
+		cache.points = cache.GetPoints()
+	}
+
 	cache.prevPoints = cache.points
 
 	if !hit {
@@ -271,13 +278,6 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 		requestedFilename = request.Filename
 		requestedFileSize = request.Size
 	)
-
-	cache.prevTime = cache.curTime
-	cache.curTime = request.DayTime
-
-	if !cache.curTime.Equal(cache.prevTime) {
-		cache.points = cache.GetPoints()
-	}
 
 	if !hit {
 		tmpSplit := strings.Split(requestedFilename, "/")
