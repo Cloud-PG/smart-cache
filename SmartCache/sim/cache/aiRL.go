@@ -22,6 +22,7 @@ type AIRL struct {
 	aiFeatureMapOrder []string
 	qTable            *qlearn.QTable
 	points            float64
+	prevPoints        float64
 	minFilePoints     float64
 }
 
@@ -245,6 +246,8 @@ func (cache AIRL) GetPoints() float64 {
 func (cache *AIRL) BeforeRequest(request *Request, hit bool) *FileStats {
 	fileStats, _ := cache.GetOrCreate(request.Filename, request.Size, request.DayTime)
 
+	cache.prevPoints = cache.points
+
 	if !hit {
 		fileStats.updateStats(hit, request.Size, request.UserID, request.SiteName, nil)
 		fileStats.updateFilePoints(&cache.curTime)
@@ -261,10 +264,9 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) *FileStats {
 // UpdatePolicy of AIRL cache
 func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool) bool {
 	var (
-		added      = false
-		curAction  qlearn.ActionType
-		prevPoints float64
-		curState   string
+		added     = false
+		curAction qlearn.ActionType
+		curState  string
 
 		requestedFilename = request.Filename
 		requestedFileSize = request.Size
@@ -276,8 +278,6 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 	if !cache.curTime.Equal(cache.prevTime) {
 		cache.points = cache.GetPoints()
 	}
-
-	prevPoints = cache.points
 
 	if !hit {
 		tmpSplit := strings.Split(requestedFilename, "/")
@@ -313,7 +313,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 		// QLearn - Take the action NOT STORE
 		if curAction == qlearn.ActionNotStore {
 			newScore := cache.points
-			diff := newScore - prevPoints
+			diff := newScore - cache.prevPoints
 			reward := 0.
 			if diff >= 0. {
 				if cache.CheckWatermark() {
@@ -354,7 +354,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 		// QLearn - Take the action STORE
 		if cache.qTable != nil && curAction == qlearn.ActionStore {
 			newScore := cache.points
-			diff := newScore - prevPoints
+			diff := newScore - cache.prevPoints
 			reward := 0.
 			if diff >= 0. {
 				if !cache.CheckWatermark() {
@@ -436,5 +436,5 @@ func (cache *AIRL) CheckWatermark() bool {
 
 // ExtraStats for output
 func (cache *AIRL) ExtraStats() string {
-	return fmt.Sprintf("Cov:%0.2f%%|Eps:%0.2f|P:%0.2f", cache.qTable.GetCoveragePercentage(), cache.qTable.Epsilon, cache.points)
+	return fmt.Sprintf("Cov:%0.2f%%|Eps:%0.2f|P:%0.0f", cache.qTable.GetCoveragePercentage(), cache.qTable.Epsilon, cache.points)
 }
