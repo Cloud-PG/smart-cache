@@ -1,15 +1,14 @@
 package cache
 
 import (
-	"container/list"
 	"encoding/json"
 	"fmt"
+	"math"
+	"simulator/v2/cache/ai/featuremap"
+	qlearn "simulator/v2/cache/qLearn"
 	"sort"
 	"strings"
 	"time"
-
-	"simulator/v2/cache/ai/featuremap"
-	qlearn "simulator/v2/cache/qLearn"
 )
 
 // AIRL cache
@@ -23,12 +22,15 @@ type AIRL struct {
 	aiFeatureMapOrder []string
 	qTable            *qlearn.QTable
 	points            float64
+	minFilePoints     float64
 }
 
 // Init the AIRL struct
 func (cache *AIRL) Init(args ...interface{}) interface{} {
 	cache.LRUCache.Init()
 	cache.Stats.Init()
+
+	cache.minFilePoints = math.Inf(1)
 
 	featureMapFilePath := args[0].(string)
 
@@ -240,56 +242,48 @@ func (cache AIRL) GetPoints() float64 {
 }
 
 // BeforeRequest of LRU cache
-func (cache *AIRL) BeforeRequest(hit bool, filename string, size float32, day int64, siteName string, userID int) *FileStats {
-	currentTime := time.Unix(day, 0)
-	curStats, _ := cache.GetOrCreate(filename, size)
+func (cache *AIRL) BeforeRequest(request *Request, hit bool) *FileStats {
+	fileStats, _ := cache.GetOrCreate(request.Filename, request.Size)
 
 	if !hit {
-		curStats.updateStats(hit, size, userID, siteName, nil)
-		curStats.updateFilePoints(&cache.curTime)
+		fileStats.updateStats(hit, request.Size, request.UserID, request.SiteName, nil)
+		fileStats.updateFilePoints(&cache.curTime)
 	} else {
-		cache.points -= curStats.Points
-		curStats.updateStats(hit, size, userID, siteName, nil)
-		curStats.updateFilePoints(&cache.curTime)
-		cache.points += curStats.Points
+		cache.points -= fileStats.Points
+		fileStats.updateStats(hit, request.Size, request.UserID, request.SiteName, nil)
+		fileStats.updateFilePoints(&cache.curTime)
+		cache.points += fileStats.Points
 	}
 
-	curStats.updateStats(hit, size, userID, siteName, &currentTime)
-	return curStats
+	return fileStats
 }
 
 // UpdatePolicy of AIRL cache
-func (cache *AIRL) UpdatePolicy(fileStats *FileStats, hit bool, vars ...interface{}) bool {
+func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool) bool {
 	var (
-		added          = false
-		curAction      qlearn.ActionType
-		prevPoints     float64
-		meanPrevPoints float64
-		curState       string
+		added      = false
+		curAction  qlearn.ActionType
+		prevPoints float64
+		curState   string
 		// File vars
 		requestedFilename = fileStats.Filename
 		requestedFileSize = fileStats.Size
-		// vars
-		day = vars[0].(int64)
 	)
 
-	currentTime := time.Unix(day, 0)
-
 	cache.prevTime = cache.curTime
-	cache.curTime = currentTime
+	cache.curTime = request.DayTime
 
 	if !cache.curTime.Equal(cache.prevTime) {
 		cache.points = cache.GetPoints()
 	}
 
 	prevPoints = cache.points
-	meanPrevPoints = prevPoints / float64(len(cache.files))
 
 	if !hit {
 		tmpSplit := strings.Split(requestedFilename, "/")
 		dataType := tmpSplit[2]
 
-		numReq, numUsers, numSites := fileStats.getRealTimeStats(&currentTime)
+		numReq, numUsers, numSites := fileStats.getRealTimeStats(&request.DayTime)
 
 		curState = qlearn.State2String(
 			cache.getState(
@@ -320,7 +314,7 @@ func (cache *AIRL) UpdatePolicy(fileStats *FileStats, hit bool, vars ...interfac
 		if curAction == qlearn.ActionNotStore {
 			newScore := cache.points
 			reward := 0.0
-			if newScore >= prevPoints && fileStats.Points > meanPrevPoints {
+			if fileStats.Points >= cache.minFilePoints || newScore >= prevPoints {
 				reward += 1.
 			} else {
 				reward -= 1.
@@ -334,41 +328,21 @@ func (cache *AIRL) UpdatePolicy(fileStats *FileStats, hit bool, vars ...interfac
 
 		// Insert with LRU mechanism
 		if cache.Size()+requestedFileSize > cache.MaxSize {
-			var totalDeleted float32
-			tmpVal := cache.queue.Front()
-			for {
-				if tmpVal == nil {
-					break
-				}
-				curFilename2Delete := tmpVal.Value.(string)
-				cache.points -= cache.getPoints(curFilename2Delete) // Q-Learning
-				curFileSize := cache.files[curFilename2Delete]
-				cache.size -= curFileSize
-				cache.dataDeleted += curFileSize
-
-				totalDeleted += curFileSize
-				delete(cache.files, curFilename2Delete)
-
-				tmpVal = tmpVal.Next()
-				// Check if all files are deleted
-				if tmpVal == nil {
-					break
-				}
-				cache.queue.Remove(tmpVal.Prev())
-
-				if totalDeleted >= requestedFileSize {
-					break
-				}
-			}
+			cache.Free(requestedFileSize, false)
 		}
 		if cache.Size()+requestedFileSize <= cache.MaxSize {
 			cache.files[requestedFilename] = requestedFileSize
 			cache.queue.PushBack(requestedFilename)
 			cache.size += requestedFileSize
-			fileStats.addInCache(&currentTime)
-			fileStats.updateFilePoints(&cache.curTime)
-			cache.points += fileStats.Points // Q-Learning
 			added = true
+
+			// Q-Learning
+			fileStats.addInCache(&request.DayTime)
+			fileStats.updateFilePoints(&cache.curTime)
+			cache.points += fileStats.Points
+			if fileStats.Points < cache.minFilePoints {
+				cache.minFilePoints = fileStats.Points
+			}
 		}
 
 		// ------------------------------
@@ -376,7 +350,7 @@ func (cache *AIRL) UpdatePolicy(fileStats *FileStats, hit bool, vars ...interfac
 		if cache.qTable != nil && curAction == qlearn.ActionStore {
 			newScore := cache.points
 			reward := 0.0
-			if fileStats.Points > meanPrevPoints || newScore >= prevPoints {
+			if fileStats.Points >= cache.minFilePoints || newScore >= prevPoints {
 				reward += 1.
 			} else {
 				reward -= 1.
@@ -388,19 +362,57 @@ func (cache *AIRL) UpdatePolicy(fileStats *FileStats, hit bool, vars ...interfac
 		}
 
 	} else {
-		var elm2move *list.Element
-		for tmpVal := cache.queue.Front(); tmpVal != nil; tmpVal = tmpVal.Next() {
-			if tmpVal.Value.(string) == requestedFilename {
-				elm2move = tmpVal
-				break
-			}
-		}
-		if elm2move != nil {
-			cache.queue.MoveToBack(elm2move)
+		cache.UpdateFileInQueue(requestedFilename)
+		if fileStats.Points < cache.minFilePoints {
+			cache.minFilePoints = fileStats.Points
 		}
 	}
 
 	return added
+}
+
+// Free removes files from the cache
+func (cache *AIRL) Free(amount float32, percentage bool) float32 {
+	var (
+		totalDeleted float32
+		sizeToDelete float32
+	)
+	if percentage {
+		sizeToDelete = amount * (cache.MaxSize / 100.)
+	} else {
+		sizeToDelete = amount
+	}
+	tmpVal := cache.queue.Front()
+	for {
+		if tmpVal == nil {
+			break
+		}
+		curFilename2Delete := tmpVal.Value.(string)
+		curFilePoints := cache.getPoints(curFilename2Delete)
+		cache.points -= curFilePoints
+		if curFilePoints <= cache.minFilePoints {
+			cache.minFilePoints = math.Inf(1)
+		}
+		fileSize := cache.files[curFilename2Delete]
+		// Update sizes
+		cache.size -= fileSize
+		cache.dataDeleted += fileSize
+		totalDeleted += fileSize
+
+		// Remove from queue
+		delete(cache.files, tmpVal.Value.(string))
+		tmpVal = tmpVal.Next()
+		// Check if all files are deleted
+		if tmpVal == nil {
+			break
+		}
+		cache.queue.Remove(tmpVal.Prev())
+
+		if totalDeleted >= sizeToDelete {
+			break
+		}
+	}
+	return totalDeleted
 }
 
 // CheckWatermark checks the watermark levels and resolve the situation

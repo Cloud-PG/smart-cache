@@ -105,10 +105,7 @@ func (cache *WeightedLRU) UpdatePolicy(request *Request, fileStats *FileStats, h
 		}
 		// Insert with LRU mechanism
 		if cache.Size()+requestedFileSize > cache.MaxSize {
-			cache.Free(
-				requestedFileSize,
-				false,
-			)
+			cache.Free(requestedFileSize, false)
 		}
 		if cache.Size()+requestedFileSize <= cache.MaxSize {
 			cache.files[requestedFilename] = requestedFileSize

@@ -278,10 +278,7 @@ func (cache *LRUCache) UpdatePolicy(request *Request, fileStats *FileStats, hit 
 
 	if !hit {
 		if cache.Size()+requestedFileSize > cache.MaxSize {
-			cache.Free(
-				requestedFileSize,
-				false,
-			)
+			cache.Free(requestedFileSize, false)
 		}
 		if cache.Size()+requestedFileSize <= cache.MaxSize {
 			cache.files[requestedFilename] = requestedFileSize
