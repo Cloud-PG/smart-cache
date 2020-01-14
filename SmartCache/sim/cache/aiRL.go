@@ -436,5 +436,5 @@ func (cache *AIRL) CheckWatermark() bool {
 
 // ExtraStats for output
 func (cache *AIRL) ExtraStats() string {
-	return fmt.Sprintf("Cov: %0.2f%%, Epsilon: %0.2f", cache.qTable.GetCoveragePercentage(), cache.qTable.Epsilon)
+	return fmt.Sprintf("Cov:%0.2f%%|Eps:%0.2f|P:%0.2f", cache.qTable.GetCoveragePercentage(), cache.qTable.Epsilon, cache.points)
 }
