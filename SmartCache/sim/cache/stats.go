@@ -82,9 +82,7 @@ const (
 	// NumDaysStatsDecay is the number of days that stats are maintained
 	NumDaysStatsDecay = 7.0
 	// NumDaysPointsDecay is the number of days that points are maintained
-	NumDaysPointsDecay = 5.0
-	// NumDaysDecayFactor smooth the decay rate
-	NumDaysDecayFactor = 0.1
+	NumDaysPointsDecay = 3.0
 )
 
 type cacheEmptyMsg struct{}
@@ -165,9 +163,9 @@ func (stats FileStats) getRealTimeStats(curTime *time.Time) (float64, float64, f
 	realNumReq, realNumUsers, realNumSites := stats.getStats()
 	if dayDiffFirstTime >= NumDaysStatsDecay {
 		realNumReq, realNumUsers, realNumSites := stats.getStats()
-		numReq := realNumReq * math.Exp(-NumDaysDecayFactor*dayDiffFirstTime)
-		numUsers := realNumUsers * math.Exp(-NumDaysDecayFactor*dayDiffFirstTime)
-		numSites := realNumSites * math.Exp(-NumDaysDecayFactor*dayDiffFirstTime)
+		numReq := realNumReq * math.Exp(-dayDiffFirstTime/dayDiffFirstTime)
+		numUsers := realNumUsers * math.Exp(-dayDiffFirstTime/dayDiffFirstTime)
+		numSites := realNumSites * math.Exp(-dayDiffFirstTime/dayDiffFirstTime)
 		return numReq, numUsers, numSites
 	}
 	return realNumReq, realNumUsers, realNumSites
@@ -184,12 +182,12 @@ func (stats FileStats) getStats() (float64, float64, float64) {
 // updateFilePoints returns the points for a single file
 func (stats *FileStats) updateFilePoints(curTime *time.Time) float64 {
 	numReq, numUsers, numSites := stats.getRealTimeStats(curTime)
-	diffDaysInCache := math.Floor(curTime.Sub(stats.InCacheSince).Hours() / 24.)
+	dayDiffInCache := math.Floor(curTime.Sub(stats.InCacheSince).Hours() / 24.)
 
 	points := numReq*10. + numUsers*100. + numSites*1000. + float64(stats.Size)
 
-	if diffDaysInCache >= NumDaysPointsDecay {
-		points = points * math.Exp(-NumDaysDecayFactor*diffDaysInCache) // Decay points
+	if dayDiffInCache >= NumDaysPointsDecay {
+		points = points * math.Exp(-dayDiffInCache/NumDaysPointsDecay) // Decay points
 	}
 
 	stats.Points = points

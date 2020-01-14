@@ -313,7 +313,13 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 		// QLearn - Take the action NOT STORE
 		if curAction == qlearn.ActionNotStore {
 			newScore := cache.points
-			reward := newScore - prevPoints
+			diff := newScore - prevPoints
+			reward := 0.
+			if diff > 0. {
+				reward += 1
+			} else {
+				reward -= 1
+			}
 			// Update table
 			cache.qTable.Update(curState, curAction, reward)
 			// Update epsilon
@@ -344,7 +350,13 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 		// QLearn - Take the action STORE
 		if cache.qTable != nil && curAction == qlearn.ActionStore {
 			newScore := cache.points
-			reward := newScore - prevPoints
+			diff := newScore - prevPoints
+			reward := 0.
+			if diff > 0. {
+				reward += 1
+			} else {
+				reward -= 1
+			}
 			// Update table
 			cache.qTable.Update(curState, curAction, reward)
 			// Update epsilon
