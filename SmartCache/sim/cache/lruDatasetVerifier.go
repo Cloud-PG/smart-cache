@@ -54,55 +54,30 @@ func (cache *LRUDatasetVerifier) Init(args ...interface{}) interface{} {
 }
 
 // UpdatePolicy of LRUDatasetVerifier cache
-func (cache *LRUDatasetVerifier) UpdatePolicy(filename string, size float32, hit bool, _ ...interface{}) bool {
-	var added = false
-	_, inDataset := cache.datasetFileMap[filename]
-	if inDataset {
-		if !hit {
-			if cache.Size()+size > cache.MaxSize {
-				var totalDeleted float32
-				tmpVal := cache.queue.Front()
-				for {
-					if tmpVal == nil {
-						break
-					}
-					fileSize := cache.files[tmpVal.Value.(string)]
-					cache.size -= fileSize
-					cache.dataDeleted += size
+func (cache *LRUDatasetVerifier) UpdatePolicy(request *Request, fileStats *FileStats, hit bool) bool {
+	var (
+		added = false
 
-					totalDeleted += fileSize
-					delete(cache.files, tmpVal.Value.(string))
+		requestedFileSize = request.Size
+		requestedFilename = request.Filename
+	)
+	_, inDataset := cache.datasetFileMap[requestedFilename]
 
-					tmpVal = tmpVal.Next()
-					// Check if all files are deleted
-					if tmpVal == nil {
-						break
-					}
-					cache.queue.Remove(tmpVal.Prev())
-
-					if totalDeleted >= size {
-						break
-					}
-				}
+	if !hit {
+		if inDataset {
+			if cache.Size()+requestedFileSize > cache.MaxSize {
+				cache.Free(requestedFileSize, false)
 			}
-			if cache.Size()+size <= cache.MaxSize {
-				cache.files[filename] = size
-				cache.queue.PushBack(filename)
-				cache.size += size
+			if cache.Size()+requestedFileSize <= cache.MaxSize {
+				cache.files[requestedFilename] = requestedFileSize
+				cache.queue.PushBack(requestedFilename)
+				cache.size += requestedFileSize
 				added = true
 			}
-		} else {
-			var elm2move *list.Element
-			for tmpVal := cache.queue.Front(); tmpVal != nil; tmpVal = tmpVal.Next() {
-				if tmpVal.Value.(string) == filename {
-					elm2move = tmpVal
-					break
-				}
-			}
-			if elm2move != nil {
-				cache.queue.MoveToBack(elm2move)
-			}
 		}
+	} else {
+		cache.UpdateFileInQueue(requestedFilename)
 	}
+
 	return added
 }

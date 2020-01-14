@@ -271,10 +271,12 @@ func (cache *LRUCache) BeforeRequest(request *Request, hit bool) *FileStats {
 
 // UpdatePolicy of LRU cache
 func (cache *LRUCache) UpdatePolicy(request *Request, fileStats *FileStats, hit bool) bool {
-	var added = false
+	var (
+		added = false
 
-	requestedFileSize := request.Size
-	requestedFilename := request.Filename
+		requestedFileSize = request.Size
+		requestedFilename = request.Filename
+	)
 
 	if !hit {
 		if cache.Size()+requestedFileSize > cache.MaxSize {
@@ -290,20 +292,6 @@ func (cache *LRUCache) UpdatePolicy(request *Request, fileStats *FileStats, hit 
 		cache.UpdateFileInQueue(requestedFilename)
 	}
 	return added
-}
-
-// UpdateFileInQueue move the file requested on the back of the queue
-func (cache *LRUCache) UpdateFileInQueue(filename string) {
-	var elm2move *list.Element
-	for tmpVal := cache.queue.Front(); tmpVal != nil; tmpVal = tmpVal.Next() {
-		if tmpVal.Value.(string) == filename {
-			elm2move = tmpVal
-			break
-		}
-	}
-	if elm2move != nil {
-		cache.queue.MoveToBack(elm2move)
-	}
 }
 
 // AfterRequest of LRU cache
@@ -326,6 +314,20 @@ func (cache *LRUCache) AfterRequest(request *Request, hit bool, added bool) {
 		cache.dataWritten += request.Size
 	}
 	cache.dataRead += request.Size
+}
+
+// UpdateFileInQueue move the file requested on the back of the queue
+func (cache *LRUCache) UpdateFileInQueue(filename string) {
+	var elm2move *list.Element
+	for tmpVal := cache.queue.Front(); tmpVal != nil; tmpVal = tmpVal.Next() {
+		if tmpVal.Value.(string) == filename {
+			elm2move = tmpVal
+			break
+		}
+	}
+	if elm2move != nil {
+		cache.queue.MoveToBack(elm2move)
+	}
 }
 
 // Free removes files from the cache
