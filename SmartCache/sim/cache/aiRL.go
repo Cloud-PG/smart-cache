@@ -314,10 +314,10 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 		if curAction == qlearn.ActionNotStore {
 			newScore := cache.points
 			reward := 0.0
-			if fileStats.Points >= cache.minFilePoints || newScore >= prevPoints {
-				reward += 1.
+			if fileStats.Points >= cache.minFilePoints || newScore > prevPoints {
+				reward += fileStats.Points
 			} else {
-				reward -= 1.
+				reward -= fileStats.Points
 			}
 			// Update table
 			cache.qTable.Update(curState, curAction, reward)
@@ -350,10 +350,10 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 		if cache.qTable != nil && curAction == qlearn.ActionStore {
 			newScore := cache.points
 			reward := 0.0
-			if fileStats.Points >= cache.minFilePoints || newScore >= prevPoints {
-				reward += 1.
+			if fileStats.Points >= cache.minFilePoints || newScore > prevPoints {
+				reward += fileStats.Points
 			} else {
-				reward -= 1.
+				reward -= fileStats.Points
 			}
 			// Update table
 			cache.qTable.Update(curState, curAction, reward)
