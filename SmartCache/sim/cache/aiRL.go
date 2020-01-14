@@ -266,8 +266,8 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 		prevPoints float64
 		curState   string
 
-		requestedFilename = fileStats.Filename
-		requestedFileSize = fileStats.Size
+		requestedFilename = request.Filename
+		requestedFileSize = request.Size
 	)
 
 	cache.prevTime = cache.curTime

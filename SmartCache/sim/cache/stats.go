@@ -38,6 +38,7 @@ func (statStruct *Stats) GetOrCreate(filename string, vars ...interface{}) (*Fil
 
 	if !inStats {
 		curStats = &FileStats{
+			Filename:  filename,
 			Size:      size,
 			FirstTime: firstTime,
 		}
