@@ -9,7 +9,6 @@ import (
 	"io"
 	"math"
 	"os"
-	"time"
 
 	pb "simulator/v2/cache/simService"
 
@@ -264,47 +263,26 @@ func (cache *LRUCache) SimLoads(stream pb.SimService_SimLoadsServer) error {
 }
 
 // BeforeRequest of LRU cache
-func (cache *LRUCache) BeforeRequest(hit bool, filename string, size float32, day int64, siteName string, userID int) *FileStats {
-	currentTime := time.Unix(day, 0)
-	curStats, _ := cache.GetOrCreate(filename, size)
-	curStats.updateStats(hit, size, userID, siteName, &currentTime)
+func (cache *LRUCache) BeforeRequest(request *Request, hit bool) *FileStats {
+	curStats, _ := cache.GetOrCreate(request.Filename, request.Size)
+	curStats.updateStats(hit, request.Size, request.UserID, request.SiteName, &request.DayTime)
 	return curStats
 }
 
 // UpdatePolicy of LRU cache
-func (cache *LRUCache) UpdatePolicy(fileStats *FileStats, hit bool, vars ...interface{}) bool {
+func (cache *LRUCache) UpdatePolicy(request *Request, fileStats *FileStats, hit bool) bool {
 	var added = false
-	requestedFileSize := fileStats.Size
-	requestedFilename := fileStats.Filename
+	requestedFileSize := request.Size
+	requestedFilename := request.Filename
 	if !hit {
 		if cache.Size()+requestedFileSize > cache.MaxSize {
-			var totalDeleted float32
-			tmpVal := cache.queue.Front()
-			for {
-				if tmpVal == nil {
-					break
-				}
-				curFileSize := cache.files[tmpVal.Value.(string)]
-				cache.size -= curFileSize
-				cache.dataDeleted += curFileSize
-
-				totalDeleted += curFileSize
-				delete(cache.files, tmpVal.Value.(string))
-
-				tmpVal = tmpVal.Next()
-				// Check if all files are deleted
-				if tmpVal == nil {
-					break
-				}
-				cache.queue.Remove(tmpVal.Prev())
-
-				if totalDeleted >= requestedFileSize {
-					break
-				}
-			}
+			cache.Free(
+				requestedFileSize,
+				false,
+			)
 		}
 		if cache.Size()+requestedFileSize <= cache.MaxSize {
-			cache.files[fileStats.Filename] = requestedFileSize
+			cache.files[requestedFilename] = requestedFileSize
 			cache.queue.PushBack(requestedFilename)
 			cache.size += requestedFileSize
 			added = true
@@ -325,25 +303,63 @@ func (cache *LRUCache) UpdatePolicy(fileStats *FileStats, hit bool, vars ...inte
 }
 
 // AfterRequest of LRU cache
-func (cache *LRUCache) AfterRequest(hit bool, added bool, size float32, wTime float32, cpuTime float32) {
+func (cache *LRUCache) AfterRequest(request *Request, hit bool, added bool) {
 	if hit {
 		cache.hit += 1.
-		cache.dataReadOnHit += size
-		cache.hitCPUTime += cpuTime
-		cache.hitWTime += wTime
+		cache.dataReadOnHit += request.Size
+		cache.hitCPUTime += request.CPUTime
+		cache.hitWTime += request.WTime
 	} else {
 		cache.miss += 1.
-		cache.dataReadOnMiss += size
-		cache.missCPUTime += cpuTime
-		cache.missWTime += wTime
+		cache.dataReadOnMiss += request.Size
+		cache.missCPUTime += request.CPUTime
+		cache.missWTime += request.WTime
 	}
 
 	// Always true because of LRU policy
 	// - added variable is needed just for code consistency
 	if added {
-		cache.dataWritten += size
+		cache.dataWritten += request.Size
 	}
-	cache.dataRead += size
+	cache.dataRead += request.Size
+}
+
+// Free removes files from the cache
+func (cache *LRUCache) Free(amount float32, percentage bool) float32 {
+	var (
+		totalDeleted float32
+		sizeToDelete float32
+	)
+	if percentage {
+		sizeToDelete = amount * (cache.MaxSize / 100.)
+	} else {
+		sizeToDelete = amount
+	}
+	tmpVal := cache.queue.Front()
+	for {
+		if tmpVal == nil {
+			break
+		}
+		fileSize := cache.files[tmpVal.Value.(string)]
+		// Update sizes
+		cache.size -= fileSize
+		cache.dataDeleted += fileSize
+		totalDeleted += fileSize
+
+		// Remove from queue
+		delete(cache.files, tmpVal.Value.(string))
+		tmpVal = tmpVal.Next()
+		// Check if all files are deleted
+		if tmpVal == nil {
+			break
+		}
+		cache.queue.Remove(tmpVal.Prev())
+
+		if totalDeleted >= sizeToDelete {
+			break
+		}
+	}
+	return totalDeleted
 }
 
 // CheckWatermark checks the watermark levels and resolve the situation
@@ -351,33 +367,10 @@ func (cache *LRUCache) CheckWatermark() bool {
 	ok := true
 	if cache.Capacity() >= cache.HighWaterMark {
 		ok = false
-		var (
-			totalDeleted float32
-			sizeToDelete float32 = (cache.HighWaterMark - cache.LowWaterMark) * (cache.MaxSize / 100.)
+		cache.Free(
+			cache.HighWaterMark-cache.LowWaterMark,
+			true,
 		)
-		tmpVal := cache.queue.Front()
-		for {
-			if tmpVal == nil {
-				break
-			}
-			fileSize := cache.files[tmpVal.Value.(string)]
-			cache.size -= fileSize
-			cache.dataDeleted += fileSize
-
-			totalDeleted += fileSize
-			delete(cache.files, tmpVal.Value.(string))
-
-			tmpVal = tmpVal.Next()
-			// Check if all files are deleted
-			if tmpVal == nil {
-				break
-			}
-			cache.queue.Remove(tmpVal.Prev())
-
-			if totalDeleted >= sizeToDelete {
-				break
-			}
-		}
 	}
 	return ok
 }

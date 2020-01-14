@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"time"
 
 	pb "simulator/v2/cache/simService"
 
@@ -25,6 +26,18 @@ type FileDump struct {
 	Size     float32 `json:"size"`
 }
 
+// CacheRequest represent an ingestable request for the cache
+type Request struct {
+	Filename string
+	Size     float32
+	WTime    float32
+	CPUTime  float32
+	Day      int64
+	DayTime  time.Time
+	SiteName string
+	UserID   int
+}
+
 // Cache is the base interface for the cache object
 type Cache interface {
 	Init(...interface{}) interface{}
@@ -37,6 +50,7 @@ type Cache interface {
 	Clear()
 	ClearFiles()
 	ClearHitMissStats()
+	Free(amount float32, percentage bool) float32
 
 	ExtraStats() string
 	Report() []string
@@ -57,9 +71,9 @@ type Cache interface {
 
 	Check(string) bool
 	CheckWatermark() bool
-	BeforeRequest(hit bool, filename string, size float32, day int64, siteName string, userID int) *FileStats
-	UpdatePolicy(fileStats *FileStats, hit bool, vars ...interface{}) bool
-	AfterRequest(hit bool, added bool, size float32, wTime float32, cpuTime float32)
+	BeforeRequest(request *Request, hit bool) *FileStats
+	UpdatePolicy(request *Request, fileStats *FileStats, hit bool) bool
+	AfterRequest(request *Request, hit bool, added bool)
 
 	SimGet(context.Context, *pb.SimCommonFile) (*pb.ActionResult, error)
 	SimClear(context.Context, *empty.Empty) (*pb.SimCacheStatus, error)
@@ -98,42 +112,35 @@ func GetFile(cache Cache, vars ...interface{}) bool {
 	[6] -> userID   int
 	*/
 
-	var (
-		filename string
-		size     float32
-		wTime    float32
-		cpuTime  float32
-		day      int64
-		siteName string
-		userID   int
-	)
-
-	filename = vars[0].(string)
+	cacheRequest := Request{
+		Filename: vars[0].(string),
+	}
 
 	switch {
 	case len(vars) > 6:
-		userID = vars[6].(int)
+		cacheRequest.UserID = vars[6].(int)
 		fallthrough
 	case len(vars) > 5:
-		siteName = vars[5].(string)
+		cacheRequest.SiteName = vars[5].(string)
 		fallthrough
 	case len(vars) > 4:
-		day = vars[4].(int64)
+		cacheRequest.Day = vars[4].(int64)
+		cacheRequest.DayTime = time.Unix(cacheRequest.Day, 0)
 		fallthrough
 	case len(vars) > 3:
-		cpuTime = vars[3].(float32)
+		cacheRequest.CPUTime = vars[3].(float32)
 		fallthrough
 	case len(vars) > 2:
-		wTime = vars[2].(float32)
+		cacheRequest.WTime = vars[2].(float32)
 		fallthrough
 	case len(vars) > 1:
-		size = vars[1].(float32)
+		cacheRequest.Size = vars[1].(float32)
 	}
 
-	hit := cache.Check(filename)
-	fileStats := cache.BeforeRequest(hit, filename, size, day, siteName, userID)
-	added := cache.UpdatePolicy(fileStats, hit, day)
-	cache.AfterRequest(hit, added, size, wTime, cpuTime)
+	hit := cache.Check(cacheRequest.Filename)
+	fileStats := cache.BeforeRequest(&cacheRequest, hit)
+	added := cache.UpdatePolicy(&cacheRequest, fileStats, hit)
+	cache.AfterRequest(&cacheRequest, hit, added)
 	cache.CheckWatermark()
 	return added
 }
