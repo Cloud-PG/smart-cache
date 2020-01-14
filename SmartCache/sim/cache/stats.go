@@ -164,9 +164,10 @@ func (stats FileStats) getRealTimeValue(value float64, dayPassed float64, decayW
 // getRealTimeStats returns the weighted num. of requests
 func (stats FileStats) getRealTimeStats(curTime *time.Time) (float64, float64, float64) {
 	dayDiffFirstTime := math.Floor(curTime.Sub(stats.FirstTime).Hours() / 24.)
-	numReq := stats.getRealTimeValue(float64(stats.TotRequests), dayDiffFirstTime, NumReqDecayDays)
-	numUsers := stats.getRealTimeValue(float64(len(stats.Users)), dayDiffFirstTime, NumUsersDecayDays)
-	numSites := stats.getRealTimeValue(float64(len(stats.Sites)), dayDiffFirstTime, NumSitesDecayDays)
+	realNumReq, realNumUsers, realNumSites := stats.getStats()
+	numReq := stats.getRealTimeValue(realNumReq, dayDiffFirstTime, NumReqDecayDays)
+	numUsers := stats.getRealTimeValue(realNumUsers, dayDiffFirstTime, NumUsersDecayDays)
+	numSites := stats.getRealTimeValue(realNumSites, dayDiffFirstTime, NumSitesDecayDays)
 	return numReq, numUsers, numSites
 }
 
@@ -181,8 +182,8 @@ func (stats FileStats) getStats() (float64, float64, float64) {
 // updateFilePoints returns the points for a single file
 func (stats *FileStats) updateFilePoints(curTime *time.Time) float64 {
 	numReq, numUsers, numSites := stats.getRealTimeStats(curTime)
-
 	dayDiffInCache := math.Floor(curTime.Sub(stats.InCacheSince).Hours() / 24.)
+
 	points := numReq * 10. * numUsers * 100. * numSites * 1000. * float64(stats.Size)
 	points = points * math.Exp(-dayDiffInCache) // Decay points
 
