@@ -1,9 +1,7 @@
 package cache
 
 import (
-	"container/list"
 	"encoding/json"
-	"time"
 )
 
 // WeightedLRU cache
@@ -83,74 +81,43 @@ func (cache *WeightedLRU) Loads(inputString *[][]byte) {
 	}
 }
 
-// UpdatePolicy of WeightedLRU cache
-func (cache *WeightedLRU) UpdatePolicy(filename string, size float32, hit bool, vars ...interface{}) bool {
-	var (
-		added    = false
-		curStats *FileStats
-		newFile  bool
-		day      = vars[0].(int64)
-		siteName = vars[1].(string)
-		userID   = vars[2].(int)
-	)
-
-	currentTime := time.Unix(day, 0)
-
-	curStats, newFile = cache.GetOrCreate(filename, size, &currentTime)
-	curStats.updateStats(hit, size, userID, siteName, &currentTime)
+// BeforeRequest of LRU cache
+func (cache *WeightedLRU) BeforeRequest(request *Request, hit bool) *FileStats {
+	curStats, newFile := cache.GetOrCreate(request.Filename, request.Size)
+	curStats.updateStats(hit, request.Size, request.UserID, request.SiteName, &request.DayTime)
 	cache.updateWeight(curStats, newFile, cache.SelFunctionType, cache.Exp)
+	return curStats
+}
+
+// UpdatePolicy of WeightedLRU cache
+func (cache *WeightedLRU) UpdatePolicy(request *Request, fileStats *FileStats, hit bool) bool {
+	var added = false
+
+	requestedFileSize := request.Size
+	requestedFilename := request.Filename
 
 	if !hit {
 
 		// If weight is higher exit and return added = false
 		// and skip the file insertion
-		if curStats.Weight > cache.GetWeightMedian() {
+		if fileStats.Weight > cache.GetWeightMedian() {
 			return added
 		}
 		// Insert with LRU mechanism
-		if cache.Size()+size > cache.MaxSize {
-			var totalDeleted float32
-			tmpVal := cache.queue.Front()
-			for {
-				if tmpVal == nil {
-					break
-				}
-				fileSize := cache.files[tmpVal.Value.(string)]
-				cache.size -= fileSize
-				cache.dataDeleted += size
-
-				totalDeleted += fileSize
-				delete(cache.files, tmpVal.Value.(string))
-
-				tmpVal = tmpVal.Next()
-				// Check if all files are deleted
-				if tmpVal == nil {
-					break
-				}
-				cache.queue.Remove(tmpVal.Prev())
-
-				if totalDeleted >= size {
-					break
-				}
-			}
+		if cache.Size()+requestedFileSize > cache.MaxSize {
+			cache.Free(
+				requestedFileSize,
+				false,
+			)
 		}
-		if cache.Size()+size <= cache.MaxSize {
-			cache.files[filename] = size
-			cache.queue.PushBack(filename)
-			cache.size += size
+		if cache.Size()+requestedFileSize <= cache.MaxSize {
+			cache.files[requestedFilename] = requestedFileSize
+			cache.queue.PushBack(requestedFilename)
+			cache.size += requestedFileSize
 			added = true
 		}
 	} else {
-		var elm2move *list.Element
-		for tmpVal := cache.queue.Front(); tmpVal != nil; tmpVal = tmpVal.Next() {
-			if tmpVal.Value.(string) == filename {
-				elm2move = tmpVal
-				break
-			}
-		}
-		if elm2move != nil {
-			cache.queue.MoveToBack(elm2move)
-		}
+		cache.UpdateFileInQueue(requestedFilename)
 	}
 	return added
 }
