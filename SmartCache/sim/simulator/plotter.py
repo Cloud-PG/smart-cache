@@ -639,6 +639,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             title="Size - Full Normal Run",
             plot_width=plot_width,
             plot_height=plot_height,
+            y_axis_label="MB",
         )
         run_full_normal_hit_rate_figs.append(size_fig)
     pbar.update(1)
@@ -664,10 +665,10 @@ def plot_results(folder: str, results: dict, cache_size: float,
     pbar.update(1)
 
     ###########################################################################
-    # Loss plot of full normal run
+    # Cost plot of full normal run
     ###########################################################################
     with ignored(Exception):
-        write_on_read_data_fig = plot_measure(
+        cost_fig = plot_measure(
             tools,
             results,
             dates,
@@ -681,6 +682,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             plot_height=plot_height,
             read_on_hit=True,
             target="cost",
+            y_axis_label="MB",
         )
         run_full_normal_hit_rate_figs.append(write_on_read_data_fig)
     pbar.update(1)
