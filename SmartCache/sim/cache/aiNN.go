@@ -1,7 +1,6 @@
 package cache
 
 import (
-	"container/list"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -267,26 +266,21 @@ func (cache AINN) GetPoints() float64 {
 }
 
 // UpdatePolicy of AINN cache
-func (cache *AINN) UpdatePolicy(filename string, size float32, hit bool, vars ...interface{}) bool {
+func (cache *AINN) UpdatePolicy(request *Request, fileStats *FileStats, hit bool) bool {
 	var (
-		added    = false
-		day      = vars[0].(int64)
-		siteName = vars[1].(string)
-		userID   = vars[2].(int)
+		added = false
+
+		requestedFilename = fileStats.Filename
+		requestedFileSize = fileStats.Size
 	)
 
-	currentTime := time.Unix(day, 0)
-
 	cache.prevTime = cache.curTime
-	cache.curTime = currentTime
-
-	curStats, _ := cache.GetOrCreate(filename, size, currentTime)
-	curStats.updateStats(hit, size, userID, siteName, &currentTime)
+	cache.curTime = request.DayTime
 
 	if !hit {
-		siteName := vars[1].(string)
-		userID := vars[2].(int)
-		tmpSplit := strings.Split(filename, "/")
+		siteName := request.SiteName
+		userID := request.UserID
+		tmpSplit := strings.Split(requestedFilename, "/")
 		dataType := tmpSplit[2]
 		campain := tmpSplit[3]
 		process := tmpSplit[4]
@@ -299,9 +293,9 @@ func (cache *AINN) UpdatePolicy(filename string, size float32, hit bool, vars ..
 			dataType,
 			campain,
 			process,
-			curStats.TotRequests,
-			curStats.RequestTicksMean,
-			size,
+			fileStats.TotRequests,
+			fileStats.RequestTicksMean,
+			requestedFileSize,
 		)
 
 		if cache.aiModel == nil {
@@ -316,12 +310,12 @@ func (cache *AINN) UpdatePolicy(filename string, size float32, hit bool, vars ..
 
 			if errGRPC != nil {
 				fmt.Println()
-				fmt.Println(filename)
+				fmt.Println(requestedFilename)
 				fmt.Println(siteName)
 				fmt.Println(userID)
-				fmt.Println(curStats.TotRequests)
-				fmt.Println(curStats.RequestTicksMean)
-				fmt.Println(size)
+				fmt.Println(fileStats.TotRequests)
+				fmt.Println(fileStats.RequestTicksMean)
+				fmt.Println(requestedFileSize)
 				fmt.Println(featureVector)
 				log.Fatalf("ERROR: %v.AIPredictOne(_) = _, %v", cache.aiClient, errGRPC)
 			}
@@ -339,51 +333,18 @@ func (cache *AINN) UpdatePolicy(filename string, size float32, hit bool, vars ..
 		}
 
 		// Insert with LRU mechanism
-		if cache.Size()+size > cache.MaxSize {
-			var totalDeleted float32
-			tmpVal := cache.queue.Front()
-			for {
-				if tmpVal == nil {
-					break
-				}
-				curFilename2Delete := tmpVal.Value.(string)
-				fileSize := cache.files[curFilename2Delete]
-				cache.size -= fileSize
-				cache.dataDeleted += size
-
-				totalDeleted += fileSize
-				delete(cache.files, curFilename2Delete)
-
-				tmpVal = tmpVal.Next()
-				// Check if all files are deleted
-				if tmpVal == nil {
-					break
-				}
-				cache.queue.Remove(tmpVal.Prev())
-
-				if totalDeleted >= size {
-					break
-				}
-			}
+		if cache.Size()+requestedFileSize > cache.MaxSize {
+			cache.Free(requestedFileSize, false)
 		}
-		if cache.Size()+size <= cache.MaxSize {
-			cache.files[filename] = size
-			cache.queue.PushBack(filename)
-			cache.size += size
+		if cache.Size()+requestedFileSize <= cache.MaxSize {
+			cache.files[requestedFilename] = requestedFileSize
+			cache.queue.PushBack(requestedFilename)
+			cache.size += requestedFileSize
 			added = true
 		}
 
 	} else {
-		var elm2move *list.Element
-		for tmpVal := cache.queue.Front(); tmpVal != nil; tmpVal = tmpVal.Next() {
-			if tmpVal.Value.(string) == filename {
-				elm2move = tmpVal
-				break
-			}
-		}
-		if elm2move != nil {
-			cache.queue.MoveToBack(elm2move)
-		}
+		cache.UpdateFileInQueue(requestedFilename)
 	}
 
 	return added

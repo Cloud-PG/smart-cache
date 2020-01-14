@@ -265,7 +265,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 		curAction  qlearn.ActionType
 		prevPoints float64
 		curState   string
-		// File vars
+
 		requestedFilename = fileStats.Filename
 		requestedFileSize = fileStats.Size
 	)
