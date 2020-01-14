@@ -243,7 +243,7 @@ func (cache AIRL) GetPoints() float64 {
 
 // BeforeRequest of LRU cache
 func (cache *AIRL) BeforeRequest(request *Request, hit bool) *FileStats {
-	fileStats, _ := cache.GetOrCreate(request.Filename, request.Size)
+	fileStats, _ := cache.GetOrCreate(request.Filename, request.Size, request.DayTime)
 
 	if !hit {
 		fileStats.updateStats(hit, request.Size, request.UserID, request.SiteName, nil)

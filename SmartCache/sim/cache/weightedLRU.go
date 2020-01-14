@@ -83,7 +83,7 @@ func (cache *WeightedLRU) Loads(inputString *[][]byte) {
 
 // BeforeRequest of LRU cache
 func (cache *WeightedLRU) BeforeRequest(request *Request, hit bool) *FileStats {
-	curStats, newFile := cache.GetOrCreate(request.Filename, request.Size)
+	curStats, newFile := cache.GetOrCreate(request.Filename, request.Size, request.DayTime)
 	curStats.updateStats(hit, request.Size, request.UserID, request.SiteName, &request.DayTime)
 	cache.updateWeight(curStats, newFile, cache.SelFunctionType, cache.Exp)
 	return curStats

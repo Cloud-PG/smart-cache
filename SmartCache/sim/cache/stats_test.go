@@ -1,7 +1,6 @@
 package cache
 
 import (
-	"fmt"
 	_ "fmt"
 	"testing"
 	"time"
@@ -11,7 +10,8 @@ func TestCreateStats(t *testing.T) {
 	stats := Stats{}
 	stats.Init()
 
-	fileStats, newFile := stats.GetOrCreate("fileA", float32(32.0))
+	curTime := time.Now()
+	fileStats, newFile := stats.GetOrCreate("fileA", float32(32.0), curTime)
 	if newFile == false {
 		t.Fatalf("File have not to be already present in stats")
 	} else if fileStats.Size != 32.0 {
@@ -27,7 +27,8 @@ func TestCreateStats(t *testing.T) {
 		t.Fatalf("Bad struct returned")
 	}
 
-	curTime := time.Now()
+	curTime = time.Now()
+	fileStats.addInCache(&curTime)
 	fileStats.updateStats(true, float32(42.0), 555, "siteA", &curTime)
 	fileStats.updateStats(true, float32(42.0), 555, "siteB", &curTime)
 	fileStats.updateStats(true, float32(42.0), 111, "siteC", &curTime)
@@ -43,7 +44,9 @@ func TestCreateStats(t *testing.T) {
 		t.Fatalf("Num. sites have to be %f and not %f", 3., numSites)
 	}
 
-	fmt.Println(fileStats.Points)
 	fileStats.updateFilePoints(&curTime)
-	fmt.Println(fileStats.Points)
+
+	if fileStats.Points < 3000. {
+		t.Fatalf("File point have to be higher than 3000 and you have %f", fileStats.Points)
+	}
 }

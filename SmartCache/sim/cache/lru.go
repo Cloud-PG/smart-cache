@@ -264,7 +264,7 @@ func (cache *LRUCache) SimLoads(stream pb.SimService_SimLoadsServer) error {
 
 // BeforeRequest of LRU cache
 func (cache *LRUCache) BeforeRequest(request *Request, hit bool) *FileStats {
-	curStats, _ := cache.GetOrCreate(request.Filename, request.Size)
+	curStats, _ := cache.GetOrCreate(request.Filename, request.Size, request.DayTime)
 	curStats.updateStats(hit, request.Size, request.UserID, request.SiteName, &request.DayTime)
 	return curStats
 }
