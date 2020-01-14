@@ -316,7 +316,11 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			diff := newScore - prevPoints
 			reward := 0.
 			if diff >= 0. {
-				reward += 1.
+				if cache.CheckWatermark() {
+					reward -= 1.
+				} else {
+					reward += 1.
+				}
 			} else {
 				reward -= 1.
 			}
@@ -353,7 +357,11 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			diff := newScore - prevPoints
 			reward := 0.
 			if diff >= 0. {
-				reward += 1.
+				if !cache.CheckWatermark() {
+					reward -= 1.
+				} else {
+					reward += 1.
+				}
 			} else {
 				reward -= 1.
 			}
