@@ -7,8 +7,8 @@ services:
         - /path/to/minio/data:/data
         - ./CAs/:/root/.minio/certs/CAs/
     environment:
-        - MINIO_ACCESS_KEY=insert a key!!!
-        - MINIO_SECRET_KEY=insert a passwd!!!
+        - MINIO_ACCESS_KEY
+        - MINIO_SECRET_KEY
     command: server /data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
