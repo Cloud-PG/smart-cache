@@ -10,10 +10,10 @@ load_dotenv()
 
 # Initialize minioClient with an endpoint and access/secret keys.
 minioClient = Minio(
-    'play.min.io',
+    os.getenv("MINIO_IP"),
     access_key=os.getenv("MINIO_ACCESS_KEY"),
     secret_key=os.getenv("MINIO_SECRET_KEY"),
-    secure=True
+    secure=False
 )
 
 # Make a bucket with the make_bucket API call.
