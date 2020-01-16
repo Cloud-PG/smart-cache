@@ -3,7 +3,7 @@
 INPUT_IP=$1
 IP=${INPUT_IP:-localhost}
 
-echo $IP
+echo "Creating certificate for -> $IP"
 
 go run generate_cert.go -ca --host "$IP"
 
