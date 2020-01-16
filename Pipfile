@@ -42,7 +42,7 @@ pillow = ">=6.2.0"
 python-dotenv = "*"
 
 [requires]
-python_version = "3"
+python_version = "3.7"
 
 [pipenv]
 allow_prereleases = true
