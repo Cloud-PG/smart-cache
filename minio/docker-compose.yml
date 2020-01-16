@@ -5,6 +5,7 @@ services:
     network_mode: "host"
     volumes:
         - /path/to/minio/data:/data
+        - ./CAs/:~/.minio/certs/CAs/
     environment:
         - MINIO_ACCESS_KEY=insert a key!!!
         - MINIO_SECRET_KEY=insert a passwd!!!
