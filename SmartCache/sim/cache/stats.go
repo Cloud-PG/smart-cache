@@ -87,6 +87,22 @@ const (
 
 type cacheEmptyMsg struct{}
 
+// CacheStatusReport stores the cache info needed by FileReport
+type CacheStatusReport struct {
+	NumFiles float32 `json:"numFiles"`
+	Size     float32 `json:"size"`
+	Points   float32 `json:"points"`
+	Capacity float32 `json:"capacity"`
+}
+
+// FileReport exports some file history changes
+type FileReport struct {
+	NumReqs     []float32           `json:"numReqs"`
+	NumUsers    []float32           `json:"numUsers"`
+	NumSites    []float32           `json:"numSites"`
+	CacheStatus []CacheStatusReport `json:"cacheStatus"`
+}
+
 // FileStats contains file statistics collected by weighted caches
 type FileStats struct {
 	Filename          string                     `json:"filename"`
@@ -104,6 +120,7 @@ type FileStats struct {
 	RequestLastIdx    int                        `json:"requestLastIdx"`
 	Users             []int                      `json:"users"`
 	Sites             []string                   `json:"sites"`
+	Report            FileReport
 }
 
 func (stats FileStats) dumps() []byte {
@@ -114,6 +131,18 @@ func (stats FileStats) dumps() []byte {
 func (stats *FileStats) loads(inString string) *FileStats {
 	json.Unmarshal([]byte(inString), &stats)
 	return stats
+}
+
+func (stats *FileStats) makeReport(numFiles float32, size float32, points float32, capacity float32) {
+	stats.Report.NumReqs = append(stats.Report.NumReqs, float32(stats.TotRequests))
+	stats.Report.NumUsers = append(stats.Report.NumUsers, float32(len(stats.Users)))
+	stats.Report.NumSites = append(stats.Report.NumSites, float32(len(stats.Sites)))
+	stats.Report.CacheStatus = append(stats.Report.CacheStatus, CacheStatusReport{
+		NumFiles: numFiles,
+		Size: size,
+		Points: points,
+		Capacity: capacity,
+	})
 }
 
 func (stats *FileStats) addInCache(curTime *time.Time) {
