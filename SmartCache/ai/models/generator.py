@@ -8,8 +8,11 @@ from time import time
 
 import grpc
 import numpy as np
-import tensorflow as tf
-from tensorflow import keras
+try:
+    import tensorflow as tf
+    from tensorflow import keras
+except:
+    print("Warning: TF not present or AVX instructions are not supported!")
 
 from ..service import ai_pb2, ai_pb2_grpc
 
