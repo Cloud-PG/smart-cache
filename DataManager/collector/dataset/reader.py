@@ -5,7 +5,6 @@ from os import path, walk
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from tensorflow import keras
 from tqdm import tqdm
 from yaspin import yaspin
 from yaspin.spinners import Spinners

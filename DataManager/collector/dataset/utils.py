@@ -10,7 +10,6 @@ import findspark
 import numpy as np
 import pandas as pd
 from pyspark import SparkConf, SparkContext
-from tensorflow import keras
 from tqdm import tqdm
 
 
