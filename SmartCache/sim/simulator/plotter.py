@@ -684,7 +684,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             target="cost",
             y_axis_label="MB",
         )
-        run_full_normal_hit_rate_figs.append(write_on_read_data_fig)
+        run_full_normal_hit_rate_figs.append(cost_fig)
     pbar.update(1)
 
     ###########################################################################
