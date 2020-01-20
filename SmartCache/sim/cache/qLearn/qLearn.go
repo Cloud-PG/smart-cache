@@ -124,8 +124,8 @@ func (table QTable) genAllStates(featureLenghts []int) chan []bool {
 	return genChan
 }
 
-// GetRandomTradeOff generates a random number
-func (table QTable) GetRandomTradeOff() float64 {
+// GetRandomFloat generates a random number
+func (table QTable) GetRandomFloat() float64 {
 	return table.RGenerator.Float64()
 }
 

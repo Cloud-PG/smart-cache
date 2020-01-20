@@ -298,13 +298,14 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 		)
 
 		// QLearn - Check action
-		expTradeoff := cache.qTable.GetRandomTradeOff()
+		expTradeoff := cache.qTable.GetRandomFloat()
 		if expTradeoff > cache.qTable.Epsilon {
 			// action
 			curAction = cache.qTable.GetBestAction(curState)
 		} else {
 			// random choice
-			if expTradeoff > 0.5 {
+			randomAction := cache.qTable.GetRandomFloat()
+			if randomAction > 0.5 {
 				curAction = qlearn.ActionStore
 			} else {
 				curAction = qlearn.ActionNotStore
