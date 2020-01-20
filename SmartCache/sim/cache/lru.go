@@ -466,23 +466,3 @@ func (cache LRUCache) CPUMissEff() float32 {
 	// Add the 15% to wall time -> estimated loss time to retrieve the files
 	return (cache.missCPUTime / (cache.missWTime * 1.15)) * 100.
 }
-
-// Report returns the current cache file status and statistics
-func (cache LRUCache) Report() []string {
-	// var (
-	// 	numFiles       = len(cache.files)
-	// 	avgSize        float32
-	// 	avgNumUsers    float32
-	// 	avgNumSites    float32
-	// 	avgNumRequests float32
-	// 	avgNumHits     float32
-	// 	avgNumMiss     float32
-	// )
-	// for filename, size := range cache.files {
-	// 	avgSize += size
-	// 	curStats := cache.GetOrCreate(filename)
-	// 	avgNumUsers += len(curStats.
-	// }
-
-	return []string{""}
-}

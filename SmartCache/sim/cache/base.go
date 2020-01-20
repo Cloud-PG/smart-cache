@@ -53,7 +53,6 @@ type Cache interface {
 	Free(amount float32, percentage bool) float32
 
 	ExtraStats() string
-	Report() []string
 
 	HitRate() float32
 	HitOverMiss() float32

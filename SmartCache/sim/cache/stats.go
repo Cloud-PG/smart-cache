@@ -87,8 +87,8 @@ const (
 
 type cacheEmptyMsg struct{}
 
-// CacheStatusReport stores the cache info needed by FileReport
-type CacheStatusReport struct {
+// StatusReport stores the cache info needed by FileReport
+type StatusReport struct {
 	NumFiles float32 `json:"numFiles"`
 	Size     float32 `json:"size"`
 	Points   float32 `json:"points"`
@@ -97,10 +97,10 @@ type CacheStatusReport struct {
 
 // FileReport exports some file history changes
 type FileReport struct {
-	NumReqs     []float32           `json:"numReqs"`
-	NumUsers    []float32           `json:"numUsers"`
-	NumSites    []float32           `json:"numSites"`
-	CacheStatus []CacheStatusReport `json:"cacheStatus"`
+	NumReqs     []float32      `json:"numReqs"`
+	NumUsers    []float32      `json:"numUsers"`
+	NumSites    []float32      `json:"numSites"`
+	CacheStatus []StatusReport `json:"cacheStatus"`
 }
 
 // FileStats contains file statistics collected by weighted caches
@@ -120,7 +120,7 @@ type FileStats struct {
 	RequestLastIdx    int                        `json:"requestLastIdx"`
 	Users             []int                      `json:"users"`
 	Sites             []string                   `json:"sites"`
-	Report            FileReport
+	Report            FileReport                 `json:"report"`
 }
 
 func (stats FileStats) dumps() []byte {
@@ -137,10 +137,10 @@ func (stats *FileStats) makeReport(numFiles float32, size float32, points float3
 	stats.Report.NumReqs = append(stats.Report.NumReqs, float32(stats.TotRequests))
 	stats.Report.NumUsers = append(stats.Report.NumUsers, float32(len(stats.Users)))
 	stats.Report.NumSites = append(stats.Report.NumSites, float32(len(stats.Sites)))
-	stats.Report.CacheStatus = append(stats.Report.CacheStatus, CacheStatusReport{
+	stats.Report.CacheStatus = append(stats.Report.CacheStatus, StatusReport{
 		NumFiles: numFiles,
-		Size: size,
-		Points: points,
+		Size:     size,
+		Points:   points,
 		Capacity: capacity,
 	})
 }

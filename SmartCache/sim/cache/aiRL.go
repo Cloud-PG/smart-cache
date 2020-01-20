@@ -265,6 +265,8 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) *FileStats {
 		cache.points += fileStats.Points
 	}
 
+	fileStats.makeReport(float32(len(cache.files)), cache.Size(), float32(cache.points), cache.Capacity())
+
 	return fileStats
 }
 
