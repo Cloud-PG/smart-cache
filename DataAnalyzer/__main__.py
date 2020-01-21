@@ -1,6 +1,10 @@
 import argparse
-from . import loaders
-from colorama import init, Fore, Back, Style
+
+from colorama import Back, Fore, Style, init
+
+from . import loaders, utils
+from .utils import _STATUS
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -18,10 +22,15 @@ def main():
     args, _ = parser.parse_known_args()
 
     init()
-    
+
     if args.path != None:
         df = loaders.csv_data(args.path, args.region, args.file_type)
+        print(f"{_STATUS}Sort data by date")
+        utils.sort_by_date(df)
+        print(f"{_STATUS}Plot stats")
+        utils.plot_daily_stats(df)
         print(df.columns)
+        print(df.JobStart.astype('datetime64[ms]'))
 
 
 if __name__ == "__main__":
