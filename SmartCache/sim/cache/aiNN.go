@@ -270,8 +270,8 @@ func (cache *AINN) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 	var (
 		added = false
 
-		requestedFilename = fileStats.Filename
-		requestedFileSize = fileStats.Size
+		requestedFilename = request.Filename
+		requestedFileSize = request.Size
 	)
 
 	cache.prevTime = cache.curTime

@@ -38,7 +38,6 @@ func (statStruct *Stats) GetOrCreate(filename string, vars ...interface{}) (*Fil
 
 	if !inStats {
 		curStats = &FileStats{
-			Filename:  filename,
 			Size:      size,
 			FirstTime: firstTime,
 		}
@@ -105,11 +104,9 @@ type FileReport struct {
 
 // FileStats contains file statistics collected by weighted caches
 type FileStats struct {
-	Filename          string                     `json:"filename"`
 	Weight            float32                    `json:"weight"`
 	Points            float64                    `json:"points"`
 	Size              float32                    `json:"size"`
-	TotRequests       uint32                     `json:"totRequests"`
 	NHits             uint32                     `json:"nHits"`
 	NMiss             uint32                     `json:"nMiss"`
 	FirstTime         time.Time                  `json:"firstTime"`
@@ -123,6 +120,11 @@ type FileStats struct {
 	Report            FileReport                 `json:"report"`
 }
 
+// TotRequests returns the total amount of requests
+func (stats FileStats) TotRequests() uint32 {
+	return stats.NHits + stats.NMiss
+}
+
 func (stats FileStats) dumps() []byte {
 	dumpStats, _ := json.Marshal(stats)
 	return dumpStats
@@ -134,7 +136,7 @@ func (stats *FileStats) loads(inString string) *FileStats {
 }
 
 func (stats *FileStats) makeReport(numFiles float32, size float32, points float32, capacity float32) {
-	stats.Report.NumReqs = append(stats.Report.NumReqs, float32(stats.TotRequests))
+	stats.Report.NumReqs = append(stats.Report.NumReqs, float32(stats.TotRequests()))
 	stats.Report.NumUsers = append(stats.Report.NumUsers, float32(len(stats.Users)))
 	stats.Report.NumSites = append(stats.Report.NumSites, float32(len(stats.Sites)))
 	stats.Report.CacheStatus = append(stats.Report.CacheStatus, StatusReport{
@@ -166,7 +168,6 @@ func (stats *FileStats) addSite(siteName string) {
 }
 
 func (stats *FileStats) updateStats(hit bool, size float32, userID int, siteName string, curTime *time.Time) {
-	stats.TotRequests++
 	stats.Size = size
 
 	stats.addUser(userID)
@@ -202,7 +203,7 @@ func (stats FileStats) getRealTimeStats(curTime *time.Time) (float64, float64, f
 
 // getStats returns number of requests, users and sites
 func (stats FileStats) getStats() (float64, float64, float64) {
-	numReq := float64(stats.TotRequests)
+	numReq := float64(stats.TotRequests())
 	numUsers := float64(len(stats.Users))
 	numSites := float64(len(stats.Sites))
 	return numReq, numUsers, numSites
@@ -229,26 +230,26 @@ func (stats *FileStats) updateWeight(functionType FunctionType, exp float32) flo
 	case FuncFileWeight:
 		stats.Weight = fileWeight(
 			stats.Size,
-			stats.TotRequests,
+			stats.TotRequests(),
 			exp,
 		)
 	case FuncFileWeightAndTime:
 		stats.Weight = fileWeightAndTime(
 			stats.Size,
-			stats.TotRequests,
+			stats.TotRequests(),
 			exp,
 			stats.LastTimeRequested,
 		)
 	case FuncFileWeightOnlyTime:
 		stats.Weight = fileWeightOnlyTime(
-			stats.TotRequests,
+			stats.TotRequests(),
 			exp,
 			stats.LastTimeRequested,
 		)
 	case FuncWeightedRequests:
 		stats.Weight = fileWeightedRequest(
 			stats.Size,
-			stats.TotRequests,
+			stats.TotRequests(),
 			stats.RequestTicksMean,
 			exp,
 		)
