@@ -111,5 +111,5 @@ def plot_daily_stats(df: 'pd.DataFrame', output_filename: str = 'dailystats.html
 
     print(f"{_STATUS}Show results")
     show(column(fig_n_req, fig_n_users, fig_n_sites))
-    # print(f"{_STATUS}Save HTML results")
-    # save(plot)
+    print(f"{_STATUS}Save HTML results")
+    save(plot)
