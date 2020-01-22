@@ -48,8 +48,8 @@ def plot_daily_stats(df: 'pd.DataFrame', output_filename: str = 'dailystats.html
 
         if df_row.SiteName not in cur_file.sites:
             cur_file.sites |= set((df_row.SiteName, ))
-        if df_row.User not in cur_file.users:
-            cur_file.users |= set((df_row.User, ))
+        if df_row.UserID not in cur_file.users:
+            cur_file.users |= set((df_row.UserID, ))
 
         cur_file.n_users.append(len(cur_file.users))
         cur_file.n_sites.append(len(cur_file.sites))
