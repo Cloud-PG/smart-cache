@@ -313,7 +313,7 @@ func (cache *AINN) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				fmt.Println(requestedFilename)
 				fmt.Println(siteName)
 				fmt.Println(userID)
-				fmt.Println(fileStats.TotRequests)
+				fmt.Println(fileStats.TotRequests())
 				fmt.Println(fileStats.RequestTicksMean)
 				fmt.Println(requestedFileSize)
 				fmt.Println(featureVector)
