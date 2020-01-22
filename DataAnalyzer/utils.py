@@ -58,11 +58,14 @@ def plot_daily_stats(df: 'pd.DataFrame', output_filename: str = 'dailystats.html
     else:
         days.append(num_req)
 
-    fig_n_req = figure(plot_width=1280, plot_height=240)
+    fig_n_req = figure(plot_width=1280, plot_height=240,
+                       title="Num. Requests", x_axis_label="n-th request")
     fig_n_users = figure(plot_width=1280, plot_height=240,
-                         x_range=fig_n_req.x_range)
+                         x_range=fig_n_req.x_range, title="Num. Users",
+                         x_axis_label="n-th request")
     fig_n_sites = figure(plot_width=1280, plot_height=240,
-                         x_range=fig_n_req.x_range)
+                         x_range=fig_n_req.x_range, title="Num. Sites",
+                         x_axis_label="n-th request")
 
     all_filenames = list(files.keys())
     for filename in tqdm(all_filenames, desc=f"{_STATUS}Remove 1 req files"):
