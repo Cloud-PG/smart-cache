@@ -9,7 +9,6 @@ import (
 	"path"
 	"sort"
 	"strconv"
-	"strings"
 )
 
 // SimulationStats is used to output the simulation statistics
@@ -22,21 +21,28 @@ type SimulationStats struct {
 
 // CSVRecord is the base record composition readed from the logs
 type CSVRecord struct {
-	Day           int64   `json:"day"`
-	Filename      string  `json:"filename"`
-	FileType      string  `json:"fileType"`
-	Protocol      string  `json:"protocol"`
-	TaskMonitorID string  `json:"taskMonitorID"`
-	TaskID        int     `json:"taskID"`
-	JobID         int     `json:"jobID"`
-	SiteName      string  `json:"siteName"`
-	JobSuccess    string  `json:"jobSuccess"`
-	JobLengthH    float32 `json:"jobLengthH"`
-	JobLengthM    float32 `json:"jobLengthM"`
-	UserID        int     `json:"user"`
-	CPUTime       float32 `json:"CPUTime"`
-	IOTime        float32 `json:"IOTime"`
-	Size          float32 `json:"size"`
+	Day             int64   `json:"day"`
+	Filename        string  `json:"filename"`
+	FileType        string  `json:"fileType"`
+	DataType        string  `json:"dataType"`
+	Protocol        string  `json:"protocol"`
+	TaskMonitorID   string  `json:"taskMonitorID"`
+	TaskID          int     `json:"taskID"`
+	JobID           int     `json:"jobID"`
+	SiteName        string  `json:"siteName"`
+	JobExecExitCode int     `json:"jobExecExitCode"`
+	JobStart        int64   `json:"jobStart"`
+	JobEnd          int64   `json:"jobEnd"`
+	JobSuccess      string  `json:"jobSuccess"`
+	JobLengthH      float32 `json:"jobLengthH"`
+	JobLengthM      float32 `json:"jobLengthM"`
+	UserID          int     `json:"user"`
+	NumCPU          int     `json:"numCPU"`
+	WrapWC          float32 `json:"WrapWC"`
+	WrapCPU         float32 `json:"WrapCPU"`
+	CPUTime         float32 `json:"CPUTime"`
+	IOTime          float32 `json:"IOTime"`
+	Size            float32 `json:"size"`
 }
 
 func recordGenerator(csvReader *csv.Reader, curFile *os.File) chan CSVRecord {
@@ -53,33 +59,60 @@ func recordGenerator(csvReader *csv.Reader, curFile *os.File) chan CSVRecord {
 				log.Fatal(err)
 			}
 
-			day, _ := strconv.ParseFloat(record[0], 64)
-			taskID, _ := strconv.ParseInt(record[4], 10, 32)
+			/*
+				record fields:
+					-[0] Filename
+					-[1] SiteName
+					-[2] UserID
+					-[3] TaskID
+					-[4] TaskMonitorID
+					-[5] JobID
+					-[6] Protocol
+					-[7] JobExecExitCode
+					-[8] JobStart
+					-[9] JobEnd
+					-[10] NumCPU
+					-[11] WrapWC
+					-[12] WrapCPU
+					-[13] Size
+					-[14] DataType
+					-[15] FileType
+					-[16] JobLengthH
+					-[17] JobLengthM
+					-[18] JobSuccess
+					-[19] CPUTime
+					-[20] IOTime
+					-[21] reqDay
+
+			*/
+
+			day, _ := strconv.ParseFloat(record[21], 64)
+			taskID, _ := strconv.ParseInt(record[3], 10, 32)
 			jobID, _ := strconv.ParseInt(record[5], 10, 32)
-			joblengthh, _ := strconv.ParseFloat(record[8], 32)
-			joblengthm, _ := strconv.ParseFloat(record[9], 32)
-			userID, _ := strconv.ParseInt(record[10], 10, 32)
-			cputime, _ := strconv.ParseFloat(record[11], 32)
-			iotime, _ := strconv.ParseFloat(record[12], 32)
+			joblengthh, _ := strconv.ParseFloat(record[16], 32)
+			joblengthm, _ := strconv.ParseFloat(record[17], 32)
+			userID, _ := strconv.ParseInt(record[2], 10, 32)
+			cputime, _ := strconv.ParseFloat(record[19], 32)
+			iotime, _ := strconv.ParseFloat(record[20], 32)
 			size, _ := strconv.ParseFloat(record[13], 32)
 
-			filename := record[1]
-			tmpSplit := strings.Split(filename, "/")
+			filename := record[0]
+			// tmpSplit := strings.Split(filename, "/")
 			// dataType := tmpSplit[2]
 			// campain := tmpSplit[3]
 			// process := tmpSplit[4]
-			fileType := tmpSplit[5]
+			// fileType := tmpSplit[5]
 
 			curRecord := CSVRecord{
 				Day:           int64(day),
 				Filename:      filename,
-				FileType:      fileType,
-				Protocol:      record[2],
-				TaskMonitorID: record[3],
+				FileType:      record[15],
+				Protocol:      record[6],
+				TaskMonitorID: record[4],
 				TaskID:        int(taskID),
 				JobID:         int(jobID),
-				SiteName:      record[6],
-				JobSuccess:    record[7],
+				SiteName:      record[1],
+				JobSuccess:    record[18],
 				JobLengthH:    float32(joblengthh),
 				JobLengthM:    float32(joblengthm),
 				UserID:        int(userID),
