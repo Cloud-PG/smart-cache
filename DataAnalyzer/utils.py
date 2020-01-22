@@ -109,7 +109,7 @@ def plot_daily_stats(df: 'pd.DataFrame', output_filename: str = 'dailystats.html
         ])
         # fig.y_range = Range1d(0, 42)
 
-    print(f"{_STATUS}Show results")
-    show(column(fig_n_req, fig_n_users, fig_n_sites))
-    print(f"{_STATUS}Save HTML results")
+    # print(f"{_STATUS}Show results")
+    # show(column(fig_n_req, fig_n_users, fig_n_sites))
+    print(f"{_STATUS}Save HTML results in: {output_filename}")
     save(column(fig_n_req, fig_n_users, fig_n_sites))
