@@ -24,11 +24,11 @@ def _load_csv_file(input_path: str, region_filter: str = None,
         raise Exception(f"File type '{tail}' is not supported...")
 
     if region_filter and region_filter != "all":
-        df = df[df.site_name.str.contains(f"_{region_filter}_", case=False)]
+        df = df[df.SiteName.str.contains(f"_{region_filter}_", case=False)]
 
     if file_type_filter and file_type_filter != "all":
-        df = df[df.filename.str.contains(
-            f"\/{file_type_filter}\/", case=False, regex=True)]
+        df = df[df.Filename.str.contains(
+            f"/{file_type_filter}/", case=False, regex=True)]
 
     return df
 
@@ -44,9 +44,11 @@ def csv_data(input_path: str, region_filter: str = None,
         data_frames = []
         for filename in tqdm(os.listdir(input_path), desc=f"{_STATUS}Load folder {input_path}"):
             data_frames.append(
-                _load_csv_file(path.join(input_path, filename)),
-                region_filter,
-                file_type_filter
+                _load_csv_file(
+                    path.join(input_path, filename),
+                    region_filter,
+                    file_type_filter
+                )
             )
         else:
             return pd.concat(data_frames)

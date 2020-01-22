@@ -38,7 +38,7 @@ def plot_daily_stats(df: 'pd.DataFrame', output_filename: str = 'dailystats.html
             days.append(num_req)
             last_day = df_row.reqDay
 
-        filename = df_row.filename
+        filename = df_row.Filename
         if filename not in files:
             files[filename] = FileStats(num_req-1)
 
@@ -46,10 +46,10 @@ def plot_daily_stats(df: 'pd.DataFrame', output_filename: str = 'dailystats.html
         cur_file.x.append(num_req)
         cur_file.n_req.append(cur_file.n_req[-1] + 1)
 
-        if df_row.site_name not in cur_file.sites:
-            cur_file.sites |= set((df_row.site_name, ))
-        if df_row.user not in cur_file.users:
-            cur_file.users |= set((df_row.user, ))
+        if df_row.SiteName not in cur_file.sites:
+            cur_file.sites |= set((df_row.SiteName, ))
+        if df_row.User not in cur_file.users:
+            cur_file.users |= set((df_row.User, ))
 
         cur_file.n_users.append(len(cur_file.users))
         cur_file.n_sites.append(len(cur_file.sites))
@@ -59,8 +59,10 @@ def plot_daily_stats(df: 'pd.DataFrame', output_filename: str = 'dailystats.html
         days.append(num_req)
 
     fig_n_req = figure(plot_width=1280, plot_height=240)
-    fig_n_users = figure(plot_width=1280, plot_height=240, x_range=fig_n_req.x_range)
-    fig_n_sites = figure(plot_width=1280, plot_height=240, x_range=fig_n_req.x_range)
+    fig_n_users = figure(plot_width=1280, plot_height=240,
+                         x_range=fig_n_req.x_range)
+    fig_n_sites = figure(plot_width=1280, plot_height=240,
+                         x_range=fig_n_req.x_range)
 
     all_filenames = list(files.keys())
     for filename in tqdm(all_filenames, desc=f"{_STATUS}Remove 1 req files"):
@@ -82,19 +84,19 @@ def plot_daily_stats(df: 'pd.DataFrame', output_filename: str = 'dailystats.html
         xs=buffer_xs,
         ys=buffer_n_req,
         line_color=['red' for _ in range(len(buffer_xs))],
-        line_width=5,
+        line_width=3,
     )
     fig_n_users.multi_line(
         xs=buffer_xs,
         ys=buffer_n_users,
         line_color=['blue' for _ in range(len(buffer_xs))],
-        line_width=5,
+        line_width=3,
     )
     fig_n_sites.multi_line(
         xs=buffer_xs,
         ys=buffer_n_sites,
         line_color=['green' for _ in range(len(buffer_xs))],
-        line_width=5,
+        line_width=3,
     )
 
     for fig in [fig_n_req, fig_n_users, fig_n_sites]:
@@ -105,7 +107,7 @@ def plot_daily_stats(df: 'pd.DataFrame', output_filename: str = 'dailystats.html
             )
             for day_req in days
         ])
-        fig.y_range = Range1d(0, 42)
+        # fig.y_range = Range1d(0, 42)
 
     print(f"{_STATUS}Show results")
     show(column(fig_n_req, fig_n_users, fig_n_sites))
