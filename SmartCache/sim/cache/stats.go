@@ -7,6 +7,11 @@ import (
 	"time"
 )
 
+const (
+	// MaxNumDaysStat limit to stay in the stats
+	MaxNumDaysStat = 14
+)
+
 // Stats collector of statistics for weighted cache
 type Stats struct {
 	data      map[string]*FileStats
@@ -17,6 +22,16 @@ type Stats struct {
 func (statStruct *Stats) Init() {
 	statStruct.data = make(map[string]*FileStats)
 	statStruct.weightSum = 0.0
+}
+
+// CleanStats remove older stats
+func (statStruct *Stats) CleanStats() {
+	for filename, stats := range statStruct.data {
+		if stats.DiffLastUpdate() >= 14 {
+			statStruct.weightSum -= stats.Weight
+			delete(statStruct.data, filename)
+		}
+	}
 }
 
 // GetOrCreate add the file into stats and returns (stats, is new file)
@@ -118,6 +133,11 @@ type FileStats struct {
 	Users             []int       `json:"users"`
 	Sites             []string    `json:"sites"`
 	Report            FileReport  `json:"report"`
+}
+
+// DiffLastUpdate returns the number of days from the last update stats
+func (stats FileStats) DiffLastUpdate() int {
+	return int(math.Floor(stats.LastTimeRequested.Sub(stats.FirstTime).Hours() / 24.))
 }
 
 // TotRequests returns the total amount of requests

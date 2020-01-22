@@ -11,6 +11,11 @@ import (
 	"time"
 )
 
+const (
+	// NumDaysClean limit to check the  stats
+	NumDaysClean = 7
+)
+
 // AIRL cache
 type AIRL struct {
 	LRUCache
@@ -24,6 +29,8 @@ type AIRL struct {
 	points            float64
 	prevPoints        float64
 	minFilePoints     float64
+	numDayElapsed     int
+	cleanedStats      bool
 }
 
 // Init the AIRL struct
@@ -32,6 +39,7 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 	cache.Stats.Init()
 
 	cache.minFilePoints = math.Inf(1)
+	cache.cleanedStats = true
 
 	featureMapFilePath := args[0].(string)
 
@@ -64,6 +72,7 @@ func (cache *AIRL) Clear() {
 	cache.LRUCache.Clear()
 	cache.LRUCache.Init()
 	cache.Stats.Init()
+	cache.cleanedStats = true
 }
 
 // Dumps the AIRL cache
@@ -251,6 +260,8 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) *FileStats {
 
 	if !cache.curTime.Equal(cache.prevTime) {
 		cache.points = cache.GetPoints()
+		cache.numDayElapsed++
+		cache.cleanedStats = false
 	}
 
 	cache.prevPoints = cache.points
@@ -382,6 +393,16 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 	}
 
 	return added
+}
+
+// AfterRequest of AIRL cache
+func (cache *AIRL) AfterRequest(request *Request, hit bool, added bool) {
+	cache.LRUCache.AfterRequest(request, hit, added)
+
+	if !cache.cleanedStats && cache.numDayElapsed%NumDaysClean == 0 {
+		cache.Stats.CleanStats()
+		cache.cleanedStats = true
+	}
 }
 
 // Free removes files from the cache
