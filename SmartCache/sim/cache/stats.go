@@ -76,8 +76,8 @@ func (statStruct Stats) updateFilesPoints(filename string, curTime *time.Time) f
 }
 
 const (
-	// StatsMemorySize represents the  number of slots
-	StatsMemorySize uint64 = 32
+	// RequestTicksSize represents the  number of slots
+	RequestTicksSize int = 32
 	// NumDaysStatsDecay is the number of days that stats are maintained
 	NumDaysStatsDecay = 7.0
 	// NumDaysPointsDecay is the number of days that points are maintained
@@ -104,20 +104,20 @@ type FileReport struct {
 
 // FileStats contains file statistics collected by weighted caches
 type FileStats struct {
-	Weight            float32                    `json:"weight"`
-	Points            float64                    `json:"points"`
-	Size              float32                    `json:"size"`
-	NHits             uint32                     `json:"nHits"`
-	NMiss             uint32                     `json:"nMiss"`
-	FirstTime         time.Time                  `json:"firstTime"`
-	InCacheSince      time.Time                  `json:"inCacheSince"`
-	LastTimeRequested time.Time                  `json:"lastTimeRequested"`
-	RequestTicksMean  float32                    `json:"requestTicksMean"`
-	RequestTicks      [StatsMemorySize]time.Time `json:"requestTicks"`
-	RequestLastIdx    int                        `json:"requestLastIdx"`
-	Users             []int                      `json:"users"`
-	Sites             []string                   `json:"sites"`
-	Report            FileReport                 `json:"report"`
+	Weight            float32     `json:"weight"`
+	Points            float64     `json:"points"`
+	Size              float32     `json:"size"`
+	NHits             uint32      `json:"nHits"`
+	NMiss             uint32      `json:"nMiss"`
+	FirstTime         time.Time   `json:"firstTime"`
+	InCacheSince      time.Time   `json:"inCacheSince"`
+	LastTimeRequested time.Time   `json:"lastTimeRequested"`
+	RequestTicksMean  float32     `json:"requestTicksMean"`
+	RequestTicks      []time.Time `json:"requestTicks"`
+	IdxLastRequest    int         `json:"idxLastRequest"`
+	Users             []int       `json:"users"`
+	Sites             []string    `json:"sites"`
+	Report            FileReport  `json:"report"`
 }
 
 // TotRequests returns the total amount of requests
@@ -181,8 +181,11 @@ func (stats *FileStats) updateStats(hit bool, size float32, userID int, siteName
 
 	if curTime != nil {
 		stats.LastTimeRequested = *curTime
-		stats.RequestTicks[stats.RequestLastIdx] = *curTime
-		stats.RequestLastIdx = (stats.RequestLastIdx + 1) % int(StatsMemorySize)
+		if len(stats.RequestTicks) < RequestTicksSize && stats.IdxLastRequest+1 > len(stats.RequestTicks) {
+			stats.RequestTicks = append(stats.RequestTicks, time.Time{})
+		}
+		stats.RequestTicks[stats.IdxLastRequest] = *curTime
+		stats.IdxLastRequest = (stats.IdxLastRequest + 1) % int(RequestTicksSize)
 		stats.RequestTicksMean = stats.getMeanReqTimes()
 	}
 }
@@ -259,13 +262,13 @@ func (stats *FileStats) updateWeight(functionType FunctionType, exp float32) flo
 
 func (stats FileStats) getMeanReqTimes() float32 {
 	var timeDiffSum time.Duration
-	for idx := 0; idx < int(StatsMemorySize); idx++ {
+	for idx := 0; idx < int(RequestTicksSize); idx++ {
 		if !stats.RequestTicks[idx].IsZero() {
 			timeDiffSum += stats.LastTimeRequested.Sub(stats.RequestTicks[idx])
 		}
 	}
 	if timeDiffSum != 0. {
-		return float32(timeDiffSum.Minutes()) / float32(StatsMemorySize)
+		return float32(timeDiffSum.Minutes()) / float32(RequestTicksSize)
 	}
 	return 0.
 }
