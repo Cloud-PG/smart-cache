@@ -155,11 +155,11 @@ def plot_daily_stats(df: 'pd.DataFrame',
         size=5
     )
 
-    for fig in [fig_n_req, fig_n_users, fig_n_sites]:
+    for fig in [fig_n_req, fig_n_users, fig_n_sites, fig_sizes, fig_1req_sizes]:
         fig.renderers.extend([
             Span(
                 location=day_req, dimension='height',
-                line_color='black', line_width=2
+                line_color='lightgray', line_width=2
             )
             for day_req in days
         ])
