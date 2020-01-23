@@ -7,6 +7,9 @@
 		},
 		{
 			"path": "../smart-cache-results"
+		},
+		{
+			"path": "../smart-cache-data"
 		}
 	],
 	"settings": {
@@ -43,6 +46,7 @@
 			"watchFileChanges": true, // watch file changes outside of the editor
 			"deepCompletion": true, // enable deep completion
 		},
-		"files.eol": "\n", // formatting only supports LF line endings
+		"files.eol": "\n",
+		"liveServer.settings.multiRootWorkspaceName": "smart-cache-data", // formatting only supports LF line endings
 	}
 }
