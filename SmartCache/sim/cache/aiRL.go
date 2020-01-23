@@ -11,15 +11,9 @@ import (
 	"time"
 )
 
-const (
-	// NumDaysClean limit to check the  stats
-	NumDaysClean = 7
-)
-
 // AIRL cache
 type AIRL struct {
 	LRUCache
-	Stats
 	prevTime          time.Time
 	curTime           time.Time
 	Exp               float32
@@ -29,17 +23,13 @@ type AIRL struct {
 	points            float64
 	prevPoints        float64
 	minFilePoints     float64
-	numDayElapsed     int
-	cleanedStats      bool
 }
 
 // Init the AIRL struct
 func (cache *AIRL) Init(args ...interface{}) interface{} {
 	cache.LRUCache.Init()
-	cache.Stats.Init()
 
 	cache.minFilePoints = math.Inf(1)
-	cache.cleanedStats = true
 
 	featureMapFilePath := args[0].(string)
 
@@ -51,17 +41,17 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 	sort.Strings(cache.aiFeatureMapOrder)
 
 	cache.qTable = &qlearn.QTable{}
-	inputLenghts := []int{}
+	inputLengths := []int{}
 	for _, featureName := range cache.aiFeatureMapOrder {
 		curFeature, _ := cache.aiFeatureMap[featureName]
 		curLen := len(curFeature.Values)
 		if curFeature.UnknownValues {
 			curLen++
 		}
-		inputLenghts = append(inputLenghts, curLen)
+		inputLengths = append(inputLengths, curLen)
 	}
 	fmt.Print("[Generate QTable]")
-	cache.qTable.Init(inputLenghts)
+	cache.qTable.Init(inputLengths)
 	fmt.Println("[Done]")
 
 	return nil
@@ -71,8 +61,6 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 func (cache *AIRL) Clear() {
 	cache.LRUCache.Clear()
 	cache.LRUCache.Init()
-	cache.Stats.Init()
-	cache.cleanedStats = true
 }
 
 // Dumps the AIRL cache
@@ -95,7 +83,7 @@ func (cache *AIRL) Dumps() *[][]byte {
 		outData = append(outData, record)
 	}
 	// ----- Stats -----
-	for _, stats := range cache.Stats.data {
+	for _, stats := range cache.Stats.fileStats {
 		dumpInfo, _ := json.Marshal(DumpInfo{Type: "STATS"})
 		dumpStats, _ := json.Marshal(stats)
 		record, _ := json.Marshal(DumpRecord{
@@ -134,7 +122,7 @@ func (cache *AIRL) Loads(inputString *[][]byte) {
 			cache.files[curFile.Filename] = curFile.Size
 			cache.size += curFile.Size
 		case "STATS":
-			json.Unmarshal([]byte(curRecord.Data), &cache.Stats.data)
+			json.Unmarshal([]byte(curRecord.Data), &cache.Stats.fileStats)
 		case "QTABLE":
 			json.Unmarshal([]byte(curRecord.Data), cache.qTable)
 		}
@@ -260,23 +248,19 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) *FileStats {
 
 	if !cache.curTime.Equal(cache.prevTime) {
 		cache.points = cache.GetPoints()
-		cache.numDayElapsed++
-		cache.cleanedStats = false
 	}
 
 	cache.prevPoints = cache.points
 
 	if !hit {
-		fileStats.updateStats(hit, request.Size, request.UserID, request.SiteName, nil)
+		fileStats.updateStats(hit, request.Size, request.UserID, request.SiteName, request.DayTime)
 		fileStats.updateFilePoints(&cache.curTime)
 	} else {
 		cache.points -= fileStats.Points
-		fileStats.updateStats(hit, request.Size, request.UserID, request.SiteName, nil)
+		fileStats.updateStats(hit, request.Size, request.UserID, request.SiteName, request.DayTime)
 		fileStats.updateFilePoints(&cache.curTime)
 		cache.points += fileStats.Points
 	}
-
-	fileStats.makeReport(float32(len(cache.files)), cache.Size(), float32(cache.points), cache.Capacity())
 
 	return fileStats
 }
@@ -395,16 +379,6 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 	return added
 }
 
-// AfterRequest of AIRL cache
-func (cache *AIRL) AfterRequest(request *Request, hit bool, added bool) {
-	cache.LRUCache.AfterRequest(request, hit, added)
-
-	if !cache.cleanedStats && cache.numDayElapsed%NumDaysClean == 0 {
-		cache.Stats.CleanStats()
-		cache.cleanedStats = true
-	}
-}
-
 // Free removes files from the cache
 func (cache *AIRL) Free(amount float32, percentage bool) float32 {
 	var (
@@ -422,20 +396,27 @@ func (cache *AIRL) Free(amount float32, percentage bool) float32 {
 			break
 		}
 		curFilename2Delete := tmpVal.Value.(string)
-		curFilePoints := cache.getPoints(curFilename2Delete)
+		fileSize := cache.files[curFilename2Delete]
+		curStats, added := cache.GetOrCreate(curFilename2Delete, fileSize)
+		if added {
+			panic("File in cache was removed from stats...")
+		}
+		curFilePoints := curStats.Points
 		cache.points -= curFilePoints
 		if curFilePoints <= cache.minFilePoints {
 			cache.minFilePoints = math.Inf(1)
 		}
-		fileSize := cache.files[curFilename2Delete]
-		// Update sizes
+
+		// Update stats
 		cache.size -= fileSize
 		cache.dataDeleted += fileSize
 		totalDeleted += fileSize
+		curStats.removeFromCache()
 
 		// Remove from queue
 		delete(cache.files, tmpVal.Value.(string))
 		tmpVal = tmpVal.Next()
+
 		// Check if all files are deleted
 		if tmpVal == nil {
 			break

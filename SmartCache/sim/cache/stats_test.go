@@ -29,11 +29,11 @@ func TestCreateStats(t *testing.T) {
 
 	curTime = time.Now()
 	fileStats.addInCache(&curTime)
-	fileStats.updateStats(true, float32(42.0), 555, "siteA", &curTime)
-	fileStats.updateStats(true, float32(42.0), 555, "siteB", &curTime)
-	fileStats.updateStats(true, float32(42.0), 111, "siteC", &curTime)
-	fileStats.updateStats(false, float32(42.0), 111, "siteA", &curTime)
-	fileStats.updateStats(false, float32(42.0), 111, "siteB", &curTime)
+	fileStats.updateStats(true, float32(42.0), 555, "siteA", curTime)
+	fileStats.updateStats(true, float32(42.0), 555, "siteB", curTime)
+	fileStats.updateStats(true, float32(42.0), 111, "siteC", curTime)
+	fileStats.updateStats(false, float32(42.0), 111, "siteA", curTime)
+	fileStats.updateStats(false, float32(42.0), 111, "siteB", curTime)
 
 	numReqs, numUsers, numSites := fileStats.getStats()
 	if numReqs != 5. {

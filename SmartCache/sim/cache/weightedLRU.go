@@ -47,7 +47,7 @@ func (cache *WeightedLRU) Dumps() *[][]byte {
 		outData = append(outData, record)
 	}
 	// ----- Stats -----
-	for _, stats := range cache.Stats.data {
+	for _, stats := range cache.Stats.fileStats {
 		dumpInfo, _ := json.Marshal(DumpInfo{Type: "STATS"})
 		dumpStats, _ := json.Marshal(stats)
 		record, _ := json.Marshal(DumpRecord{
@@ -76,7 +76,7 @@ func (cache *WeightedLRU) Loads(inputString *[][]byte) {
 			cache.files[curFile.Filename] = curFile.Size
 			cache.size += curFile.Size
 		case "STATS":
-			json.Unmarshal([]byte(curRecord.Data), &cache.Stats.data)
+			json.Unmarshal([]byte(curRecord.Data), &cache.Stats.fileStats)
 		}
 	}
 }
@@ -84,7 +84,7 @@ func (cache *WeightedLRU) Loads(inputString *[][]byte) {
 // BeforeRequest of LRU cache
 func (cache *WeightedLRU) BeforeRequest(request *Request, hit bool) *FileStats {
 	curStats, newFile := cache.GetOrCreate(request.Filename, request.Size, request.DayTime)
-	curStats.updateStats(hit, request.Size, request.UserID, request.SiteName, &request.DayTime)
+	curStats.updateStats(hit, request.Size, request.UserID, request.SiteName, request.DayTime)
 	cache.updateWeight(curStats, newFile, cache.SelFunctionType, cache.Exp)
 	return curStats
 }

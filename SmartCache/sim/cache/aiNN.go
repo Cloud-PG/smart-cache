@@ -20,7 +20,6 @@ import (
 // AINN cache
 type AINN struct {
 	LRUCache
-	Stats
 	prevTime           time.Time
 	curTime            time.Time
 	Exp                float32
@@ -39,7 +38,6 @@ type AINN struct {
 // Init the AINN struct
 func (cache *AINN) Init(args ...interface{}) interface{} {
 	cache.LRUCache.Init()
-	cache.Stats.Init()
 
 	cache.aiClientHost = args[0].(string)
 	cache.aiClientPort = args[1].(string)
@@ -100,7 +98,6 @@ func (cache *AINN) Init(args ...interface{}) interface{} {
 func (cache *AINN) Clear() {
 	cache.LRUCache.Clear()
 	cache.LRUCache.Init()
-	cache.Stats.Init()
 }
 
 // Dumps the AINN cache
@@ -123,7 +120,7 @@ func (cache *AINN) Dumps() *[][]byte {
 		outData = append(outData, record)
 	}
 	// ----- Stats -----
-	for _, stats := range cache.Stats.data {
+	for _, stats := range cache.Stats.fileStats {
 		dumpInfo, _ := json.Marshal(DumpInfo{Type: "STATS"})
 		dumpStats, _ := json.Marshal(stats)
 		record, _ := json.Marshal(DumpRecord{
@@ -153,7 +150,7 @@ func (cache *AINN) Loads(inputString *[][]byte) {
 			cache.files[curFile.Filename] = curFile.Size
 			cache.size += curFile.Size
 		case "STATS":
-			json.Unmarshal([]byte(curRecord.Data), &cache.Stats.data)
+			json.Unmarshal([]byte(curRecord.Data), &cache.Stats.fileStats)
 		}
 	}
 }
