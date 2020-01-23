@@ -15,6 +15,9 @@ def main():
     parser.add_argument('--region', type=str,
                         default="all",
                         help='Region of the data to analyse [DEFAULT: "all"]')
+    parser.add_argument('--reset-stat-days', type=int,
+                        default=7,
+                        help='Number of days after the stats are reset [DEFAULT: 7]')
     parser.add_argument('--file-type', type=str,
                         default="all",
                         help='File type of the data to analyse [DEFAULT: "all"]')
@@ -24,11 +27,11 @@ def main():
     init()
 
     if args.path != None:
-        df = loaders.csv_data(args.path, args.region, args.file_type)
+        df = loaders.csv_data(args.path, args.region,args.file_type )
         print(f"{_STATUS}Sort data by date")
         utils.sort_by_date(df)
         print(f"{_STATUS}Plot stats")
-        utils.plot_daily_stats(df)
+        utils.plot_daily_stats(df, reset_stat_days=args.reset_stat_days)
         print(df.columns)
         print(df.JobStart.astype('datetime64[ms]'))
 

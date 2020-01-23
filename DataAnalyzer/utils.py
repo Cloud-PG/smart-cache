@@ -24,10 +24,13 @@ class FileStats(object):
         self.sites = set()
 
 
-def plot_daily_stats(df: 'pd.DataFrame', output_filename: str = 'dailystats.html'):
+def plot_daily_stats(df: 'pd.DataFrame',
+                     output_filename: str = 'dailystats.html',
+                     reset_stat_days: int = 0):
     output_file(output_filename, mode="inline")
 
-    files = {}
+    stats = []
+    _files = {}
     days = []
 
     last_day = None
@@ -37,12 +40,15 @@ def plot_daily_stats(df: 'pd.DataFrame', output_filename: str = 'dailystats.html
         if last_day != df_row.reqDay:
             days.append(num_req)
             last_day = df_row.reqDay
+            if reset_stat_days > 0 and len(days) % reset_stat_days == 0:
+                stats.append(_files)
+                _files = {}
 
         filename = df_row.Filename
-        if filename not in files:
-            files[filename] = FileStats(num_req-1)
+        if filename not in _files:
+            _files[filename] = FileStats(num_req-1)
 
-        cur_file = files[filename]
+        cur_file = _files[filename]
         cur_file.x.append(num_req)
         cur_file.n_req.append(cur_file.n_req[-1] + 1)
 
@@ -57,6 +63,8 @@ def plot_daily_stats(df: 'pd.DataFrame', output_filename: str = 'dailystats.html
         num_req += 1
     else:
         days.append(num_req)
+        stats.append(_files)
+        _files = {}
 
     fig_n_req = figure(plot_width=1280, plot_height=240,
                        title="Num. Requests", x_axis_label="n-th request")
@@ -67,21 +75,23 @@ def plot_daily_stats(df: 'pd.DataFrame', output_filename: str = 'dailystats.html
                          x_range=fig_n_req.x_range, title="Num. Sites",
                          x_axis_label="n-th request")
 
-    all_filenames = list(files.keys())
-    for filename in tqdm(all_filenames, desc=f"{_STATUS}Remove 1 req files"):
-        if len(files[filename].x) <= 2:
-            del files[filename]
+    for period, files in enumerate(stats, 1):
+        all_filenames = list(files.keys())
+        for filename in tqdm(all_filenames, desc=f"{_STATUS}Remove 1 req files from period {period}"):
+            if len(files[filename].x) <= 2:
+                del files[filename]
 
     buffer_xs = []
     buffer_n_req = []
     buffer_n_users = []
     buffer_n_sites = []
 
-    for _, stats in tqdm(files.items(), desc=f"{_STATUS}Plot lines"):
-        buffer_xs += [stats.x]
-        buffer_n_req.append(stats.n_req)
-        buffer_n_users.append(stats.n_users)
-        buffer_n_sites.append(stats.n_sites)
+    for period, files in enumerate(stats, 1):
+        for _, stats in tqdm(files.items(), desc=f"{_STATUS}Plot lines of period {period}"):
+            buffer_xs += [stats.x]
+            buffer_n_req.append(stats.n_req)
+            buffer_n_users.append(stats.n_users)
+            buffer_n_sites.append(stats.n_sites)
 
     fig_n_req.multi_line(
         xs=buffer_xs,
