@@ -1,6 +1,6 @@
 import argparse
 
-from colorama import Back, Fore, Style, init
+from colorama import init
 
 from . import loaders, utils
 from .utils import _STATUS
