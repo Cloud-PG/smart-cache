@@ -12,6 +12,9 @@ def main():
 
     parser.add_argument('path', default=None,
                         help='Folder or file to open')
+    parser.add_argument('--output-filename', type=str,
+                        default="dailystats.html",
+                        help='The output file name [DEFAULT: "dailystats.html"]')
     parser.add_argument('--region', type=str,
                         default="all",
                         help='Region of the data to analyse [DEFAULT: "all"]')
@@ -27,11 +30,13 @@ def main():
     init()
 
     if args.path != None:
-        df = loaders.csv_data(args.path, args.region,args.file_type )
+        df = loaders.csv_data(args.path, args.region, args.file_type)
         print(f"{_STATUS}Sort data by date...")
         utils.sort_by_date(df)
         print(f"{_STATUS}Plot stats...")
-        utils.plot_daily_stats(df, reset_stat_days=args.reset_stat_days)
+        utils.plot_daily_stats(df,
+                               output_filename=args.output_filename,
+                               reset_stat_days=args.reset_stat_days)
         print(df.columns)
         print(df.JobStart.astype('datetime64[ms]'))
 
