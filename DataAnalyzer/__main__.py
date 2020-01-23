@@ -28,9 +28,9 @@ def main():
 
     if args.path != None:
         df = loaders.csv_data(args.path, args.region,args.file_type )
-        print(f"{_STATUS}Sort data by date")
+        print(f"{_STATUS}Sort data by date...")
         utils.sort_by_date(df)
-        print(f"{_STATUS}Plot stats")
+        print(f"{_STATUS}Plot stats...")
         utils.plot_daily_stats(df, reset_stat_days=args.reset_stat_days)
         print(df.columns)
         print(df.JobStart.astype('datetime64[ms]'))
