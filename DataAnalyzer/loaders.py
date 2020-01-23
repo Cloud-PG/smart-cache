@@ -42,7 +42,8 @@ def csv_data(input_path: str, region_filter: str = None,
     """
     if path.isdir(input_path):
         data_frames = []
-        for filename in tqdm(os.listdir(input_path), desc=f"{_STATUS}Load folder {input_path}"):
+        files = [file_ for file_ in os.listdir(input_path) if file_.find("csv") != -1]
+        for filename in tqdm(files, desc=f"{_STATUS}Load folder {input_path}"):
             data_frames.append(
                 _load_csv_file(
                     path.join(input_path, filename),
