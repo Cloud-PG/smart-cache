@@ -33,8 +33,13 @@ def _load_csv_file(input_path: str, region_filter: str = None,
     return df
 
 
+def _get_month(filename: str) -> int:
+    return int(filename.split(".")[0].replace("results_", "").split("-")[1])
+
+
 def csv_data(input_path: str, region_filter: str = None,
-             file_type_filter: str = None) -> 'pd.DataFrame':
+             file_type_filter: str = None,
+             month_filter: int = -1) -> 'pd.DataFrame':
     """Open all data from csv files.
 
     input_path cold be a folder or a file.
@@ -42,8 +47,12 @@ def csv_data(input_path: str, region_filter: str = None,
     """
     if path.isdir(input_path):
         data_frames = []
-        files = [file_ for file_ in os.listdir(input_path) if file_.find("csv") != -1]
+        files = [file_ for file_ in os.listdir(
+            input_path) if file_.find("csv") != -1]
         for filename in tqdm(files, desc=f"{_STATUS}Load folder {input_path}"):
+            if month_filter != -1:
+                if _get_month(filename) != month_filter:
+                    continue
             data_frames.append(
                 _load_csv_file(
                     path.join(input_path, filename),
@@ -52,7 +61,10 @@ def csv_data(input_path: str, region_filter: str = None,
                 )
             )
         else:
-            return pd.concat(data_frames)
+            if data_frames:
+                return pd.concat(data_frames)
+            else:
+                pd.DataFrame()
     else:
         print(f"{_STATUS}Load file {input_path}")
         return _load_csv_file(input_path, region_filter, file_type_filter)

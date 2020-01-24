@@ -21,6 +21,9 @@ def main():
     parser.add_argument('--reset-stat-days', type=int,
                         default=7,
                         help='Number of days after the stats are reset [DEFAULT: 7]')
+    parser.add_argument('--month', type=int,
+                        default=-1,
+                        help='Month to extract [DEFAULT: -1]')
     parser.add_argument('--file-type', type=str,
                         default="all",
                         help='File type of the data to analyse [DEFAULT: "all"]')
@@ -30,7 +33,12 @@ def main():
     init()
 
     if args.path != None:
-        df = loaders.csv_data(args.path, args.region, args.file_type)
+        df = loaders.csv_data(
+            args.path,
+            region_filter=args.region,
+            file_type_filter=args.file_type,
+            month_filter=args.month
+        )
         print(f"{_STATUS}Sort data by date...")
         utils.sort_by_date(df)
         print(f"{_STATUS}Plot stats...")
