@@ -212,9 +212,9 @@ func (cache *AIRL) getState(request *Request, fileStats *FileStats) []bool {
 	for _, featureName := range cache.aiFeatureMapOrder {
 		switch featureName {
 		case "size":
-			tmpArr = cache.getCategory(featureName, size)
+			tmpArr = cache.getCategory(featureName, float64(size))
 		case "numReq":
-			tmpArr = cache.getCategory(featureName, numReq)
+			tmpArr = cache.getCategory(featureName, float64(numReq))
 		case "cacheUsage":
 			tmpArr = cache.getCategory(featureName, cacheCapacity)
 		case "dataType":
