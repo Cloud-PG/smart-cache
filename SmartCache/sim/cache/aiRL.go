@@ -195,15 +195,17 @@ func (cache *AIRL) getCategory(catKey string, value interface{}) []bool {
 	panic(fmt.Sprintf("Cannot convert a value '%v' of category %s", value, catKey))
 }
 
-func (cache *AIRL) getState(vars ...interface{}) []bool {
-	var inputVector []bool
-	var tmpArr []bool
+func (cache *AIRL) getState(request *Request, fileStats *FileStats) []bool {
+	var (
+		inputVector []bool
+		tmpArr      []bool
+	)
 
-	size := float64(vars[0].(float32))
-	dataType := vars[1].(string)
-	numReq := vars[2].(float64)
-	numUsers := vars[3].(float64)
-	numSites := vars[4].(float64)
+	tmpSplit := strings.Split(request.Filename, "/")
+	dataType := tmpSplit[2]
+
+	numReq, _, _ := fileStats.getRealTimeStats(&request.DayTime)
+	size := request.Size
 
 	cacheCapacity := float64(cache.Capacity())
 
@@ -213,10 +215,6 @@ func (cache *AIRL) getState(vars ...interface{}) []bool {
 			tmpArr = cache.getCategory(featureName, size)
 		case "numReq":
 			tmpArr = cache.getCategory(featureName, numReq)
-		case "numUsers":
-			tmpArr = cache.getCategory(featureName, numUsers)
-		case "numSites":
-			tmpArr = cache.getCategory(featureName, numSites)
 		case "cacheUsage":
 			tmpArr = cache.getCategory(featureName, cacheCapacity)
 		case "dataType":
@@ -277,20 +275,8 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 	)
 
 	if !hit {
-		tmpSplit := strings.Split(requestedFilename, "/")
-		dataType := tmpSplit[2]
 
-		numReq, numUsers, numSites := fileStats.getRealTimeStats(&request.DayTime)
-
-		curState = qlearn.State2String(
-			cache.getState(
-				requestedFileSize,
-				dataType,
-				numReq,
-				numUsers,
-				numSites,
-			),
-		)
+		curState = qlearn.State2String(cache.getState(request, fileStats))
 
 		// QLearn - Check action
 		expTradeoff := cache.qTable.GetRandomFloat()
