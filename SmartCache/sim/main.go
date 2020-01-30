@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fatih/color"
 	"simulator/v2/cache"
 	pb "simulator/v2/cache/simService"
 
@@ -45,6 +46,7 @@ var (
 	simWindowSize       uint32
 	weightedFunc        string
 	weightExp           float32
+	logger              = log.New(os.Stderr, color.MagentaString("[SIM] "), log.Lshortfile|log.LstdFlags)
 )
 
 type simDetailCmd int
@@ -263,14 +265,14 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			}
 
 			if simLoadDump {
-				fmt.Println("[Loading cache dump...]")
+				logger.Println("[Loading cache dump...]")
 				curCacheInstance.Load(simLoadDumpFileName)
-				fmt.Println("[Cache dump loaded!]")
+				logger.Println("[Cache dump loaded!]")
 				if simColdStart {
 					curCacheInstance.ClearFiles()
-					fmt.Println("[Cache Files deleted][COLD START]")
+					logger.Println("[Cache Files deleted][COLD START]")
 				} else {
-					fmt.Println("[Cache Files stored][HOT START]")
+					logger.Println("[Cache Files stored][HOT START]")
 				}
 			}
 
@@ -356,14 +358,14 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				defer pprof.StopCPUProfile()
 			}
 
-			fmt.Println("[Simulation START]")
+			logger.Println("[Simulation START]")
 
 			for record := range iterator {
 				totNumRecords++
 
 				if strings.Compare(simRegion, "all") != 0 {
 					if strings.Index(strings.ToLower(record.SiteName), selectedRegion) == -1 {
-						// TODO: fix junp output
+						// TODO: fix jump output
 						// fmt.Printf("[Jump region %s]\r",
 						// 	record.SiteName,
 						// )
@@ -372,7 +374,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				}
 				if strings.Compare(simFileType, "all") != 0 {
 					if strings.Index(strings.ToLower(record.FileType), strings.ToLower(simFileType)) == -1 {
-						// TODO: fix junp output
+						// TODO: fix jump output
 						// fmt.Printf("[Jump file type %s]\r",
 						// 	record.FileType,
 						// )
@@ -450,7 +452,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 							},
 							"",
 						)
-						fmt.Print(outString)
+						logger.Print(outString)
 						totIterations += numIterations
 						numIterations = 0
 						start = time.Now()
@@ -461,7 +463,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 						windowStepCounter = 0
 					}
 				} else if windowStepCounter == simWindowSize {
-					fmt.Printf("[Jump %d records of window %d]\n",
+					logger.Printf("[Jump %d records of window %d]\n",
 						numRecords,
 						windowCounter,
 					)
@@ -470,7 +472,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 					numRecords = 0
 				} else {
 					if time.Now().Sub(start).Seconds() >= outputUpdateDelay {
-						fmt.Printf("[Jump %d records of window %d]\r",
+						logger.Printf("[Jump %d records of window %d]\r",
 							numRecords,
 							windowCounter,
 						)
@@ -495,7 +497,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			elTM := int(elapsedTime.Minutes()) % 60
 			elTS := int(elapsedTime.Seconds()) % 60
 			avgSpeed := float64(totIterations) / elapsedTime.Seconds()
-			fmt.Printf("\n[Simulation END][elapsed Time: %02d:%02d:%02d][Num. Records: %d][Mean Records/s: %0.0f]\n",
+			logger.Printf("\n[Simulation END][elapsed Time: %02d:%02d:%02d][Num. Records: %d][Mean Records/s: %0.0f]\n",
 				elTH,
 				elTM,
 				elTS,
@@ -568,34 +570,34 @@ func genCache(cacheType string) cache.Cache {
 	var cacheInstance cache.Cache
 	switch cacheType {
 	case "lru":
-		fmt.Printf("[Create LRU Cache][Size: %f]\n", cacheSize)
+		logger.Printf("[Create LRU Cache][Size: %f]\n", cacheSize)
 		cacheInstance = &cache.LRUCache{
 			MaxSize: cacheSize,
 		}
 		cacheInstance.Init()
 	case "lruDatasetVerifier":
-		fmt.Printf("[Create lruDatasetVerifier Cache][Size: %f]\n", cacheSize)
+		logger.Printf("[Create lruDatasetVerifier Cache][Size: %f]\n", cacheSize)
 		cacheInstance = &cache.LRUDatasetVerifier{
 			LRUCache: cache.LRUCache{
 				MaxSize: cacheSize,
 			},
 		}
 	case "aiNN":
-		fmt.Printf("[Create aiNN Cache][Size: %f]\n", cacheSize)
+		logger.Printf("[Create aiNN Cache][Size: %f]\n", cacheSize)
 		cacheInstance = &cache.AINN{
 			LRUCache: cache.LRUCache{
 				MaxSize: cacheSize,
 			},
 		}
 	case "aiRL":
-		fmt.Printf("[Create aiRL Cache][Size: %f]\n", cacheSize)
+		logger.Printf("[Create aiRL Cache][Size: %f]\n", cacheSize)
 		cacheInstance = &cache.AIRL{
 			LRUCache: cache.LRUCache{
 				MaxSize: cacheSize,
 			},
 		}
 	case "weightedLRU":
-		fmt.Printf("[Create Weighted Cache][Size: %f]\n", cacheSize)
+		logger.Printf("[Create Weighted Cache][Size: %f]\n", cacheSize)
 
 		var (
 			selFunctionType cache.FunctionType

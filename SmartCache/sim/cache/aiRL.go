@@ -3,12 +3,19 @@ package cache
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"math"
+	"os"
 	"simulator/v2/cache/ai/featuremap"
 	qlearn "simulator/v2/cache/qLearn"
+	"github.com/fatih/color"
 	"sort"
 	"strings"
 	"time"
+)
+
+var (
+	logger = log.New(os.Stderr, color.GreenString("[AIRL] "), log.Lshortfile|log.LstdFlags)
 )
 
 // AIRL cache
@@ -50,9 +57,9 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 		}
 		inputLengths = append(inputLengths, curLen)
 	}
-	fmt.Print("[Generate QTable]")
+	logger.Println("[Generate QTable]")
 	cache.qTable.Init(inputLengths)
-	fmt.Println("[Done]")
+	logger.Println("[Done]")
 
 	return nil
 }

@@ -3,6 +3,7 @@ module simulator/v2
 go 1.13
 
 require (
+	github.com/fatih/color v1.9.0
 	github.com/golang/protobuf v1.3.2
 	github.com/spf13/cobra v0.0.5
 	golang.org/x/crypto v0.0.0-20191119213627-4f8c1d86b1ba

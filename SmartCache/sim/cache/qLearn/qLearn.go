@@ -2,8 +2,11 @@ package qlearn
 
 import (
 	"fmt"
+	"github.com/fatih/color"
+	"log"
 	"math"
 	"math/rand"
+	"os"
 )
 
 // ActionType are cache possible actions
@@ -22,6 +25,10 @@ const (
 	RLSARSA RLUpdateType = iota
 	// RLQLearning indicates the Bellman equation
 	RLQLearning
+)
+
+var (
+	logger = log.New(os.Stderr, color.CyanString("[QLEARN] "), log.Lshortfile|log.LstdFlags)
 )
 
 // QTable used in Qlearning
@@ -63,7 +70,7 @@ func (table *QTable) Init(featureLenghts []int) {
 	}
 	table.NumStates = numStates
 
-	fmt.Printf("[Generate %d states][...]\n", numStates)
+	logger.Printf("[Generate %d states][...]\n", numStates)
 	table.States = make(map[string][]float64, numStates)
 
 	for state := range table.genAllStates(featureLenghts) {
@@ -72,13 +79,13 @@ func (table *QTable) Init(featureLenghts []int) {
 		if !inMap {
 			table.States[stateString] = make([]float64, len(table.Actions))
 		} else {
-			fmt.Printf("State %v with idx %s already present...\n", state, stateString)
+			logger.Printf("State %v with idx %s already present...\n", state, stateString)
 			panic("Insert state error!!!")
 		}
 
 	}
 	table.NumVars = table.NumStates * int64(len(table.Actions))
-	fmt.Printf("[Tot. Vars: %d]\n", table.NumVars)
+	logger.Printf("[Tot. Vars: %d]\n", table.NumVars)
 }
 
 func (table QTable) genAllStates(featureLenghts []int) chan []bool {
