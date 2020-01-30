@@ -263,7 +263,8 @@ def main():
                             f"{args.dataset_prefix}-window_00.json.gz"
                         )
                     )
-                    exe_args.append(f"--dataset2TestPath={dataset_file}")
+                    exe_args.append(f"--dataset2TestPath={dataset_file}") 
+                print(f"EXEC -> {' '.join(exe_args)}")
                 cur_process = subprocess.Popen(
                     " ".join(exe_args),
                     shell=True,

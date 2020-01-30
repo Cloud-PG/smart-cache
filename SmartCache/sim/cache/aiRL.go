@@ -4,14 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"math"
 	"os"
 	"simulator/v2/cache/ai/featuremap"
 	qlearn "simulator/v2/cache/qLearn"
-	"github.com/fatih/color"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/fatih/color"
 )
 
 var (
@@ -29,14 +29,11 @@ type AIRL struct {
 	qTable            *qlearn.QTable
 	points            float64
 	prevPoints        float64
-	minFilePoints     float64
 }
 
 // Init the AIRL struct
 func (cache *AIRL) Init(args ...interface{}) interface{} {
 	cache.LRUCache.Init()
-
-	cache.minFilePoints = math.Inf(1)
 
 	featureMapFilePath := args[0].(string)
 
@@ -281,92 +278,130 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 		requestedFileSize = request.Size
 	)
 
-	if !hit {
+	// Check learning phase or not
+	expTradeoff := cache.qTable.GetRandomFloat()
 
-		curState = qlearn.State2String(cache.getState(request, fileStats))
+	if expTradeoff > cache.qTable.Epsilon {
+		// ########################
+		// ##### Normal phase #####
+		// ########################
 
-		// QLearn - Check action
-		expTradeoff := cache.qTable.GetRandomFloat()
-		if expTradeoff > cache.qTable.Epsilon {
-			// action
+		if !hit {
+			// ########################
+			// ##### MISS branch  #####
+			// ########################
+
+			curState = qlearn.State2String(cache.getState(request, fileStats))
 			curAction = cache.qTable.GetBestAction(curState)
+			// ----------------------------------
+			// QLearn - Take the action NOT STORE
+			// ----------------------------------
+			if curAction == qlearn.ActionNotStore {
+				return added
+			}
+			// ------------------------------
+			// QLearn - Take the action STORE
+			// ------------------------------
+			// Insert with LRU mechanism
+			if cache.Size()+requestedFileSize > cache.MaxSize {
+				cache.Free(requestedFileSize, false)
+			}
+			if cache.Size()+requestedFileSize <= cache.MaxSize {
+				cache.files[requestedFilename] = requestedFileSize
+				cache.queue.PushBack(requestedFilename)
+				cache.size += requestedFileSize
+				added = true
+
+				fileStats.addInCache(&request.DayTime)
+				fileStats.updateFilePoints(&cache.curTime)
+				cache.points += fileStats.Points
+			}
 		} else {
-			// random choice
+			// #######################
+			// ##### HIT branch  #####
+			// #######################
+			cache.UpdateFileInQueue(requestedFilename)
+		}
+	} else {
+		// ##########################
+		// ##### Learning phase #####
+		// ##########################
+
+		if !hit {
+			// ########################
+			// ##### MISS branch  #####
+			// ########################
+
+			curState = qlearn.State2String(cache.getState(request, fileStats))
+
+			// ----- Random choice -----
 			randomAction := cache.qTable.GetRandomFloat()
 			if randomAction > 0.5 {
 				curAction = qlearn.ActionStore
 			} else {
 				curAction = qlearn.ActionNotStore
 			}
-		}
 
-		// ----------------------------------
-		// QLearn - Take the action NOT STORE
-		if curAction == qlearn.ActionNotStore {
+			// ----------------------------------
+			// QLearn - Take the action NOT STORE
+			if curAction == qlearn.ActionNotStore {
+				newScore := cache.points
+				diff := newScore - cache.prevPoints
+				reward := diff
+				// Update table
+				cache.qTable.Update(curState, curAction, reward)
+				// Update epsilon
+				cache.qTable.UpdateEpsilon()
+				return added
+			}
+
+			// Insert with LRU mechanism
+			if cache.Size()+requestedFileSize > cache.MaxSize {
+				cache.Free(requestedFileSize, false)
+			}
+			if cache.Size()+requestedFileSize <= cache.MaxSize {
+				cache.files[requestedFilename] = requestedFileSize
+				cache.queue.PushBack(requestedFilename)
+				cache.size += requestedFileSize
+				added = true
+
+				fileStats.addInCache(&request.DayTime)
+				fileStats.updateFilePoints(&cache.curTime)
+				cache.points += fileStats.Points
+			}
+
+			// ------------------------------
+			// QLearn - Take the action STORE
+			if cache.qTable != nil && curAction == qlearn.ActionStore {
+				newScore := cache.points
+				diff := newScore - cache.prevPoints
+				reward := diff
+				// Update table
+				cache.qTable.Update(curState, curAction, reward)
+				// Update epsilon
+				cache.qTable.UpdateEpsilon()
+			}
+
+		} else {
+			// #######################
+			// ##### HIT branch  #####
+			// #######################
+			cache.UpdateFileInQueue(requestedFilename)
+
+			// ------------------------------
+			// QLearn - hit reward on best action
+			curState = qlearn.State2String(cache.getState(request, fileStats))
+			curAction = cache.qTable.GetBestAction(curState)
+
 			newScore := cache.points
 			diff := newScore - cache.prevPoints
-			reward := 0.
-			if diff >= 0. {
-				if cache.CheckWatermark() {
-					reward -= 1.
-				} else {
-					reward += 1.
-				}
-			} else {
-				reward -= 1.
-			}
+			reward := diff
 			// Update table
 			cache.qTable.Update(curState, curAction, reward)
 			// Update epsilon
 			cache.qTable.UpdateEpsilon()
-			return added
 		}
 
-		// Insert with LRU mechanism
-		if cache.Size()+requestedFileSize > cache.MaxSize {
-			cache.Free(requestedFileSize, false)
-		}
-		if cache.Size()+requestedFileSize <= cache.MaxSize {
-			cache.files[requestedFilename] = requestedFileSize
-			cache.queue.PushBack(requestedFilename)
-			cache.size += requestedFileSize
-			added = true
-
-			// Q-Learning
-			fileStats.addInCache(&request.DayTime)
-			fileStats.updateFilePoints(&cache.curTime)
-			cache.points += fileStats.Points
-			if fileStats.Points < cache.minFilePoints {
-				cache.minFilePoints = fileStats.Points
-			}
-		}
-
-		// ------------------------------
-		// QLearn - Take the action STORE
-		if cache.qTable != nil && curAction == qlearn.ActionStore {
-			newScore := cache.points
-			diff := newScore - cache.prevPoints
-			reward := 0.
-			if diff >= 0. {
-				if !cache.CheckWatermark() {
-					reward -= 1.
-				} else {
-					reward += 1.
-				}
-			} else {
-				reward -= 1.
-			}
-			// Update table
-			cache.qTable.Update(curState, curAction, reward)
-			// Update epsilon
-			cache.qTable.UpdateEpsilon()
-		}
-
-	} else {
-		cache.UpdateFileInQueue(requestedFilename)
-		if fileStats.Points < cache.minFilePoints {
-			cache.minFilePoints = fileStats.Points
-		}
 	}
 
 	return added
@@ -396,9 +431,6 @@ func (cache *AIRL) Free(amount float32, percentage bool) float32 {
 		}
 		curFilePoints := curStats.Points
 		cache.points -= curFilePoints
-		if curFilePoints <= cache.minFilePoints {
-			cache.minFilePoints = math.Inf(1)
-		}
 
 		// Update stats
 		cache.size -= fileSize
