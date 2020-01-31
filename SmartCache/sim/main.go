@@ -448,11 +448,10 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 								fmt.Sprintf("[Capacity %.2f%%]", curCacheInstance.Capacity()),
 								fmt.Sprintf("[Extra-> %s]", curCacheInstance.ExtraStats()),
 								fmt.Sprintf("[%0.0f it/s]", float64(numIterations)/time.Now().Sub(start).Seconds()),
-								"\r",
 							},
 							"",
 						)
-						logger.Print(outString)
+						logger.Println(outString)
 						totIterations += numIterations
 						numIterations = 0
 						start = time.Now()
@@ -472,7 +471,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 					numRecords = 0
 				} else {
 					if time.Now().Sub(start).Seconds() >= outputUpdateDelay {
-						logger.Printf("[Jump %d records of window %d]\r",
+						logger.Printf("[Jump %d records of window %d]\n",
 							numRecords,
 							windowCounter,
 						)

@@ -18,10 +18,12 @@ from SmartCache.sim import get_simulator_exe
 from .ga import compare_greedy_solution, get_best_configuration
 from .greedy import get2PTAS
 from .plotter import plot_results
-from .utils import load_results, str2bool, wait_jobs
+from .utils import get_logger, load_results, str2bool, wait_jobs
 
 
 def main():
+    logger = get_logger(__name__)
+
     parser = argparse.ArgumentParser(
         "simulator", description="Simulation and result plotting")
 
@@ -148,7 +150,7 @@ def main():
                 for cache_type in cache_types:
                     working_dir = path.join(
                         single_window_run_dir,
-                       f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}"
+                        f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}"
                         f"window_{window_idx}",
                     )
                     os.makedirs(working_dir, exist_ok=True)
@@ -202,7 +204,7 @@ def main():
                         cwd=working_dir,
                         stdin=subprocess.PIPE,
                         stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
+                        stderr=subprocess.STDOUT,
                     )
                     processes.append(("Single Window", cur_process))
 
@@ -263,15 +265,15 @@ def main():
                             f"{args.dataset_prefix}-window_00.json.gz"
                         )
                     )
-                    exe_args.append(f"--dataset2TestPath={dataset_file}") 
-                print(f"EXEC -> {' '.join(exe_args)}")
+                    exe_args.append(f"--dataset2TestPath={dataset_file}")
+                logger.info(f"[EXEC]->[{' '.join(exe_args)}]")
                 cur_process = subprocess.Popen(
                     " ".join(exe_args),
                     shell=True,
                     cwd=working_dir,
                     stdin=subprocess.PIPE,
                     stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
                 )
                 processes.append(("Full Run", cur_process))
                 # Add custom cache parameters
@@ -352,7 +354,7 @@ def main():
                         cwd=working_dir,
                         stdin=subprocess.PIPE,
                         stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
+                        stderr=subprocess.STDOUT,
                     )
                     processes.append(("Next Window", cur_process))
 
@@ -430,7 +432,7 @@ def main():
                         cwd=working_dir,
                         stdin=subprocess.PIPE,
                         stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
+                        stderr=subprocess.STDOUT,
                     )
                     processes.append(("Next Period", cur_process))
 
