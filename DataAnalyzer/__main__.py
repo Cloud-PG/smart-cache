@@ -24,6 +24,9 @@ def main():
     parser.add_argument('--month', type=int,
                         default=-1,
                         help='Month to extract [DEFAULT: -1]')
+    parser.add_argument('--output-type', choices=['show', 'html', 'png'], type=str,
+                        default='show',
+                        help='How to plot the results [DEFAULT: show]')
     parser.add_argument('--file-type', type=str,
                         default="all",
                         help='File type of the data to analyse [DEFAULT: "all"]')
@@ -41,10 +44,13 @@ def main():
         )
         print(f"{_STATUS}Sort data by date...")
         utils.sort_by_date(df)
-        print(f"{_STATUS}Plot stats...")
-        utils.plot_daily_stats(df,
-                               output_filename=args.output_filename,
-                               reset_stat_days=args.reset_stat_days)
+        print(f"{_STATUS}Extract stats...")
+        utils.plot_daily_stats(
+            df,
+            output_filename=args.output_filename,
+            output_type=args.output_type,
+            reset_stat_days=args.reset_stat_days
+        )
         print(df.columns)
         print(df.JobStart.astype('datetime64[ms]'))
 
