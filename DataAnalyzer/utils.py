@@ -98,10 +98,10 @@ def plot_daily_stats(df: 'pd.DataFrame',
 
         ##
         # Uncomment to get frequencies
-        # frequencie_keys = frequencies.keys()
+        # frequencie_keys = list(frequencies.keys())
         # df = pd.DataFrame(data={'num.req': frequencie_keys, 'num.files': [
         #                   frequencies[key] for key in frequencie_keys]})
-        # df.to_csv(f"week-{period:02d}.csv", index_label=False)
+        # df.to_csv(f"week-{period:02d}.csv", index=False)
 
     fig_n_req = figure(plot_width=1280, plot_height=240,
                        title="Num. Requests", x_axis_label="n-th request")
