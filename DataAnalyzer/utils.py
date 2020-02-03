@@ -74,15 +74,34 @@ def plot_daily_stats(df: 'pd.DataFrame',
         stats.append(_files)
         _files = {}
 
+    ##
+    # Uncomment to get frequencies
+    # frequencies = {}
+
     for period, files in enumerate(stats, 1):
         all_filenames = list(files.keys())
         _files = {}
         for filename in tqdm(all_filenames, desc=f"{_STATUS}Split 1 req files from period {period}"):
+            ##
+            # Uncomment to get frequencies
+            # cur_file = files[filename]
+            # num_req = cur_file.n_req[-1]
+            # if num_req not in frequencies:
+            #     frequencies[num_req] = 0
+            # frequencies[num_req] += 1
+
             if len(files[filename].x) <= 2:
                 _files[filename] = files[filename]
                 del files[filename]
         else:
             stats_1req.append(_files)
+
+        ##
+        # Uncomment to get frequencies
+        # frequencie_keys = frequencies.keys()
+        # df = pd.DataFrame(data={'num.req': frequencie_keys, 'num.files': [
+        #                   frequencies[key] for key in frequencie_keys]})
+        # df.to_csv(f"week-{period:02d}.csv", index_label=False)
 
     fig_n_req = figure(plot_width=1280, plot_height=240,
                        title="Num. Requests", x_axis_label="n-th request")
