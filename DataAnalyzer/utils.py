@@ -53,7 +53,7 @@ def plot_daily_stats(df: 'pd.DataFrame',
 
         filename = df_row.Filename
         if filename not in _files:
-            _files[filename] = FileStats(num_req-1, df_row.Size / 1024**2)
+            _files[filename] = FileStats(num_req-1, int(df_row.Size / 1024**2))
 
         cur_file = _files[filename]
         cur_file.x.append(num_req)
@@ -66,13 +66,23 @@ def plot_daily_stats(df: 'pd.DataFrame',
 
         cur_file.n_users.append(len(cur_file.users))
         cur_file.n_sites.append(len(cur_file.sites))
-        cur_file.sizes.append(df_row.Size / 1024**2)
+        cur_file.sizes.append(int(df_row.Size / 1024**2))
 
         num_req += 1
     else:
         days.append(num_req)
         stats.append(_files)
         _files = {}
+
+    for period, files in enumerate(stats, 1):
+        all_filenames = list(files.keys())
+        _files = {}
+        for filename in tqdm(all_filenames, desc=f"{_STATUS}Split 1 req files from period {period}"):
+            if len(files[filename].x) <= 2:
+                _files[filename] = files[filename]
+                del files[filename]
+        else:
+            stats_1req.append(_files)
 
     fig_n_req = figure(plot_width=1280, plot_height=240,
                        title="Num. Requests", x_axis_label="n-th request")
@@ -102,16 +112,6 @@ def plot_daily_stats(df: 'pd.DataFrame',
                                        title="correlation num. reqs. and num. sites",
                                        x_axis_label="num. req.",
                                        y_axis_label="num. sites")
-
-    for period, files in enumerate(stats, 1):
-        all_filenames = list(files.keys())
-        _files = {}
-        for filename in tqdm(all_filenames, desc=f"{_STATUS}Split 1 req files from period {period}"):
-            if len(files[filename].x) <= 2:
-                _files[filename] = files[filename]
-                del files[filename]
-        else:
-            stats_1req.append(_files)
 
     buf_xs = []
     buf_n_req = []
