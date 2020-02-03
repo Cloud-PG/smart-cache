@@ -27,6 +27,8 @@ type AIRL struct {
 	aiFeatureMap      map[string]featuremap.Obj
 	aiFeatureMapOrder []string
 	qTable            *qlearn.QTable
+	qPrevState        map[string]string
+	qPrevAction       map[string]qlearn.ActionType
 	points            float64
 	prevPoints        float64
 }
@@ -36,6 +38,9 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 	cache.LRUCache.Init()
 
 	featureMapFilePath := args[0].(string)
+
+	cache.qPrevState = make(map[string]string, 0)
+	cache.qPrevAction = make(map[string]qlearn.ActionType, 0)
 
 	cache.aiFeatureMap = featuremap.Parse(featureMapFilePath)
 
@@ -223,6 +228,8 @@ func (cache *AIRL) getState(request *Request, fileStats *FileStats) []bool {
 			tmpArr = cache.getCategory(featureName, cacheCapacity)
 		case "dataType":
 			tmpArr = cache.getCategory(featureName, dataType)
+		case "deltaNumLastRequest":
+			tmpArr = cache.getCategory(featureName, float64(fileStats.DeltaLastRequest))
 		default:
 			panic(fmt.Sprintf("Cannot prepare input %s", featureName))
 		}
@@ -248,21 +255,21 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) *FileStats {
 	cache.prevTime = cache.curTime
 	cache.curTime = request.DayTime
 
-	if !cache.curTime.Equal(cache.prevTime) {
-		cache.points = cache.GetPoints()
-	}
+	// if !cache.curTime.Equal(cache.prevTime) {
+	// 	cache.points = cache.GetPoints()
+	// }
 
-	cache.prevPoints = cache.points
+	// cache.prevPoints = cache.points
 
-	if !hit {
-		fileStats.updateStats(hit, request.Size, request.UserID, request.SiteName, request.DayTime)
-		fileStats.updateFilePoints(&cache.curTime)
-	} else {
-		cache.points -= fileStats.Points
-		fileStats.updateStats(hit, request.Size, request.UserID, request.SiteName, request.DayTime)
-		fileStats.updateFilePoints(&cache.curTime)
-		cache.points += fileStats.Points
-	}
+	// if !hit {
+	// 	fileStats.updateStats(hit, request.Size, request.UserID, request.SiteName, request.DayTime)
+	// 	fileStats.updateFilePoints(&cache.curTime)
+	// } else {
+	// 	cache.points -= fileStats.Points
+	// 	fileStats.updateStats(hit, request.Size, request.UserID, request.SiteName, request.DayTime)
+	// 	fileStats.updateFilePoints(&cache.curTime)
+	// 	cache.points += fileStats.Points
+	// }
 
 	return fileStats
 }
@@ -345,9 +352,24 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			// ----------------------------------
 			// QLearn - Take the action NOT STORE
 			if curAction == qlearn.ActionNotStore {
-				newScore := cache.points
-				diff := newScore - cache.prevPoints
-				reward := diff
+				// newScore := cache.points
+				// diff := newScore - cache.prevPoints
+				// reward := 0.
+				// if diff >= 0 {
+				// 	reward += 1.
+				// } else {
+				// 	reward -= 1.
+				// }
+
+				reward := 0.
+				if fileStats.TotRequests() > 1 || fileStats.DeltaLastRequest < 1000 {
+					reward -= 1.0
+				} else {
+					reward += 1.0
+				}
+				cache.qPrevState[request.Filename] = curState
+				cache.qPrevAction[request.Filename] = curAction
+
 				// Update table
 				cache.qTable.Update(curState, curAction, reward)
 				// Update epsilon
@@ -373,9 +395,24 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			// ------------------------------
 			// QLearn - Take the action STORE
 			if cache.qTable != nil && curAction == qlearn.ActionStore {
-				newScore := cache.points
-				diff := newScore - cache.prevPoints
-				reward := diff
+				// newScore := cache.points
+				// diff := newScore - cache.prevPoints
+				// reward := 0.
+				// if diff >= 0 {
+				// 	reward += 1.
+				// } else {
+				// 	reward -= 1.
+				// }
+
+				reward := 0.
+				if fileStats.TotRequests() > 1 || fileStats.DeltaLastRequest < 1000 {
+					reward += 1.0
+				} else {
+					reward -= 1.0
+				}
+				cache.qPrevState[request.Filename] = curState
+				cache.qPrevAction[request.Filename] = curAction
+
 				// Update table
 				cache.qTable.Update(curState, curAction, reward)
 				// Update epsilon
@@ -390,16 +427,18 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 			// ------------------------------
 			// QLearn - hit reward on best action
-			curState = qlearn.State2String(cache.getState(request, fileStats))
-			curAction = cache.qTable.GetBestAction(curState)
+			curState = cache.qPrevState[request.Filename]
+			curAction = cache.qPrevAction[request.Filename]
 
-			newScore := cache.points
-			diff := newScore - cache.prevPoints
-			reward := diff
-			// Update table
-			cache.qTable.Update(curState, curAction, reward)
-			// Update epsilon
-			cache.qTable.UpdateEpsilon()
+			if curState != "" { // Some action are not taken randomly
+				reward := 1.0
+
+				// Update table
+				cache.qTable.Update(curState, curAction, reward)
+				// Update epsilon
+				cache.qTable.UpdateEpsilon()
+			}
+
 		}
 
 	}

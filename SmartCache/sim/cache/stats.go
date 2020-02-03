@@ -20,12 +20,14 @@ type Stats struct {
 	weightSum       float32
 	firstUpdateTime time.Time
 	lastUpdateTime  time.Time
+	numRequests     int32
 }
 
 // Init initialize Stats
 func (statStruct *Stats) Init() {
 	statStruct.fileStats = make(map[string]*FileStats)
 	statStruct.weightSum = 0.0
+	statStruct.numRequests = 0
 }
 
 // DirtyStats indicates if the stats needs a purge
@@ -74,13 +76,17 @@ func (statStruct *Stats) GetOrCreate(filename string, vars ...interface{}) (*Fil
 
 	if !inStats || curStats == nil {
 		curStats = &FileStats{
-			Size:      size,
-			FirstTime: reqTime,
+			Size:             size,
+			FirstTime:        reqTime,
+			DeltaLastRequest: 0,
 		}
 		statStruct.fileStats[filename] = curStats
 	} else {
 		curStats.Size = size
+		curStats.DeltaLastRequest = statStruct.numRequests - curStats.DeltaLastRequest
 	}
+
+	statStruct.numRequests++
 
 	return curStats, !inStats
 }
@@ -131,6 +137,7 @@ type FileStats struct {
 	RequestTicksMean  float32     `json:"requestTicksMean"`
 	RequestTicks      []time.Time `json:"requestTicks"`
 	IdxLastRequest    int         `json:"idxLastRequest"`
+	DeltaLastRequest  int32       `json:"deltaLastRequest"`
 	Users             []int       `json:"users"`
 	Sites             []string    `json:"sites"`
 }
