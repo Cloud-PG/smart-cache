@@ -97,11 +97,11 @@ def plot_daily_stats(df: 'pd.DataFrame',
     fig_corr_numreqs_numusers = figure(plot_width=240, plot_height=240,
                                        title="correlation num. reqs. and num. users",
                                        x_axis_label="num. req.",
-                                       y_axis_label="size (MB)")
+                                       y_axis_label="num. users")
     fig_corr_numreqs_numsites = figure(plot_width=240, plot_height=240,
                                        title="correlation num. reqs. and num. sites",
                                        x_axis_label="num. req.",
-                                       y_axis_label="size (MB)")
+                                       y_axis_label="num. sites")
 
     for period, files in enumerate(stats, 1):
         all_filenames = list(files.keys())
