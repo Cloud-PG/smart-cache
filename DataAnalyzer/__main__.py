@@ -13,8 +13,8 @@ def main():
     parser.add_argument('path', default=None,
                         help='Folder or file to open')
     parser.add_argument('--output-filename', type=str,
-                        default="dailystats.html",
-                        help='The output file name [DEFAULT: "dailystats.html"]')
+                        default="dailystats",
+                        help='The output file name [DEFAULT: "dailystats"]')
     parser.add_argument('--region', type=str,
                         default="all",
                         help='Region of the data to analyse [DEFAULT: "all"]')
