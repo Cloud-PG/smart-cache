@@ -31,6 +31,8 @@ type AIRL struct {
 	qPrevAction       map[string]qlearn.ActionType
 	points            float64
 	prevPoints        float64
+	dailyReadOnHit    float32
+	dailyReadOnMiss   float32
 }
 
 // Init the AIRL struct
@@ -255,6 +257,11 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) *FileStats {
 	cache.prevTime = cache.curTime
 	cache.curTime = request.DayTime
 
+	if !cache.curTime.Equal(cache.prevTime) {
+		cache.dailyReadOnHit = 0.0
+		cache.dailyReadOnMiss = 0.0
+	}
+
 	// if !cache.curTime.Equal(cache.prevTime) {
 	// 	cache.points = cache.GetPoints()
 	// }
@@ -319,9 +326,9 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				cache.size += requestedFileSize
 				added = true
 
-				fileStats.addInCache(&request.DayTime)
-				fileStats.updateFilePoints(&cache.curTime)
-				cache.points += fileStats.Points
+				// fileStats.addInCache(&request.DayTime)
+				// fileStats.updateFilePoints(&cache.curTime)
+				// cache.points += fileStats.Points
 			}
 		} else {
 			// #######################
@@ -342,8 +349,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			curState = qlearn.State2String(cache.getState(request, fileStats))
 
 			// ----- Random choice -----
-			randomAction := cache.qTable.GetRandomFloat()
-			if randomAction > 0.5 {
+			if randomAction := cache.qTable.GetRandomFloat(); randomAction > 0.5 {
 				curAction = qlearn.ActionStore
 			} else {
 				curAction = qlearn.ActionNotStore
@@ -362,7 +368,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				// }
 
 				reward := 0.
-				if fileStats.TotRequests() > 1 || fileStats.DeltaLastRequest < 1000 {
+				if fileStats.TotRequests() > 1 || fileStats.DeltaLastRequest < 50000 || cache.dailyReadOnHit < cache.dailyReadOnMiss {
 					reward -= 1.0
 				} else {
 					reward += 1.0
@@ -387,9 +393,9 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				cache.size += requestedFileSize
 				added = true
 
-				fileStats.addInCache(&request.DayTime)
-				fileStats.updateFilePoints(&cache.curTime)
-				cache.points += fileStats.Points
+				// fileStats.addInCache(&request.DayTime)
+				// fileStats.updateFilePoints(&cache.curTime)
+				// cache.points += fileStats.Points
 			}
 
 			// ------------------------------
@@ -405,10 +411,10 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				// }
 
 				reward := 0.
-				if fileStats.TotRequests() > 1 || fileStats.DeltaLastRequest < 1000 {
-					reward += 1.0
-				} else {
+				if fileStats.TotRequests() < 100 && fileStats.DeltaLastRequest > 50000 && cache.dailyReadOnHit > cache.dailyReadOnMiss {
 					reward -= 1.0
+				} else {
+					reward += 1.0
 				}
 				cache.qPrevState[request.Filename] = curState
 				cache.qPrevAction[request.Filename] = curAction
@@ -431,7 +437,12 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			curAction = cache.qPrevAction[request.Filename]
 
 			if curState != "" { // Some action are not taken randomly
-				reward := 1.0
+				reward := 0.0
+				if cache.dailyReadOnHit > cache.dailyReadOnMiss {
+					reward += 1.0
+				} else {
+					reward -= 1.0
+				}
 
 				// Update table
 				cache.qTable.Update(curState, curAction, reward)
@@ -444,6 +455,16 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 	}
 
 	return added
+}
+
+// AfterRequest of LRU cache
+func (cache *AIRL) AfterRequest(request *Request, hit bool, added bool) {
+	cache.LRUCache.AfterRequest(request, hit, added)
+	if hit {
+		cache.dailyReadOnHit += request.Size
+	} else {
+		cache.dailyReadOnMiss += request.Size
+	}
 }
 
 // Free removes files from the cache
@@ -468,8 +489,8 @@ func (cache *AIRL) Free(amount float32, percentage bool) float32 {
 		if added {
 			panic("File in cache was removed from stats...")
 		}
-		curFilePoints := curStats.Points
-		cache.points -= curFilePoints
+		// curFilePoints := curStats.Points
+		// cache.points -= curFilePoints
 
 		// Update stats
 		cache.size -= fileSize
@@ -497,13 +518,13 @@ func (cache *AIRL) Free(amount float32, percentage bool) float32 {
 // CheckWatermark checks the watermark levels and resolve the situation
 func (cache *AIRL) CheckWatermark() bool {
 	goodStatus := cache.LRUCache.CheckWatermark()
-	if !goodStatus {
-		cache.points = cache.GetPoints()
-	}
+	// if !goodStatus {
+	// 	cache.points = cache.GetPoints()
+	// }
 	return goodStatus
 }
 
 // ExtraStats for output
 func (cache *AIRL) ExtraStats() string {
-	return fmt.Sprintf("Cov:%0.2f%%|Eps:%0.2f|P:%0.0f", cache.qTable.GetCoveragePercentage(), cache.qTable.Epsilon, cache.points)
+	return fmt.Sprintf("Cov:%0.2f%%|Eps:%0.2f|P:%0.0f|HMS:%v", cache.qTable.GetCoveragePercentage(), cache.qTable.Epsilon, cache.points, cache.dailyReadOnHit > cache.dailyReadOnMiss)
 }
