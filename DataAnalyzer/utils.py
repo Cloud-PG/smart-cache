@@ -16,12 +16,15 @@ def sort_by_date(df: 'pd.DataFrame', column_name: str = "reqDay") -> 'pd.DataFra
 
 class FileStats(object):
 
-    def __init__(self, start_x: int = 0, size: int = 0):
+    def __init__(self, start_x: int = 0, start_size: int = 0,
+                 start_delta_time: int = 0):
         self.x = [start_x]
         self.n_req = [0]
         self.n_users = [0]
         self.n_sites = [0]
-        self.sizes = [size]
+        self.delta_times = []
+        self.last_request = [start_delta_time]
+        self.sizes = [start_size]
         self.users = set()
         self.sites = set()
 
@@ -53,11 +56,17 @@ def plot_daily_stats(df: 'pd.DataFrame',
 
         filename = df_row.Filename
         if filename not in _files:
-            _files[filename] = FileStats(num_req-1, int(df_row.Size / 1024**2))
+            _files[filename] = FileStats(
+                num_req-1,
+                int(df_row.Size / 1024**2),
+                num_req,
+            )
 
         cur_file = _files[filename]
         cur_file.x.append(num_req)
         cur_file.n_req.append(cur_file.n_req[-1] + 1)
+        cur_file.delta_times.append(num_req - cur_file.last_request[-1])
+        cur_file.last_request.append(num_req)
 
         if df_row.SiteName not in cur_file.sites:
             cur_file.sites |= set((df_row.SiteName, ))
@@ -111,6 +120,9 @@ def plot_daily_stats(df: 'pd.DataFrame',
     fig_n_sites = figure(plot_width=1280, plot_height=240,
                          x_range=fig_n_req.x_range, title="Num. Sites",
                          x_axis_label="n-th request")
+    fig_delta_times = figure(plot_width=1280, plot_height=240,
+                         x_range=fig_n_req.x_range, title="delta",
+                         x_axis_label="n-th request")
     fig_sizes = figure(plot_width=1280, plot_height=240,
                        x_range=fig_n_req.x_range, title="File sizes",
                        x_axis_label="n-th request",
@@ -136,6 +148,7 @@ def plot_daily_stats(df: 'pd.DataFrame',
     buf_n_req = []
     buf_n_users = []
     buf_n_sites = []
+    buf_delta_times = []
     buf_sizes = []
     buf_1req_xs = []
     buf_1req_sizes = []
@@ -149,6 +162,7 @@ def plot_daily_stats(df: 'pd.DataFrame',
             buf_n_req.append(stats.n_req)
             buf_n_users.append(stats.n_users)
             buf_n_sites.append(stats.n_sites)
+            buf_delta_times.append(stats.delta_times)
             buf_sizes.append(stats.sizes)
             buf_corr_numreqs_sizes.append(
                 (stats.n_req[-1], stats.sizes[-1]))
@@ -158,7 +172,7 @@ def plot_daily_stats(df: 'pd.DataFrame',
                 (stats.n_req[-1], stats.n_sites[-1]))
 
     for period, files in enumerate(stats_1req, 1):
-        for _, stats in tqdm(files.items(), desc=f"{_STATUS}Collect lines of period {period}"):
+        for _, stats in tqdm(files.items(), desc=f"{_STATUS}Collect 1 req. file lines of period {period}"):
             buf_1req_xs += [stats.x]
             buf_1req_sizes.append(stats.sizes)
             buf_corr_numreqs_sizes.append(
@@ -187,6 +201,13 @@ def plot_daily_stats(df: 'pd.DataFrame',
         xs=buf_xs,
         ys=buf_n_sites,
         line_color=['green' for _ in range(len(buf_xs))],
+        line_width=2,
+    )
+    print(f"{_STATUS}Plot delta times")
+    fig_delta_times.multi_line(
+        xs=buf_xs,
+        ys=buf_delta_times,
+        line_color=['orange' for _ in range(len(buf_xs))],
         line_width=2,
     )
     print(f"{_STATUS}Plot sizes")
@@ -236,7 +257,7 @@ def plot_daily_stats(df: 'pd.DataFrame',
         # fig.y_range = Range1d(0, 42)
 
     plot = column(
-        fig_n_req, fig_n_users, fig_n_sites,
+        fig_n_req, fig_n_users, fig_n_sites, fig_delta_times,
         fig_sizes, fig_1req_sizes,
         row(
             fig_corr_numreqs_sizes,
@@ -250,7 +271,7 @@ def plot_daily_stats(df: 'pd.DataFrame',
         show(plot)
     elif output_type == 'html':
         output_file(f"{output_filename}.html", mode="inline")
-        print(f"{_STATUS}Save result HTML in: {output_filename}")
+        print(f"{_STATUS}Save result HTML in: {output_filename}.html")
         save(plot)
     elif output_type == 'png':
         print(f"{_STATUS}Save result PNG in: {output_filename}.png")
