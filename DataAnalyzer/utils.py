@@ -121,7 +121,7 @@ def plot_daily_stats(df: 'pd.DataFrame',
                          x_range=fig_n_req.x_range, title="Num. Sites",
                          x_axis_label="n-th request")
     fig_delta_times = figure(plot_width=1280, plot_height=240,
-                         x_range=fig_n_req.x_range, title="delta",
+                         x_range=fig_n_req.x_range, title="Delta times",
                          x_axis_label="n-th request")
     fig_sizes = figure(plot_width=1280, plot_height=240,
                        x_range=fig_n_req.x_range, title="File sizes",
@@ -143,98 +143,113 @@ def plot_daily_stats(df: 'pd.DataFrame',
                                        title="correlation num. reqs. and num. sites",
                                        x_axis_label="num. req.",
                                        y_axis_label="num. sites")
+    fig_corr_meandelta_sizes = figure(plot_width=240, plot_height=240,
+                                       title="correlation mean delta times. and sizes",
+                                       x_axis_label="mean delta time",
+                                       y_axis_label="size (MB)")
 
-    buf_xs = []
-    buf_n_req = []
-    buf_n_users = []
-    buf_n_sites = []
-    buf_delta_times = []
-    buf_sizes = []
-    buf_1req_xs = []
-    buf_1req_sizes = []
-    buf_corr_numreqs_sizes = []
-    buf_corr_numreqs_numusers = []
-    buf_corr_numreqs_numsites = []
+    buff_xs = []
+    buff_n_req = []
+    buff_n_users = []
+    buff_n_sites = []
+    buff_delta_times = []
+    buff_sizes = []
+    buff_1req_xs = []
+    buff_1req_sizes = []
+    buff_corr_numreqs_sizes = []
+    buff_corr_numreqs_numusers = []
+    buff_corr_numreqs_numsites = []
+    buff_corr_meandelta_sizes = []
 
     for period, files in enumerate(stats, 1):
         for _, stats in tqdm(files.items(), desc=f"{_STATUS}Collect lines of period {period}"):
-            buf_xs += [stats.x]
-            buf_n_req.append(stats.n_req)
-            buf_n_users.append(stats.n_users)
-            buf_n_sites.append(stats.n_sites)
-            buf_delta_times.append(stats.delta_times)
-            buf_sizes.append(stats.sizes)
-            buf_corr_numreqs_sizes.append(
+            buff_xs += [stats.x]
+            buff_n_req.append(stats.n_req)
+            buff_n_users.append(stats.n_users)
+            buff_n_sites.append(stats.n_sites)
+            buff_delta_times.append(stats.delta_times)
+            buff_sizes.append(stats.sizes)
+            buff_corr_numreqs_sizes.append(
                 (stats.n_req[-1], stats.sizes[-1]))
-            buf_corr_numreqs_numusers.append(
+            buff_corr_numreqs_numusers.append(
                 (stats.n_req[-1], stats.n_users[-1]))
-            buf_corr_numreqs_numsites.append(
+            buff_corr_numreqs_numsites.append(
                 (stats.n_req[-1], stats.n_sites[-1]))
+            buff_corr_meandelta_sizes.append(
+                (
+                    int(sum(stats.delta_times)/len(stats.delta_times)),
+                    stats.sizes[-1]
+                )
+            )
 
     for period, files in enumerate(stats_1req, 1):
         for _, stats in tqdm(files.items(), desc=f"{_STATUS}Collect 1 req. file lines of period {period}"):
-            buf_1req_xs += [stats.x]
-            buf_1req_sizes.append(stats.sizes)
-            buf_corr_numreqs_sizes.append(
+            buff_1req_xs += [stats.x]
+            buff_1req_sizes.append(stats.sizes)
+            buff_corr_numreqs_sizes.append(
                 (stats.n_req[-1], stats.sizes[-1]))
-            buf_corr_numreqs_numusers.append(
+            buff_corr_numreqs_numusers.append(
                 (stats.n_req[-1], stats.n_users[-1]))
-            buf_corr_numreqs_numsites.append(
+            buff_corr_numreqs_numsites.append(
                 (stats.n_req[-1], stats.n_sites[-1]))
 
     print(f"{_STATUS}Plot num requests")
     fig_n_req.multi_line(
-        xs=buf_xs,
-        ys=buf_n_req,
-        line_color=['red' for _ in range(len(buf_xs))],
+        xs=buff_xs,
+        ys=buff_n_req,
+        line_color=['red' for _ in range(len(buff_xs))],
         line_width=2,
     )
     print(f"{_STATUS}Plot num. users")
     fig_n_users.multi_line(
-        xs=buf_xs,
-        ys=buf_n_users,
-        line_color=['blue' for _ in range(len(buf_xs))],
+        xs=buff_xs,
+        ys=buff_n_users,
+        line_color=['blue' for _ in range(len(buff_xs))],
         line_width=2,
     )
     print(f"{_STATUS}Plot num. sites")
     fig_n_sites.multi_line(
-        xs=buf_xs,
-        ys=buf_n_sites,
-        line_color=['green' for _ in range(len(buf_xs))],
+        xs=buff_xs,
+        ys=buff_n_sites,
+        line_color=['green' for _ in range(len(buff_xs))],
         line_width=2,
     )
     print(f"{_STATUS}Plot delta times")
-    fig_delta_times.multi_line(
-        xs=buf_xs,
-        ys=buf_delta_times,
-        line_color=['orange' for _ in range(len(buf_xs))],
-        line_width=2,
+    fig_delta_times.scatter(
+        [val for points in buff_xs for val in points],
+        [val for sizes in buff_delta_times for val in sizes],
+        size=5
     )
     print(f"{_STATUS}Plot sizes")
     fig_sizes.scatter(
-        [val for points in buf_xs for val in points],
-        [val for sizes in buf_sizes for val in sizes],
+        [val for points in buff_xs for val in points],
+        [val for sizes in buff_sizes for val in sizes],
         size=5
     )
     print(f"{_STATUS}Plot sizes of 1 req. files")
     fig_1req_sizes.scatter(
-        [val for points in buf_1req_xs for val in points],
-        [val for sizes in buf_1req_sizes for val in sizes],
+        [val for points in buff_1req_xs for val in points],
+        [val for sizes in buff_1req_sizes for val in sizes],
         size=5
     )
     print(f"{_STATUS}Plot correlation of num. reqs. and sizes")
     fig_corr_numreqs_sizes.scatter(
-        *zip(*buf_corr_numreqs_sizes),
+        *zip(*buff_corr_numreqs_sizes),
         size=5
     )
     print(f"{_STATUS}Plot correlation of num. reqs. and num. users")
     fig_corr_numreqs_numusers.scatter(
-        *zip(*buf_corr_numreqs_numusers),
+        *zip(*buff_corr_numreqs_numusers),
         size=5
     )
     print(f"{_STATUS}Plot correlation of num. reqs. and num. sites")
     fig_corr_numreqs_numsites.scatter(
-        *zip(*buf_corr_numreqs_numsites),
+        *zip(*buff_corr_numreqs_numsites),
+        size=5
+    )
+    print(f"{_STATUS}Plot correlation of mean delta times and sizes")
+    fig_corr_meandelta_sizes.scatter(
+        *zip(*buff_corr_meandelta_sizes),
         size=5
     )
 
@@ -262,7 +277,8 @@ def plot_daily_stats(df: 'pd.DataFrame',
         row(
             fig_corr_numreqs_sizes,
             fig_corr_numreqs_numusers,
-            fig_corr_numreqs_numsites
+            fig_corr_numreqs_numsites,
+            fig_corr_meandelta_sizes
         ),
     )
 
