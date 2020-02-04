@@ -83,7 +83,8 @@ func (statStruct *Stats) GetOrCreate(filename string, vars ...interface{}) (*Fil
 		statStruct.fileStats[filename] = curStats
 	} else {
 		curStats.Size = size
-		curStats.DeltaLastRequest = statStruct.numRequests - curStats.DeltaLastRequest
+		curStats.DeltaLastRequest = statStruct.numRequests - curStats.LastRequest
+		curStats.LastRequest = statStruct.numRequests
 	}
 
 	statStruct.numRequests++
@@ -138,6 +139,7 @@ type FileStats struct {
 	RequestTicks      []time.Time `json:"requestTicks"`
 	IdxLastRequest    int         `json:"idxLastRequest"`
 	DeltaLastRequest  int32       `json:"deltaLastRequest"`
+	LastRequest       int32       `json:"lastRequest"`
 	Users             []int       `json:"users"`
 	Sites             []string    `json:"sites"`
 }
