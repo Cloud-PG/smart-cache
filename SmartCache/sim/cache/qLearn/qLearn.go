@@ -220,11 +220,11 @@ func (table *QTable) Update(state string, action ActionType, reward float64) {
 		nextStateIdx := getArgMax(table.States[state]) // The next state is the max value
 		table.States[state][action] = curStateValue + table.LearningRate*(reward+table.DiscountFactor*table.States[state][nextStateIdx]-curStateValue)
 	}
-	table.EpisodeCounter += 1.0
 }
 
 // UpdateEpsilon upgrades the epsilon variable
 func (table *QTable) UpdateEpsilon() {
+	table.EpisodeCounter += 1.0
 	table.Epsilon = table.MinEpsilon + (table.MaxEpsilon-table.MinEpsilon)*math.Exp(-table.DecayRateEpsilon*float64(table.EpisodeCounter))
 }
 
