@@ -2,11 +2,14 @@ package qlearn
 
 import (
 	"fmt"
-	"github.com/fatih/color"
 	"log"
 	"math"
 	"math/rand"
 	"os"
+	"simulator/v2/cache/ai/featuremap"
+	"strings"
+
+	"github.com/fatih/color"
 )
 
 // ActionType are cache possible actions
@@ -44,6 +47,7 @@ type QTable struct {
 	MinEpsilon       float64              `json:"min_epsilon"`
 	EpisodeCounter   float64              `json:"episode_counter"`
 	Actions          []ActionType         `json:"actions"`
+	ActionStrings    []string             `json:"actionStrings"`
 	RGenerator       *rand.Rand           `json:"r_generator"`
 	UpdateFunction   RLUpdateType         `json:"update_function"`
 }
@@ -60,6 +64,10 @@ func (table *QTable) Init(featureLenghts []int) {
 	table.Actions = []ActionType{
 		ActionNotStore,
 		ActionStore,
+	}
+	table.ActionStrings = []string{
+		"ActionNotStore",
+		"ActionStore",
 	}
 	table.UpdateFunction = RLQLearning
 	table.RGenerator = rand.New(rand.NewSource(42))
@@ -136,18 +144,35 @@ func (table QTable) GetRandomFloat() float64 {
 	return table.RGenerator.Float64()
 }
 
-// PrintTable outputs the state values
-func (table QTable) PrintTable() {
+// ToString outputs the state values in a csv format string
+func (table QTable) ToString(featureMap *map[string]featuremap.Obj, featureMapOrder *[]string) string {
+	csvOutput := ""
+	if featureMap != nil && featureMapOrder != nil {
+		csvOutput += strings.Join(
+			[]string{
+				strings.Join(table.ActionStrings, ","),
+				strings.Join(*featureMapOrder, ","),
+			},
+			",",
+		)
+		csvOutput += "\n"
+	}
 	for state, actions := range table.States {
-		fmt.Printf("[%s]\t[", state)
 		for idx, action := range actions {
-			fmt.Printf("%09.2f", action)
+			csvOutput += fmt.Sprintf("%09.2f", action)
 			if idx != len(actions)-1 {
-				fmt.Print(" ")
+				csvOutput += fmt.Sprint(",")
 			}
 		}
-		fmt.Println("]")
+		if featureMap == nil && featureMapOrder == nil {
+			fmt.Printf(",%s", state)
+		} else {
+			stateRepr := String2StateRepr(state, *featureMap, *featureMapOrder)
+			csvOutput += fmt.Sprintf(",%s", stateRepr)
+		}
+		csvOutput += "\n"
 	}
+	return csvOutput
 }
 
 // GetCoveragePercentage returns the exploration result of the QTable
@@ -239,4 +264,36 @@ func State2String(state []bool) string {
 		}
 	}
 	return resIdx
+}
+
+// String2StateRepr create a human representation of the state starting from the state string
+func String2StateRepr(state string, featureMap map[string]featuremap.Obj, featureMapOrder []string) string {
+	var (
+		result []string
+		curPos = 0
+	)
+
+	for _, featureName := range featureMapOrder {
+		curCategory := featureMap[featureName]
+		lenCategory := 0
+		if curCategory.UnknownValues == true || curCategory.BucketOpenRight == true {
+			lenCategory = curCategory.GetLenKeys() + 1
+		} else {
+			lenCategory = curCategory.GetLenKeys()
+		}
+		partialState := state[curPos : curPos+lenCategory]
+		keyIdx := int(strings.IndexRune(partialState, '1'))
+		for key, value := range curCategory.Values {
+			if value == keyIdx {
+				result = append(
+					result,
+					key,
+				)
+				break
+			}
+		}
+		curPos += lenCategory
+	}
+
+	return strings.Join(result, ",")
 }

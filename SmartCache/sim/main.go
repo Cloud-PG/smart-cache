@@ -10,9 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fatih/color"
 	"simulator/v2/cache"
 	pb "simulator/v2/cache/simService"
+
+	"github.com/fatih/color"
 
 	"google.golang.org/grpc"
 
@@ -233,6 +234,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			resultFileName := baseName + "_results.csv"
 			resultRunStatsName := baseName + "_run_stats.json"
 			resultReportStatsName := baseName + "_report_stats.json"
+			resultQTableName := baseName + "_qtable.csv"
 
 			// Create cache
 			var grpcConn interface{} = nil
@@ -515,6 +517,16 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				TotNumRecords: totNumRecords,
 				AvgSpeed:      fmt.Sprintf("Num.Records/s = %0.2f", avgSpeed),
 			})
+			if cacheType == "aiRL" {
+				// Save run statistics
+				qtableFile, errCreateQTablecsv := os.Create(resultQTableName)
+				defer qtableFile.Close()
+				if errCreateQTablecsv != nil {
+					panic(errCreateQTablecsv)
+				}
+				qtableFile.WriteString(curCacheInstance.ExtraOutput("qtable"))
+			}
+
 			if errMarshal != nil {
 				panic(errMarshal)
 			}

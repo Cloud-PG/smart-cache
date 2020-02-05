@@ -453,6 +453,11 @@ func (cache LRUCache) ExtraStats() string {
 	return "NONE"
 }
 
+// ExtraOutput for output specific information
+func (cache LRUCache) ExtraOutput(info string) string {
+	return "NONE"
+}
+
 // CPUEff returns the CPU efficiency
 func (cache LRUCache) CPUEff() float32 {
 	totCPUTime := cache.hitCPUTime + cache.missCPUTime

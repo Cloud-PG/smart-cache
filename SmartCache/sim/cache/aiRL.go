@@ -368,10 +368,10 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				// }
 
 				reward := 0.
-				if fileStats.TotRequests() > 1 || fileStats.DeltaLastRequest < 50000 || cache.dailyReadOnHit < cache.dailyReadOnMiss {
-					reward -= 1.0
+				if fileStats.TotRequests() > 1 || fileStats.DeltaLastRequest < 50000 || (cache.dailyReadOnHit/cache.dailyReadOnMiss) < (2./3.) {
+					reward -= float64(request.Size)
 				} else {
-					reward += 1.0
+					reward += float64(request.Size)
 				}
 				cache.qPrevState[request.Filename] = curState
 				cache.qPrevAction[request.Filename] = curAction
@@ -411,10 +411,10 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				// }
 
 				reward := 0.
-				if fileStats.TotRequests() < 100 && fileStats.DeltaLastRequest > 50000 && cache.dailyReadOnHit > cache.dailyReadOnMiss {
-					reward -= 1.0
+				if fileStats.TotRequests() < 100 && fileStats.DeltaLastRequest > 50000 && (cache.dailyReadOnHit/cache.dailyReadOnMiss) >= (2./3.) {
+					reward -= float64(request.Size)
 				} else {
-					reward += 1.0
+					reward += float64(request.Size)
 				}
 				cache.qPrevState[request.Filename] = curState
 				cache.qPrevAction[request.Filename] = curAction
@@ -438,10 +438,10 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 			if curState != "" { // Some action are not taken randomly
 				reward := 0.0
-				if cache.dailyReadOnHit > cache.dailyReadOnMiss {
-					reward += 1.0
+				if (cache.dailyReadOnHit / cache.dailyReadOnMiss) >= (2. / 3.) {
+					reward += float64(request.Size)
 				} else {
-					reward -= 1.0
+					reward -= float64(request.Size)
 				}
 
 				// Update table
@@ -527,4 +527,21 @@ func (cache *AIRL) CheckWatermark() bool {
 // ExtraStats for output
 func (cache *AIRL) ExtraStats() string {
 	return fmt.Sprintf("Cov:%0.2f%%|Eps:%0.2f|P:%0.0f|HMS:%v", cache.qTable.GetCoveragePercentage(), cache.qTable.Epsilon, cache.points, cache.dailyReadOnHit > cache.dailyReadOnMiss)
+}
+
+// ExtraOutput for output specific information
+func (cache AIRL) ExtraOutput(info string) string {
+	result := ""
+	switch info {
+	case "qtable":
+		result = cache.GetQTable()
+	default:
+		result = "NONE"
+	}
+	return result
+}
+
+// GetQTable return a string of the qtable in csv format
+func (cache AIRL) GetQTable() string {
+	return cache.qTable.ToString(&cache.aiFeatureMap, &cache.aiFeatureMapOrder)
 }
