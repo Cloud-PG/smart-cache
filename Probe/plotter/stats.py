@@ -1,17 +1,11 @@
 import pandas as pd
 from bokeh.io import export_png
 from bokeh.layouts import column, row
-from bokeh.models import BasicTickFormatter, Range1d, Span
+from bokeh.models import BasicTickFormatter, Span
 from bokeh.plotting import figure, output_file, save, show
-from colorama import Fore, Style
 from tqdm import tqdm
 
-_STATUS = f"{Style.BRIGHT + Fore.MAGENTA}==> {Style.RESET_ALL}"
-
-
-def sort_by_date(df: 'pd.DataFrame', column_name: str = "reqDay") -> 'pd.DataFrame':
-    df.sort_values(by="reqDay", inplace=True)
-    return df
+from ..utils import _STATUS_COLOR
 
 
 class FileStats(object):
@@ -45,7 +39,7 @@ def plot_daily_stats(df: 'pd.DataFrame',
 
     for df_row in tqdm(df.itertuples(),
                        total=df.shape[0],
-                       desc=f"{_STATUS}Parse stats"):
+                       desc=f"{_STATUS_COLOR}Parse stats"):
         if last_day != df_row.reqDay:
             days.append(num_req)
             last_day = df_row.reqDay
@@ -90,7 +84,7 @@ def plot_daily_stats(df: 'pd.DataFrame',
     for period, files in enumerate(stats, 1):
         all_filenames = list(files.keys())
         _files = {}
-        for filename in tqdm(all_filenames, desc=f"{_STATUS}Split 1 req files from period {period}"):
+        for filename in tqdm(all_filenames, desc=f"{_STATUS_COLOR}Split 1 req files from period {period}"):
             ##
             # Uncomment to get frequencies
             # cur_file = files[filename]
@@ -167,7 +161,7 @@ def plot_daily_stats(df: 'pd.DataFrame',
     buff_corr_meandelta_sizes = []
 
     for period, files in enumerate(stats, 1):
-        for _, stats in tqdm(files.items(), desc=f"{_STATUS}Collect lines of period {period}"):
+        for _, stats in tqdm(files.items(), desc=f"{_STATUS_COLOR}Collect lines of period {period}"):
             buff_xs += [stats.x[1:]]
             buff_n_req.append(stats.n_req[1:])
             buff_n_users.append(stats.n_users[1:])
@@ -194,7 +188,7 @@ def plot_daily_stats(df: 'pd.DataFrame',
             )
 
     for period, files in enumerate(stats_1req, 1):
-        for _, stats in tqdm(files.items(), desc=f"{_STATUS}Collect 1 req. file lines of period {period}"):
+        for _, stats in tqdm(files.items(), desc=f"{_STATUS_COLOR}Collect 1 req. file lines of period {period}"):
             buff_1req_xs += [stats.x[1:]]
             buff_1req_sizes.append(stats.sizes[1:])
             buff_corr_numreqs_sizes.append(
@@ -204,66 +198,66 @@ def plot_daily_stats(df: 'pd.DataFrame',
             buff_corr_numreqs_numsites.append(
                 (stats.n_req[-1], stats.n_sites[-1]))
 
-    print(f"{_STATUS}Plot num requests")
+    print(f"{_STATUS_COLOR}Plot num requests")
     fig_n_req.multi_line(
         xs=buff_xs,
         ys=buff_n_req,
         line_color=['red' for _ in range(len(buff_xs))],
         line_width=2,
     )
-    print(f"{_STATUS}Plot num. users")
+    print(f"{_STATUS_COLOR}Plot num. users")
     fig_n_users.multi_line(
         xs=buff_xs,
         ys=buff_n_users,
         line_color=['blue' for _ in range(len(buff_xs))],
         line_width=2,
     )
-    print(f"{_STATUS}Plot num. sites")
+    print(f"{_STATUS_COLOR}Plot num. sites")
     fig_n_sites.multi_line(
         xs=buff_xs,
         ys=buff_n_sites,
         line_color=['green' for _ in range(len(buff_xs))],
         line_width=2,
     )
-    print(f"{_STATUS}Plot delta times")
+    print(f"{_STATUS_COLOR}Plot delta times")
     fig_delta_times.scatter(
         [val for points in buff_xs for val in points],
         [val for delta_times in buff_delta_times for val in delta_times],
         size=5
     )
-    print(f"{_STATUS}Plot sizes")
+    print(f"{_STATUS_COLOR}Plot sizes")
     fig_sizes.scatter(
         [val for points in buff_xs for val in points],
         [val for sizes in buff_sizes for val in sizes],
         size=5
     )
-    print(f"{_STATUS}Plot sizes of 1 req. files")
+    print(f"{_STATUS_COLOR}Plot sizes of 1 req. files")
     fig_1req_sizes.scatter(
         [val for points in buff_1req_xs for val in points],
         [val for sizes in buff_1req_sizes for val in sizes],
         size=5
     )
-    print(f"{_STATUS}Plot correlation of num. reqs. and sizes")
+    print(f"{_STATUS_COLOR}Plot correlation of num. reqs. and sizes")
     fig_corr_numreqs_sizes.scatter(
         *zip(*buff_corr_numreqs_sizes),
         size=5
     )
-    print(f"{_STATUS}Plot correlation of num. reqs. and num. users")
+    print(f"{_STATUS_COLOR}Plot correlation of num. reqs. and num. users")
     fig_corr_numreqs_numusers.scatter(
         *zip(*buff_corr_numreqs_numusers),
         size=5
     )
-    print(f"{_STATUS}Plot correlation of num. reqs. and num. sites")
+    print(f"{_STATUS_COLOR}Plot correlation of num. reqs. and num. sites")
     fig_corr_numreqs_numsites.scatter(
         *zip(*buff_corr_numreqs_numsites),
         size=5
     )
-    print(f"{_STATUS}Plot correlation of num. reqs. and mean delta times")
+    print(f"{_STATUS_COLOR}Plot correlation of num. reqs. and mean delta times")
     fig_corr_numreqs_meandelta.scatter(
         *zip(*buff_corr_numreqs_meandelta),
         size=5
     )
-    print(f"{_STATUS}Plot correlation of mean delta times and sizes")
+    print(f"{_STATUS_COLOR}Plot correlation of mean delta times and sizes")
     fig_corr_meandelta_sizes.scatter(
         *zip(*buff_corr_meandelta_sizes),
         size=5
@@ -302,12 +296,12 @@ def plot_daily_stats(df: 'pd.DataFrame',
     )
 
     if output_type == 'show':
-        print(f"{_STATUS}Show results")
+        print(f"{_STATUS_COLOR}Show results")
         show(plot)
     elif output_type == 'html':
         output_file(f"{output_filename}.html", mode="inline")
-        print(f"{_STATUS}Save result HTML in: {output_filename}.html")
+        print(f"{_STATUS_COLOR}Save result HTML in: {output_filename}.html")
         save(plot)
     elif output_type == 'png':
-        print(f"{_STATUS}Save result PNG in: {output_filename}.png")
+        print(f"{_STATUS_COLOR}Save result PNG in: {output_filename}.png")
         export_png(plot, filename=f"{output_filename}.png")

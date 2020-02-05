@@ -1,9 +1,11 @@
-import pandas as pd
-from os import path
-import os
 import gzip
+import os
+from os import path
+
+import pandas as pd
 from tqdm import tqdm
-from .utils import _STATUS
+
+from .utils import _STATUS_COLOR
 
 __all__ = ['csv_data']
 
@@ -49,7 +51,7 @@ def csv_data(input_path: str, region_filter: str = None,
         data_frames = []
         files = [file_ for file_ in os.listdir(
             input_path) if file_.find("csv") != -1]
-        for filename in tqdm(files, desc=f"{_STATUS}Load folder {input_path}"):
+        for filename in tqdm(files, desc=f"{_STATUS_COLOR}Load folder {input_path}"):
             if month_filter != -1:
                 if _get_month(filename) != month_filter:
                     continue
@@ -66,5 +68,5 @@ def csv_data(input_path: str, region_filter: str = None,
             else:
                 pd.DataFrame()
     else:
-        print(f"{_STATUS}Load file {input_path}")
+        print(f"{_STATUS_COLOR}Load file {input_path}")
         return _load_csv_file(input_path, region_filter, file_type_filter)

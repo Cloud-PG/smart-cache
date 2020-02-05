@@ -2,8 +2,8 @@ import argparse
 
 from colorama import init
 
-from . import loaders, utils
-from .utils import _STATUS
+from .. import loaders, plotter, utils
+from ..utils import _STATUS_COLOR
 
 
 def main():
@@ -24,8 +24,8 @@ def main():
     parser.add_argument('--month', type=int,
                         default=-1,
                         help='Month to extract [DEFAULT: -1]')
-    parser.add_argument('--output-type', choices=['show', 'html', 'png'], type=str,
-                        default='show',
+    parser.add_argument('--output-type', choices=['show', 'html', 'png'],
+                        type=str, default='show',
                         help='How to plot the results [DEFAULT: show]')
     parser.add_argument('--file-type', type=str,
                         default="all",
@@ -35,17 +35,17 @@ def main():
 
     init()
 
-    if args.path != None:
+    if args.path is not None:
         df = loaders.csv_data(
             args.path,
             region_filter=args.region,
             file_type_filter=args.file_type,
             month_filter=args.month
         )
-        print(f"{_STATUS}Sort data by date...")
+        print(f"{_STATUS_COLOR}Sort data by date...")
         utils.sort_by_date(df)
-        print(f"{_STATUS}Extract stats...")
-        utils.plot_daily_stats(
+        print(f"{_STATUS_COLOR}Extract stats...")
+        plotter.plot_daily_stats(
             df,
             output_filename=args.output_filename,
             output_type=args.output_type,

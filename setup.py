@@ -6,7 +6,10 @@ setup(
     author='Mirco Tracolli',
     author_email='mirco.tracolli@pg.infn.it',
     packages=[
-        'DataAnalyzer',
+        'Probe',
+        'Probe.analyzer',
+        'Probe.plotter',
+        'Probe.converter',
         'DataManager',
         'DataManager.agent',
         'DataManager.agent.converter',
