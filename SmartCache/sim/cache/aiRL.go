@@ -295,9 +295,10 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 	)
 
 	// Check learning phase or not
-	expTradeoff := cache.qTable.GetRandomFloat()
+	// expTradeoff := cache.qTable.GetRandomFloat()
 
-	if expTradeoff > cache.qTable.Epsilon {
+	// if expTradeoff > cache.qTable.Epsilon {
+	if cache.qTable.Epsilon <= cache.qTable.MinEpsilon { // Force learning until epsilon is > min epsilon
 		// ########################
 		// ##### Normal phase #####
 		// ########################
@@ -370,10 +371,10 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				// }
 
 				reward := 0.
-				if fileStats.TotRequests() > 1 || fileStats.DeltaLastRequest < 50000 || (cache.dailyReadOnHit/cache.dailyReadOnMiss) < (2./3.) {
-					reward -= 1.0
+				if fileStats.TotRequests() > 1 || fileStats.DeltaLastRequest < 10000 || (cache.dailyReadOnHit/cache.dailyReadOnMiss) < (2./3.) {
+					reward -= float64(request.Size)
 				} else {
-					reward += 1.0
+					reward += float64(request.Size)
 				}
 				cache.qPrevState[request.Filename] = curState
 				cache.qPrevAction[request.Filename] = curAction
@@ -402,7 +403,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 			// ------------------------------
 			// QLearn - Take the action STORE
-			if cache.qTable != nil && curAction == qlearn.ActionStore {
+			if curAction == qlearn.ActionStore {
 				// newScore := cache.points
 				// diff := newScore - cache.prevPoints
 				// reward := 0.
@@ -413,10 +414,10 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				// }
 
 				reward := 0.
-				if fileStats.TotRequests() < 100 && fileStats.DeltaLastRequest > 50000 && (cache.dailyReadOnHit/cache.dailyReadOnMiss) >= (2./3.) {
-					reward -= 1.0
+				if fileStats.TotRequests() < 100 && fileStats.DeltaLastRequest > 10000 && (cache.dailyReadOnHit/cache.dailyReadOnMiss) >= (2./3.) {
+					reward -= float64(request.Size)
 				} else {
-					reward += 1.0
+					reward += float64(request.Size)
 				}
 				cache.qPrevState[request.Filename] = curState
 				cache.qPrevAction[request.Filename] = curAction
@@ -441,9 +442,9 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			if curState != "" { // Some action are not taken randomly
 				reward := 0.0
 				if (cache.dailyReadOnHit / cache.dailyReadOnMiss) >= (2. / 3.) {
-					reward += 1.0
+					reward += float64(request.Size)
 				} else {
-					reward -= 1.0
+					reward -= float64(request.Size)
 				}
 
 				// Update table
@@ -528,7 +529,7 @@ func (cache *AIRL) CheckWatermark() bool {
 
 // ExtraStats for output
 func (cache *AIRL) ExtraStats() string {
-	return fmt.Sprintf("Cov:%0.2f%%|Eps:%0.2f|P:%0.0f|HMS:%v", cache.qTable.GetCoveragePercentage(), cache.qTable.Epsilon, cache.points, cache.dailyReadOnHit > cache.dailyReadOnMiss)
+	return fmt.Sprintf("Cov:%0.2f%%|Eps:%0.5f|P:%0.0f|HMS:%v", cache.qTable.GetCoveragePercentage(), cache.qTable.Epsilon, cache.points, cache.dailyReadOnHit > cache.dailyReadOnMiss)
 }
 
 // ExtraOutput for output specific information
