@@ -278,6 +278,8 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) *FileStats {
 	// 	cache.points += fileStats.Points
 	// }
 
+	fileStats.updateStats(hit, request.Size, request.UserID, request.SiteName, request.DayTime)
+
 	return fileStats
 }
 
@@ -369,9 +371,9 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 				reward := 0.
 				if fileStats.TotRequests() > 1 || fileStats.DeltaLastRequest < 50000 || (cache.dailyReadOnHit/cache.dailyReadOnMiss) < (2./3.) {
-					reward -= float64(request.Size)
+					reward -= 1.0
 				} else {
-					reward += float64(request.Size)
+					reward += 1.0
 				}
 				cache.qPrevState[request.Filename] = curState
 				cache.qPrevAction[request.Filename] = curAction
@@ -412,9 +414,9 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 				reward := 0.
 				if fileStats.TotRequests() < 100 && fileStats.DeltaLastRequest > 50000 && (cache.dailyReadOnHit/cache.dailyReadOnMiss) >= (2./3.) {
-					reward -= float64(request.Size)
+					reward -= 1.0
 				} else {
-					reward += float64(request.Size)
+					reward += 1.0
 				}
 				cache.qPrevState[request.Filename] = curState
 				cache.qPrevAction[request.Filename] = curAction
@@ -439,9 +441,9 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			if curState != "" { // Some action are not taken randomly
 				reward := 0.0
 				if (cache.dailyReadOnHit / cache.dailyReadOnMiss) >= (2. / 3.) {
-					reward += float64(request.Size)
+					reward += 1.0
 				} else {
-					reward -= float64(request.Size)
+					reward -= 1.0
 				}
 
 				// Update table
