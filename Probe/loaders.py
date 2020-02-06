@@ -12,6 +12,13 @@ __all__ = ['csv_data']
 
 def _load_csv_file(input_path: str, region_filter: str = None,
                    file_type_filter: str = None) -> 'pd.DataFrame':
+    """Load a csv data file.
+    
+    :raises Exception: File type not supported
+    :raises Exception: Compressed file type not supported
+    :return: The data content
+    :rtype: pandas.DataFrame
+    """
     head, tail = path.splitext(input_path)
     if tail in ['.gz', 'gzip']:
         head, tail = path.splitext(head)
@@ -36,16 +43,23 @@ def _load_csv_file(input_path: str, region_filter: str = None,
 
 
 def _get_month(filename: str) -> int:
+    """Get the month number from a data filename
+    
+    :param filename: The data filename
+    :type filename: str
+    :return: the number of the month found inthe filename
+    :rtype: int
+    """
     return int(filename.split(".")[0].replace("results_", "").split("-")[1])
 
 
 def csv_data(input_path: str, region_filter: str = None,
              file_type_filter: str = None,
              month_filter: int = -1) -> 'pd.DataFrame':
-    """Open all data from csv files.
-
-    input_path cold be a folder or a file.
-    CSV data could be also zipped with gZip.
+    """Open csv data folder and files
+    
+    :return: The whole dataset
+    :rtype: pandas.DataFrame
     """
     if path.isdir(input_path):
         data_frames = []
