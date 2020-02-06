@@ -58,7 +58,7 @@ def convert_categories_from_sqlite(df: 'pd.DataFrame', categories: list, db_file
         raplace_cache = {}
         for row in tqdm(
             df.itertuples(),
-            desc=f"{_STATUS_COLOR}Collect ids of {category} category",
+            desc=f"{_STATUS_COLOR}Convert rows of {category} category",
             total=total_rows,
             position=2,
         ):
