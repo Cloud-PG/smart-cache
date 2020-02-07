@@ -1,4 +1,5 @@
 import argparse
+import pickle
 
 from colorama import init
 from tqdm import tqdm
@@ -6,7 +7,8 @@ from tqdm import tqdm
 from .. import loaders, utils
 from ..utils import _STATUS_ARROW
 from .extractor import get_object_columns, get_unique_values
-from .utils import (convert_categories_from_sqlite, make_sqlite_categories,
+from .utils import (CategoryContainer, convert_categories,
+                    convert_categories_from_sqlite, make_sqlite_categories,
                     save_numeric_df)
 
 
@@ -30,6 +32,7 @@ def main():
     if args.path is not None:
         files = loaders.gen_csv_data(args.path, region_filter=args.region)
         tot_files = next(files)
+        container = CategoryContainer()
         for filepath, df in tqdm(
             files,
             desc=f"{_STATUS_ARROW}Convert files",
@@ -39,19 +42,14 @@ def main():
             categories = dict(
                 (name, get_unique_values(df[name])) for name in columns
             )
-            make_sqlite_categories(
-                filepath,
-                categories,
-                args.category_db_file,
-                region_filter=args.region
-            )
-            new_df = convert_categories_from_sqlite(
-                filepath,
-                df, categories,
-                args.category_db_file,
-                region_filter=args.region
-            )
+            container.update(categories, filepath)
+
+            new_df = convert_categories(filepath, df, categories, container)
             save_numeric_df(filepath, new_df, region_filter=args.region)
+
+        print(f"{_STATUS_ARROW}Save database...")
+        with open(f"container_{args.region}_.pickle", "wb") as out_file:
+            pickle.dump(container, out_file)
 
 
 if __name__ == "__main__":
