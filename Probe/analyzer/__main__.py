@@ -3,7 +3,7 @@ import argparse
 from colorama import init
 
 from .. import loaders, plotter, utils
-from ..utils import _STATUS_COLOR
+from ..utils import _STATUS_ARROW
 
 
 def main():
@@ -42,9 +42,9 @@ def main():
             file_type_filter=args.file_type,
             month_filter=args.month
         )
-        print(f"{_STATUS_COLOR}Sort data by date...")
+        print(f"{_STATUS_ARROW}Sort data by date...")
         utils.sort_by_date(df)
-        print(f"{_STATUS_COLOR}Extract stats...")
+        print(f"{_STATUS_ARROW}Extract stats...")
         plotter.plot_daily_stats(
             df,
             output_filename=args.output_filename,

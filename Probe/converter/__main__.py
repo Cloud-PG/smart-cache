@@ -4,7 +4,7 @@ from colorama import init
 from tqdm import tqdm
 
 from .. import loaders, utils
-from ..utils import _STATUS_COLOR
+from ..utils import _STATUS_ARROW
 from .extractor import get_object_columns, get_unique_values
 from .utils import (convert_categories_from_sqlite, make_sqlite_categories,
                     save_numeric_df)
@@ -32,7 +32,7 @@ def main():
         tot_files = next(files)
         for filepath, df in tqdm(
             files,
-            desc=f"{_STATUS_COLOR}Convert files",
+            desc=f"{_STATUS_ARROW}Convert files",
             total=tot_files,
         ):
             columns = get_object_columns(df)

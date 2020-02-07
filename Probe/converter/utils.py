@@ -4,7 +4,7 @@ from os import path
 import pandas as pd
 from tqdm import tqdm
 
-from..utils import _STATUS_COLOR
+from..utils import _STATUS_ARROW, _STATUS_WARNING, _STATUS_OK
 
 
 def make_sqlite_categories(source_filename: str,
@@ -31,7 +31,7 @@ def make_sqlite_categories(source_filename: str,
 
     for category, values in tqdm(
         categories.items(),
-        desc=f"{_STATUS_COLOR}[File:{source_filename}] Populate db",
+        desc=f"{_STATUS_ARROW}[File:{_STATUS_WARNING(source_filename)}] Populate db",
     ):
         cursor.execute(f'''CREATE TABLE IF NOT EXISTS {category} (
             ID INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
@@ -40,7 +40,7 @@ def make_sqlite_categories(source_filename: str,
         ''')
         for value in tqdm(
             values,
-            desc=f"{_STATUS_COLOR}[File:{source_filename}] Insert values of {category} category",
+            desc=f"{_STATUS_ARROW}[File:{_STATUS_WARNING(source_filename)}] Insert values of {category} category",
         ):
             cursor.execute(
                 f'''INSERT OR IGNORE INTO {category} ({category.lower()}) VALUES ("{value}")'''
@@ -80,12 +80,12 @@ def convert_categories_from_sqlite(source_filename: str,
     total_rows = df.shape[0]
     for category in tqdm(
         categories,
-        desc=f"{_STATUS_COLOR}[File:{source_filename}] Convert categories",
+        desc=f"{_STATUS_ARROW}[File:{_STATUS_WARNING(source_filename)}] Convert categories",
     ):
         raplace_cache = {}
         for row in tqdm(
             df.itertuples(),
-            desc=f"{_STATUS_COLOR}[File:{source_filename}] Convert rows of {category} category",
+            desc=f"{_STATUS_ARROW}[File:{_STATUS_WARNING(source_filename)}] Convert rows of {category} category",
             total=total_rows,
         ):
             cur_cat_value = getattr(row, category)
@@ -117,7 +117,7 @@ def save_numeric_df(filepath: str, df: 'pd.DataFrame', region_filter: str = "all
     head, tail = path.split(filepath)
     output_filename = tail.replace(
         "results_", f"results_numeric_{region_filter}_")
-    print(f"{_STATUS_COLOR}Save csv {output_filename}")
+    print(f"{_STATUS_ARROW}Save csv {_STATUS_OK(output_filename)}\x1b[0K")
     df.to_csv(
         path.join(
             head,
