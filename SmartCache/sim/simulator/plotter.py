@@ -7,7 +7,7 @@ from bokeh.io import export_png
 from bokeh.layouts import column, row
 from bokeh.models import (BasicTickFormatter, BoxZoomTool, Legend, PanTool,
                           Range1d, ResetTool, SaveTool, Span, WheelZoomTool)
-from bokeh.palettes import Accent
+from bokeh.palettes import Set1
 from bokeh.plotting import Figure, figure, output_file, save
 from tqdm import tqdm
 
@@ -16,7 +16,7 @@ from .utils import ignored
 
 def update_colors(new_name: str, color_table: dict):
     names = list(color_table.keys()) + [new_name]
-    colors = cycle(Accent[8])
+    colors = cycle(Set1[8])
     for name in sorted(names):
         cur_color = next(colors)
         color_table[name] = cur_color
@@ -29,14 +29,14 @@ def add_window_lines(cur_fig, dates: list, window_size: int):
     cur_fig.renderers.extend([
         Span(
             location=idx-0.5, dimension='height',
-            line_color='black', line_width=0.9
+            line_color='black', line_width=0.42
         )
         for idx in range(0, len(dates), window_size)
     ])
     cur_fig.renderers.extend([
         Span(
             location=idx-0.5, dimension='height',
-            line_color='red', line_width=2.42
+            line_color='gray', line_width=3.42
         )
         for idx in range(0, len(dates), window_size*4)
     ])
