@@ -5,7 +5,7 @@ from bokeh.models import BasicTickFormatter, Span
 from bokeh.plotting import figure, output_file, save, show
 from tqdm import tqdm
 
-from ..utils import _STATUS_ARROW
+from ..utils import STATUS_ARROW
 
 
 class FileStats(object):
@@ -39,7 +39,7 @@ def plot_daily_stats(df: 'pd.DataFrame',
 
     for df_row in tqdm(df.itertuples(),
                        total=df.shape[0],
-                       desc=f"{_STATUS_ARROW}Parse stats"):
+                       desc=f"{STATUS_ARROW}Parse stats"):
         if last_day != df_row.reqDay:
             days.append(num_req)
             last_day = df_row.reqDay
@@ -84,7 +84,7 @@ def plot_daily_stats(df: 'pd.DataFrame',
     for period, files in enumerate(stats, 1):
         all_filenames = list(files.keys())
         _files = {}
-        for filename in tqdm(all_filenames, desc=f"{_STATUS_ARROW}Split 1 req files from period {period}"):
+        for filename in tqdm(all_filenames, desc=f"{STATUS_ARROW}Split 1 req files from period {period}"):
             ##
             # Uncomment to get frequencies
             # cur_file = files[filename]
@@ -161,7 +161,7 @@ def plot_daily_stats(df: 'pd.DataFrame',
     buff_corr_meandelta_sizes = []
 
     for period, files in enumerate(stats, 1):
-        for _, stats in tqdm(files.items(), desc=f"{_STATUS_ARROW}Collect lines of period {period}"):
+        for _, stats in tqdm(files.items(), desc=f"{STATUS_ARROW}Collect lines of period {period}"):
             buff_xs += [stats.x[1:]]
             buff_n_req.append(stats.n_req[1:])
             buff_n_users.append(stats.n_users[1:])
@@ -188,7 +188,7 @@ def plot_daily_stats(df: 'pd.DataFrame',
             )
 
     for period, files in enumerate(stats_1req, 1):
-        for _, stats in tqdm(files.items(), desc=f"{_STATUS_ARROW}Collect 1 req. file lines of period {period}"):
+        for _, stats in tqdm(files.items(), desc=f"{STATUS_ARROW}Collect 1 req. file lines of period {period}"):
             buff_1req_xs += [stats.x[1:]]
             buff_1req_sizes.append(stats.sizes[1:])
             buff_corr_numreqs_sizes.append(
@@ -198,66 +198,66 @@ def plot_daily_stats(df: 'pd.DataFrame',
             buff_corr_numreqs_numsites.append(
                 (stats.n_req[-1], stats.n_sites[-1]))
 
-    print(f"{_STATUS_ARROW}Plot num requests")
+    print(f"{STATUS_ARROW}Plot num requests")
     fig_n_req.multi_line(
         xs=buff_xs,
         ys=buff_n_req,
         line_color=['red' for _ in range(len(buff_xs))],
         line_width=2,
     )
-    print(f"{_STATUS_ARROW}Plot num. users")
+    print(f"{STATUS_ARROW}Plot num. users")
     fig_n_users.multi_line(
         xs=buff_xs,
         ys=buff_n_users,
         line_color=['blue' for _ in range(len(buff_xs))],
         line_width=2,
     )
-    print(f"{_STATUS_ARROW}Plot num. sites")
+    print(f"{STATUS_ARROW}Plot num. sites")
     fig_n_sites.multi_line(
         xs=buff_xs,
         ys=buff_n_sites,
         line_color=['green' for _ in range(len(buff_xs))],
         line_width=2,
     )
-    print(f"{_STATUS_ARROW}Plot delta times")
+    print(f"{STATUS_ARROW}Plot delta times")
     fig_delta_times.scatter(
         [val for points in buff_xs for val in points],
         [val for delta_times in buff_delta_times for val in delta_times],
         size=5
     )
-    print(f"{_STATUS_ARROW}Plot sizes")
+    print(f"{STATUS_ARROW}Plot sizes")
     fig_sizes.scatter(
         [val for points in buff_xs for val in points],
         [val for sizes in buff_sizes for val in sizes],
         size=5
     )
-    print(f"{_STATUS_ARROW}Plot sizes of 1 req. files")
+    print(f"{STATUS_ARROW}Plot sizes of 1 req. files")
     fig_1req_sizes.scatter(
         [val for points in buff_1req_xs for val in points],
         [val for sizes in buff_1req_sizes for val in sizes],
         size=5
     )
-    print(f"{_STATUS_ARROW}Plot correlation of num. reqs. and sizes")
+    print(f"{STATUS_ARROW}Plot correlation of num. reqs. and sizes")
     fig_corr_numreqs_sizes.scatter(
         *zip(*buff_corr_numreqs_sizes),
         size=5
     )
-    print(f"{_STATUS_ARROW}Plot correlation of num. reqs. and num. users")
+    print(f"{STATUS_ARROW}Plot correlation of num. reqs. and num. users")
     fig_corr_numreqs_numusers.scatter(
         *zip(*buff_corr_numreqs_numusers),
         size=5
     )
-    print(f"{_STATUS_ARROW}Plot correlation of num. reqs. and num. sites")
+    print(f"{STATUS_ARROW}Plot correlation of num. reqs. and num. sites")
     fig_corr_numreqs_numsites.scatter(
         *zip(*buff_corr_numreqs_numsites),
         size=5
     )
-    print(f"{_STATUS_ARROW}Plot correlation of num. reqs. and mean delta times")
+    print(f"{STATUS_ARROW}Plot correlation of num. reqs. and mean delta times")
     fig_corr_numreqs_meandelta.scatter(
         *zip(*buff_corr_numreqs_meandelta),
         size=5
     )
-    print(f"{_STATUS_ARROW}Plot correlation of mean delta times and sizes")
+    print(f"{STATUS_ARROW}Plot correlation of mean delta times and sizes")
     fig_corr_meandelta_sizes.scatter(
         *zip(*buff_corr_meandelta_sizes),
         size=5
@@ -296,12 +296,12 @@ def plot_daily_stats(df: 'pd.DataFrame',
     )
 
     if output_type == 'show':
-        print(f"{_STATUS_ARROW}Show results")
+        print(f"{STATUS_ARROW}Show results")
         show(plot)
     elif output_type == 'html':
         output_file(f"{output_filename}.html", mode="inline")
-        print(f"{_STATUS_ARROW}Save result HTML in: {output_filename}.html")
+        print(f"{STATUS_ARROW}Save result HTML in: {output_filename}.html")
         save(plot)
     elif output_type == 'png':
-        print(f"{_STATUS_ARROW}Save result PNG in: {output_filename}.png")
+        print(f"{STATUS_ARROW}Save result PNG in: {output_filename}.png")
         export_png(plot, filename=f"{output_filename}.png")

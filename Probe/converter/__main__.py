@@ -1,15 +1,14 @@
 import argparse
 import pickle
+from os import path
 
 from colorama import init
 from tqdm import tqdm
 
-from .. import loaders, utils
-from ..utils import _STATUS_ARROW
+from .. import loaders
+from ..utils import STATUS_ARROW, STATUS_WARNING
 from .extractor import get_object_columns, get_unique_values
-from .utils import (CategoryContainer, convert_categories,
-                    convert_categories_from_sqlite, make_sqlite_categories,
-                    save_numeric_df)
+from .utils import CategoryContainer, convert_categories, save_numeric_df
 
 
 def main():
@@ -32,12 +31,20 @@ def main():
     if args.path is not None:
         files = loaders.gen_csv_data(args.path, region_filter=args.region)
         tot_files = next(files)
-        container = CategoryContainer()
+
+        container_filename = f"container_{args.region}_.pickle"
+        if path.isfile(container_filename):
+            with open(container_filename, "rb") as container_file:
+                container = pickle.load(container_file)
+        else:
+            container = CategoryContainer()
+
         for filepath, df in tqdm(
             files,
-            desc=f"{_STATUS_ARROW}Convert files",
+            desc=f"{STATUS_ARROW}Convert files",
             total=tot_files,
         ):
+            print(f"{STATUS_ARROW}Process file: {STATUS_WARNING(filepath)}")
             columns = get_object_columns(df)
             categories = dict(
                 (name, get_unique_values(df[name])) for name in columns
@@ -47,9 +54,9 @@ def main():
             new_df = convert_categories(filepath, df, categories, container)
             save_numeric_df(filepath, new_df, region_filter=args.region)
 
-        print(f"{_STATUS_ARROW}Save database...")
-        with open(f"container_{args.region}_.pickle", "wb") as out_file:
-            pickle.dump(container, out_file)
+            print(f"{STATUS_ARROW}Save database...")
+            with open(f"container_{args.region}_.pickle", "wb") as out_file:
+                pickle.dump(container, out_file)
 
 
 if __name__ == "__main__":

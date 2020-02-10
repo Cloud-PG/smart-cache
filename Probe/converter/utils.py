@@ -4,12 +4,12 @@ from os import path
 import pandas as pd
 from tqdm import tqdm
 
-from..utils import _STATUS_ARROW, _STATUS_WARNING, _STATUS_OK
+from..utils import STATUS_ARROW, STATUS_WARNING, STATUS_OK
 
 
 class CategoryContainer:
 
-    def __init__(self):
+    def __init__(self, filename: str=''):
         self._data = dict()
         self.__sequences = dict()
 
@@ -26,7 +26,7 @@ class CategoryContainer:
     def update(self, categories, source_filepath: str):
         for category, values in tqdm(
             categories.items(),
-            desc=f"{_STATUS_ARROW}[File:{_STATUS_WARNING(source_filepath)}] Populate container",
+            desc=f"{STATUS_ARROW}[File:{STATUS_WARNING(source_filepath)}] Populate container",
             position=1,
         ):
             if category not in self._data:
@@ -36,7 +36,7 @@ class CategoryContainer:
             cur_category = self._data[category]
             for value in tqdm(
                 values,
-                desc=f"{_STATUS_ARROW}[File:{_STATUS_WARNING(source_filepath)}] Insert values of {category} category",
+                desc=f"{STATUS_ARROW}[File:{STATUS_WARNING(source_filepath)}] Insert values of {category} category",
                 position=2,
             ):
                 if value not in cur_category:
@@ -69,12 +69,12 @@ def convert_categories(source_filepath: str,
     total_rows = df.shape[0]
     for category in tqdm(
         categories,
-        desc=f"{_STATUS_ARROW}[File:{_STATUS_WARNING(source_filepath)}] Convert categories",
+        desc=f"{STATUS_ARROW}[File:{STATUS_WARNING(source_filepath)}] Convert categories",
     ):
         raplace_cache = {}
         for row in tqdm(
             df.itertuples(),
-            desc=f"{_STATUS_ARROW}[File:{_STATUS_WARNING(source_filepath)}] Convert rows of {category} category",
+            desc=f"{STATUS_ARROW}[File:{STATUS_WARNING(source_filepath)}] Convert rows of {category} category",
             total=total_rows,
         ):
             cur_cat_value = getattr(row, category)
@@ -114,7 +114,7 @@ def make_sqlite_categories(source_filename: str,
 
     for category, values in tqdm(
         categories.items(),
-        desc=f"{_STATUS_ARROW}[File:{_STATUS_WARNING(source_filename)}] Populate db",
+        desc=f"{STATUS_ARROW}[File:{STATUS_WARNING(source_filename)}] Populate db",
     ):
         cursor.execute(f'''CREATE TABLE IF NOT EXISTS {category} (
             ID INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
@@ -123,7 +123,7 @@ def make_sqlite_categories(source_filename: str,
         ''')
         for value in tqdm(
             values,
-            desc=f"{_STATUS_ARROW}[File:{_STATUS_WARNING(source_filename)}] Insert values of {category} category",
+            desc=f"{STATUS_ARROW}[File:{STATUS_WARNING(source_filename)}] Insert values of {category} category",
         ):
             print(
                 f'''INSERT OR IGNORE INTO {category} ({category.lower()}) VALUES ("{value}")''')
@@ -165,12 +165,12 @@ def convert_categories_from_sqlite(source_filename: str,
     total_rows = df.shape[0]
     for category in tqdm(
         categories,
-        desc=f"{_STATUS_ARROW}[File:{_STATUS_WARNING(source_filename)}] Convert categories",
+        desc=f"{STATUS_ARROW}[File:{STATUS_WARNING(source_filename)}] Convert categories",
     ):
         raplace_cache = {}
         for row in tqdm(
             df.itertuples(),
-            desc=f"{_STATUS_ARROW}[File:{_STATUS_WARNING(source_filename)}] Convert rows of {category} category",
+            desc=f"{STATUS_ARROW}[File:{STATUS_WARNING(source_filename)}] Convert rows of {category} category",
             total=total_rows,
         ):
             cur_cat_value = getattr(row, category)
@@ -202,7 +202,7 @@ def save_numeric_df(filepath: str, df: 'pd.DataFrame', region_filter: str = "all
     head, tail = path.split(filepath)
     output_filename = tail.replace(
         "results_", f"results_numeric_{region_filter}_")
-    print(f"{_STATUS_ARROW}Save csv {_STATUS_OK(output_filename)}\x1b[0K")
+    print(f"{STATUS_ARROW}Save csv {STATUS_OK(output_filename)}\x1b[0K")
     df.to_csv(
         path.join(
             head,
