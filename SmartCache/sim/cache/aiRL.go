@@ -344,6 +344,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			// #######################
 			// ##### HIT branch  #####
 			// #######################
+			logger.Info("Normal hit branch")
 			cache.UpdateFileInQueue(requestedFilename)
 		}
 	} else {
@@ -365,6 +366,8 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				curAction = qlearn.ActionNotStore
 			}
 
+			logger.Info("Learning MISS branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
+
 			// ----------------------------------
 			// QLearn - Take the action NOT STORE
 			if curAction == qlearn.ActionNotStore {
@@ -379,9 +382,9 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 				reward := 0.
 				if fileStats.TotRequests() > 1 || cache.dailyReadOnHit < cache.dailyReadOnMiss/2.0 || cache.dailyReadOnMiss > bandwidthLimit {
-					reward -= 3.0
+					reward -= float64(request.Size)
 				} else {
-					reward += 1.0
+					reward += float64(request.Size)
 				}
 				cache.qPrevState[request.Filename] = curState
 				cache.qPrevAction[request.Filename] = curAction
@@ -422,9 +425,9 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 				reward := 0.
 				if fileStats.TotRequests() < 100 && cache.dailyReadOnHit >= cache.dailyReadOnMiss/2.0 && cache.dailyReadOnMiss <= bandwidthLimit {
-					reward -= 2.0
+					reward -= float64(request.Size)
 				} else {
-					reward += 1.0
+					reward += float64(request.Size)
 				}
 				cache.qPrevState[request.Filename] = curState
 				cache.qPrevAction[request.Filename] = curAction
@@ -446,12 +449,14 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			curState = cache.qPrevState[request.Filename]
 			curAction = cache.qPrevAction[request.Filename]
 
+			logger.Info("Learning HIT branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
+
 			if curState != "" { // Some action are not taken randomly
 				reward := 0.0
 				if fileStats.TotRequests() < 100 && cache.dailyReadOnHit < cache.dailyReadOnMiss/2.0 && cache.dailyReadOnMiss <= bandwidthLimit {
-					reward -= 1.0
+					reward -= float64(request.Size)
 				} else {
-					reward += 1.0
+					reward += float64(request.Size)
 				}
 
 				// Update table
@@ -536,7 +541,7 @@ func (cache *AIRL) CheckWatermark() bool {
 
 // ExtraStats for output
 func (cache *AIRL) ExtraStats() string {
-	return fmt.Sprintf("Cov:%0.2f%%|Eps:%0.5f|P:%0.0f|HMS:%v", cache.qTable.GetCoveragePercentage(), cache.qTable.Epsilon, cache.points, cache.dailyReadOnHit > cache.dailyReadOnMiss)
+	return fmt.Sprintf("SCov:%0.2f%%|ACov:%0.2f%%|Eps:%0.5f|P:%0.0f|HMS:%v", cache.qTable.GetStateCoverage(), cache.qTable.GetActionCoverage(), cache.qTable.Epsilon, cache.points, cache.dailyReadOnHit > cache.dailyReadOnMiss)
 }
 
 // ExtraOutput for output specific information
