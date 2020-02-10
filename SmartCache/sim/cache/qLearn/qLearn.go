@@ -56,8 +56,8 @@ func (table *QTable) Init(featureLenghts []int) {
 
 	table.LearningRate = 0.9 // also named Alpha
 	table.DiscountFactor = 0.5
-	table.DecayRateEpsilon = 0.000005
-	table.Epsilon = 0.1
+	table.DecayRateEpsilon = 0.00001
+	table.Epsilon = 1.0
 	table.MaxEpsilon = 1.0
 	table.MinEpsilon = 0.1
 	// With getArgMax the first action is the default choice
@@ -175,8 +175,8 @@ func (table QTable) ToString(featureMap *map[string]featuremap.Obj, featureMapOr
 	return csvOutput
 }
 
-// GetCoveragePercentage returns the exploration result of the QTable
-func (table QTable) GetCoveragePercentage() float64 {
+// GetActionCoverage returns the exploration result of the QTable Actions
+func (table QTable) GetActionCoverage() float64 {
 	numSetVariables := 0
 	for _, actions := range table.States {
 		for _, action := range actions {
@@ -186,6 +186,20 @@ func (table QTable) GetCoveragePercentage() float64 {
 		}
 	}
 	return (float64(numSetVariables) / float64(table.NumVars)) * 100.
+}
+
+// GetStateCoverage returns the exploration result of the QTable States
+func (table QTable) GetStateCoverage() float64 {
+	numSetVariables := 0
+	for _, actions := range table.States {
+		for _, action := range actions {
+			if action != 0.0 {
+				numSetVariables++
+				break
+			}
+		}
+	}
+	return (float64(numSetVariables) / float64(len(table.States))) * 100.
 }
 
 // GetAction returns the possible environment action from a state
@@ -209,17 +223,28 @@ func (table QTable) GetBestAction(state string) ActionType {
 	return table.Actions[maxValueIdx]
 }
 
+// GetActionIndex returns the index of a given action
+func (table QTable) GetActionIndex(action ActionType) int {
+	for idx, value := range table.Actions {
+		if value == action {
+			return idx
+		}
+	}
+	return -1
+}
+
 // Update change the Q-table values of the given action
 func (table *QTable) Update(state string, action ActionType, reward float64) {
 	curStateValue := table.GetAction(state, action)
+	actionIdx := table.GetActionIndex(action)
 	switch table.UpdateFunction {
 	case RLSARSA:
 		// TODO: fix next state with a proper one, not the maximum of the same state
 		nextStateIdx := getArgMax(table.States[state]) // The next state is the same
-		table.States[state][action] = (1.0-table.LearningRate)*curStateValue + table.LearningRate*(reward+table.DiscountFactor*table.States[state][nextStateIdx])
+		table.States[state][actionIdx] = (1.0-table.LearningRate)*curStateValue + table.LearningRate*(reward+table.DiscountFactor*table.States[state][nextStateIdx])
 	case RLQLearning:
 		nextStateIdx := getArgMax(table.States[state]) // The next state is the max value
-		table.States[state][action] = curStateValue + table.LearningRate*(reward+table.DiscountFactor*table.States[state][nextStateIdx]-curStateValue)
+		table.States[state][actionIdx] = curStateValue + table.LearningRate*(reward+table.DiscountFactor*table.States[state][nextStateIdx]-curStateValue)
 	}
 }
 

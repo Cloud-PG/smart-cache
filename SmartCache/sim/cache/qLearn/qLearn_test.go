@@ -19,7 +19,7 @@ func TestQTable(t *testing.T) {
 
 	qTable := QTable{}
 	qTable.Init(sizes)
-	coverP := qTable.GetCoveragePercentage()
+	coverP := qTable.GetActionCoverage()
 
 	if len(qTable.States) != numStates {
 		t.Fatalf("Error: created %d states instead of %d", len(qTable.States), numStates)
