@@ -3,19 +3,21 @@ package cache
 import (
 	"encoding/json"
 	"fmt"
-	"log"
-	"os"
 	"simulator/v2/cache/ai/featuremap"
 	qlearn "simulator/v2/cache/qLearn"
 	"sort"
 	"strings"
 	"time"
 
-	"github.com/fatih/color"
+	"go.uber.org/zap"
+)
+
+const (
+	bandwidthLimit = (1000000. / 8.) * 60. * 60. * 24.
 )
 
 var (
-	logger = log.New(os.Stderr, color.GreenString("[AIRL] "), log.Lshortfile|log.LstdFlags)
+	logger = zap.L()
 )
 
 // AIRL cache
@@ -37,6 +39,8 @@ type AIRL struct {
 
 // Init the AIRL struct
 func (cache *AIRL) Init(args ...interface{}) interface{} {
+	logger = zap.L()
+
 	cache.LRUCache.Init()
 
 	featureMapFilePath := args[0].(string)
@@ -61,9 +65,9 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 		}
 		inputLengths = append(inputLengths, curLen)
 	}
-	logger.Println("[Generate QTable]")
+	logger.Info("[Generate QTable]")
 	cache.qTable.Init(inputLengths)
-	logger.Println("[Done]")
+	logger.Info("[Done]")
 
 	return nil
 }
@@ -215,7 +219,7 @@ func (cache *AIRL) getState(request *Request, fileStats *FileStats) []bool {
 	tmpSplit := strings.Split(request.Filename, "/")
 	dataType := tmpSplit[2]
 
-	numReq, _, _ := fileStats.getRealTimeStats(&request.DayTime)
+	numReq, _, _ := fileStats.getStats()
 	size := request.Size
 
 	cacheCapacity := float64(cache.Capacity())
@@ -310,12 +314,15 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 			curState = qlearn.State2String(cache.getState(request, fileStats))
 			curAction = cache.qTable.GetBestAction(curState)
+			logger.Info("Normal MISS branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
 			// ----------------------------------
 			// QLearn - Take the action NOT STORE
 			// ----------------------------------
 			if curAction == qlearn.ActionNotStore {
+				logger.Info("NOT TO STORE ACTION")
 				return added
 			}
+			logger.Info("STORE ACTION")
 			// ------------------------------
 			// QLearn - Take the action STORE
 			// ------------------------------
@@ -371,10 +378,10 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				// }
 
 				reward := 0.
-				if fileStats.TotRequests() > 1 || fileStats.DeltaLastRequest < 10000 || (cache.dailyReadOnHit/cache.dailyReadOnMiss) < (2./3.) {
-					reward -= float64(request.Size)
+				if fileStats.TotRequests() > 1 || cache.dailyReadOnHit < cache.dailyReadOnMiss/2.0 || cache.dailyReadOnMiss > bandwidthLimit {
+					reward -= 3.0
 				} else {
-					reward += float64(request.Size)
+					reward += 1.0
 				}
 				cache.qPrevState[request.Filename] = curState
 				cache.qPrevAction[request.Filename] = curAction
@@ -414,10 +421,10 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				// }
 
 				reward := 0.
-				if fileStats.TotRequests() < 100 && fileStats.DeltaLastRequest > 10000 && (cache.dailyReadOnHit/cache.dailyReadOnMiss) >= (2./3.) {
-					reward -= float64(request.Size)
+				if fileStats.TotRequests() < 100 && cache.dailyReadOnHit >= cache.dailyReadOnMiss/2.0 && cache.dailyReadOnMiss <= bandwidthLimit {
+					reward -= 2.0
 				} else {
-					reward += float64(request.Size)
+					reward += 1.0
 				}
 				cache.qPrevState[request.Filename] = curState
 				cache.qPrevAction[request.Filename] = curAction
@@ -441,10 +448,10 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 			if curState != "" { // Some action are not taken randomly
 				reward := 0.0
-				if (cache.dailyReadOnHit / cache.dailyReadOnMiss) >= (2. / 3.) {
-					reward += float64(request.Size)
+				if fileStats.TotRequests() < 100 && cache.dailyReadOnHit < cache.dailyReadOnMiss/2.0 && cache.dailyReadOnMiss <= bandwidthLimit {
+					reward -= 1.0
 				} else {
-					reward -= float64(request.Size)
+					reward += 1.0
 				}
 
 				// Update table

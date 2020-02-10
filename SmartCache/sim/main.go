@@ -14,11 +14,21 @@ import (
 	pb "simulator/v2/cache/simService"
 
 	"github.com/fatih/color"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	"google.golang.org/grpc"
 
 	"github.com/spf13/cobra"
 )
+
+func initZapLog(level zapcore.Level) *zap.Logger {
+	config := zap.NewDevelopmentConfig()
+	config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+	config.Level = zap.NewAtomicLevelAt(level)
+	logger, _ := config.Build()
+	return logger
+}
 
 var (
 	aiFeatureMap        string
@@ -29,6 +39,7 @@ var (
 	cacheSize           float32
 	cpuprofile          string
 	dataset2TestPath    string
+	enableDebug         bool
 	githash             string
 	memprofile          string
 	outputUpdateDelay   float64
@@ -104,6 +115,10 @@ func main() {
 	rootCmd.PersistentFlags().Float32Var(
 		&weightExp, "weightExp", 2.0,
 		"[Simulation] Exponential to use with weighted cache function",
+	)
+	rootCmd.PersistentFlags().BoolVar(
+		&enableDebug, "debug", false,
+		"[Debugging] Enable or not code debug",
 	)
 
 	if err := rootCmd.Execute(); err != nil {
@@ -216,6 +231,21 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				fmt.Println("ERR: You need to specify the cache type and a file or a folder")
 				os.Exit(-1)
 			}
+
+			// CHECK DEBUG MODE
+			if enableDebug {
+				fmt.Println("DEBUG")
+				loggerMgr := initZapLog(zap.DebugLevel)
+				zap.ReplaceGlobals(loggerMgr)
+				defer loggerMgr.Sync() // flushes buffer, if any
+			} else {
+				fmt.Println("NO DEBUG")
+				loggerMgr := initZapLog(zap.ErrorLevel)
+				zap.ReplaceGlobals(loggerMgr)
+				defer loggerMgr.Sync() // flushes buffer, if any
+
+			}
+
 			cacheType := args[0]
 			pathString := args[1]
 			copy(args, args[2:])

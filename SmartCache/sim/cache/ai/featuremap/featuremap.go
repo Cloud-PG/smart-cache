@@ -3,12 +3,18 @@ package featuremap
 import (
 	"compress/gzip"
 	"encoding/json"
-	"log"
+	"fmt"
 	"os"
 	"path/filepath"
+
+	"go.uber.org/zap"
 )
 
 type mapType int
+
+var (
+	logger = zap.L()
+)
 
 const (
 	// TypeBool is the type bool for the feature map
@@ -68,26 +74,26 @@ func GetEntries(featureMapFilePath string) chan Entry {
 
 	featureMapFile, errOpenFile := os.Open(featureMapFilePath)
 	if errOpenFile != nil {
-		log.Fatalf("Cannot open file '%s'\n", errOpenFile)
+		logger.Error(fmt.Sprintf("Cannot open file '%s'\n", errOpenFile))
 	}
 
 	if fileExtension == ".gzip" || fileExtension == ".gz" {
 		featureMapFileGz, errOpenZipFile := gzip.NewReader(featureMapFile)
 		if errOpenZipFile != nil {
-			log.Fatalf("Cannot open zip stream from file '%s'\nError: %s\n", featureMapFilePath, errOpenZipFile)
+			logger.Error(fmt.Sprintf("Cannot open zip stream from file '%s'\nError: %s\n", featureMapFilePath, errOpenZipFile))
 		}
 
 		errJSONUnmarshal := json.NewDecoder(featureMapFileGz).Decode(&tmpMap)
 		if errJSONUnmarshal != nil {
-			log.Fatalf("Cannot unmarshal gzipped json from file '%s'\nError: %s\n", featureMapFilePath, errJSONUnmarshal)
+			logger.Error(fmt.Sprintf("Cannot unmarshal gzipped json from file '%s'\nError: %s\n", featureMapFilePath, errJSONUnmarshal))
 		}
 	} else if fileExtension == ".json" {
 		errJSONUnmarshal := json.NewDecoder(featureMapFile).Decode(&tmpMap)
 		if errJSONUnmarshal != nil {
-			log.Fatalf("Cannot unmarshal plain json from file '%s'\nError: %s\n", featureMapFilePath, errJSONUnmarshal)
+			logger.Error(fmt.Sprintf("Cannot unmarshal plain json from file '%s'\nError: %s\n", featureMapFilePath, errJSONUnmarshal))
 		}
 	} else {
-		log.Fatalf("Cannot unmarshal file '%s' with extension '%s'", featureMapFilePath, fileExtension)
+		logger.Error(fmt.Sprintf("Cannot unmarshal '%s' with extension '%s'", featureMapFilePath, fileExtension))
 	}
 
 	channel := make(chan Entry)

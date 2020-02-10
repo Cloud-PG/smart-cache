@@ -9,7 +9,7 @@ import (
 
 const (
 	// MaxNumDaysStat limit to stay in the stats
-	MaxNumDaysStat = 21.
+	MaxNumDaysStat = 14.
 	// NumDays2Purge limit the clean action of the stats
 	NumDays2Purge = 7.
 )

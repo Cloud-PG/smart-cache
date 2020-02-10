@@ -2,14 +2,12 @@ package qlearn
 
 import (
 	"fmt"
-	"log"
 	"math"
 	"math/rand"
-	"os"
 	"simulator/v2/cache/ai/featuremap"
 	"strings"
 
-	"github.com/fatih/color"
+	"go.uber.org/zap"
 )
 
 // ActionType are cache possible actions
@@ -19,10 +17,10 @@ type ActionType int
 type RLUpdateType int
 
 const (
-	// ActionStore indicates to store an element in cache
-	ActionStore ActionType = iota
-	// ActionNotStore indicates to not store an element in cache
-	ActionNotStore
+	// ActionNotStore indicates to store an element in cache
+	ActionNotStore ActionType = iota - 1
+	// ActionStore indicates to not store an element in cache
+	ActionStore
 
 	// RLSARSA indicates the standard RL update algorithm SARSA
 	RLSARSA RLUpdateType = iota
@@ -31,14 +29,14 @@ const (
 )
 
 var (
-	logger = log.New(os.Stderr, color.CyanString("[QLEARN] "), log.Lshortfile|log.LstdFlags)
+	logger = zap.L()
 )
 
 // QTable used in Qlearning
 type QTable struct {
 	States           map[string][]float64 `json:"states"`
-	NumStates        int64                `json:"num_states"`
-	NumVars          int64                `json:"num_vars"`
+	NumStates        int                  `json:"num_states"`
+	NumVars          int                  `json:"num_vars"`
 	LearningRate     float64              `json:"learning_rate"`
 	DiscountFactor   float64              `json:"discount_factor"`
 	DecayRateEpsilon float64              `json:"decay_rate_epsilon"`
@@ -54,10 +52,12 @@ type QTable struct {
 
 // Init initilizes the QTable struct
 func (table *QTable) Init(featureLenghts []int) {
+	logger = zap.L()
+
 	table.LearningRate = 0.9 // also named Alpha
 	table.DiscountFactor = 0.5
 	table.DecayRateEpsilon = 0.000005
-	table.Epsilon = 1.0
+	table.Epsilon = 0.1
 	table.MaxEpsilon = 1.0
 	table.MinEpsilon = 0.1
 	// With getArgMax the first action is the default choice
@@ -72,13 +72,13 @@ func (table *QTable) Init(featureLenghts []int) {
 	table.UpdateFunction = RLQLearning
 	table.RGenerator = rand.New(rand.NewSource(42))
 
-	var numStates int64 = 1
+	numStates := 1
 	for _, featureLen := range featureLenghts {
-		numStates *= int64(featureLen)
+		numStates *= int(featureLen)
 	}
 	table.NumStates = numStates
 
-	logger.Printf("[Generate %d states][...]\n", numStates)
+	logger.Info("Num generated states", zap.Int("numStates", numStates))
 	table.States = make(map[string][]float64, numStates)
 
 	for state := range table.genAllStates(featureLenghts) {
@@ -87,13 +87,13 @@ func (table *QTable) Init(featureLenghts []int) {
 		if !inMap {
 			table.States[stateString] = make([]float64, len(table.Actions))
 		} else {
-			logger.Printf("State %v with idx %s already present...\n", state, stateString)
+			logger.Sugar().Errorf("State %v with idx %s already present...\n", state, stateString)
 			panic("Insert state error!!!")
 		}
 
 	}
-	table.NumVars = table.NumStates * int64(len(table.Actions))
-	logger.Printf("[Tot. Vars: %d]\n", table.NumVars)
+	table.NumVars = table.NumStates * len(table.Actions)
+	logger.Info("Num action values", zap.Int("numActionValues", table.NumVars))
 }
 
 func (table QTable) genAllStates(featureLenghts []int) chan []bool {
@@ -203,9 +203,10 @@ func (table QTable) GetAction(stateIdx string, action ActionType) float64 {
 
 // GetBestAction returns the action of the best action for the given state
 func (table QTable) GetBestAction(state string) ActionType {
-
 	values := table.States[state]
-	return table.Actions[getArgMax(values)]
+	maxValueIdx := getArgMax(values)
+	logger.Info("Get best action", zap.Float64s("values", values), zap.Int("idx max value", maxValueIdx))
+	return table.Actions[maxValueIdx]
 }
 
 // Update change the Q-table values of the given action
