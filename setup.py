@@ -10,6 +10,7 @@ setup(
         'Probe.analyzer',
         'Probe.plotter',
         'Probe.converter',
+        'Probe.qTable',
         'DataManager',
         'DataManager.agent',
         'DataManager.agent.converter',
