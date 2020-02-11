@@ -201,7 +201,7 @@ class CacheEnv(gym.Env):
                 [str(datetime.fromtimestamp(self.df.loc[0, 'reqDay'])) + ' +0000 UTC',
                  self._LRU._size,
                  self._LRU.hit_rate() * 100.0,
-                 self._LRU._hit/self._LRU._miss,
+                 self._LRU._hit/self._LRU._miss * 100.0,
                  0,
                  self._LRU._written_data,
                  self._LRU._read_data,
