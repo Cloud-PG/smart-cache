@@ -1,11 +1,15 @@
-import gym
-import numpy as np
+import csv
+import gzip
 import json
 import os
-import csv
-import pandas as pd
-import gzip
+from collections import OrderedDict
 from datetime import datetime
+
+import numpy as np
+import pandas as pd
+
+import gym
+
 
 class FileStats(object):
 
@@ -62,8 +66,7 @@ class LRU(object):
         """
         self._size: float = 0.0
         self._max_size = size
-        self._files = {}
-        self._queue = []
+        self._files = OrderedDict()
 
         self._stats = Stats()
         # Stat attributes
@@ -101,26 +104,21 @@ class LRU(object):
             #print(self._max_size)
             if self._size + file_stats.size <= self._max_size:
                 self._files[filename] = file_stats
-                self._queue.append(filename)
                 self._size += file_stats.size
                 return True
         
             else:
                 while self._size + file_stats.size > self._max_size:
-                    to_remove = self._queue.pop(0)
-                    file_size = self._files[to_remove].size
+                    _, file_size = self._files.popitem(False)
                     self._size -= file_size
                     self._deleted_data += file_size
-                    del self._files[to_remove]
                 else:
                     self._files[filename] = file_stats
-                    self._queue.append(filename)
                     self._size += file_stats.size
                     return True
         
         elif hit:
-            self._queue.remove(filename)
-            self._queue.append(filename)
+            self._files.move_to_end(filename)
         
         return False
 
