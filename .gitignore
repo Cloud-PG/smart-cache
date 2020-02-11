@@ -240,3 +240,12 @@ SmartCache/sim/**/*.csv.gz
 scripts/DataAnalysis/**/*.csv.gz
 scripts/DataAnalysis/simulation_results*/
 scripts/DataAnalysis/datasets/
+
+
+
+stock.py
+explore_actions.py
+converter.py
+prova.py
+cache_old.py
+test.py
