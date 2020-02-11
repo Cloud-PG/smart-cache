@@ -234,6 +234,7 @@ SmartCache/plugin/dasgoclient
 SmartCache/plugin/goXcachePlugin
 
 # Simulation data and results
+*.csv
 SmartCache/sim/**/*.csv.gz
 scripts/DataAnalysis/**/*.csv.gz
 scripts/DataAnalysis/simulation_results*/
