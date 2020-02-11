@@ -258,6 +258,7 @@ def main():
                         working_dir,
                         args.window_start,
                         args.window_stop,
+                        dump=True,
                         load=True,
                         dump_dir=working_dir,
                     )
