@@ -18,12 +18,12 @@ type RLUpdateType int
 
 const (
 	// ActionNotStore indicates to store an element in cache
-	ActionNotStore ActionType = iota - 1
+	ActionNotStore ActionType = iota - 2
 	// ActionStore indicates to not store an element in cache
 	ActionStore
 
 	// RLSARSA indicates the standard RL update algorithm SARSA
-	RLSARSA RLUpdateType = iota
+	RLSARSA RLUpdateType = iota - 2
 	// RLQLearning indicates the Bellman equation
 	RLQLearning
 )
@@ -56,7 +56,7 @@ func (table *QTable) Init(featureLenghts []int) {
 
 	table.LearningRate = 0.9 // also named Alpha
 	table.DiscountFactor = 0.5
-	table.DecayRateEpsilon = 0.00001
+	table.DecayRateEpsilon = 0.0000042
 	table.Epsilon = 1.0
 	table.MaxEpsilon = 1.0
 	table.MinEpsilon = 0.1
