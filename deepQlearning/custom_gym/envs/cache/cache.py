@@ -198,9 +198,9 @@ class CacheEnv(gym.Env):
         with open('../dQl_100T_it_results.csv', 'a', newline='') as file:
             writer = csv.writer(file)
             writer.writerow(
-                [datetime.fromtimestamp(self.df.loc[0, 'reqDay']),
+                [str(datetime.fromtimestamp(self.df.loc[0, 'reqDay'])) + ' +0000 UTC',
                  self._LRU._size,
-                 self._LRU.hit_rate(),
+                 self._LRU.hit_rate() * 100.0,
                  self._LRU._hit/self._LRU._miss,
                  0,
                  self._LRU._written_data,
@@ -209,9 +209,9 @@ class CacheEnv(gym.Env):
                  self._LRU._dailyReadOnMiss,
                  self._LRU._deleted_data,
                  (self._LRU._CPUtime_hit + self._LRU._CPUtime_miss) /
-                    (self._LRU._WALLtime_hit + self._LRU._WALLtime_miss * 1.15),
-                    (self._LRU._CPUtime_hit)/(self._LRU._WALLtime_hit),
-                    (self._LRU._CPUtime_miss)/(self._LRU._WALLtime_miss * 1.15),
+                    (self._LRU._WALLtime_hit + self._LRU._WALLtime_miss * 1.15) *100.0,
+                    (self._LRU._CPUtime_hit)/(self._LRU._WALLtime_hit) * 100.0,
+                    (self._LRU._CPUtime_miss)/(self._LRU._WALLtime_miss * 1.15) * 100.0,
                     self._LRU._written_data + self._LRU._read_data + self._LRU._deleted_data])
 
         return
