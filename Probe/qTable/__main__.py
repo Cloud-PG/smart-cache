@@ -14,17 +14,35 @@ def main():
     args, _ = parser.parse_known_args()
 
     df = pd.read_csv(args.path)
-    df = df.sort_values(by=['numReq', 'size', 'deltaNumLastRequest'])
+    df = df.sort_values(
+        by=['dataType', 'numReq', 'size', 'deltaNumLastRequest'])
 
-    print(f"numReq\tsize\tdeltaNumLastRequest")
+    print(f"dataType\tnumReq\tsize\tdeltaNumLastRequest")
     print("-"*42)
+
+    action_explored = 0
+    state_not_explored = 0
+
     for row in df.sort_values(by=['numReq', 'size', 'deltaNumLastRequest']).itertuples():
+        if row.ActionNotStore != 0.:
+            action_explored += 1
+        if row.ActionStore != 0.:
+            action_explored += 1
+
         if row.ActionNotStore == row.ActionStore == 0.0:
-            print(f"{row.numReq}\t{row.size}\t{row.deltaNumLastRequest}\t{STATUS_ARROW} {STATUS_WARNING('NOT EXPLORED')}")
+            print(f"{row.dataType}\t{row.numReq}\t{row.size}\t{row.deltaNumLastRequest}\t{STATUS_ARROW} {STATUS_WARNING('NOT EXPLORED')}")
+            state_not_explored += 1
         elif row.ActionNotStore >= row.ActionStore:
-            print(f"{row.numReq}\t{row.size}\t{row.deltaNumLastRequest}\t{STATUS_ARROW} {STATUS_ERROR('NOT STORE')}")
+            print(f"{row.dataType}\t{row.numReq}\t{row.size}\t{row.deltaNumLastRequest}\t{STATUS_ARROW} {STATUS_ERROR('NOT STORE')}")
         else:
-            print(f"{row.numReq}\t{row.size}\t{row.deltaNumLastRequest}\t{STATUS_ARROW} {STATUS_OK('STORE')}")
+            print(
+                f"{row.dataType}\t{row.numReq}\t{row.size}\t{row.deltaNumLastRequest}\t{STATUS_ARROW} {STATUS_OK('STORE')}")
+
+    print("-"*42)
+    print(
+        f"Explored {((df.shape[0] - state_not_explored) / df.shape[0])*100.:0.2f}% states and {(action_explored / (df.shape[0] * 2))*100.:0.2f}% of actions"
+    )
+    print("-"*42)
 
 
 if __name__ == "__main__":
