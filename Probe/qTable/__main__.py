@@ -16,6 +16,8 @@ def main():
     df = pd.read_csv(args.path)
     df = df.sort_values(by=['numReq', 'size', 'deltaNumLastRequest'])
 
+    print(f"numReq\tsize\tdeltaNumLastRequest")
+    print("-"*42)
     for row in df.sort_values(by=['numReq', 'size', 'deltaNumLastRequest']).itertuples():
         if row.ActionNotStore == row.ActionStore == 0.0:
             print(f"{row.numReq}\t{row.size}\t{row.deltaNumLastRequest}\t{STATUS_ARROW} {STATUS_WARNING('NOT EXPLORED')}")
