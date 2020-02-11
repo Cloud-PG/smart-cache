@@ -21,6 +21,62 @@ from .plotter import plot_results
 from .utils import get_logger, load_results, str2bool, wait_jobs
 
 
+def prepare_process_call(args, simulator_exe, cache_type, working_dir: str,
+                         start_window: int, stop_window: int, window_idx: int = 0,
+                         dump: bool = False, load: bool = False, dump_dir: str=""
+                         ) -> str:
+    os.makedirs(working_dir, exist_ok=True)
+    # Create base command
+    exe_args = [
+        simulator_exe,
+        args.action,
+        cache_type,
+        path.abspath(args.source),
+        f"--size={args.cache_size}",
+        f"--simRegion={args.region}",
+        f"--simFileType={args.file_type}",
+        f"--simWindowSize={args.window_size}",
+        f"--simStartFromWindow={start_window}",
+        f"--simStopWindow={stop_window}",
+    ]
+    if dump:
+        exe_args.append("--simDump=true")
+        exe_args.append("--simDumpFileName=dump.json.gz")
+    if load:
+        exe_args.append("--simLoadDump=true")
+        exe_args.append(f"--simLoadDumpFileName={path.join(dump_dir, 'dump.json.gz')}")
+    # Add custom cache parameters
+    if cache_type in ['aiNN', 'aiRL']:
+        if cache_type == "aiNN":
+            feature_map_file = path.abspath(
+                path.join(
+                    path.dirname(args.ai_model_basename),
+                    f"{args.feature_prefix}-window_{window_idx:02d}.json.gz"
+                )
+            )
+            model_weights_file = path.abspath(
+                f"{args.ai_model_basename.split('.h5')[0]}-window_{window_idx:02d}.dump.json.gz"
+            )
+            exe_args.append(
+                f"--aiFeatureMap={feature_map_file}")
+            exe_args.append("--aiHost=127.0.0.1")
+            exe_args.append(f"--aiPort=4242")
+            exe_args.append(f"--aiModel={model_weights_file}")
+        elif cache_type == "aiRL":
+            exe_args.append(
+                f"--aiFeatureMap={path.abspath(args.ai_feature_map)}")
+    elif cache_type == 'lruDatasetVerifier':
+        dataset_file = path.abspath(
+            path.join(
+                args.dataset_folder,
+                f"{args.dataset_prefix}-window_{window_idx:02d}.json.gz"
+            )
+        )
+        exe_args.append(f"--dataset2TestPath={dataset_file}")
+
+    return " ".join(exe_args)
+
+
 def main():
     logger = get_logger(__name__)
 
@@ -29,7 +85,7 @@ def main():
 
     parser.register('type', 'bool', str2bool)  # add type keyword to registries
 
-    parser.add_argument('action', choices=['sim', 'simAI', 'testDataset', 'plot', 'train', 'create_dataset'],
+    parser.add_argument('action', choices=['sim', 'simAI', 'simRL', 'testDataset', 'plot', 'train', 'create_dataset'],
                         default="sim",
                         help='Action requested')
     parser.add_argument('source', type=str,
@@ -153,53 +209,20 @@ def main():
                         f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}"
                         f"window_{window_idx}",
                     )
-                    os.makedirs(working_dir, exist_ok=True)
-                    # Create base command
-                    exe_args = [
+                    exe_cmd = prepare_process_call(
+                        args,
                         simulator_exe,
-                        args.action,
                         cache_type,
-                        path.abspath(args.source),
-                        f"--size={args.cache_size}",
-                        f"--simRegion={args.region}",
-                        f"--simFileType={args.file_type}",
-                        f"--simWindowSize={args.window_size}",
-                        f"--simStartFromWindow={window_idx}",
-                        f"--simStopWindow={window_idx+1}",
-                        "--simDump=true",
-                        "--simDumpFileName=dump.json.gz",
-                    ]
-                    # Add custom cache parameters
-                    if cache_type in ['aiNN', 'aiRL']:
-                        if cache_type == "aiNN":
-                            feature_map_file = path.abspath(
-                                path.join(
-                                    path.dirname(args.ai_model_basename),
-                                    f"{args.feature_prefix}-window_{window_idx:02d}.json.gz"
-                                )
-                            )
-                            model_weights_file = path.abspath(
-                                f"{args.ai_model_basename.split('.h5')[0]}-window_{window_idx:02d}.dump.json.gz"
-                            )
-                            exe_args.append(
-                                f"--aiFeatureMap={feature_map_file}")
-                            exe_args.append("--aiHost=127.0.0.1")
-                            exe_args.append(f"--aiPort=4242")
-                            exe_args.append(f"--aiModel={model_weights_file}")
-                        elif cache_type == "aiRL":
-                            exe_args.append(
-                                f"--aiFeatureMap={path.abspath(args.ai_feature_map)}")
-                    elif cache_type == 'lruDatasetVerifier':
-                        dataset_file = path.abspath(
-                            path.join(
-                                args.dataset_folder,
-                                f"{args.dataset_prefix}-window_{window_idx:02d}.json.gz"
-                            )
-                        )
-                        exe_args.append(f"--dataset2TestPath={dataset_file}")
+                        working_dir,
+                        window_idx,
+                        window_idx+1,
+                        window_idx,
+                        dump=True
+                    )
+                    logger.info(f"[EXEC]->[{exe_cmd}]")
                     # Create the task
                     cur_process = subprocess.Popen(
-                        " ".join(exe_args),
+                        exe_cmd,
                         shell=True,
                         cwd=working_dir,
                         stdin=subprocess.PIPE,
@@ -224,51 +247,17 @@ def main():
                     normal_run_dir,
                     f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}"
                 )
-                os.makedirs(working_dir, exist_ok=True)
-                # Create base command
-                exe_args = [
+                exe_cmd = prepare_process_call(
+                    args,
                     simulator_exe,
-                    args.action,
                     cache_type,
-                    path.abspath(args.source),
-                    f"--size={args.cache_size}",
-                    f"--simRegion={args.region}",
-                    f"--simFileType={args.file_type}",
-                    f"--simWindowSize={args.window_size}",
-                    f"--simStartFromWindow={args.window_start}",
-                    f"--simStopWindow={args.window_stop}",
-                ]
-                # Add custom cache parameters
-                if cache_type in ['aiNN', 'aiRL']:
-                    if cache_type == "aiNN":
-                        feature_map_file = path.abspath(
-                            path.join(
-                                path.dirname(args.ai_model_basename),
-                                f"{args.feature_prefix}-window_00.json.gz"
-                            )
-                        )
-                        model_weights_file = path.abspath(
-                            f"{args.ai_model_basename.split('.h5')[0]}-window_00.dump.json.gz"
-                        )
-                        exe_args.append(
-                            f"--aiFeatureMap={feature_map_file}")
-                        exe_args.append("--aiHost=127.0.0.1")
-                        exe_args.append(f"--aiPort=4242")
-                        exe_args.append(f"--aiModel={model_weights_file}")
-                    elif cache_type == "aiRL":
-                        exe_args.append(
-                            f"--aiFeatureMap={path.abspath(args.ai_feature_map)}")
-                elif cache_type == 'lruDatasetVerifier':
-                    dataset_file = path.abspath(
-                        path.join(
-                            args.dataset_folder,
-                            f"{args.dataset_prefix}-window_00.json.gz"
-                        )
-                    )
-                    exe_args.append(f"--dataset2TestPath={dataset_file}")
-                logger.info(f"[EXEC]->[{' '.join(exe_args)}]")
+                    working_dir,
+                    args.window_start,
+                    args.window_stop,
+                    dump=True
+                )
                 cur_process = subprocess.Popen(
-                    " ".join(exe_args),
+                    exe_cmd,
                     shell=True,
                     cwd=working_dir,
                     stdin=subprocess.PIPE,
@@ -303,53 +292,19 @@ def main():
                         f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}"
                         f"window_{window_idx}",
                     )
-                    os.makedirs(working_dir, exist_ok=True)
-                    # Create base command
-                    exe_args = [
+                    exe_cmd = prepare_process_call(
+                        args,
                         simulator_exe,
-                        args.action,
                         cache_type,
-                        path.abspath(args.source),
-                        f"--size={args.cache_size}",
-                        f"--simRegion={args.region}",
-                        f"--simFileType={args.file_type}",
-                        f"--simWindowSize={args.window_size}",
-                        f"--simStartFromWindow={window_idx+1}",
-                        f"--simStopWindow={window_idx+2}",
-                        "--simLoadDump=true",
-                        f"--simLoadDumpFileName={path.join(dump_dir, 'dump.json.gz')}",
-                    ]
-                    # Add custom cache parameters
-                    if cache_type in ['aiNN', 'aiRL']:
-                        if cache_type == "aiNN":
-                            feature_map_file = path.abspath(
-                                path.join(
-                                    path.dirname(args.ai_model_basename),
-                                    f"{args.feature_prefix}-window_{window_idx:02d}.json.gz"
-                                )
-                            )
-                            model_weights_file = path.abspath(
-                                f"{args.ai_model_basename.split('.h5')[0]}-window_{window_idx:02d}.dump.json.gz"
-                            )
-                            exe_args.append(
-                                f"--aiFeatureMap={feature_map_file}")
-                            exe_args.append("--aiHost=127.0.0.1")
-                            exe_args.append(f"--aiPort=4242")
-                            exe_args.append(f"--aiModel={model_weights_file}")
-                        elif cache_type == "aiRL":
-                            exe_args.append(
-                                f"--aiFeatureMap={path.abspath(args.ai_feature_map)}")
-                    elif cache_type == 'lruDatasetVerifier':
-                        dataset_file = path.abspath(
-                            path.join(
-                                args.dataset_folder,
-                                f"{args.dataset_prefix}-window_{window_idx:02d}.json.gz"
-                            )
-                        )
-                        exe_args.append(f"--dataset2TestPath={dataset_file}")
-                    # Create the task
+                        working_dir,
+                        window_idx+1,
+                        window_idx+2,
+                        window_idx
+                        load=True
+                        dump_dir=dump_dir
+                    )
                     cur_process = subprocess.Popen(
-                        " ".join(exe_args),
+                        exe_cmd,
                         shell=True,
                         cwd=working_dir,
                         stdin=subprocess.PIPE,
@@ -381,53 +336,19 @@ def main():
                         f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}"
                         f"window_{window_idx}",
                     )
-                    os.makedirs(working_dir, exist_ok=True)
-                    # Create base command
-                    exe_args = [
+                    exe_cmd = prepare_process_call(
+                        args,
                         simulator_exe,
-                        args.action,
                         cache_type,
-                        path.abspath(args.source),
-                        f"--size={args.cache_size}",
-                        f"--simRegion={args.region}",
-                        f"--simFileType={args.file_type}",
-                        f"--simWindowSize={args.window_size}",
-                        f"--simStartFromWindow={window_idx+1}",
-                        f"--simStopWindow={args.window_stop+1}",
-                        "--simLoadDump=true",
-                        f"--simLoadDumpFileName={path.join(dump_dir, 'dump.json.gz')}",
-                    ]
-                    # Add custom cache parameters
-                    if cache_type in ['aiNN', 'aiRL']:
-                        if cache_type == "aiNN":
-                            feature_map_file = path.abspath(
-                                path.join(
-                                    path.dirname(args.ai_model_basename),
-                                    f"{args.feature_prefix}-window_{window_idx:02d}.json.gz"
-                                )
-                            )
-                            model_weights_file = path.abspath(
-                                f"{args.ai_model_basename.split('.h5')[0]}-window_{window_idx:02d}.dump.json.gz"
-                            )
-                            exe_args.append(
-                                f"--aiFeatureMap={feature_map_file}")
-                            exe_args.append("--aiHost=127.0.0.1")
-                            exe_args.append(f"--aiPort=4242")
-                            exe_args.append(f"--aiModel={model_weights_file}")
-                        elif cache_type == "aiRL":
-                            exe_args.append(
-                                f"--aiFeatureMap={path.abspath(args.ai_feature_map)}")
-                    elif cache_type == 'lruDatasetVerifier':
-                        dataset_file = path.abspath(
-                            path.join(
-                                args.dataset_folder,
-                                f"{args.dataset_prefix}-window_{window_idx:02d}.json.gz"
-                            )
-                        )
-                        exe_args.append(f"--dataset2TestPath={dataset_file}")
-                    # Create the task
+                        working_dir,
+                        window_idx+1,
+                        args.window_stop+1,
+                        window_idx
+                        load=True
+                        dump_dir=dump_dir
+                    )
                     cur_process = subprocess.Popen(
-                        " ".join(exe_args),
+                        exe_cmd,
                         shell=True,
                         cwd=working_dir,
                         stdin=subprocess.PIPE,
