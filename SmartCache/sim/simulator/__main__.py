@@ -271,6 +271,7 @@ def main():
                         args.window_stop,
                         dump=True
                     )
+                logger.info(f"[EXEC]->[{exe_cmd}]")
                 cur_process = subprocess.Popen(
                     exe_cmd,
                     shell=True,
@@ -318,6 +319,7 @@ def main():
                         load=True,
                         dump_dir=dump_dir,
                     )
+                    logger.info(f"[EXEC]->[{exe_cmd}]")
                     cur_process = subprocess.Popen(
                         exe_cmd,
                         shell=True,
@@ -362,6 +364,7 @@ def main():
                         load=True,
                         dump_dir=dump_dir
                     )
+                    logger.info(f"[EXEC]->[{exe_cmd}]")
                     cur_process = subprocess.Popen(
                         exe_cmd,
                         shell=True,
