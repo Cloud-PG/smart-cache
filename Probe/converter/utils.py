@@ -9,7 +9,7 @@ from..utils import STATUS_ARROW, STATUS_WARNING, STATUS_OK
 
 class CategoryContainer:
 
-    def __init__(self, filename: str=''):
+    def __init__(self, filename: str = ''):
         self._data = dict()
         self.__sequences = dict()
 
@@ -189,24 +189,15 @@ def convert_categories_from_sqlite(source_filename: str,
     return df
 
 
-def save_numeric_df(filepath: str, df: 'pd.DataFrame', region_filter: str = "all"):
+def save_numeric_df(filepath: str, df: 'pd.DataFrame', output_filename: str = "result_numeric.csv.gz"):
     """Save the new numeric dataset.
 
     :param filepath: The original dataset filename
     :type filepath: str
     :param df: the new dataframe source to save
     :type df: pandas.DataFrame
-    :param region_filter: the region of the source, defaults to "all"
-    :type region_filter: str, optional
+    :param output_filename: the name of the saved file
+    :type output_filename: str, optional
     """
-    head, tail = path.split(filepath)
-    output_filename = tail.replace(
-        "results_", f"results_numeric_{region_filter}_")
     print(f"{STATUS_ARROW}Save csv {STATUS_OK(output_filename)}\x1b[0K")
-    df.to_csv(
-        path.join(
-            head,
-            output_filename
-        ),
-        index=False,
-    )
+    df.to_csv(output_filename, index=False)

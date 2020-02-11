@@ -44,19 +44,31 @@ def main():
             desc=f"{STATUS_ARROW}Convert files",
             total=tot_files,
         ):
-            print(f"{STATUS_ARROW}Process file: {STATUS_WARNING(filepath)}")
-            columns = get_object_columns(df)
-            categories = dict(
-                (name, get_unique_values(df[name])) for name in columns
+
+            head, tail = path.split(filepath)
+            output_filename = path.join(
+                head,
+                tail.replace(
+                    "results_", f"results_numeric_{args.region}_"
+                )
             )
-            container.update(categories, filepath)
 
-            new_df = convert_categories(filepath, df, categories, container)
-            save_numeric_df(filepath, new_df, region_filter=args.region)
+            if not path.isfile(output_filename):
+                print(f"{STATUS_ARROW}Process file: {STATUS_WARNING(filepath)}")
+                columns = get_object_columns(df)
+                categories = dict(
+                    (name, get_unique_values(df[name])) for name in columns
+                )
+                container.update(categories, filepath)
 
-            print(f"{STATUS_ARROW}Save database...")
-            with open(f"container_{args.region}_.pickle", "wb") as out_file:
-                pickle.dump(container, out_file)
+                new_df = convert_categories(
+                    filepath, df, categories, container)
+                save_numeric_df(filepath, new_df,
+                                output_filename=output_filename)
+
+                print(f"{STATUS_ARROW}Save database...")
+                with open(f"container_{args.region}_.pickle", "wb") as out_file:
+                    pickle.dump(container, out_file)
 
 
 if __name__ == "__main__":

@@ -5,7 +5,7 @@ from os import path
 import pandas as pd
 from tqdm import tqdm
 
-from .utils import STATUS_ARROW
+from .utils import STATUS_WARNING, STATUS_ARROW
 
 __all__ = ['csv_data']
 
@@ -19,6 +19,10 @@ def _load_csv_file(input_path: str, region_filter: str = None,
     :return: The data content
     :rtype: pandas.DataFrame
     """
+    print(
+        f"{STATUS_ARROW}Open file: {STATUS_WARNING(input_path)}\x1b[0K",
+        end="\r"
+    )
     head, tail = path.splitext(input_path)
     if tail in ['.gz', 'gzip']:
         head, tail = path.splitext(head)
@@ -64,7 +68,7 @@ def gen_csv_data(input_path: str, region_filter: str = None,
     """
     if path.isdir(input_path):
         files = [file_ for file_ in os.listdir(
-            input_path) if file_.find("csv") != -1]
+            input_path) if file_.find("csv") != -1 and file_.find("numeric") == -1]
         yield len(files)
         for filename in files:
             if month_filter != -1:
@@ -95,7 +99,7 @@ def csv_data(input_path: str, region_filter: str = None,
     if path.isdir(input_path):
         data_frames = []
         files = [file_ for file_ in os.listdir(
-            input_path) if file_.find("csv") != -1]
+            input_path) if file_.find("csv") != -1 and file_.find("numeric") == -1]
         for filename in tqdm(files, desc=f"{STATUS_ARROW}Load folder {input_path}"):
             if month_filter != -1:
                 if _get_month(filename) != month_filter:
