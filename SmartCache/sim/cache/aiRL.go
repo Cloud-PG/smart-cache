@@ -299,10 +299,10 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 	)
 
 	// Check learning phase or not
-	// expTradeoff := cache.qTable.GetRandomFloat()
+	expTradeoff := cache.qTable.GetRandomFloat()
 
-	// if expTradeoff > cache.qTable.Epsilon {
-	if cache.qTable.Epsilon <= cache.qTable.MinEpsilon { // Force learning until epsilon is > min epsilon
+	if expTradeoff > cache.qTable.Epsilon {
+		//if cache.qTable.Epsilon <= cache.qTable.MinEpsilon { // Force learning until epsilon is > min epsilon
 		// ########################
 		// ##### Normal phase #####
 		// ########################
@@ -424,7 +424,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				// }
 
 				reward := 0.
-				if cache.dailyReadOnHit >= cache.dailyReadOnMiss/2.0 && cache.dailyReadOnMiss <= bandwidthLimit {
+				if cache.dailyReadOnMiss >= bandwidthLimit {
 					reward -= float64(request.Size)
 				} else {
 					reward += float64(request.Size)
@@ -453,7 +453,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 			if curState != "" { // Some action are not taken randomly
 				reward := 0.0
-				if cache.dailyReadOnHit < cache.dailyReadOnMiss/2.0 && cache.dailyReadOnMiss <= bandwidthLimit {
+				if cache.dailyReadOnHit < cache.dailyReadOnMiss/2.0 {
 					reward -= float64(request.Size)
 				} else {
 					reward += float64(request.Size)
@@ -541,7 +541,7 @@ func (cache *AIRL) CheckWatermark() bool {
 
 // ExtraStats for output
 func (cache *AIRL) ExtraStats() string {
-	return fmt.Sprintf("SCov:%0.2f%%|ACov:%0.2f%%|Eps:%0.5f|P:%0.0f|HMS:%v", cache.qTable.GetStateCoverage(), cache.qTable.GetActionCoverage(), cache.qTable.Epsilon, cache.points, cache.dailyReadOnHit > 2.0*cache.dailyReadOnMiss)
+	return fmt.Sprintf("SCov:%0.2f%%|ACov:%0.2f%%|Eps:%0.5f|P:%0.0f|HMRatio:%v|bandR:%v", cache.qTable.GetStateCoverage(), cache.qTable.GetActionCoverage(), cache.qTable.Epsilon, cache.points, cache.dailyReadOnHit > cache.dailyReadOnMiss/2.0, cache.dailyReadOnMiss <= bandwidthLimit)
 }
 
 // ExtraOutput for output specific information
