@@ -299,9 +299,9 @@ def main():
                         working_dir,
                         window_idx+1,
                         window_idx+2,
-                        window_idx
-                        load=True
-                        dump_dir=dump_dir
+                        window_idx,
+                        load=True,
+                        dump_dir=dump_dir,
                     )
                     cur_process = subprocess.Popen(
                         exe_cmd,
@@ -343,8 +343,8 @@ def main():
                         working_dir,
                         window_idx+1,
                         args.window_stop+1,
-                        window_idx
-                        load=True
+                        window_idx,
+                        load=True,
                         dump_dir=dump_dir
                     )
                     cur_process = subprocess.Popen(
