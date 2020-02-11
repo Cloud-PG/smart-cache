@@ -130,6 +130,9 @@ def main():
     parser.add_argument('--out-html', type='bool',
                         default=True,
                         help='Plot the output as a html [DEFAULT: True]')
+    parser.add_argument('--load-prev-normal-run', type='bool',
+                        default=False,
+                        help='Loads the previous normal run [DEFAULT: False]')
     parser.add_argument('--out-png', type='bool',
                         default=False,
                         help='Plot the output as a png (requires phantomjs-prebuilt installed with npm) [DEFAULT: False]')
@@ -247,15 +250,27 @@ def main():
                     normal_run_dir,
                     f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}"
                 )
-                exe_cmd = prepare_process_call(
-                    args,
-                    simulator_exe,
-                    cache_type,
-                    working_dir,
-                    args.window_start,
-                    args.window_stop,
-                    dump=True
-                )
+                if args.load_prev_normal_run:
+                    exe_cmd = prepare_process_call(
+                        args,
+                        simulator_exe,
+                        cache_type,
+                        working_dir,
+                        args.window_start,
+                        args.window_stop,
+                        load=True,
+                        dump_dir=working_dir,
+                    )
+                else:
+                    exe_cmd = prepare_process_call(
+                        args,
+                        simulator_exe,
+                        cache_type,
+                        working_dir,
+                        args.window_start,
+                        args.window_stop,
+                        dump=True
+                    )
                 cur_process = subprocess.Popen(
                     exe_cmd,
                     shell=True,
