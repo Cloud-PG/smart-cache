@@ -319,10 +319,10 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			// QLearn - Take the action NOT STORE
 			// ----------------------------------
 			if curAction == qlearn.ActionNotStore {
-				logger.Info("NOT TO STORE ACTION")
+				logger.Info("Normal MISS branch NOT TO STORE ACTION")
 				return added
 			}
-			logger.Info("STORE ACTION")
+			logger.Info("Normal MISS branch STORE ACTION")
 			// ------------------------------
 			// QLearn - Take the action STORE
 			// ------------------------------
@@ -381,7 +381,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				// }
 
 				reward := 0.
-				if fileStats.TotRequests() > 1 || cache.dailyReadOnHit < cache.dailyReadOnMiss/2.0 || cache.dailyReadOnMiss > bandwidthLimit {
+				if cache.dailyReadOnHit < cache.dailyReadOnMiss/2.0 || cache.dailyReadOnMiss > bandwidthLimit {
 					reward -= float64(request.Size)
 				} else {
 					reward += float64(request.Size)
@@ -424,7 +424,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				// }
 
 				reward := 0.
-				if fileStats.TotRequests() < 100 && cache.dailyReadOnHit >= cache.dailyReadOnMiss/2.0 && cache.dailyReadOnMiss <= bandwidthLimit {
+				if cache.dailyReadOnHit >= cache.dailyReadOnMiss/2.0 && cache.dailyReadOnMiss <= bandwidthLimit {
 					reward -= float64(request.Size)
 				} else {
 					reward += float64(request.Size)
@@ -453,7 +453,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 			if curState != "" { // Some action are not taken randomly
 				reward := 0.0
-				if fileStats.TotRequests() < 100 && cache.dailyReadOnHit < cache.dailyReadOnMiss/2.0 && cache.dailyReadOnMiss <= bandwidthLimit {
+				if cache.dailyReadOnHit < cache.dailyReadOnMiss/2.0 && cache.dailyReadOnMiss <= bandwidthLimit {
 					reward -= float64(request.Size)
 				} else {
 					reward += float64(request.Size)
