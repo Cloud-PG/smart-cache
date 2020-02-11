@@ -56,7 +56,7 @@ func (table *QTable) Init(featureLenghts []int) {
 
 	table.LearningRate = 0.9 // also named Alpha
 	table.DiscountFactor = 0.5
-	table.DecayRateEpsilon = 0.0000042
+	table.DecayRateEpsilon = 0.000042
 	table.Epsilon = 1.0
 	table.MaxEpsilon = 1.0
 	table.MinEpsilon = 0.1
