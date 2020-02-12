@@ -270,9 +270,20 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				cacheType,
 				fmt.Sprintf("%0.0fT", cacheSize/(1024.*1024.)),
 				simRegion,
-			},
-				"_",
-			)
+			}, "_")
+
+			if cacheType == "weightedLRU" {
+				parameters := strings.Join([]string{
+					fmt.Sprintf("%0.2f", weightAlpha),
+					fmt.Sprintf("%0.2f", weightBeta),
+					fmt.Sprintf("%0.2f", weightGamma),
+				}, "_")
+				baseName = strings.Join([]string{
+					baseName,
+					weightedFunc,
+					parameters,
+				}, "_ ")
+			}
 
 			// Output files
 			dumpFileName := baseName + ".json.gz"
