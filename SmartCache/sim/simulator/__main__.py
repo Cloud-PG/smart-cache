@@ -23,7 +23,8 @@ from .utils import get_logger, load_results, str2bool, wait_jobs
 
 def prepare_process_call(args, simulator_exe, cache_type, working_dir: str,
                          start_window: int, stop_window: int, window_idx: int = 0,
-                         dump: bool = False, load: bool = False, dump_dir: str=""
+                         dump: bool = False, load: bool = False, dump_dir: str = "",
+                         cold_start: bool = false, cold_start_no_stats: bool = False
                          ) -> str:
     os.makedirs(working_dir, exist_ok=True)
     # Create base command
@@ -39,12 +40,20 @@ def prepare_process_call(args, simulator_exe, cache_type, working_dir: str,
         f"--simStartFromWindow={start_window}",
         f"--simStopWindow={stop_window}",
     ]
+
     if dump:
         exe_args.append("--simDump=true")
         exe_args.append("--simDumpFileName=dump.json.gz")
     if load:
         exe_args.append("--simLoadDump=true")
-        exe_args.append(f"--simLoadDumpFileName={path.join(dump_dir, 'dump.json.gz')}")
+        exe_args.append(
+            f"--simLoadDumpFileName={path.join(dump_dir, 'dump.json.gz')}"
+        )
+    if cold_start:
+        exe_args.append("--simColdStart=true")
+    if cold_start_no_stats:
+        exe_args.append("--simColdStartNoStats=true")
+
     # Add custom cache parameters
     if cache_type in ['aiNN', 'aiRL']:
         if cache_type == "aiNN":
@@ -261,6 +270,8 @@ def main():
                         dump=True,
                         load=True,
                         dump_dir=working_dir,
+                        cold_start=True,
+                        cold_start_no_stats=True,
                     )
                 else:
                     exe_cmd = prepare_process_call(
@@ -319,6 +330,8 @@ def main():
                         window_idx,
                         load=True,
                         dump_dir=dump_dir,
+                        cold_start=True,
+                        cold_start_no_stats=True,
                     )
                     logger.info(f"[EXEC]->[{exe_cmd}]")
                     cur_process = subprocess.Popen(
@@ -363,7 +376,9 @@ def main():
                         args.window_stop+1,
                         window_idx,
                         load=True,
-                        dump_dir=dump_dir
+                        dump_dir=dump_dir,
+                        cold_start=True,
+                        cold_start_no_stats=True,
                     )
                     logger.info(f"[EXEC]->[{exe_cmd}]")
                     cur_process = subprocess.Popen(

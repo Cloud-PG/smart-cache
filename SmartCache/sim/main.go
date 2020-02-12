@@ -46,6 +46,7 @@ var (
 	serviceHost         string
 	servicePort         int32
 	simColdStart        bool
+	simColdStartNoStats bool
 	simDump             bool
 	simDumpFileName     string
 	simLoadDump         bool
@@ -202,8 +203,12 @@ func addSimFlags(cmd *cobra.Command) {
 		"number of the window to stop with the simulation",
 	)
 	cmd.PersistentFlags().BoolVar(
-		&simColdStart, "simColdStart", true,
+		&simColdStart, "simColdStart", false,
 		"indicates if the cache have to be empty after a dump load",
+	)
+	cmd.PersistentFlags().BoolVar(
+		&simColdStartNoStats, "simColdStartNoStats", false,
+		"indicates if the cache have to be empty and without any stats after a dump load",
 	)
 }
 
@@ -304,8 +309,13 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 
 				logger.Println("[Cache dump loaded!]")
 				if simColdStart {
-					curCacheInstance.ClearFiles()
-					logger.Println("[Cache Files deleted][COLD START]")
+					if simColdStartNoStats {
+						curCacheInstance.Clear()
+						logger.Println("[Cache Files deleted][COLD START][NO STATISTICS]")
+					} else {
+						curCacheInstance.ClearFiles()
+						logger.Println("[Cache Files deleted][COLD START]")
+					}
 				} else {
 					logger.Println("[Cache Files stored][HOT START]")
 				}
