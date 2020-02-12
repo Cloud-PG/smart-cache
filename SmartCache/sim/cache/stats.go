@@ -93,12 +93,12 @@ func (statStruct *Stats) GetOrCreate(filename string, vars ...interface{}) (*Fil
 }
 
 // UpdateWeight update the weight of a file and also the sum of all weights
-func (statStruct *Stats) updateWeight(stats *FileStats, newFile bool, functionType FunctionType, exp float32) {
+func (statStruct *Stats) updateWeight(stats *FileStats, newFile bool, functionType FunctionType, alpha float32, beta float32, gamma float32) {
 	if newFile {
-		statStruct.weightSum += stats.updateWeight(functionType, exp)
+		statStruct.weightSum += stats.updateWeight(functionType, alpha, beta, gamma)
 	} else {
 		statStruct.weightSum -= stats.Weight
-		statStruct.weightSum += stats.updateWeight(functionType, exp)
+		statStruct.weightSum += stats.updateWeight(functionType, alpha, beta, gamma)
 	}
 }
 
@@ -249,33 +249,31 @@ func (stats *FileStats) updateFilePoints(curTime *time.Time) float64 {
 	return points
 }
 
-func (stats *FileStats) updateWeight(functionType FunctionType, exp float32) float32 {
+func (stats *FileStats) updateWeight(functionType FunctionType, alpha float32, beta float32, gamma float32) float32 {
 	switch functionType {
-	case FuncFileWeight:
-		stats.Weight = fileWeight(
+	case FuncParametricBase:
+		stats.Weight = fileWeightedBaseParams(
+			stats.TotRequests(),
 			stats.Size,
-			stats.TotRequests(),
-			exp,
+			stats.RequestTicksMean,
+			alpha,
+			beta,
+			gamma,
 		)
-	case FuncFileWeightAndTime:
-		stats.Weight = fileWeightAndTime(
+	case FuncParametricExp:
+		stats.Weight = fileWeightedExpParams(
+			stats.TotRequests(),
 			stats.Size,
-			stats.TotRequests(),
-			exp,
-			stats.LastTimeRequested,
-		)
-	case FuncFileWeightOnlyTime:
-		stats.Weight = fileWeightOnlyTime(
-			stats.TotRequests(),
-			exp,
-			stats.LastTimeRequested,
+			stats.RequestTicksMean,
+			alpha,
+			beta,
+			gamma,
 		)
 	case FuncWeightedRequests:
 		stats.Weight = fileWeightedRequest(
-			stats.Size,
 			stats.TotRequests(),
+			stats.Size,
 			stats.RequestTicksMean,
-			exp,
 		)
 	}
 	return stats.Weight

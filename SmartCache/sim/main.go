@@ -58,7 +58,9 @@ var (
 	simStopWindow       uint32
 	simWindowSize       uint32
 	weightedFunc        string
-	weightExp           float32
+	weightAlpha         float32
+	weightBeta          float32
+	weightGamma         float32
 	logger              = log.New(os.Stderr, color.MagentaString("[SIM] "), log.Lshortfile|log.LstdFlags)
 )
 
@@ -114,8 +116,16 @@ func main() {
 		"[WeightedLRU] function to use with weighted cache",
 	)
 	rootCmd.PersistentFlags().Float32Var(
-		&weightExp, "weightExp", 2.0,
-		"[Simulation] Exponential to use with weighted cache function",
+		&weightAlpha, "weightAlpha", 1.0,
+		"[Simulation] Parameter Alpha of the weighted function",
+	)
+	rootCmd.PersistentFlags().Float32Var(
+		&weightBeta, "weightBeta", 1.0,
+		"[Simulation] Parameter Beta of the weighted function",
+	)
+	rootCmd.PersistentFlags().Float32Var(
+		&weightGamma, "weightGamma", 1.0,
+		"[Simulation] Parameter Gamma of the weighted function",
 	)
 	rootCmd.PersistentFlags().BoolVar(
 		&enableDebug, "debug", false,
@@ -658,12 +668,10 @@ func genCache(cacheType string) cache.Cache {
 		)
 
 		switch weightedFunc {
-		case "FuncFileWeight":
-			selFunctionType = cache.FuncFileWeight
-		case "FuncFileWeightAndTime":
-			selFunctionType = cache.FuncFileWeightAndTime
-		case "FuncFileWeightOnlyTime":
-			selFunctionType = cache.FuncFileWeightOnlyTime
+		case "FuncParamBase":
+			selFunctionType = cache.FuncParametricBase
+		case "FuncParamBaseExp":
+			selFunctionType = cache.FuncParametricExp
 		case "FuncWeightedRequests":
 			selFunctionType = cache.FuncWeightedRequests
 		default:
@@ -675,7 +683,11 @@ func genCache(cacheType string) cache.Cache {
 			LRUCache: cache.LRUCache{
 				MaxSize: cacheSize,
 			},
-			Exp:             weightExp,
+			Parameters: cache.WeightedFunctionParameters{
+				Alpha: weightAlpha,
+				Beta:  weightBeta,
+				Gamma: weightGamma,
+			},
 			SelFunctionType: selFunctionType,
 		}
 		cacheInstance.Init()

@@ -18,7 +18,6 @@ func TestWeightedLRUBaseMultipleInsert(t *testing.T) {
 			MaxSize: 3.0,
 		},
 		SelFunctionType: FuncWeightedRequests,
-		Exp:             WeightedCacheEXP,
 	}
 	testCache.Init()
 
@@ -46,7 +45,6 @@ func TestWeightedLRUClear(t *testing.T) {
 			MaxSize: 3.0,
 		},
 		SelFunctionType: FuncWeightedRequests,
-		Exp:             WeightedCacheEXP,
 	}
 	testCache.Init()
 
@@ -78,7 +76,6 @@ func TestWeightedLRUInsert(t *testing.T) {
 			MaxSize: 5.0,
 		},
 		SelFunctionType: FuncWeightedRequests,
-		Exp:             WeightedCacheEXP,
 	}
 	testCache.Init()
 

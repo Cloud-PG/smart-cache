@@ -4,11 +4,18 @@ import (
 	"encoding/json"
 )
 
+// WeightedFunctionParameters are the input parameters of the weighted function
+type WeightedFunctionParameters struct {
+	Alpha float32
+	Beta  float32
+	Gamma float32
+}
+
 // WeightedLRU cache
 type WeightedLRU struct {
 	LRUCache
 	Stats
-	Exp             float32
+	Parameters      WeightedFunctionParameters
 	SelFunctionType FunctionType
 }
 
@@ -85,7 +92,7 @@ func (cache *WeightedLRU) Loads(inputString [][]byte) {
 func (cache *WeightedLRU) BeforeRequest(request *Request, hit bool) *FileStats {
 	curStats, newFile := cache.GetOrCreate(request.Filename, request.Size, request.DayTime)
 	curStats.updateStats(hit, request.Size, request.UserID, request.SiteName, request.DayTime)
-	cache.updateWeight(curStats, newFile, cache.SelFunctionType, cache.Exp)
+	cache.updateWeight(curStats, newFile, cache.SelFunctionType, cache.Parameters.Alpha, cache.Parameters.Beta, cache.Parameters.Gamma)
 	return curStats
 }
 
