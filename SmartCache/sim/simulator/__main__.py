@@ -24,7 +24,7 @@ from .utils import get_logger, load_results, str2bool, wait_jobs
 def prepare_process_call(args, simulator_exe, cache_type, working_dir: str,
                          start_window: int, stop_window: int, window_idx: int = 0,
                          dump: bool = False, load: bool = False, dump_dir: str = "",
-                         cold_start: bool = false, cold_start_no_stats: bool = False
+                         cold_start: bool = False, cold_start_no_stats: bool = False
                          ) -> str:
     os.makedirs(working_dir, exist_ok=True)
     # Create base command
