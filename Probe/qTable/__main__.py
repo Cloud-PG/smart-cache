@@ -15,15 +15,15 @@ def main():
 
     df = pd.read_csv(args.path)
     df = df.sort_values(
-        by=['dataType', 'numReq', 'size', 'deltaNumLastRequest'])
+        by=['numReq', 'size', 'cacheUsage', 'dataType', 'deltaNumLastRequest'])
 
-    print(f"dataType\tnumReq\tsize\tdeltaNumLastRequest")
+    print(f"numReq\tsize\tcacheUsage\tdataType\tdeltaNumLastRequest")
     print("-"*42)
 
     action_explored = 0
     state_not_explored = 0
 
-    for row in df.sort_values(by=['numReq', 'size', 'deltaNumLastRequest']).itertuples():
+    for row in df.itertuples():
         if row.ActionNotStore != 0.:
             action_explored += 1
         if row.ActionStore != 0.:
