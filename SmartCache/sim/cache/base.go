@@ -11,8 +11,9 @@ import (
 
 // DumpRecord represents a record in the dump file
 type DumpRecord struct {
-	Info string `json:"info"`
-	Data string `json:"data"`
+	Info     string `json:"info"`
+	Data     string `json:"data"`
+	Filename string `json:"filename"`
 }
 
 // DumpInfo collects cache marshall info
@@ -42,10 +43,10 @@ type Request struct {
 type Cache interface {
 	Init(...interface{}) interface{}
 
-	Dumps() *[][]byte
+	Dumps() [][]byte
 	Dump(filename string)
-	Loads(*[][]byte)
-	Load(filename string)
+	Loads([][]byte)
+	Load(filename string) [][]byte
 
 	Clear()
 	ClearFiles()

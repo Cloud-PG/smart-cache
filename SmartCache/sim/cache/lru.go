@@ -13,6 +13,7 @@ import (
 	pb "simulator/v2/cache/simService"
 
 	empty "github.com/golang/protobuf/ptypes/empty"
+	"go.uber.org/zap"
 )
 
 // LRUCache cache
@@ -99,7 +100,7 @@ func (cache *LRUCache) ClearHitMissStats() {
 }
 
 // Dumps the LRUCache cache
-func (cache *LRUCache) Dumps() *[][]byte {
+func (cache *LRUCache) Dumps() [][]byte {
 	outData := make([][]byte, 0)
 	var newLine = []byte("\n")
 
@@ -117,7 +118,7 @@ func (cache *LRUCache) Dumps() *[][]byte {
 		record = append(record, newLine...)
 		outData = append(outData, record)
 	}
-	return &outData
+	return outData
 }
 
 // Dump the LRUCache cache
@@ -128,7 +129,7 @@ func (cache *LRUCache) Dump(filename string) {
 	}
 	gwriter := gzip.NewWriter(outFile)
 
-	for _, record := range *cache.Dumps() {
+	for _, record := range cache.Dumps() {
 		gwriter.Write(record)
 	}
 
@@ -136,13 +137,11 @@ func (cache *LRUCache) Dump(filename string) {
 }
 
 // Loads the LRUCache cache
-func (cache *LRUCache) Loads(inputString *[][]byte) {
+func (cache *LRUCache) Loads(inputString [][]byte) {
 	var curRecord DumpRecord
 	var curRecordInfo DumpInfo
-
-	for _, record := range *inputString {
-		buffer := record[:len(record)-1]
-		json.Unmarshal(buffer, &curRecord)
+	for _, record := range inputString {
+		json.Unmarshal(record, &curRecord)
 		json.Unmarshal([]byte(curRecord.Info), &curRecordInfo)
 		switch curRecordInfo.Type {
 		case "FILES":
@@ -155,7 +154,9 @@ func (cache *LRUCache) Loads(inputString *[][]byte) {
 }
 
 // Load the LRUCache cache
-func (cache LRUCache) Load(filename string) {
+func (cache LRUCache) Load(filename string) [][]byte {
+	logger.Info("Dump cache", zap.String("filename", filename))
+
 	inFile, err := os.Open(filename)
 	if err != nil {
 		panic(fmt.Sprintf("Error dump file opening: %s", err))
@@ -173,15 +174,23 @@ func (cache LRUCache) Load(filename string) {
 	charBuffer = make([]byte, 1)
 
 	for {
-		curChar, err := greader.Read(charBuffer)
+		_, err := greader.Read(charBuffer)
 		if err != nil {
 			if err == io.EOF {
+				if len(buffer) > 0 {
+					newRecord := make([]byte, len(buffer))
+					copy(newRecord, buffer)
+					records = append(records, newRecord)
+					buffer = buffer[:0]
+				}
 				break
 			}
 			panic(err)
 		}
-		if string(curChar) == "\n" {
-			records = append(records, buffer)
+		if string(charBuffer) == "\n" {
+			newRecord := make([]byte, len(buffer))
+			copy(newRecord, buffer)
+			records = append(records, newRecord)
 			buffer = buffer[:0]
 		} else {
 			buffer = append(buffer, charBuffer...)
@@ -189,7 +198,7 @@ func (cache LRUCache) Load(filename string) {
 	}
 	greader.Close()
 
-	cache.Loads(&records)
+	return records
 }
 
 // SimGet updates the cache from a protobuf message
@@ -230,7 +239,7 @@ func (cache *LRUCache) SimGetInfoCacheStatus(ctx context.Context, _ *empty.Empty
 
 // SimDumps returns the content of the cache
 func (cache *LRUCache) SimDumps(_ *empty.Empty, stream pb.SimService_SimDumpsServer) error {
-	for _, record := range *cache.Dumps() {
+	for _, record := range cache.Dumps() {
 		curRecord := &pb.SimDumpRecord{
 			Raw: record,
 		}
@@ -257,7 +266,7 @@ func (cache *LRUCache) SimLoads(stream pb.SimService_SimLoadsServer) error {
 		records = append(records, record.Raw)
 	}
 
-	cache.Loads(&records)
+	cache.Loads(records)
 
 	return nil
 }

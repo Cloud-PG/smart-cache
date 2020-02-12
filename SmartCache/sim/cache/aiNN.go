@@ -101,7 +101,7 @@ func (cache *AINN) Clear() {
 }
 
 // Dumps the AINN cache
-func (cache *AINN) Dumps() *[][]byte {
+func (cache *AINN) Dumps() [][]byte {
 	outData := make([][]byte, 0)
 	var newLine = []byte("\n")
 
@@ -131,15 +131,15 @@ func (cache *AINN) Dumps() *[][]byte {
 		outData = append(outData, record)
 	}
 
-	return &outData
+	return outData
 }
 
 // Loads the AINN cache
-func (cache *AINN) Loads(inputString *[][]byte) {
+func (cache *AINN) Loads(inputString [][]byte) {
 	var curRecord DumpRecord
 	var curRecordInfo DumpInfo
 
-	for _, record := range *inputString {
+	for _, record := range inputString {
 		buffer := record[:len(record)-1]
 		json.Unmarshal(buffer, &curRecord)
 		json.Unmarshal([]byte(curRecord.Info), &curRecordInfo)

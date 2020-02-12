@@ -1,8 +1,10 @@
 package cache
 
 import (
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
+	"os"
 	"simulator/v2/cache/ai/featuremap"
 	qlearn "simulator/v2/cache/qLearn"
 	"sort"
@@ -14,10 +16,6 @@ import (
 
 const (
 	bandwidthLimit = (1000000. / 8.) * 60. * 60. * 24.
-)
-
-var (
-	logger = zap.L()
 )
 
 // AIRL cache
@@ -79,7 +77,7 @@ func (cache *AIRL) Clear() {
 }
 
 // Dumps the AIRL cache
-func (cache *AIRL) Dumps() *[][]byte {
+func (cache *AIRL) Dumps() [][]byte {
 	outData := make([][]byte, 0)
 	var newLine = []byte("\n")
 
@@ -98,12 +96,13 @@ func (cache *AIRL) Dumps() *[][]byte {
 		outData = append(outData, record)
 	}
 	// ----- Stats -----
-	for _, stats := range cache.Stats.fileStats {
+	for filename, stats := range cache.Stats.fileStats {
 		dumpInfo, _ := json.Marshal(DumpInfo{Type: "STATS"})
 		dumpStats, _ := json.Marshal(stats)
 		record, _ := json.Marshal(DumpRecord{
-			Info: string(dumpInfo),
-			Data: string(dumpStats),
+			Info:     string(dumpInfo),
+			Data:     string(dumpStats),
+			Filename: filename,
 		})
 		record = append(record, newLine...)
 		outData = append(outData, record)
@@ -118,30 +117,60 @@ func (cache *AIRL) Dumps() *[][]byte {
 	record = append(record, newLine...)
 	outData = append(outData, record)
 
-	return &outData
+	return outData
+}
+
+// Dump the AIRL cache
+func (cache *AIRL) Dump(filename string) {
+	logger.Info("Dump cache", zap.String("filename", filename))
+	outFile, osErr := os.Create(filename)
+	if osErr != nil {
+		panic(fmt.Sprintf("Error dump file creation: %s", osErr))
+	}
+	gwriter := gzip.NewWriter(outFile)
+
+	for _, record := range cache.Dumps() {
+		gwriter.Write(record)
+	}
+
+	gwriter.Close()
 }
 
 // Loads the AIRL cache
-func (cache *AIRL) Loads(inputString *[][]byte) {
-	var curRecord DumpRecord
-	var curRecordInfo DumpInfo
+func (cache *AIRL) Loads(inputString [][]byte) {
+	var (
+		curRecord     DumpRecord
+		curRecordInfo DumpInfo
+		unmarshalErr  error
+	)
 
-	for _, record := range *inputString {
-		buffer := record[:len(record)-1]
-		json.Unmarshal(buffer, &curRecord)
-		json.Unmarshal([]byte(curRecord.Info), &curRecordInfo)
+	for _, record := range inputString {
+		unmarshalErr = json.Unmarshal(record, &curRecord)
+		if unmarshalErr != nil {
+			panic(unmarshalErr)
+		}
+		unmarshalErr = json.Unmarshal([]byte(curRecord.Info), &curRecordInfo)
+		if unmarshalErr != nil {
+			panic(unmarshalErr)
+		}
 		switch curRecordInfo.Type {
 		case "FILES":
 			var curFile FileDump
-			json.Unmarshal([]byte(curRecord.Data), &curFile)
+			unmarshalErr = json.Unmarshal([]byte(curRecord.Data), &curFile)
 			cache.files[curFile.Filename] = curFile.Size
 			cache.size += curFile.Size
 		case "STATS":
-			json.Unmarshal([]byte(curRecord.Data), &cache.Stats.fileStats)
+			var curFileStats FileStats
+			unmarshalErr = json.Unmarshal([]byte(curRecord.Data), &curFileStats)
+			cache.Stats.fileStats[curRecord.Filename] = &curFileStats
 		case "QTABLE":
-			json.Unmarshal([]byte(curRecord.Data), cache.qTable)
+			unmarshalErr = json.Unmarshal([]byte(curRecord.Data), cache.qTable)
+		}
+		if unmarshalErr != nil {
+			panic(fmt.Sprintf("%+v", unmarshalErr))
 		}
 	}
+
 }
 
 func (cache *AIRL) getCategory(catKey string, value interface{}) []bool {

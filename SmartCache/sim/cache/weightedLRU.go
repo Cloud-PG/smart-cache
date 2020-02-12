@@ -28,7 +28,7 @@ func (cache *WeightedLRU) Clear() {
 }
 
 // Dumps the WeightedLRU cache
-func (cache *WeightedLRU) Dumps() *[][]byte {
+func (cache *WeightedLRU) Dumps() [][]byte {
 	outData := make([][]byte, 0)
 	var newLine = []byte("\n")
 
@@ -57,15 +57,15 @@ func (cache *WeightedLRU) Dumps() *[][]byte {
 		record = append(record, newLine...)
 		outData = append(outData, record)
 	}
-	return &outData
+	return outData
 }
 
 // Loads the WeightedLRU cache
-func (cache *WeightedLRU) Loads(inputString *[][]byte) {
+func (cache *WeightedLRU) Loads(inputString [][]byte) {
 	var curRecord DumpRecord
 	var curRecordInfo DumpInfo
 
-	for _, record := range *inputString {
+	for _, record := range inputString {
 		buffer := record[:len(record)-1]
 		json.Unmarshal(buffer, &curRecord)
 		json.Unmarshal([]byte(curRecord.Info), &curRecordInfo)
