@@ -10,6 +10,8 @@ import pandas as pd
 
 import gym
 
+bandwidthLimit = (1000000. / 8.) * 60. * 60. * 24
+
 
 class FileStats(object):
 
@@ -110,9 +112,9 @@ class LRU(object):
 
             else:
                 while self._size + file_stats.size > self._max_size:
-                    _, file_size = self._files.popitem(False)
-                    self._size -= file_size
-                    self._deleted_data += file_size
+                    _, file_stats = self._files.popitem(False)
+                    self._size -= file_stats.size
+                    self._deleted_data += file_stats.size
                 else:
                     self._files[filename] = file_stats
                     self._size += file_stats.size
@@ -137,9 +139,9 @@ class LRU(object):
         self._read_data += fileStats.size
 
 
-###############################################################################################################
-##############################################################################################################
-#################################################################################################################
+###############################################################################
+###############################################################################
+###############################################################################
 
 def from_list_to_one_hot(list_):
     with open('features.json') as f:
@@ -209,9 +211,11 @@ class CacheEnv(gym.Env):
                  self._LRU._dailyReadOnMiss,
                  self._LRU._deleted_data,
                  (self._LRU._CPUtime_hit + self._LRU._CPUtime_miss) /
-                    (self._LRU._WALLtime_hit + self._LRU._WALLtime_miss * 1.15) *100.0,
+                    (self._LRU._WALLtime_hit +
+                     self._LRU._WALLtime_miss * 1.15) * 100.0,
                     (self._LRU._CPUtime_hit)/(self._LRU._WALLtime_hit) * 100.0,
-                    (self._LRU._CPUtime_miss)/(self._LRU._WALLtime_miss * 1.15) * 100.0,
+                    (self._LRU._CPUtime_miss) /
+                 (self._LRU._WALLtime_miss * 1.15) * 100.0,
                     self._LRU._written_data + self._LRU._read_data + self._LRU._deleted_data])
 
         return
@@ -296,13 +300,15 @@ class CacheEnv(gym.Env):
             self._LRU._CPUtime_miss += cputime
             if toadd == True:
                 reward = 0
-                if filestats.tot_requests > 1 or (self.curRequest - filestats._last_request) < 10000 or (self._LRU._dailyReadOnHit/self._LRU._dailyReadOnMiss) < (2./3.):
+                if self._LRU._dailyReadOnMiss >= bandwidthLimit:
+                    # if filestats.tot_requests > 1 or (self.curRequest - filestats._last_request) < 10000 or (self._LRU._dailyReadOnHit/self._LRU._dailyReadOnMiss) < (2./3.):
                     reward -= float(size)
                 else:
                     reward += float(size)
             if toadd == False:
                 reward = 0
-                if filestats.tot_requests < 100 and (self.curRequest - filestats._last_request) > 10000 and (self._LRU._dailyReadOnHit/self._LRU._dailyReadOnMiss) >= (2./3.):
+                if self._LRU._dailyReadOnHit < self._LRU._dailyReadOnMiss/2.0 or self._LRU._dailyReadOnMiss > bandwidthLimit:
+                    # if filestats.tot_requests < 100 and (self.curRequest - filestats._last_request) > 10000 and (self._LRU._dailyReadOnHit/self._LRU._dailyReadOnMiss) >= (2./3.):
                     reward -= float(size)
                 else:
                     reward += float(size)
@@ -310,7 +316,8 @@ class CacheEnv(gym.Env):
             self._LRU._WALLtime_hit += walltime
             self._LRU._CPUtime_hit += cputime
             reward = 0.0
-            if (self._LRU._dailyReadOnHit / self._LRU._dailyReadOnMiss) >= (2. / 3.):
+            if self._LRU._dailyReadOnHit >= self._LRU._dailyReadOnMiss/2.0:
+                # if (self._LRU._dailyReadOnHit / self._LRU._dailyReadOnMiss) >= (2. / 3.):
                 reward += float(size)
             else:
                 reward -= float(size)
