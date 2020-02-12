@@ -234,12 +234,12 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 
 			// CHECK DEBUG MODE
 			if enableDebug {
-				fmt.Println("DEBUG")
+				logger.Println("[DEBUG]")
 				loggerMgr := initZapLog(zap.DebugLevel)
 				zap.ReplaceGlobals(loggerMgr)
 				defer loggerMgr.Sync() // flushes buffer, if any
 			} else {
-				fmt.Println("NO DEBUG")
+				logger.Println("[NO DEBUG]")
 				loggerMgr := initZapLog(zap.ErrorLevel)
 				zap.ReplaceGlobals(loggerMgr)
 				defer loggerMgr.Sync() // flushes buffer, if any
@@ -297,8 +297,11 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			}
 
 			if simLoadDump {
-				logger.Println("[Loading cache dump...]")
-				curCacheInstance.Load(simLoadDumpFileName)
+				logger.Printf("[Loading cache dump file %s]\n", simLoadDumpFileName)
+
+				loadedDump := curCacheInstance.Load(simLoadDumpFileName)
+				curCacheInstance.Loads(loadedDump)
+
 				logger.Println("[Cache dump loaded!]")
 				if simColdStart {
 					curCacheInstance.ClearFiles()
@@ -528,7 +531,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			elTM := int(elapsedTime.Minutes()) % 60
 			elTS := int(elapsedTime.Seconds()) % 60
 			avgSpeed := float64(totIterations) / elapsedTime.Seconds()
-			logger.Printf("\n[Simulation END][elapsed Time: %02d:%02d:%02d][Num. Records: %d][Mean Records/s: %0.0f]\n",
+			logger.Printf("[Simulation END][elapsed Time: %02d:%02d:%02d][Num. Records: %d][Mean Records/s: %0.0f]\n",
 				elTH,
 				elTM,
 				elTS,
