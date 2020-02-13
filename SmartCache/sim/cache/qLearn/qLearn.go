@@ -43,7 +43,7 @@ type QTable struct {
 	Epsilon          float64              `json:"epsilon"`
 	MaxEpsilon       float64              `json:"max_epsilon"`
 	MinEpsilon       float64              `json:"min_epsilon"`
-	EpisodeCounter   float64              `json:"episode_counter"`
+	StepNum          int32                `json:"episode_counter"`
 	Actions          []ActionType         `json:"actions"`
 	ActionStrings    []string             `json:"actionStrings"`
 	RGenerator       *rand.Rand           `json:"r_generator"`
@@ -106,6 +106,7 @@ func (table *QTable) ResetParams() {
 	table.Epsilon = 1.0
 	table.MaxEpsilon = 1.0
 	table.MinEpsilon = 0.1
+	table.StepNum = 0
 
 	logger.Info("Parameters restored as default...")
 }
@@ -264,8 +265,8 @@ func (table *QTable) Update(state string, action ActionType, reward float64) {
 
 // UpdateEpsilon upgrades the epsilon variable
 func (table *QTable) UpdateEpsilon() {
-	table.EpisodeCounter += 1.0
-	table.Epsilon = table.MinEpsilon + (table.MaxEpsilon-table.MinEpsilon)*math.Exp(-table.DecayRateEpsilon*float64(table.EpisodeCounter))
+	table.StepNum++
+	table.Epsilon = table.MinEpsilon + (table.MaxEpsilon-table.MinEpsilon)*math.Exp(-table.DecayRateEpsilon*float64(table.StepNum))
 }
 
 // TODO: sistemare gli stati per avere current state e next state
