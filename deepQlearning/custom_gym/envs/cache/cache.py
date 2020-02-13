@@ -262,7 +262,7 @@ class CacheEnv(gym.Env):
         return
 
     def get_dataframe(self, i):
-        directory = "/Users/tommasotedeschi/Documents/Dottorato/ML/deepQlearning/results"
+        directory = "/home/ubuntu/source2018"
         file_ = sorted(os.listdir(directory))[i]
         with gzip.open(directory + '/' + str(file_)) as f:
             df_ = pd.read_csv(f)

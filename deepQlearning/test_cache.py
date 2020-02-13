@@ -26,7 +26,7 @@ ENV_NAME = 'CacheEnv-v0'
 
 #env = gym.make(ENV_NAME,df = df_)
 
-env = gym.make(ENV_NAME, total_days = 30)
+env = gym.make(ENV_NAME, total_days = 90)
 
 nb_actions = env.action_space.n
 print(nb_actions)
@@ -54,6 +54,6 @@ dqn = DQNAgent(model=model, nb_actions=nb_actions, memory=memory, nb_steps_warmu
 #dqn.compile(Adam(lr=1e-3), metrics=['mae'])
 dqn.compile(Adam(lr=1e-1), metrics=['mae'])
 
-dqn.fit(env, nb_steps=900000, visualize=False, verbose=2)
+dqn.fit(env, nb_steps=3000000, visualize=False, verbose=2)
 
 #dqn.test(env, nb_episodes=1, visualize=False)
