@@ -78,6 +78,8 @@ func (statStruct *Stats) GetOrCreate(filename string, vars ...interface{}) (*Fil
 			Size:             size,
 			FirstTime:        reqTime,
 			DeltaLastRequest: 0,
+			Users:            map[int]int{},
+			Sites:            map[string]int{},
 		}
 		statStruct.fileStats[filename] = curStats
 	} else {
