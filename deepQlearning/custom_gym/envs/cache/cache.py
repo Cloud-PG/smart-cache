@@ -63,10 +63,15 @@ class Stats(object):
 
 class LRU(object):
 
-    def __init__(self, size: float = 104857600):
-        """Initialize cache.
-        Args:
-            size (float): cache size in MB. Default = 10T
+    def __init__(self, size: float = 104857600, h_watermark: float = 95., l_watermark: float = 75.):
+        """Init of the cache object
+
+        :param size: The size of the cache, defaults to 104857600 (100Terabytes)
+        :type size: float, optional
+        :param h_watermark: hight watermark (percentage), defaults to 95.
+        :type h_watermark: float, optional
+        :param l_watermark: lower watermark (percentage), defaults to 75.
+        :type l_watermark: float, optional
         """
         self._size: float = 0.0
         self._max_size = size
@@ -87,6 +92,13 @@ class LRU(object):
 
         self._dailyReadOnHit: float = 0.0
         self._dailyReadOnMiss: float = 0.0
+
+        self._h_watermark: float = h_watermark
+        self._l_watermark: float = l_watermark
+
+    @oroperty
+    def capacity(self) -> float:
+        return (self._size / self._max_size) * 100.
 
     def hit_rate(self) -> float:
         if self._hit:
@@ -111,14 +123,10 @@ class LRU(object):
                 return True
 
             else:
-                while self._size + file_stats.size > self._max_size:
-                    _, file_stats = self._files.popitem(False)
-                    self._size -= file_stats.size
-                    self._deleted_data += file_stats.size
-                else:
-                    self._files[filename] = file_stats
-                    self._size += file_stats.size
-                    return True
+                self.__free(file_stats.size)
+                self._files[filename] = file_stats
+                self._size += file_stats.size
+                return True
 
         elif hit:
             self._files.move_to_end(filename)
@@ -137,6 +145,27 @@ class LRU(object):
             self._written_data += fileStats.size
 
         self._read_data += fileStats.size
+
+    def __free(self, amount: float, percentage: bool = False):
+        if not percentage:
+            size_to_remove = amount
+        else:
+            size_to_remove = amount * (self._max_size / 100.)
+        tot_removed = 0.0
+        while tot_removed < size_to_remove:
+            _, file_stats = self._files.popitem(False)
+            self._size -= file_stats.size
+            self._deleted_data += file_stats.size
+
+    def check_watermark_and_free(self):
+        """Check if the cache reached the hight watermark.
+
+        If it is true, the cache free space until
+        the lower watermark is reached
+        """
+        if self.capacity >= self._h_watermark:
+            percentage = self.capacity - self._l_watermark
+            self.__free(percentage, percentage=True)
 
 
 ###############################################################################
@@ -293,6 +322,7 @@ class CacheEnv(gym.Env):
         # modify cache and update stats according to the chosen action
         added = self._LRU.update_policy(filename, filestats, hit, toadd)
         self._LRU.after_request(filestats, hit, added)
+        self._LRU.check_watermark_and_free()
 
         # compute the reward
         if hit == False:
