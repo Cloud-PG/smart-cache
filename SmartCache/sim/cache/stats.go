@@ -176,7 +176,7 @@ func (stats *FileStats) removeFromCache() {
 func (stats *FileStats) addUser(userID int) {
 	for _, user := range stats.Users {
 		if user == userID {
-			break
+			return
 		}
 	}
 	stats.Users = append(stats.Users, userID)
@@ -185,7 +185,7 @@ func (stats *FileStats) addUser(userID int) {
 func (stats *FileStats) addSite(siteName string) {
 	for _, site := range stats.Sites {
 		if site == siteName {
-			break
+			return
 		}
 	}
 	stats.Sites = append(stats.Sites, siteName)
