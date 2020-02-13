@@ -154,6 +154,7 @@ class LRU(object):
         tot_removed = 0.0
         while tot_removed < size_to_remove:
             _, file_stats = self._files.popitem(False)
+            tot_removed += file_stats.size
             self._size -= file_stats.size
             self._deleted_data += file_stats.size
 
@@ -316,9 +317,10 @@ class CacheEnv(gym.Env):
         cputime = self.df.loc[self.curRequest, 'CPUTime']
         walltime = self.df.loc[self.curRequest, 'WrapWC']
 
-        print(cputime)
-        print(walltime)
+        #print(cputime)
+        #print(walltime)
 
+        print('files in cache are'+ str(len(self._LRU._files)))
         # modify cache and update stats according to the chosen action
         added = self._LRU.update_policy(filename, filestats, hit, toadd)
         self._LRU.after_request(filestats, hit, added)
