@@ -112,7 +112,7 @@ func main() {
 		"[Simulation] time delay for cmd output",
 	)
 	rootCmd.PersistentFlags().StringVar(
-		&weightedFunc, "weightFunction", "FuncWeightedRequests",
+		&weightedFunc, "weightedFunc", "FuncWeightedRequests",
 		"[WeightedLRU] function to use with weighted cache",
 	)
 	rootCmd.PersistentFlags().Float32Var(
@@ -282,7 +282,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 					baseName,
 					weightedFunc,
 					parameters,
-				}, "_ ")
+				}, "_")
 			}
 
 			// Output files
@@ -501,7 +501,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 						elapsedTime := time.Now().Sub(simBeginTime)
 						outString := strings.Join(
 							[]string{
-								fmt.Sprintf("[%s_%0.0f_%s]", cacheType, cacheSize, simRegion),
+								fmt.Sprintf("[%s]", baseName),
 								fmt.Sprintf("[Elapsed Time: %02d:%02d:%02d]",
 									int(elapsedTime.Hours()),
 									int(elapsedTime.Minutes())%60,
