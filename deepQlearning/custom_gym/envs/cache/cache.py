@@ -7,7 +7,6 @@ from datetime import datetime
 
 import numpy as np
 import pandas as pd
-
 import gym
 
 bandwidthLimit = (1000000. / 8.) * 60. * 60. * 24
