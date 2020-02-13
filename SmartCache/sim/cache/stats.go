@@ -3,7 +3,6 @@ package cache
 import (
 	"encoding/json"
 	"math"
-	"sort"
 	"time"
 )
 
@@ -126,22 +125,22 @@ type cacheEmptyMsg struct{}
 
 // FileStats contains file statistics collected by weighted caches
 type FileStats struct {
-	Weight            float32     `json:"weight"`
-	Points            float64     `json:"points"`
-	Size              float32     `json:"size"`
-	NHits             uint32      `json:"nHits"`
-	NMiss             uint32      `json:"nMiss"`
-	FirstTime         time.Time   `json:"firstTime"`
-	InCacheSince      time.Time   `json:"inCacheSince"`
-	InCache           bool        `json:"inCache"`
-	LastTimeRequested time.Time   `json:"lastTimeRequested"`
-	RequestTicksMean  float32     `json:"requestTicksMean"`
-	RequestTicks      []time.Time `json:"requestTicks"`
-	IdxLastRequest    int         `json:"idxLastRequest"`
-	DeltaLastRequest  int32       `json:"deltaLastRequest"`
-	LastRequest       int32       `json:"lastRequest"`
-	Users             []int       `json:"users"`
-	Sites             []string    `json:"sites"`
+	Weight            float32        `json:"weight"`
+	Points            float64        `json:"points"`
+	Size              float32        `json:"size"`
+	NHits             uint32         `json:"nHits"`
+	NMiss             uint32         `json:"nMiss"`
+	FirstTime         time.Time      `json:"firstTime"`
+	InCacheSince      time.Time      `json:"inCacheSince"`
+	InCache           bool           `json:"inCache"`
+	LastTimeRequested time.Time      `json:"lastTimeRequested"`
+	RequestTicksMean  float32        `json:"requestTicksMean"`
+	RequestTicks      []time.Time    `json:"requestTicks"`
+	IdxLastRequest    int            `json:"idxLastRequest"`
+	DeltaLastRequest  int32          `json:"deltaLastRequest"`
+	LastRequest       int32          `json:"lastRequest"`
+	Users             map[int]int    `json:"users"`
+	Sites             map[string]int `json:"sites"`
 }
 
 // DiffLastUpdate returns the number of days from the last update stats
@@ -175,19 +174,21 @@ func (stats *FileStats) removeFromCache() {
 }
 
 func (stats *FileStats) addUser(userID int) {
-	idx := sort.Search(len(stats.Users), func(idx int) bool { return userID <= stats.Users[idx] })
-	if idx >= len(stats.Users) || stats.Users[idx] != userID {
-		stats.Users = append(stats.Users, userID)
-		sort.Ints(stats.Users)
+	user, inStats := stats.Users[userID]
+	if !inStats {
+		user = 0
 	}
+	user++
+	stats.Users[userID] = user
 }
 
 func (stats *FileStats) addSite(siteName string) {
-	idx := sort.Search(len(stats.Sites), func(idx int) bool { return siteName <= stats.Sites[idx] })
-	if idx >= len(stats.Sites) || stats.Sites[idx] != siteName {
-		stats.Sites = append(stats.Sites, siteName)
-		sort.Strings(stats.Sites)
+	site, inStats := stats.Sites[siteName]
+	if !inStats {
+		site = 0
 	}
+	site++
+	stats.Sites[siteName] = site
 }
 
 func (stats *FileStats) updateStats(hit bool, size float32, userID int, siteName string, curTime time.Time) {
