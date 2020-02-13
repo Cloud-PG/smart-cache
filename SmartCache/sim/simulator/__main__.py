@@ -23,6 +23,7 @@ from .utils import get_logger, load_results, str2bool, wait_jobs
 
 def prepare_process_call(args, simulator_exe, cache_type, working_dir: str,
                          start_window: int, stop_window: int, window_idx: int = 0,
+                         wf_parameters: dict = None,
                          dump: bool = False, load: bool = False, dump_dir: str = "",
                          cold_start: bool = False, cold_start_no_stats: bool = False
                          ) -> str:
@@ -54,7 +55,12 @@ def prepare_process_call(args, simulator_exe, cache_type, working_dir: str,
     if cold_start_no_stats:
         exe_args.append("--simColdStartNoStats=true")
 
-    # Add custom cache parameters
+    if cache_type == "weightedLRU":
+        exe_args.append(f"--weightedFunc={wf_parameters['function']}")
+        exe_args.append(f"--weightAlpha={wf_parameters['alpha']}")
+        exe_args.append(f"--weightBeta={wf_parameters['beta']}")
+        exe_args.append(f"--weightGamma={wf_parameters['gamma']}")
+
     if cache_type in ['aiNN', 'aiRL']:
         if cache_type == "aiNN":
             feature_map_file = path.abspath(
@@ -103,6 +109,23 @@ def main():
     parser.add_argument('--cache-types', type=str,
                         default="lru,weightedLRU",
                         help='Comma separated list of cache to simulate [DEFAULT: "lru,weightedLRU"]')
+    parser.add_argument('--weighted-function', type=str,
+                        choices=[
+                            "FuncParamBase",
+                            "FuncParamBaseExp",
+                            "FuncWeightedRequests",
+                        ],
+                        default="FuncWeightedRequests",
+                        help='The selected weight function [DEFAULT: "FuncWeightedRequests"]')
+    parser.add_argument('--wf-param-alpha', type=float,
+                        default=1.0,
+                        help='The weight function parameter alpha [DEFAULT: 1.0]')
+    parser.add_argument('--wf-param-beta', type=float,
+                        default=1.0,
+                        help='The weight function parameter beta [DEFAULT: 1.0]')
+    parser.add_argument('--wf-param-gamma', type=float,
+                        default=1.0,
+                        help='The weight function parameter gamma [DEFAULT: 1.0]')
     parser.add_argument('--out-folder', type=str,
                         default="./simulation_results",
                         help='The folder where the simulation results will be stored [DEFAULT: "simulation_results"]')
@@ -213,6 +236,13 @@ def main():
         )
         os.makedirs(single_window_run_dir, exist_ok=True)
 
+        weight_function_parameters = {
+            'function': args.weighted_function,
+            'alpha': args.wf_param_alpha,
+            'beta': args.wf_param_beta,
+            'gamma': args.wf_param_gamma,
+        }
+
         if 'single' in simulation_steps:
             for window_idx in range(args.window_start, args.window_stop):
                 for cache_type in cache_types:
@@ -229,6 +259,7 @@ def main():
                         window_idx,
                         window_idx+1,
                         window_idx,
+                        wf_parameters=weight_function_parameters,
                         dump=True
                     )
                     logger.info(f"[EXEC]->[{exe_cmd}]")
@@ -267,6 +298,7 @@ def main():
                         working_dir,
                         args.window_start,
                         args.window_stop,
+                        wf_parameters=weight_function_parameters,
                         dump=True,
                         load=True,
                         dump_dir=working_dir,
@@ -281,6 +313,7 @@ def main():
                         working_dir,
                         args.window_start,
                         args.window_stop,
+                        wf_parameters=weight_function_parameters,
                         dump=True
                     )
                 logger.info(f"[EXEC]->[{exe_cmd}]")
@@ -328,6 +361,7 @@ def main():
                         window_idx+1,
                         window_idx+2,
                         window_idx,
+                        wf_parameters=weight_function_parameters,
                         load=True,
                         dump_dir=dump_dir,
                         cold_start=True,
@@ -375,6 +409,7 @@ def main():
                         window_idx+1,
                         args.window_stop+1,
                         window_idx,
+                        wf_parameters=weight_function_parameters,
                         load=True,
                         dump_dir=dump_dir,
                         cold_start=True,
