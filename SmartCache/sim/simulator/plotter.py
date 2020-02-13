@@ -13,6 +13,8 @@ from tqdm import tqdm
 
 from .utils import ignored
 
+_LINE_WIDTH = 2.8
+
 
 def update_colors(new_name: str, color_table: dict):
     names = list(color_table.keys()) + [new_name]
@@ -109,7 +111,7 @@ def plot_column(tools: list,
                 dates,
                 points,
                 color=color_table[cache_name],
-                line_width=5.,
+                line_width=_LINE_WIDTH,
             )
             legend_items.append((cache_name, [cur_line]))
             mean_point = sum(points) / len(points)
@@ -133,7 +135,7 @@ def plot_column(tools: list,
                 dates,
                 points,
                 color=color_table[cache_name],
-                line_width=5.,
+                line_width=_LINE_WIDTH,
             )
             legend_items.append((cache_name, [cur_line]))
             mean_point = sum(points) / len(points)
@@ -163,7 +165,7 @@ def plot_column(tools: list,
                 dates,
                 points,
                 color=color_table[f'{cache_name}_single'],
-                line_width=5.,
+                line_width=_LINE_WIDTH,
             )
             legend_items.append((single_window_name, [cur_line]))
             next_windows = pd.concat(
@@ -186,7 +188,7 @@ def plot_column(tools: list,
                 points,
                 line_color="red",
                 line_alpha=0.9,
-                line_width=5.,
+                line_width=_LINE_WIDTH,
                 line_dash="dashed",
             )
             legend_items.append((next_window_name, [cur_line]))
@@ -207,7 +209,7 @@ def plot_column(tools: list,
                 dates,
                 points,
                 color=color_table[cache_name],
-                line_width=5.,
+                line_width=_LINE_WIDTH,
             )
             legend_items.append((cache_name, [cur_line]))
             mean_point = sum(points) / len(points)
@@ -236,7 +238,7 @@ def plot_column(tools: list,
                 dates,
                 points,
                 color=color_table[f'{cache_name}_single'],
-                line_width=5.,
+                line_width=_LINE_WIDTH,
             )
             legend_items.append((single_window_name, [cur_line]))
             line_styles = cycle([
@@ -269,7 +271,7 @@ def plot_column(tools: list,
                         points,
                         line_color="red",
                         line_alpha=0.9,
-                        line_width=5.,
+                        line_width=_LINE_WIDTH,
                         line_dash=cur_line_style,
                     )
                     legend_items.append((cur_period_name, [cur_line]))
@@ -328,13 +330,13 @@ def plot_measure(tools: list,
     if target != None and target not in ['cpu_eff', 'network_in_saturation', 'network_out_saturation']:
         hline_1 = Span(
             location=1.0, dimension='width', line_dash="dashed",
-            line_color="black", line_width=5.,
+            line_color="black", line_width=_LINE_WIDTH,
         )
         cur_fig.renderers.extend([hline_1])
     elif target != None and target.find("network_") != -1:
         hline_1 = Span(
             location=100.0, dimension='width', line_dash="dashed",
-            line_color="black", line_width=5.,
+            line_color="black", line_width=_LINE_WIDTH,
         )
         cur_fig.renderers.extend([hline_1])
 
@@ -379,7 +381,7 @@ def plot_measure(tools: list,
                 dates,
                 points,
                 color=color_table[cache_name],
-                line_width=5.,
+                line_width=_LINE_WIDTH,
             )
             legend_items.append((cache_name, [cur_line]))
             mean_point = sum(points) / len(points)
@@ -401,7 +403,7 @@ def plot_measure(tools: list,
                 dates,
                 points,
                 color=color_table[cache_name],
-                line_width=5.,
+                line_width=_LINE_WIDTH,
             )
             legend_items.append((cache_name, [cur_line]))
             mean_point = sum(points) / len(points)
@@ -432,7 +434,7 @@ def plot_measure(tools: list,
                 dates,
                 points,
                 color=color_table[f'{cache_name}_single'],
-                line_width=5.,
+                line_width=_LINE_WIDTH,
             )
             legend_items.append((single_window_name, [cur_line]))
             next_windows = pd.concat(
@@ -456,7 +458,7 @@ def plot_measure(tools: list,
                 points,
                 line_color="red",
                 line_alpha=0.9,
-                line_width=5.,
+                line_width=_LINE_WIDTH,
                 line_dash="dashed",
             )
             legend_items.append((next_window_name, [cur_line]))
@@ -478,7 +480,7 @@ def plot_measure(tools: list,
                 dates,
                 points,
                 color=color_table[cache_name],
-                line_width=5.,
+                line_width=_LINE_WIDTH,
             )
             legend_items.append((cache_name, [cur_line]))
             mean_point = sum(points) / len(points)
@@ -508,7 +510,7 @@ def plot_measure(tools: list,
                 dates,
                 points,
                 color=color_table[f'{cache_name}_single'],
-                line_width=5.,
+                line_width=_LINE_WIDTH,
             )
             legend_items.append((single_window_name, [cur_line]))
             line_styles = cycle([
@@ -541,7 +543,7 @@ def plot_measure(tools: list,
                         points,
                         line_color="red",
                         line_alpha=0.9,
-                        line_width=5.,
+                        line_width=_LINE_WIDTH,
                         line_dash=cur_line_style,
                     )
                     legend_items.append((cur_period_name, [cur_line]))
@@ -643,7 +645,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
         )
         run_full_normal_hit_rate_figs.append(size_fig)
     pbar.update(1)
-    
+
     ###########################################################################
     # Hit Rate plot of full normal run
     ###########################################################################
