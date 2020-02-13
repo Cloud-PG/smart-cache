@@ -165,6 +165,7 @@ func (cache *AIRL) Loads(inputString [][]byte) {
 			cache.Stats.fileStats[curRecord.Filename] = &curFileStats
 		case "QTABLE":
 			unmarshalErr = json.Unmarshal([]byte(curRecord.Data), cache.qTable)
+			cache.qTable.ResetParams()
 		}
 		if unmarshalErr != nil {
 			panic(fmt.Sprintf("%+v", unmarshalErr))

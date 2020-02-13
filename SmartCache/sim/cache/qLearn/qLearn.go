@@ -96,6 +96,20 @@ func (table *QTable) Init(featureLenghts []int) {
 	logger.Info("Num action values", zap.Int("numActionValues", table.NumVars))
 }
 
+// ResetParams resets the learning parameters
+func (table *QTable) ResetParams() {
+	logger = zap.L()
+
+	table.LearningRate = 0.9 // also named Alpha
+	table.DiscountFactor = 0.5
+	table.DecayRateEpsilon = 0.000042
+	table.Epsilon = 1.0
+	table.MaxEpsilon = 1.0
+	table.MinEpsilon = 0.1
+
+	logger.Info("Parameters restored as default...")
+}
+
 func (table QTable) genAllStates(featureLenghts []int) chan []bool {
 	genChan := make(chan []bool)
 	go func() {
