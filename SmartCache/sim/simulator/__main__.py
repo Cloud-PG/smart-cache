@@ -92,6 +92,14 @@ def prepare_process_call(args, simulator_exe, cache_type, working_dir: str,
     return " ".join(exe_args)
 
 
+def cache_name(cache_type: str, args) -> str:
+    if cache_type == "weightedLRU":
+        cache_name = f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}_{args.weighted_function}_{args.wf_param_alpha:0.2f}_{args.wf_param_beta:0.2f}_{args.wf_param_gamma:0.2f}"
+    else:
+        cache_name = f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}"
+    return cache_name
+
+
 def main():
     logger = get_logger(__name__)
 
@@ -248,7 +256,7 @@ def main():
                 for cache_type in cache_types:
                     working_dir = path.join(
                         single_window_run_dir,
-                        f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}"
+                        cache_name(cache_type, args),
                         f"window_{window_idx}",
                     )
                     exe_cmd = prepare_process_call(
@@ -288,7 +296,7 @@ def main():
             for cache_type in cache_types:
                 working_dir = path.join(
                     normal_run_dir,
-                    f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}"
+                    cache_name(cache_type, args),
                 )
                 if args.load_prev_normal_run:
                     exe_cmd = prepare_process_call(
@@ -345,12 +353,12 @@ def main():
                 for cache_type in cache_types:
                     working_dir = path.join(
                         nexxt_window_run_dir,
-                        f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}"
+                        cache_name(cache_type, args),
                         f"window_{window_idx+1}",
                     )
                     dump_dir = path.join(
                         single_window_run_dir,
-                        f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}"
+                        cache_name(cache_type, args),
                         f"window_{window_idx}",
                     )
                     exe_cmd = prepare_process_call(
@@ -393,12 +401,12 @@ def main():
                 for cache_type in cache_types:
                     working_dir = path.join(
                         next_period_run_dir,
-                        f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}"
+                        cache_name(cache_type, args),
                         f"windows_{window_idx+1}-{args.window_stop}",
                     )
                     dump_dir = path.join(
                         single_window_run_dir,
-                        f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}"
+                        cache_name(cache_type, args),
                         f"window_{window_idx}",
                     )
                     exe_cmd = prepare_process_call(
