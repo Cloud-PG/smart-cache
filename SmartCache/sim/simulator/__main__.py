@@ -227,6 +227,8 @@ def main():
         base_dir = path.abspath(path.join(os.getcwd(), args.out_folder))
         os.makedirs(base_dir, exist_ok=True)
 
+        logger.info(f"[BASE DIR]->[{base_dir}]")
+
         with open(path.join(base_dir, "simulator.version"), "w") as ver_file:
             output = subprocess.check_output(
                 " ".join([simulator_exe, 'version']),
