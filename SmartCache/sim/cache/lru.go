@@ -387,7 +387,7 @@ func (cache *LRUCache) CheckWatermark() bool {
 	if cache.Capacity() >= cache.HighWaterMark {
 		ok = false
 		cache.Free(
-			cache.HighWaterMark-cache.LowWaterMark,
+			cache.Capacity()-cache.LowWaterMark,
 			true,
 		)
 	}
