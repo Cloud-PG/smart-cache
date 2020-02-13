@@ -96,7 +96,7 @@ class LRU(object):
         self._h_watermark: float = h_watermark
         self._l_watermark: float = l_watermark
 
-    @oroperty
+    @property
     def capacity(self) -> float:
         return (self._size / self._max_size) * 100.
 
