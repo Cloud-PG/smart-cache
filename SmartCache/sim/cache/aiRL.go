@@ -416,8 +416,6 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				} else {
 					reward += float64(request.Size)
 				}
-				cache.qPrevState[request.Filename] = curState
-				cache.qPrevAction[request.Filename] = curAction
 
 				// Update table
 				cache.qTable.Update(curState, curAction, reward)
