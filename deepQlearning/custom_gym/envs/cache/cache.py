@@ -3,7 +3,7 @@ import gzip
 import json
 import os
 from collections import OrderedDict
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import numpy as np
 import pandas as pd
@@ -207,8 +207,8 @@ def from_list_to_one_hot(list_):
 class CacheEnv(gym.Env):
 
     def write_stats(self):
-        if self.curDay == 0:
-            with open('../dQl_100T_it_results.csv', 'w', newline='') as file:
+        if self.curDay == self._idx_start + 1:
+            with open('../dQl_100T_it_results_{}_startmonth{}_endmonth{}.csv'.format('onehot'+ str(self._one_hot),self._startMonth,self._endMonth), 'w', newline='') as file:
                 writer = csv.writer(file)
                 writer.writerow(
                     ['date',
@@ -226,7 +226,7 @@ class CacheEnv(gym.Env):
                      'CPU miss efficiency',
                      'cost'])
 
-        with open('../dQl_100T_it_results.csv', 'a', newline='') as file:
+        with open('../dQl_100T_it_results_{}_startmonth{}_endmonth{}.csv'.format('onehot_'+ str(self._one_hot),self._startMonth,self._endMonth), 'a', newline='') as file:
             writer = csv.writer(file)
             writer.writerow(
                 [str(datetime.fromtimestamp(self.df.loc[0, 'reqDay'])) + ' +0000 UTC',
@@ -274,7 +274,23 @@ class CacheEnv(gym.Env):
             self.df_length = len(self.df)
         print(file_)
 
-    # function that creates the input vector combining request and cache information
+    # functions that create the input vector combining request and cache information
+    def get_simple_values(self, df_line, LRU, filestats):
+        l = []
+        l.append(df_line['Size'])
+        l.append(filestats.tot_requests)
+        l.append(self.curRequest - filestats._last_request)
+        l.append(self._LRU._size/self._LRU._max_size)
+        datatype = (df_line['DataType'])
+        if datatype == 'data':
+            l.append(0.)
+        else:
+            l.append(1.)
+        return np.asarray(l)
+        # return np.zeros(18)
+
+
+
     def get_one_hot(self, df_line, LRU, filestats):
         l = []
         l.append(df_line['Size'])
@@ -285,18 +301,45 @@ class CacheEnv(gym.Env):
         return from_list_to_one_hot(l)
         # return np.zeros(18)
 
-    def __init__(self, total_days):
+    def __init__(self, one_hot: bool = True, start_month: int = 1, end_month: int = 2 ):
 
+        self._one_hot = one_hot
         self.curRequest = 0
-        self._totalDays = total_days
+        self._startMonth = start_month
+        self._endMonth = end_month
+
+        start = datetime(2018, 1, 1)
+        delta = timedelta(days=1)
+        
+        idx_start=0
+        cur = start
+        while cur.month != start_month:
+            idx_start += 1
+            cur = start + delta*idx_start
+
+        idx_end=idx_start
+        while cur.month != end_month + 1:
+            idx_end += 1
+            cur = start + delta*idx_end
+        
+        self._idx_start = idx_start
+        self._idx_end = idx_end
+
+        self.curDay = idx_start + 1
+        self._totalDays = idx_end - idx_start
+
         #self.df = df
         #self.curTotalDailyRequest = len(df)
-        self.reward_range = (-1, 1)
+        #self.reward_range = (-1, 1)
 
         # define action and observations spaces
         self.action_space = gym.spaces.Discrete(2)
-        self.observation_space = gym.spaces.Box(
-            low=0, high=1, shape=(18,), dtype=np.float16)
+        if self._one_hot == True:
+            self.observation_space = gym.spaces.Box(
+                low=0, high=1, shape=(18,), dtype=np.float16)
+        else:
+            self.observation_space = gym.spaces.Box(
+                low=0, high=1, shape=(5,), dtype=np.float16)            
 
         print('Environment initialized')
 
@@ -365,10 +408,10 @@ class CacheEnv(gym.Env):
         # if the day is over, go to the next day, saving and resetting LRU stats
         done = False
         self.size_tot +=size
-        print(str(size) + '-----' + str(filestats.size))
+        #print(str(size) + '-----' + str(filestats.size))
         #print(str(self.size_tot) + '-----' + str(self._LRU._read_data))
-        #print(self.curRequest)
-        #print(self.df_length)
+        print(self.curRequest)
+        print(self.df_length)
         # print(self.curDay+1)
         # print(self._totalDays)
 
@@ -394,9 +437,10 @@ class CacheEnv(gym.Env):
             writer.writerow([reward])
 
         #print('day ' + str(self.curDay) + ' / request ' + str(self.curRequest))
-
-        return np.array(self.get_one_hot(self.df.loc[self.curRequest], self._LRU, filestats)), reward, done, {}
-
+        if self._one_hot == True:
+            return np.array(self.get_one_hot(self.df.loc[self.curRequest], self._LRU, filestats)), reward, done, {}
+        else:
+            return np.array(self.get_simple_values(self.df.loc[self.curRequest], self._LRU, filestats)), reward, done, {}
     def reset(self):
 
         with open('reward.csv', 'w') as file:
@@ -408,7 +452,7 @@ class CacheEnv(gym.Env):
         self.size_tot=0
         # begin with first request
         self.curRequest = 0
-        self.curDay = 0
+        #self.curDay = 0
 
         self.get_dataframe(self.curDay)
 
@@ -418,4 +462,8 @@ class CacheEnv(gym.Env):
         filestats = self._LRU.before_request(
             self.df.loc[self.curRequest, 'Filename'], hit, self.df.loc[0, 'Size'], self.curRequest)
 
-        return np.array(self.get_one_hot(self.df.loc[0], self._LRU, filestats))
+        if self._one_hot == True:
+            return np.array(self.get_one_hot(self.df.loc[0], self._LRU, filestats))
+        
+        else:
+            return np.array(self.get_simple_values(self.df.loc[0], self._LRU, filestats))
