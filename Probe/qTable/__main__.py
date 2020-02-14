@@ -14,17 +14,16 @@ def main():
     args, _ = parser.parse_known_args()
 
     df = pd.read_csv(args.path)
-    
+
     df = df.sort_values(
         by=['numReq', 'size', 'cacheUsage', 'dataType', 'deltaNumLastRequest'])
 
+    print("-"*42)
     print(f"numReq\tsize\tcacheUsage\tdataType\tdeltaNumLastRequest")
     print("-"*42)
 
     action_explored = 0
     state_not_explored = 0
-    
-    print(df)
 
     for row in df.itertuples():
         if row.ActionNotStore != 0.:
