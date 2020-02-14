@@ -119,8 +119,8 @@ def main():
                         help='Comma separated list of cache to simulate [DEFAULT: "lru,weightedLRU"]')
     parser.add_argument('--weighted-function', type=str,
                         choices=[
-                            "FuncParamBase",
-                            "FuncParamBaseExp",
+                            "FuncAdditive",
+                            "FuncMultiplicative",
                             "FuncWeightedRequests",
                         ],
                         default="FuncWeightedRequests",
