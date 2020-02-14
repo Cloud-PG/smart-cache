@@ -272,6 +272,7 @@ class CacheEnv(gym.Env):
             df_ = df_.reset_index()
             self.df = df_
             self.df_length = len(self.df)
+        print(file_)
 
     # function that creates the input vector combining request and cache information
     def get_one_hot(self, df_line, LRU, filestats):
@@ -311,15 +312,20 @@ class CacheEnv(gym.Env):
         hit = self._LRU.check(self.df.loc[self.curRequest, 'Filename'])
         filename = self.df.loc[self.curRequest, 'Filename']
         size = self.df.loc[self.curRequest, 'Size']
-        filestats = self._LRU._stats.get_or_set(
-            filename, size, self.curRequest)
+        #filestats = self._LRU._stats.get_or_set(
+        #    filename, size, self.curRequest)
+
+        filestats = self._LRU.before_request(
+            self.df.loc[self.curRequest, 'Filename'], hit, self.df.loc[self.curRequest, 'Size'], self.curRequest)
+
+        
         cputime = self.df.loc[self.curRequest, 'CPUTime']
         walltime = self.df.loc[self.curRequest, 'WrapWC']
 
         #print(cputime)
         #print(walltime)
 
-        print('files in cache are'+ str(len(self._LRU._files)))
+        #print('files in cache are'+ str(len(self._LRU._files)))
         # modify cache and update stats according to the chosen action
         added = self._LRU.update_policy(filename, filestats, hit, toadd)
         self._LRU.after_request(filestats, hit, added)
@@ -358,9 +364,11 @@ class CacheEnv(gym.Env):
 
         # if the day is over, go to the next day, saving and resetting LRU stats
         done = False
-
-        print(self.curRequest)
-        print(self.df_length)
+        self.size_tot +=size
+        print(str(size) + '-----' + str(filestats.size))
+        #print(str(self.size_tot) + '-----' + str(self._LRU._read_data))
+        #print(self.curRequest)
+        #print(self.df_length)
         # print(self.curDay+1)
         # print(self._totalDays)
 
@@ -385,7 +393,7 @@ class CacheEnv(gym.Env):
             writer = csv.writer(file)
             writer.writerow([reward])
 
-        print('day ' + str(self.curDay) + ' / request ' + str(self.curRequest))
+        #print('day ' + str(self.curDay) + ' / request ' + str(self.curRequest))
 
         return np.array(self.get_one_hot(self.df.loc[self.curRequest], self._LRU, filestats)), reward, done, {}
 
@@ -397,7 +405,7 @@ class CacheEnv(gym.Env):
 
         # create cache
         self._LRU = LRU()
-
+        self.size_tot=0
         # begin with first request
         self.curRequest = 0
         self.curDay = 0
