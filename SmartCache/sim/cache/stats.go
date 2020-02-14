@@ -252,8 +252,8 @@ func (stats *FileStats) updateFilePoints(curTime *time.Time) float64 {
 
 func (stats *FileStats) updateWeight(functionType FunctionType, alpha float32, beta float32, gamma float32) float32 {
 	switch functionType {
-	case FuncParametricBase:
-		stats.Weight = fileWeightedBaseParams(
+	case FuncAdditive:
+		stats.Weight = fileWeightedAdditiveFunction(
 			stats.TotRequests(),
 			stats.Size,
 			stats.RequestTicksMean,
@@ -261,8 +261,8 @@ func (stats *FileStats) updateWeight(functionType FunctionType, alpha float32, b
 			beta,
 			gamma,
 		)
-	case FuncParametricExp:
-		stats.Weight = fileWeightedExpParams(
+	case FuncMultiplicative:
+		stats.Weight = fileWeightedMultiplicativeFunction(
 			stats.TotRequests(),
 			stats.Size,
 			stats.RequestTicksMean,

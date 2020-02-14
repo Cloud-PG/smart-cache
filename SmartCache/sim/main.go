@@ -679,10 +679,10 @@ func genCache(cacheType string) cache.Cache {
 		)
 
 		switch weightedFunc {
-		case "FuncParamBase":
-			selFunctionType = cache.FuncParametricBase
-		case "FuncParamBaseExp":
-			selFunctionType = cache.FuncParametricExp
+		case "FuncAdditive":
+			selFunctionType = cache.FuncAdditive
+		case "FuncMultiplicative":
+			selFunctionType = cache.FuncMultiplicative
 		case "FuncWeightedRequests":
 			selFunctionType = cache.FuncWeightedRequests
 		default:
