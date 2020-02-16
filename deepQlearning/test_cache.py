@@ -26,7 +26,7 @@ ENV_NAME = 'CacheEnv-v0'
 
 #env = gym.make(ENV_NAME,df = df_)
 
-env = gym.make(ENV_NAME, one_hot = True, start_month = 5, end_month = 7)
+env = gym.make(ENV_NAME, one_hot = True, start_month = 5, end_month = 12)
 
 nb_actions = env.action_space.n
 print(nb_actions)

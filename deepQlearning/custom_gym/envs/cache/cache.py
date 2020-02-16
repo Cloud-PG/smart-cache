@@ -203,14 +203,13 @@ def from_list_to_one_hot(list_):
         one_hot_tot = np.concatenate((one_hot_tot, np.zeros(1)))
         one_hot_tot = np.concatenate((one_hot_tot, np.ones(1)))
 
-    #print ('OKkkkkkkkkkkkkkkkk')
     return one_hot_tot
 
 
 class CacheEnv(gym.Env):
 
     def write_stats(self):
-        if self.curDay == self._idx_start + 1:
+        if self.curDay == self._idx_start:
             with open('../dQl_100T_it_results_{}_startmonth{}_endmonth{}.csv'.format('onehot'+ str(self._one_hot),self._startMonth,self._endMonth), 'w', newline='') as file:
                 writer = csv.writer(file)
                 writer.writerow(
@@ -232,7 +231,7 @@ class CacheEnv(gym.Env):
         with open('../dQl_100T_it_results_{}_startmonth{}_endmonth{}.csv'.format('onehot'+ str(self._one_hot),self._startMonth,self._endMonth), 'a', newline='') as file:
             writer = csv.writer(file)
             writer.writerow(
-                [str(datetime.fromtimestamp(self.df.loc[0, 'reqDay'])) + ' +0000 UTC',
+                [str(datetime.fromtimestamp(self.df.loc[0, 'reqDay']) + timedelta(days=1) ) + ' +0200 UTC',
                  self._LRU._size,
                  self._LRU.hit_rate() * 100.0,
                  self._LRU._hit/self._LRU._miss * 100.0,
@@ -319,14 +318,22 @@ class CacheEnv(gym.Env):
             cur = start + delta*idx_start
 
         idx_end=idx_start
-        while cur.month != end_month + 1:
-            idx_end += 1
-            cur = start + delta*idx_end
+        if end_month != 12: 
+            while cur.month != end_month + 1:
+                idx_end += 1
+                print(cur)
+                cur = start + delta*idx_end
+        else:
+            while cur.month != 1:
+                idx_end += 1
+                print(cur)
+                cur = start + delta*idx_end
+
         
         self._idx_start = idx_start
         self._idx_end = idx_end
 
-        self.curDay = idx_start + 1
+        self.curDay = idx_start 
         self._totalDays = idx_end - idx_start
 
         #self.df = df
