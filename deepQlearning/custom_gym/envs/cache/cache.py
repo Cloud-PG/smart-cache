@@ -197,10 +197,13 @@ def from_list_to_one_hot(list_):
         one_hot_tot = np.concatenate((one_hot_tot, one_hot))
 
     if list_[len(features)-1] == 'data':
+        one_hot_tot = np.concatenate((one_hot_tot, np.ones(1)))
         one_hot_tot = np.concatenate((one_hot_tot, np.zeros(1)))
     else:
+        one_hot_tot = np.concatenate((one_hot_tot, np.zeros(1)))
         one_hot_tot = np.concatenate((one_hot_tot, np.ones(1)))
 
+    #print ('OKkkkkkkkkkkkkkkkk')
     return one_hot_tot
 
 
@@ -226,7 +229,7 @@ class CacheEnv(gym.Env):
                      'CPU miss efficiency',
                      'cost'])
 
-        with open('../dQl_100T_it_results_{}_startmonth{}_endmonth{}.csv'.format('onehot_'+ str(self._one_hot),self._startMonth,self._endMonth), 'a', newline='') as file:
+        with open('../dQl_100T_it_results_{}_startmonth{}_endmonth{}.csv'.format('onehot'+ str(self._one_hot),self._startMonth,self._endMonth), 'a', newline='') as file:
             writer = csv.writer(file)
             writer.writerow(
                 [str(datetime.fromtimestamp(self.df.loc[0, 'reqDay'])) + ' +0000 UTC',
@@ -289,8 +292,6 @@ class CacheEnv(gym.Env):
         return np.asarray(l)
         # return np.zeros(18)
 
-
-
     def get_one_hot(self, df_line, LRU, filestats):
         l = []
         l.append(df_line['Size'])
@@ -336,7 +337,7 @@ class CacheEnv(gym.Env):
         self.action_space = gym.spaces.Discrete(2)
         if self._one_hot == True:
             self.observation_space = gym.spaces.Box(
-                low=0, high=1, shape=(18,), dtype=np.float16)
+                low=0, high=1, shape=(16,), dtype=np.float16)
         else:
             self.observation_space = gym.spaces.Box(
                 low=0, high=1, shape=(5,), dtype=np.float16)            
@@ -355,20 +356,11 @@ class CacheEnv(gym.Env):
         hit = self._LRU.check(self.df.loc[self.curRequest, 'Filename'])
         filename = self.df.loc[self.curRequest, 'Filename']
         size = self.df.loc[self.curRequest, 'Size']
-        #filestats = self._LRU._stats.get_or_set(
-        #    filename, size, self.curRequest)
-
         filestats = self._LRU.before_request(
             self.df.loc[self.curRequest, 'Filename'], hit, self.df.loc[self.curRequest, 'Size'], self.curRequest)
-
-        
         cputime = self.df.loc[self.curRequest, 'CPUTime']
         walltime = self.df.loc[self.curRequest, 'WrapWC']
 
-        #print(cputime)
-        #print(walltime)
-
-        #print('files in cache are'+ str(len(self._LRU._files)))
         # modify cache and update stats according to the chosen action
         added = self._LRU.update_policy(filename, filestats, hit, toadd)
         self._LRU.after_request(filestats, hit, added)
@@ -381,14 +373,12 @@ class CacheEnv(gym.Env):
             if toadd == True:
                 reward = 0
                 if self._LRU._dailyReadOnMiss >= bandwidthLimit:
-                    # if filestats.tot_requests > 1 or (self.curRequest - filestats._last_request) < 10000 or (self._LRU._dailyReadOnHit/self._LRU._dailyReadOnMiss) < (2./3.):
                     reward -= float(size)
                 else:
                     reward += float(size)
             if toadd == False:
                 reward = 0
                 if self._LRU._dailyReadOnHit < self._LRU._dailyReadOnMiss/2.0 or self._LRU._dailyReadOnMiss > bandwidthLimit:
-                    # if filestats.tot_requests < 100 and (self.curRequest - filestats._last_request) > 10000 and (self._LRU._dailyReadOnHit/self._LRU._dailyReadOnMiss) >= (2./3.):
                     reward -= float(size)
                 else:
                     reward += float(size)
@@ -397,7 +387,6 @@ class CacheEnv(gym.Env):
             self._LRU._CPUtime_hit += cputime
             reward = 0.0
             if self._LRU._dailyReadOnHit >= self._LRU._dailyReadOnMiss/2.0:
-                # if (self._LRU._dailyReadOnHit / self._LRU._dailyReadOnMiss) >= (2. / 3.):
                 reward += float(size)
             else:
                 reward -= float(size)
@@ -408,23 +397,18 @@ class CacheEnv(gym.Env):
         # if the day is over, go to the next day, saving and resetting LRU stats
         done = False
         self.size_tot +=size
-        #print(str(size) + '-----' + str(filestats.size))
-        #print(str(self.size_tot) + '-----' + str(self._LRU._read_data))
-        print(self.curRequest)
-        print(self.df_length)
-        # print(self.curDay+1)
-        # print(self._totalDays)
+        print(str(self.curRequest) + ' / ' + str(self.df_length), end="\r")
+        #print(self.df_length)
 
         if (self.curRequest + 1) == self.df_length:
             self.write_stats()
             self.reset_stats()
-
-            if (self.curDay+1) == self._totalDays:
-                done = True
-            else:
-                self.curDay += 1
-                self.curRequest = 0
-                self.get_dataframe(self.curDay)
+            #if (self.curDay+1) == self._totalDays:
+            #    done = True
+            #else:
+            self.curDay += 1
+            self.curRequest = 0
+            self.get_dataframe(self.curDay)
 
         # update stats about the new request
         if done == False:
@@ -436,7 +420,6 @@ class CacheEnv(gym.Env):
             writer = csv.writer(file)
             writer.writerow([reward])
 
-        #print('day ' + str(self.curDay) + ' / request ' + str(self.curRequest))
         if self._one_hot == True:
             return np.array(self.get_one_hot(self.df.loc[self.curRequest], self._LRU, filestats)), reward, done, {}
         else:
@@ -462,8 +445,14 @@ class CacheEnv(gym.Env):
         filestats = self._LRU.before_request(
             self.df.loc[self.curRequest, 'Filename'], hit, self.df.loc[0, 'Size'], self.curRequest)
 
+        #print(self._startMonth)
+        #print(self._endMonth)
+        #print(self._totalDays)
+
         if self._one_hot == True:
             return np.array(self.get_one_hot(self.df.loc[0], self._LRU, filestats))
         
         else:
             return np.array(self.get_simple_values(self.df.loc[0], self._LRU, filestats))
+        
+
