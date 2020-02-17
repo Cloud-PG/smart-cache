@@ -19,7 +19,7 @@ import (
 // LRUCache cache
 type LRUCache struct {
 	Stats
-	files                              map[string]float32
+	files                              map[int64]float32
 	queue                              *list.List
 	hit, miss, size, MaxSize           float32
 	hitCPUTime, missCPUTime            float32
@@ -33,7 +33,7 @@ type LRUCache struct {
 // Init the LRU struct
 func (cache *LRUCache) Init(_ ...interface{}) interface{} {
 	cache.Stats.Init()
-	cache.files = make(map[string]float32)
+	cache.files = make(map[int64]float32)
 	cache.queue = list.New()
 	if cache.HighWaterMark == 0.0 {
 		cache.HighWaterMark = 95.0
@@ -51,7 +51,7 @@ func (cache *LRUCache) Init(_ ...interface{}) interface{} {
 
 // ClearFiles remove the cache files
 func (cache *LRUCache) ClearFiles() {
-	cache.files = make(map[string]float32)
+	cache.files = make(map[int64]float32)
 	cache.size = 0.
 }
 
@@ -330,10 +330,10 @@ func (cache *LRUCache) AfterRequest(request *Request, hit bool, added bool) {
 }
 
 // UpdateFileInQueue move the file requested on the back of the queue
-func (cache *LRUCache) UpdateFileInQueue(filename string) {
+func (cache *LRUCache) UpdateFileInQueue(filename int64) {
 	var elm2move *list.Element
 	for tmpVal := cache.queue.Front(); tmpVal != nil; tmpVal = tmpVal.Next() {
-		if tmpVal.Value.(string) == filename {
+		if tmpVal.Value.(int64) == filename {
 			elm2move = tmpVal
 			break
 		}
@@ -359,14 +359,15 @@ func (cache *LRUCache) Free(amount float32, percentage bool) float32 {
 		if tmpVal == nil {
 			break
 		}
-		fileSize := cache.files[tmpVal.Value.(string)]
+		fileName := tmpVal.Value.(int64)
+		fileSize := cache.files[fileName]
 		// Update sizes
 		cache.size -= fileSize
 		cache.dataDeleted += fileSize
 		totalDeleted += fileSize
 
 		// Remove from queue
-		delete(cache.files, tmpVal.Value.(string))
+		delete(cache.files, fileName)
 		tmpVal = tmpVal.Next()
 		// Check if all files are deleted
 		if tmpVal == nil {
@@ -452,7 +453,7 @@ func (cache LRUCache) DataDeleted() float32 {
 }
 
 // Check returns if a file is in cache or not
-func (cache LRUCache) Check(key string) bool {
+func (cache LRUCache) Check(key int64) bool {
 	_, ok := cache.files[key]
 	return ok
 }

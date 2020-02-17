@@ -9,6 +9,42 @@ import (
 	"path"
 	"sort"
 	"strconv"
+	"strings"
+
+	"go.uber.org/zap"
+)
+
+const (
+	csvHeader = "Filename,SiteName,UserID,TaskID,TaskMonitorID,JobID,Protocol,JobExecExitCode,JobStart,JobEnd,NumCPU,WrapWC,WrapCPU,Size,DataType,FileType,JobLengthH,JobLengthM,JobSuccess,CPUTime,IOTime,reqDay"
+)
+
+var (
+	/*
+		CSV HEADER:
+			-[0] Filename
+			-[1] SiteName
+			-[2] UserID
+			-[3] TaskID
+			-[4] TaskMonitorID
+			-[5] JobID
+			-[6] Protocol
+			-[7] JobExecExitCode
+			-[8] JobStart
+			-[9] JobEnd
+			-[10] NumCPU
+			-[11] WrapWC
+			-[12] WrapCPU
+			-[13] Size
+			-[14] DataType
+			-[15] FileType
+			-[16] JobLengthH
+			-[17] JobLengthM
+			-[18] JobSuccess
+			-[19] CPUTime
+			-[20] IOTime
+			-[21] reqDay
+	*/
+	csvHeaderIndexes = []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21}
 )
 
 // SimulationStats is used to output the simulation statistics
@@ -22,18 +58,18 @@ type SimulationStats struct {
 // CSVRecord is the base record composition readed from the logs
 type CSVRecord struct {
 	Day             int64   `json:"day"`
-	Filename        string  `json:"filename"`
-	FileType        string  `json:"fileType"`
-	DataType        string  `json:"dataType"`
-	Protocol        string  `json:"protocol"`
-	TaskMonitorID   string  `json:"taskMonitorID"`
+	Filename        int64   `json:"filename"`
+	FileType        int     `json:"fileType"`
+	DataType        int     `json:"dataType"`
+	Protocol        int64   `json:"protocol"`
+	TaskMonitorID   int64   `json:"taskMonitorID"`
 	TaskID          int     `json:"taskID"`
 	JobID           int     `json:"jobID"`
-	SiteName        string  `json:"siteName"`
+	SiteName        int     `json:"siteName"`
 	JobExecExitCode int     `json:"jobExecExitCode"`
 	JobStart        int64   `json:"jobStart"`
 	JobEnd          int64   `json:"jobEnd"`
-	JobSuccess      string  `json:"jobSuccess"`
+	JobSuccess      int64   `json:"jobSuccess"`
 	JobLengthH      float32 `json:"jobLengthH"`
 	JobLengthM      float32 `json:"jobLengthM"`
 	UserID          int     `json:"user"`
@@ -45,7 +81,7 @@ type CSVRecord struct {
 	Size            float32 `json:"size"`
 }
 
-func recordGenerator(csvReader *csv.Reader, curFile *os.File) chan CSVRecord {
+func recordGenerator(csvReader *csv.Reader, curFile *os.File, headerMap []int) chan CSVRecord {
 	channel := make(chan CSVRecord)
 	go func() {
 		defer close(channel)
@@ -59,60 +95,36 @@ func recordGenerator(csvReader *csv.Reader, curFile *os.File) chan CSVRecord {
 				log.Fatal(err)
 			}
 
-			/*
-				record fields:
-					-[0] Filename
-					-[1] SiteName
-					-[2] UserID
-					-[3] TaskID
-					-[4] TaskMonitorID
-					-[5] JobID
-					-[6] Protocol
-					-[7] JobExecExitCode
-					-[8] JobStart
-					-[9] JobEnd
-					-[10] NumCPU
-					-[11] WrapWC
-					-[12] WrapCPU
-					-[13] Size
-					-[14] DataType
-					-[15] FileType
-					-[16] JobLengthH
-					-[17] JobLengthM
-					-[18] JobSuccess
-					-[19] CPUTime
-					-[20] IOTime
-					-[21] reqDay
+			// fmt.Println(record)
 
-			*/
-
-			day, _ := strconv.ParseFloat(record[21], 64)
-			taskID, _ := strconv.ParseInt(record[3], 10, 32)
-			jobID, _ := strconv.ParseInt(record[5], 10, 32)
-			joblengthh, _ := strconv.ParseFloat(record[16], 32)
-			joblengthm, _ := strconv.ParseFloat(record[17], 32)
-			userID, _ := strconv.ParseInt(record[2], 10, 32)
-			cputime, _ := strconv.ParseFloat(record[19], 32)
-			iotime, _ := strconv.ParseFloat(record[20], 32)
-			size, _ := strconv.ParseFloat(record[13], 32)
-
-			filename := record[0]
-			// tmpSplit := strings.Split(filename, "/")
-			// dataType := tmpSplit[2]
-			// campain := tmpSplit[3]
-			// process := tmpSplit[4]
-			// fileType := tmpSplit[5]
+			filename, _ := strconv.ParseInt(record[headerMap[0]], 10, 64)
+			siteName, _ := strconv.ParseInt(record[headerMap[1]], 10, 32)
+			userID, _ := strconv.ParseInt(record[headerMap[2]], 10, 32)
+			taskID, _ := strconv.ParseInt(record[headerMap[3]], 10, 32)
+			taskMonitorID, _ := strconv.ParseInt(record[headerMap[4]], 10, 64)
+			jobID, _ := strconv.ParseInt(record[headerMap[5]], 10, 32)
+			protocol, _ := strconv.ParseInt(record[headerMap[6]], 10, 64)
+			size, _ := strconv.ParseFloat(record[headerMap[13]], 32)
+			dataType, _ := strconv.ParseInt(record[headerMap[14]], 10, 64)
+			fileType, _ := strconv.ParseInt(record[headerMap[15]], 10, 64)
+			joblengthh, _ := strconv.ParseFloat(record[headerMap[16]], 32)
+			joblengthm, _ := strconv.ParseFloat(record[headerMap[17]], 32)
+			jobSuccess, _ := strconv.ParseInt(record[headerMap[18]], 10, 64)
+			cputime, _ := strconv.ParseFloat(record[headerMap[19]], 32)
+			iotime, _ := strconv.ParseFloat(record[headerMap[20]], 32)
+			day, _ := strconv.ParseFloat(record[headerMap[21]], 64)
 
 			curRecord := CSVRecord{
 				Day:           int64(day),
 				Filename:      filename,
-				FileType:      record[15],
-				Protocol:      record[6],
-				TaskMonitorID: record[4],
+				FileType:      int(fileType),
+				DataType:      int(dataType),
+				Protocol:      protocol,
+				TaskMonitorID: taskMonitorID,
 				TaskID:        int(taskID),
 				JobID:         int(jobID),
-				SiteName:      record[1],
-				JobSuccess:    record[18],
+				SiteName:      int(siteName),
+				JobSuccess:    jobSuccess,
 				JobLengthH:    float32(joblengthh),
 				JobLengthM:    float32(joblengthm),
 				UserID:        int(userID),
@@ -129,6 +141,8 @@ func recordGenerator(csvReader *csv.Reader, curFile *os.File) chan CSVRecord {
 
 // OpenSimFile opens a simulation file
 func OpenSimFile(filePath string) chan CSVRecord {
+	logger = zap.L()
+
 	fileExt := path.Ext(filePath)
 	var iterator chan CSVRecord
 
@@ -136,6 +150,8 @@ func OpenSimFile(filePath string) chan CSVRecord {
 	if errOpenFile != nil {
 		panic(errOpenFile)
 	}
+
+	headerMap := csvHeaderIndexes
 
 	switch fileExt {
 	case ".gz", ".gzip":
@@ -146,16 +162,44 @@ func OpenSimFile(filePath string) chan CSVRecord {
 		}
 		csvReader := csv.NewReader(curCsv)
 		// Discar header
-		csvReader.Read()
-		iterator = recordGenerator(csvReader, curFile)
+		header, errCSVRead := csvReader.Read()
+		headerStr := strings.Join(header, ",")
+		logger.Info("FIle header", zap.String("CSV header", headerStr), zap.String("file", filePath))
+		if headerStr != csvHeader {
+			headerMap = getHeaderIndexes(header)
+		}
+		if errCSVRead != nil {
+			panic(errCSVRead)
+		}
+		iterator = recordGenerator(csvReader, curFile, headerMap)
 	default:
 		csvReader := csv.NewReader(curFile)
 		// Discar header
-		csvReader.Read()
-		iterator = recordGenerator(csvReader, curFile)
+		header, errCSVRead := csvReader.Read()
+		headerStr := strings.Join(header, ",")
+		logger.Info("FIle header", zap.String("CSV header", headerStr), zap.String("file", filePath))
+		if headerStr != csvHeader {
+			headerMap = getHeaderIndexes(header)
+		}
+		if errCSVRead != nil {
+			panic(errCSVRead)
+		}
+		iterator = recordGenerator(csvReader, curFile, headerMap)
 	}
 
 	return iterator
+}
+
+func getHeaderIndexes(header []string) []int {
+	var indexes []int
+	for _, name := range strings.Split(csvHeader, ",") {
+		for idx, curHeaderName := range header {
+			if name == curHeaderName {
+				indexes = append(indexes, idx)
+			}
+		}
+	}
+	return indexes
 }
 
 // OpenSimFolder opens a simulation folder

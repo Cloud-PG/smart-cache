@@ -15,7 +15,7 @@ const (
 
 // Stats collector of statistics for weighted cache
 type Stats struct {
-	fileStats       map[string]*FileStats
+	fileStats       map[int64]*FileStats
 	weightSum       float32
 	firstUpdateTime time.Time
 	lastUpdateTime  time.Time
@@ -24,7 +24,7 @@ type Stats struct {
 
 // Init initialize Stats
 func (statStruct *Stats) Init() {
-	statStruct.fileStats = make(map[string]*FileStats)
+	statStruct.fileStats = make(map[int64]*FileStats)
 	statStruct.weightSum = 0.0
 	statStruct.numRequests = 0
 }
@@ -50,7 +50,7 @@ func (statStruct *Stats) PurgeStats() {
 }
 
 // GetOrCreate add the file into stats and returns (stats, is new file)
-func (statStruct *Stats) GetOrCreate(filename string, vars ...interface{}) (*FileStats, bool) {
+func (statStruct *Stats) GetOrCreate(filename int64, vars ...interface{}) (*FileStats, bool) {
 	var (
 		size    float32
 		reqTime time.Time
@@ -107,7 +107,7 @@ func (statStruct *Stats) GetWeightMedian() float32 {
 }
 
 // updateFilePoints returns the points for a single file
-func (statStruct Stats) updateFilesPoints(filename string, curTime *time.Time) float64 {
+func (statStruct Stats) updateFilesPoints(filename int64, curTime *time.Time) float64 {
 	curStats, _ := statStruct.fileStats[filename]
 	return curStats.updateFilePoints(curTime)
 }
@@ -140,7 +140,7 @@ type FileStats struct {
 	DeltaLastRequest  int32       `json:"deltaLastRequest"`
 	LastRequest       int32       `json:"lastRequest"`
 	Users             []int       `json:"users"`
-	Sites             []string    `json:"sites"`
+	Sites             []int       `json:"sites"`
 }
 
 // DiffLastUpdate returns the number of days from the last update stats
@@ -182,7 +182,7 @@ func (stats *FileStats) addUser(userID int) {
 	stats.Users = append(stats.Users, userID)
 }
 
-func (stats *FileStats) addSite(siteName string) {
+func (stats *FileStats) addSite(siteName int) {
 	for _, site := range stats.Sites {
 		if site == siteName {
 			return
@@ -191,7 +191,7 @@ func (stats *FileStats) addSite(siteName string) {
 	stats.Sites = append(stats.Sites, siteName)
 }
 
-func (stats *FileStats) updateStats(hit bool, size float32, userID int, siteName string, curTime time.Time) {
+func (stats *FileStats) updateStats(hit bool, size float32, userID int, siteName int, curTime time.Time) {
 	stats.Size = size
 
 	stats.addUser(userID)

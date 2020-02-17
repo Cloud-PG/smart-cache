@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"strconv"
-	"strings"
 	"time"
 
 	"simulator/v2/cache/ai/featuremap"
@@ -277,11 +276,10 @@ func (cache *AINN) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 	if !hit {
 		siteName := request.SiteName
 		userID := request.UserID
-		tmpSplit := strings.Split(requestedFilename, "/")
-		dataType := tmpSplit[2]
-		campain := tmpSplit[3]
-		process := tmpSplit[4]
-		fileType := tmpSplit[5]
+		dataType := request.DataType
+		campain := 0
+		process := 0
+		fileType := request.Filetype
 
 		featureVector := cache.composeFeatures(
 			siteName,

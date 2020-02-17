@@ -408,7 +408,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				windowStepCounter uint32
 				windowCounter     uint32
 			)
-			selectedRegion := fmt.Sprintf("_%s_", strings.ToLower(simRegion))
+			// selectedRegion := fmt.Sprintf("_%s_", strings.ToLower(simRegion))
 
 			simBeginTime := time.Now()
 			start := time.Now()
@@ -429,24 +429,24 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			for record := range iterator {
 				totNumRecords++
 
-				if strings.Compare(simRegion, "all") != 0 {
-					if strings.Index(strings.ToLower(record.SiteName), selectedRegion) == -1 {
-						// TODO: fix jump output
-						// fmt.Printf("[Jump region %s]\r",
-						// 	record.SiteName,
-						// )
-						continue
-					}
-				}
-				if strings.Compare(simFileType, "all") != 0 {
-					if strings.Index(strings.ToLower(record.FileType), strings.ToLower(simFileType)) == -1 {
-						// TODO: fix jump output
-						// fmt.Printf("[Jump file type %s]\r",
-						// 	record.FileType,
-						// )
-						continue
-					}
-				}
+				// if strings.Compare(simRegion, "all") != 0 {
+				// 	if strings.Index(strings.ToLower(record.SiteName), selectedRegion) == -1 {
+				// 		// TODO: fix jump output
+				// 		// fmt.Printf("[Jump region %s]\r",
+				// 		// 	record.SiteName,
+				// 		// )
+				// 		continue
+				// 	}
+				// }
+				// if strings.Compare(simFileType, "all") != 0 {
+				// 	if strings.Index(strings.ToLower(record.FileType), strings.ToLower(simFileType)) == -1 {
+				// 		// TODO: fix jump output
+				// 		// fmt.Printf("[Jump file type %s]\r",
+				// 		// 	record.FileType,
+				// 		// )
+				// 		continue
+				// 	}
+				// }
 
 				numRecords++
 

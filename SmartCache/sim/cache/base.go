@@ -13,7 +13,7 @@ import (
 type DumpRecord struct {
 	Info     string `json:"info"`
 	Data     string `json:"data"`
-	Filename string `json:"filename"`
+	Filename int64  `json:"filename"`
 }
 
 // DumpInfo collects cache marshall info
@@ -23,20 +23,22 @@ type DumpInfo struct {
 
 // FileDump represents the record of a dumped cache file
 type FileDump struct {
-	Filename string  `json:"filename"`
+	Filename int64   `json:"filename"`
 	Size     float32 `json:"size"`
 }
 
 // Request represent an ingestable request for the cache
 type Request struct {
-	Filename string
+	Filename int64
 	Size     float32
 	WTime    float32
 	CPUTime  float32
 	Day      int64
 	DayTime  time.Time
-	SiteName string
+	SiteName int
 	UserID   int
+	DataType int
+	Filetype int
 }
 
 // Cache is the base interface for the cache object
@@ -70,7 +72,7 @@ type Cache interface {
 	CPUHitEff() float32
 	CPUMissEff() float32
 
-	Check(string) bool
+	Check(int64) bool
 	CheckWatermark() bool
 	BeforeRequest(request *Request, hit bool) *FileStats
 	UpdatePolicy(request *Request, fileStats *FileStats, hit bool) bool
@@ -104,17 +106,17 @@ func GetSimCacheStatus(cache Cache) *pb.SimCacheStatus {
 // GetFile requests a file to the cache
 func GetFile(cache Cache, vars ...interface{}) bool {
 	/* vars:
-	[0] -> filename string
+	[0] -> filename int64
 	[1] -> size     float32
 	[2] -> wTime    float32
 	[3] -> cpuTime  float32
 	[4] -> day      int64
-	[5] -> siteName string
+	[5] -> siteName int
 	[6] -> userID   int
 	*/
 
 	cacheRequest := Request{
-		Filename: vars[0].(string),
+		Filename: vars[0].(int64),
 	}
 
 	switch {
@@ -122,7 +124,7 @@ func GetFile(cache Cache, vars ...interface{}) bool {
 		cacheRequest.UserID = vars[6].(int)
 		fallthrough
 	case len(vars) > 5:
-		cacheRequest.SiteName = vars[5].(string)
+		cacheRequest.SiteName = vars[5].(int)
 		fallthrough
 	case len(vars) > 4:
 		cacheRequest.Day = vars[4].(int64)

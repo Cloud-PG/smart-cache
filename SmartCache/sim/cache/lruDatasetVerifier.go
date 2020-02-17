@@ -10,24 +10,24 @@ import (
 
 // DatasetFiles represents the dataset file composition
 type DatasetFiles struct {
-	SelectedFiles []string `json:"selected_files"`
+	SelectedFiles []int64 `json:"selected_files"`
 }
 
 // LRUDatasetVerifier cache
 type LRUDatasetVerifier struct {
 	LRUCache
-	datasetFileMap map[string]bool
+	datasetFileMap map[int64]bool
 }
 
 // Init the LRU struct
 func (cache *LRUDatasetVerifier) Init(args ...interface{}) interface{} {
 	cache.LRUCache.Init()
 
-	cache.files = make(map[string]float32)
-	cache.Stats.fileStats = make(map[string]*FileStats)
+	cache.files = make(map[int64]float32)
+	cache.Stats.fileStats = make(map[int64]*FileStats)
 	cache.queue = list.New()
 
-	cache.datasetFileMap = make(map[string]bool)
+	cache.datasetFileMap = make(map[int64]bool)
 	datasetFilePath := args[0].(string)
 
 	datasetFile, errOpenFile := os.Open(datasetFilePath)

@@ -8,7 +8,6 @@ import (
 	"simulator/v2/cache/ai/featuremap"
 	qlearn "simulator/v2/cache/qLearn"
 	"sort"
-	"strings"
 	"time"
 
 	"go.uber.org/zap"
@@ -27,8 +26,8 @@ type AIRL struct {
 	aiFeatureMap      map[string]featuremap.Obj
 	aiFeatureMapOrder []string
 	qTable            *qlearn.QTable
-	qPrevState        map[string]string
-	qPrevAction       map[string]qlearn.ActionType
+	qPrevState        map[int64]string
+	qPrevAction       map[int64]qlearn.ActionType
 	points            float64
 	prevPoints        float64
 	dailyReadOnHit    float32
@@ -43,8 +42,8 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 
 	featureMapFilePath := args[0].(string)
 
-	cache.qPrevState = make(map[string]string, 0)
-	cache.qPrevAction = make(map[string]qlearn.ActionType, 0)
+	cache.qPrevState = make(map[int64]string, 0)
+	cache.qPrevAction = make(map[int64]qlearn.ActionType, 0)
 
 	cache.aiFeatureMap = featuremap.Parse(featureMapFilePath)
 
@@ -198,7 +197,7 @@ func (cache *AIRL) getCategory(catKey string, value interface{}) []bool {
 				res[0] = true
 			}
 		} else {
-			res[curCategory.Values[value.(string)]] = true
+			res[curCategory.Values[string(value.(int))]] = true
 		}
 		return res
 	}
@@ -246,8 +245,7 @@ func (cache *AIRL) getState(request *Request, fileStats *FileStats) []bool {
 		tmpArr      []bool
 	)
 
-	tmpSplit := strings.Split(request.Filename, "/")
-	dataType := tmpSplit[2]
+	dataType := request.DataType
 
 	numReq, _, _ := fileStats.getStats()
 	size := request.Size
@@ -529,7 +527,7 @@ func (cache *AIRL) Free(amount float32, percentage bool) float32 {
 		if tmpVal == nil {
 			break
 		}
-		curFilename2Delete := tmpVal.Value.(string)
+		curFilename2Delete := tmpVal.Value.(int64)
 		fileSize := cache.files[curFilename2Delete]
 		curStats, added := cache.GetOrCreate(curFilename2Delete, fileSize)
 		if added {
@@ -545,7 +543,7 @@ func (cache *AIRL) Free(amount float32, percentage bool) float32 {
 		curStats.removeFromCache()
 
 		// Remove from queue
-		delete(cache.files, tmpVal.Value.(string))
+		delete(cache.files, curFilename2Delete)
 		tmpVal = tmpVal.Next()
 
 		// Check if all files are deleted
