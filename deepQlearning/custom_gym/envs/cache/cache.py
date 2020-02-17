@@ -261,6 +261,13 @@ class CacheEnv(gym.Env):
         self._LRU._dailyReadOnHit: float = 0.0
         self._LRU._dailyReadOnMiss: float = 0.0
 
+        self._LRU._CPUtime_hit: float = 0.0
+        self._LRU._WALLtime_hit: float = 0.0
+        self._LRU._CPUtime_miss: float = 0.0
+        self._LRU._WALLtime_miss: float = 0.0
+
+
+
         return
 
     def get_dataframe(self, i):
