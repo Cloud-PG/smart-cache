@@ -253,6 +253,7 @@ func (cache *AIRL) getState(request *Request, fileStats *FileStats) []bool {
 	size := request.Size
 
 	cacheCapacity := float64(cache.Capacity())
+	deltaHighWatermark := float64(cache.HighWaterMark) - cacheCapacity
 
 	for _, featureName := range cache.aiFeatureMapOrder {
 		switch featureName {
@@ -266,6 +267,8 @@ func (cache *AIRL) getState(request *Request, fileStats *FileStats) []bool {
 			tmpArr = cache.getCategory(featureName, dataType)
 		case "deltaNumLastRequest":
 			tmpArr = cache.getCategory(featureName, float64(fileStats.DeltaLastRequest))
+		case "deltaHighWatermark":
+			tmpArr = cache.getCategory(featureName, deltaHighWatermark)
 		default:
 			panic(fmt.Sprintf("Cannot prepare input %s", featureName))
 		}
@@ -411,7 +414,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				// }
 
 				reward := 0.
-				if cache.dailyReadOnHit < cache.dailyReadOnMiss/2.0 || cache.dailyReadOnMiss > bandwidthLimit {
+				if cache.dataReadOnHit < cache.dataReadOnMiss/2.0 || cache.dailyReadOnHit < cache.dailyReadOnMiss/2.0 || cache.dailyReadOnMiss > bandwidthLimit {
 					reward -= float64(request.Size)
 				} else {
 					reward += float64(request.Size)
@@ -481,7 +484,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 			if curState != "" { // Some action are not taken randomly
 				reward := 0.0
-				if cache.dailyReadOnHit < cache.dailyReadOnMiss/2.0 {
+				if cache.dataReadOnHit < cache.dataReadOnMiss/2.0 || cache.dailyReadOnHit < cache.dailyReadOnMiss/2.0 {
 					reward -= float64(request.Size)
 				} else {
 					reward += float64(request.Size)
