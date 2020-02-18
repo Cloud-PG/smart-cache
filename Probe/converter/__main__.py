@@ -9,7 +9,7 @@ from .. import loaders
 from ..utils import STATUS_ARROW, STATUS_WARNING
 from .extractor import (check_filename_info, check_region_info,
                         get_object_columns, get_unique_values)
-from .utils import CategoryContainer, convert_categories, save_numeric_df
+from .utils import CategoryContainer, convert_categories, save_numeric_df, shuffle_df
 
 
 def main():
@@ -24,6 +24,9 @@ def main():
     parser.add_argument('--region', type=str,
                         default="all",
                         help='Region of the data to analyse [DEFAULT: "all"]')
+    parser.add_argument('--seed', type=int,
+                        default=42,
+                        help='Shuffle seed number [DEFAULT: 42]')
 
     args, _ = parser.parse_known_args()
 
@@ -62,6 +65,9 @@ def main():
 
                 print(f"{STATUS_ARROW}Check filename info...")
                 df = check_filename_info(df)
+
+                print(f"{STATUS_ARROW}Shuffle DataFrame...")
+                df = shuffle_df(df, args.seed)
 
                 columns = get_object_columns(df)
                 categories = dict(

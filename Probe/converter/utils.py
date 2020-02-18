@@ -7,6 +7,19 @@ from tqdm import tqdm
 from..utils import STATUS_ARROW, STATUS_WARNING, STATUS_OK
 
 
+def shuffle_df(df: 'pd.DataFrame', seed: int = 42) -> 'pd.DataFrame':
+    """Shuffle a dataframe with the given seed
+
+    :param df: the input dataframe
+    :type df: pandas.DataFrame
+    :param seed: the seed number
+    :type seed: int
+    :return: the shuffled dataframe
+    :rtype: pandas.DataFrame
+    """
+    return df.sample(frac=1, random_state=seed).reset_index(drop=True)
+
+
 class CategoryContainer:
 
     def __init__(self, filename: str = ''):
