@@ -102,8 +102,7 @@ def convert_categories(source_filepath: str,
             total=total_rows,
         ):
             cur_cat_value = getattr(row, category)
-            if cur_cat_value not in raplace_cache and not isinstance(cur_cat_value, int):
-
+            if not isinstance(cur_cat_value, int) and cur_cat_value not in raplace_cache:
                 cat_id = container.get(category, cur_cat_value)
                 raplace_cache[cur_cat_value] = cat_id
                 df[category].replace(
