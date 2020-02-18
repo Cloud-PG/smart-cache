@@ -95,7 +95,7 @@ func main() {
 		&memprofile, "memprofile", "",
 		"[Profiling] Profile the Memory during the simulation. If a file is specified the Memory will be profiled on that file. Note that memprofile will stop the simulation after 1 iteration.",
 	)
-	rootCmd.PersistentFlags().Float32Var(
+	rootCmd.PersistentFlags().Float64Var(
 		&cacheSize, "size", 10485760., // 10TB
 		"[Simulation] cache size",
 	)
@@ -115,15 +115,15 @@ func main() {
 		&weightedFunc, "weightedFunc", "FuncWeightedRequests",
 		"[WeightedLRU] function to use with weighted cache",
 	)
-	rootCmd.PersistentFlags().Float32Var(
+	rootCmd.PersistentFlags().Float64Var(
 		&weightAlpha, "weightAlpha", 1.0,
 		"[Simulation] Parameter Alpha of the weighted function",
 	)
-	rootCmd.PersistentFlags().Float32Var(
+	rootCmd.PersistentFlags().Float64Var(
 		&weightBeta, "weightBeta", 1.0,
 		"[Simulation] Parameter Beta of the weighted function",
 	)
-	rootCmd.PersistentFlags().Float32Var(
+	rootCmd.PersistentFlags().Float64Var(
 		&weightGamma, "weightGamma", 1.0,
 		"[Simulation] Parameter Gamma of the weighted function",
 	)
