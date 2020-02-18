@@ -1,6 +1,22 @@
 import pandas as pd
 
 
+def check_region(df: 'pd.DataFrame') -> 'pd.DataFrame':
+    """Check if region column exists.
+
+    If not exists, it creates the column from the SiteName information
+
+    :return: the data frame with the new column
+    :rtype: pandas.DataFrame
+    """
+    if 'region' not in df.columns:
+        # Example lambda map:
+        #  T2_US_Vanderbilt -> us
+        df['region'] = df['SiteName'].map(
+            lambda elm: elm.split("_")[1].lower())
+    return df
+
+
 def get_object_columns(df: 'pd.DataFrame') -> list:
     """Returns the name of the columns that are objects (string)
 
