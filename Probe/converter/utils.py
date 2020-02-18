@@ -7,6 +7,17 @@ from tqdm import tqdm
 from..utils import STATUS_ARROW, STATUS_WARNING, STATUS_OK
 
 
+def str2bool(v: str):
+    """Check if a string is a boolean True.
+    
+    :param v: the input string
+    :type v: str
+    :return: True if it is a true boolean string
+    :rtype: bool
+    """
+    return v.lower() in ("yes", "true", "True", "t", "1")
+
+
 def shuffle_df(df: 'pd.DataFrame', seed: int = 42) -> 'pd.DataFrame':
     """Shuffle a dataframe with the given seed
 

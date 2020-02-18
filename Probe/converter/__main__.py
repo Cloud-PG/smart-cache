@@ -9,12 +9,15 @@ from .. import loaders
 from ..utils import STATUS_ARROW, STATUS_WARNING
 from .extractor import (check_filename_info, check_region_info,
                         get_object_columns, get_unique_values)
-from .utils import CategoryContainer, convert_categories, save_numeric_df, shuffle_df
+from .utils import (CategoryContainer, convert_categories, save_numeric_df,
+                    shuffle_df, str2bool)
 
 
 def main():
     parser = argparse.ArgumentParser(
         "converter", description="Convert the data")
+
+    parser.register('type', 'bool', str2bool)  # add type keyword to registries
 
     parser.add_argument('path', default=None,
                         help='Folder or file to open')
@@ -27,6 +30,9 @@ def main():
     parser.add_argument('--seed', type=int,
                         default=42,
                         help='Shuffle seed number [DEFAULT: 42]')
+    parser.add_argument('--shuffle', type='bool',
+                        default=False,
+                        help='Shuffle the dataframe [DEFAULT: True]')
 
     args, _ = parser.parse_known_args()
 
@@ -66,8 +72,9 @@ def main():
                 print(f"{STATUS_ARROW}Check filename info...")
                 df = check_filename_info(df)
 
-                print(f"{STATUS_ARROW}Shuffle DataFrame...")
-                df = shuffle_df(df, args.seed)
+                if args.shuffle:
+                    print(f"{STATUS_ARROW}Shuffle DataFrame...")
+                    df = shuffle_df(df, args.seed)
 
                 columns = get_object_columns(df)
                 categories = dict(
