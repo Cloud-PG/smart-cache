@@ -6,9 +6,9 @@ import (
 
 // WeightedFunctionParameters are the input parameters of the weighted function
 type WeightedFunctionParameters struct {
-	Alpha float32
-	Beta  float32
-	Gamma float32
+	Alpha float64
+	Beta  float64
+	Gamma float64
 }
 
 // WeightedLRU cache

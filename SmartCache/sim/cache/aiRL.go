@@ -22,7 +22,6 @@ type AIRL struct {
 	LRUCache
 	prevTime          time.Time
 	curTime           time.Time
-	Exp               float32
 	aiFeatureMap      map[string]featuremap.Obj
 	aiFeatureMapOrder []string
 	qTable            *qlearn.QTable
@@ -30,8 +29,8 @@ type AIRL struct {
 	qPrevAction       map[int64]qlearn.ActionType
 	points            float64
 	prevPoints        float64
-	dailyReadOnHit    float32
-	dailyReadOnMiss   float32
+	dailyReadOnHit    float64
+	dailyReadOnMiss   float64
 }
 
 // Init the AIRL struct
@@ -512,10 +511,10 @@ func (cache *AIRL) AfterRequest(request *Request, hit bool, added bool) {
 }
 
 // Free removes files from the cache
-func (cache *AIRL) Free(amount float32, percentage bool) float32 {
+func (cache *AIRL) Free(amount float64, percentage bool) float64 {
 	var (
-		totalDeleted float32
-		sizeToDelete float32
+		totalDeleted float64
+		sizeToDelete float64
 	)
 	if percentage {
 		sizeToDelete = amount * (cache.MaxSize / 100.)

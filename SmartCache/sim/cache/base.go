@@ -24,21 +24,21 @@ type DumpInfo struct {
 // FileDump represents the record of a dumped cache file
 type FileDump struct {
 	Filename int64   `json:"filename"`
-	Size     float32 `json:"size"`
+	Size     float64 `json:"size"`
 }
 
 // Request represent an ingestable request for the cache
 type Request struct {
 	Filename int64
-	Size     float32
-	WTime    float32
-	CPUTime  float32
+	Size     float64
+	WTime    float64
+	CPUTime  float64
 	Day      int64
 	DayTime  time.Time
-	SiteName int
-	UserID   int
-	DataType int
-	Filetype int
+	SiteName int64
+	UserID   int64
+	DataType int64
+	Filetype int64
 }
 
 // Cache is the base interface for the cache object
@@ -53,24 +53,24 @@ type Cache interface {
 	Clear()
 	ClearFiles()
 	ClearHitMissStats()
-	Free(amount float32, percentage bool) float32
+	Free(amount float64, percentage bool) float64
 
 	ExtraStats() string
 	ExtraOutput(string) string
 
-	HitRate() float32
-	HitOverMiss() float32
-	WeightedHitRate() float32
-	Size() float32
-	Capacity() float32
-	DataWritten() float32
-	DataRead() float32
-	DataReadOnHit() float32
-	DataReadOnMiss() float32
-	DataDeleted() float32
-	CPUEff() float32
-	CPUHitEff() float32
-	CPUMissEff() float32
+	HitRate() float64
+	HitOverMiss() float64
+	WeightedHitRate() float64
+	Size() float64
+	Capacity() float64
+	DataWritten() float64
+	DataRead() float64
+	DataReadOnHit() float64
+	DataReadOnMiss() float64
+	DataDeleted() float64
+	CPUEff() float64
+	CPUHitEff() float64
+	CPUMissEff() float64
 
 	Check(int64) bool
 	CheckWatermark() bool
@@ -107,12 +107,12 @@ func GetSimCacheStatus(cache Cache) *pb.SimCacheStatus {
 func GetFile(cache Cache, vars ...interface{}) bool {
 	/* vars:
 	[0] -> filename int64
-	[1] -> size     float32
-	[2] -> wTime    float32
-	[3] -> cpuTime  float32
+	[1] -> size     float64
+	[2] -> wTime    float64
+	[3] -> cpuTime  float64
 	[4] -> day      int64
-	[5] -> siteName int
-	[6] -> userID   int
+	[5] -> siteName int64
+	[6] -> userID   int64
 	*/
 
 	cacheRequest := Request{
@@ -121,23 +121,23 @@ func GetFile(cache Cache, vars ...interface{}) bool {
 
 	switch {
 	case len(vars) > 6:
-		cacheRequest.UserID = vars[6].(int)
+		cacheRequest.UserID = vars[6].(int64)
 		fallthrough
 	case len(vars) > 5:
-		cacheRequest.SiteName = vars[5].(int)
+		cacheRequest.SiteName = vars[5].(int64)
 		fallthrough
 	case len(vars) > 4:
 		cacheRequest.Day = vars[4].(int64)
 		cacheRequest.DayTime = time.Unix(cacheRequest.Day, 0)
 		fallthrough
 	case len(vars) > 3:
-		cacheRequest.CPUTime = vars[3].(float32)
+		cacheRequest.CPUTime = vars[3].(float64)
 		fallthrough
 	case len(vars) > 2:
-		cacheRequest.WTime = vars[2].(float32)
+		cacheRequest.WTime = vars[2].(float64)
 		fallthrough
 	case len(vars) > 1:
-		cacheRequest.Size = vars[1].(float32)
+		cacheRequest.Size = vars[1].(float64)
 	}
 
 	hit := cache.Check(cacheRequest.Filename)

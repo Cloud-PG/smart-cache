@@ -16,10 +16,10 @@ const (
 // Stats collector of statistics for weighted cache
 type Stats struct {
 	fileStats       map[int64]*FileStats
-	weightSum       float32
+	weightSum       float64
 	firstUpdateTime time.Time
 	lastUpdateTime  time.Time
-	numRequests     int32
+	numRequests     int64
 }
 
 // Init initialize Stats
@@ -52,7 +52,7 @@ func (statStruct *Stats) PurgeStats() {
 // GetOrCreate add the file into stats and returns (stats, is new file)
 func (statStruct *Stats) GetOrCreate(filename int64, vars ...interface{}) (*FileStats, bool) {
 	var (
-		size    float32
+		size    float64
 		reqTime time.Time
 	)
 
@@ -61,7 +61,7 @@ func (statStruct *Stats) GetOrCreate(filename int64, vars ...interface{}) (*File
 		reqTime = vars[1].(time.Time)
 		fallthrough
 	default:
-		size = vars[0].(float32)
+		size = vars[0].(float64)
 	}
 
 	// Stats age update
@@ -92,7 +92,7 @@ func (statStruct *Stats) GetOrCreate(filename int64, vars ...interface{}) (*File
 }
 
 // UpdateWeight update the weight of a file and also the sum of all weights
-func (statStruct *Stats) updateWeight(stats *FileStats, newFile bool, functionType FunctionType, alpha float32, beta float32, gamma float32) {
+func (statStruct *Stats) updateWeight(stats *FileStats, newFile bool, functionType FunctionType, alpha float64, beta float64, gamma float64) {
 	if newFile {
 		statStruct.weightSum += stats.updateWeight(functionType, alpha, beta, gamma)
 	} else {
@@ -102,8 +102,8 @@ func (statStruct *Stats) updateWeight(stats *FileStats, newFile bool, functionTy
 }
 
 // GetWeightMedian returns the mean of the weight of all files
-func (statStruct *Stats) GetWeightMedian() float32 {
-	return statStruct.weightSum / float32(len(statStruct.fileStats))
+func (statStruct *Stats) GetWeightMedian() float64 {
+	return statStruct.weightSum / float64(len(statStruct.fileStats))
 }
 
 // updateFilePoints returns the points for a single file
@@ -125,22 +125,22 @@ type cacheEmptyMsg struct{}
 
 // FileStats contains file statistics collected by weighted caches
 type FileStats struct {
-	Weight            float32     `json:"weight"`
+	Weight            float64     `json:"weight"`
 	Points            float64     `json:"points"`
-	Size              float32     `json:"size"`
-	NHits             uint32      `json:"nHits"`
-	NMiss             uint32      `json:"nMiss"`
+	Size              float64     `json:"size"`
+	NHits             int64       `json:"nHits"`
+	NMiss             int64       `json:"nMiss"`
 	FirstTime         time.Time   `json:"firstTime"`
 	InCacheSince      time.Time   `json:"inCacheSince"`
 	InCache           bool        `json:"inCache"`
 	LastTimeRequested time.Time   `json:"lastTimeRequested"`
-	RequestTicksMean  float32     `json:"requestTicksMean"`
+	RequestTicksMean  float64     `json:"requestTicksMean"`
 	RequestTicks      []time.Time `json:"requestTicks"`
 	IdxLastRequest    int         `json:"idxLastRequest"`
-	DeltaLastRequest  int32       `json:"deltaLastRequest"`
-	LastRequest       int32       `json:"lastRequest"`
-	Users             []int       `json:"users"`
-	Sites             []int       `json:"sites"`
+	DeltaLastRequest  int64       `json:"deltaLastRequest"`
+	LastRequest       int64       `json:"lastRequest"`
+	Users             []int64     `json:"users"`
+	Sites             []int64     `json:"sites"`
 }
 
 // DiffLastUpdate returns the number of days from the last update stats
@@ -149,7 +149,7 @@ func (stats FileStats) DiffLastUpdate() float64 {
 }
 
 // TotRequests returns the total amount of requests
-func (stats FileStats) TotRequests() uint32 {
+func (stats FileStats) TotRequests() int64 {
 	return stats.NHits + stats.NMiss
 }
 
@@ -173,7 +173,7 @@ func (stats *FileStats) removeFromCache() {
 	stats.InCache = false
 }
 
-func (stats *FileStats) addUser(userID int) {
+func (stats *FileStats) addUser(userID int64) {
 	for _, user := range stats.Users {
 		if user == userID {
 			return
@@ -182,7 +182,7 @@ func (stats *FileStats) addUser(userID int) {
 	stats.Users = append(stats.Users, userID)
 }
 
-func (stats *FileStats) addSite(siteName int) {
+func (stats *FileStats) addSite(siteName int64) {
 	for _, site := range stats.Sites {
 		if site == siteName {
 			return
@@ -191,7 +191,7 @@ func (stats *FileStats) addSite(siteName int) {
 	stats.Sites = append(stats.Sites, siteName)
 }
 
-func (stats *FileStats) updateStats(hit bool, size float32, userID int, siteName int, curTime time.Time) {
+func (stats *FileStats) updateStats(hit bool, size float64, userID int64, siteName int64, curTime time.Time) {
 	stats.Size = size
 
 	stats.addUser(userID)
@@ -250,7 +250,7 @@ func (stats *FileStats) updateFilePoints(curTime *time.Time) float64 {
 	return points
 }
 
-func (stats *FileStats) updateWeight(functionType FunctionType, alpha float32, beta float32, gamma float32) float32 {
+func (stats *FileStats) updateWeight(functionType FunctionType, alpha float64, beta float64, gamma float64) float64 {
 	switch functionType {
 	case FuncAdditive:
 		stats.Weight = fileWeightedAdditiveFunction(
@@ -280,7 +280,7 @@ func (stats *FileStats) updateWeight(functionType FunctionType, alpha float32, b
 	return stats.Weight
 }
 
-func (stats FileStats) getMeanReqTimes() float32 {
+func (stats FileStats) getMeanReqTimes() float64 {
 	var timeDiffSum time.Duration
 	for idx := 0; idx < len(stats.RequestTicks); idx++ {
 		if !stats.RequestTicks[idx].IsZero() {
@@ -288,7 +288,7 @@ func (stats FileStats) getMeanReqTimes() float32 {
 		}
 	}
 	if timeDiffSum != 0. {
-		return float32(timeDiffSum.Minutes()) / float32(RequestTicksSize)
+		return timeDiffSum.Minutes() / float64(RequestTicksSize)
 	}
 	return 0.
 }

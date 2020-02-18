@@ -47,7 +47,7 @@ var (
 			- [23] Campain (int64)
 			- [24] Process (int64)
 	*/
-	csvHeaderIndexes = []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23}
+	csvHeaderIndexes = []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24}
 )
 
 // SimulationStats is used to output the simulation statistics

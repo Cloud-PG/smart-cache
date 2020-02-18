@@ -36,7 +36,7 @@ var (
 	aiModel             string
 	aiPort              string
 	buildstamp          string
-	cacheSize           float32
+	cacheSize           float64
 	cpuprofile          string
 	dataset2TestPath    string
 	enableDebug         bool
@@ -58,9 +58,9 @@ var (
 	simStopWindow       uint32
 	simWindowSize       uint32
 	weightedFunc        string
-	weightAlpha         float32
-	weightBeta          float32
-	weightGamma         float32
+	weightAlpha         float64
+	weightBeta          float64
+	weightGamma         float64
 	logger              = log.New(os.Stderr, color.MagentaString("[SIM] "), log.Lshortfile|log.LstdFlags)
 )
 

@@ -104,7 +104,7 @@ func TestLRUCacheInsert(t *testing.T) {
 }
 
 func BenchmarkLRUCache(b *testing.B) {
-	var maxSize float32 = 1024. * 1024. * 10.
+	var maxSize float64 = 1024. * 1024. * 10.
 	var LetterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 
 	genRandomFilePath := func(num int32) string {
@@ -121,6 +121,6 @@ func BenchmarkLRUCache(b *testing.B) {
 	testCache.Init()
 
 	for n := 0; n < b.N; n++ {
-		GetFile(testCache, genRandomFilePath(5), rand.Float32()*maxSize, 0.0, 0.0, time.Now().Unix())
+		GetFile(testCache, genRandomFilePath(5), rand.Float64()*maxSize, 0.0, 0.0, time.Now().Unix())
 	}
 }

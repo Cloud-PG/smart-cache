@@ -23,7 +23,7 @@ type LRUDatasetVerifier struct {
 func (cache *LRUDatasetVerifier) Init(args ...interface{}) interface{} {
 	cache.LRUCache.Init()
 
-	cache.files = make(map[int64]float32)
+	cache.files = make(map[int64]float64)
 	cache.Stats.fileStats = make(map[int64]*FileStats)
 	cache.queue = list.New()
 
