@@ -7,7 +7,8 @@ from tqdm import tqdm
 
 from .. import loaders
 from ..utils import STATUS_ARROW, STATUS_WARNING
-from .extractor import get_object_columns, get_unique_values, check_region
+from .extractor import (check_filename_info, check_region_info,
+                        get_object_columns, get_unique_values)
 from .utils import CategoryContainer, convert_categories, save_numeric_df
 
 
@@ -56,8 +57,11 @@ def main():
             if not path.isfile(output_filename):
                 print(f"{STATUS_ARROW}Process file: {STATUS_WARNING(filepath)}")
 
-                print(f"{STATUS_ARROW}Check region column...")
-                df = check_region(df)
+                print(f"{STATUS_ARROW}Check region info...")
+                df = check_region_info(df)
+
+                print(f"{STATUS_ARROW}Check filename info...")
+                df = check_filename_info(df)
 
                 columns = get_object_columns(df)
                 categories = dict(

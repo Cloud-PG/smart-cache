@@ -1,19 +1,47 @@
 import pandas as pd
 
 
-def check_region(df: 'pd.DataFrame') -> 'pd.DataFrame':
+def check_region_info(df: 'pd.DataFrame') -> 'pd.DataFrame':
     """Check if region column exists.
 
     If not exists, it creates the column from the SiteName information
 
+    :param df: the input dataframe
+    :type df: pandas.DataFrame
     :return: the data frame with the new column
     :rtype: pandas.DataFrame
     """
-    if 'region' not in df.columns:
+    if 'Region' not in df.columns:
         # Example lambda map:
         #  T2_US_Vanderbilt -> us
-        df['region'] = df['SiteName'].map(
-            lambda elm: elm.split("_")[1].lower())
+        df['Region'] = df['SiteName'].map(
+            lambda elm: elm.split("_")[1].lower()
+        )
+    return df
+
+
+def check_filename_info(df: 'pd.DataFrame') -> 'pd.DataFrame':
+    """Check if filename stats exist.
+
+    If not exist, it creates the columns from the filename information
+
+    :param df: the input dataframe
+    :type df: pandas.DataFrame
+    :return: the data frame with the new column
+    :rtype: pandas.DataFrame
+    """
+    if 'Campain' not in df.columns:
+        # Example lambda map:
+        #  /store/data/Run2016B/DoubleEG/MINIAOD/03Feb2017_ver2-v2/50000/0EEFA768-E2EA-E611-86FE-0025905A610A.root -> Run2016B
+        df['Campain'] = df['Filename'].map(
+            lambda elm: elm.split("/")[3]
+        )
+    if 'Process' not in df.columns:
+        # Example lambda map:
+        #  /store/data/Run2016B/DoubleEG/MINIAOD/03Feb2017_ver2-v2/50000/0EEFA768-E2EA-E611-86FE-0025905A610A.root -> DoubleEG
+        df['Process'] = df['Filename'].map(
+            lambda elm: elm.split("/")[4]
+        )
     return df
 
 
