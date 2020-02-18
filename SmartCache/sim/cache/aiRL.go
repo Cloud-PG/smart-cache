@@ -196,7 +196,7 @@ func (cache *AIRL) getCategory(catKey string, value interface{}) []bool {
 				res[0] = true
 			}
 		} else {
-			res[curCategory.Values[string(value.(int))]] = true
+			res[curCategory.Values[string(value.(int64))]] = true
 		}
 		return res
 	}
