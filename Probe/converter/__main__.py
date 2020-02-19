@@ -56,12 +56,20 @@ def main():
         ):
 
             head, tail = path.split(filepath)
-            output_filename = path.join(
-                head,
-                tail.replace(
-                    "results_", f"results_numeric_{args.region}_"
+            if args.shuffle:
+                output_filename = path.join(
+                    head,
+                    tail.replace(
+                        "results_", f"results_numeric_{args.region}_shuffle_{args.seed}"
+                    )
                 )
-            )
+            else:
+                output_filename = path.join(
+                    head,
+                    tail.replace(
+                        "results_", f"results_numeric_{args.region}_"
+                    )
+                )
 
             if not path.isfile(output_filename):
                 print(f"{STATUS_ARROW}Process file: {STATUS_WARNING(filepath)}")
