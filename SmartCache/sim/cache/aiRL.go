@@ -24,7 +24,7 @@ type AIRL struct {
 	curTime           time.Time
 	aiFeatureMap      map[string]featuremap.Obj
 	aiFeatureMapOrder []string
-	qTable            *qlearn.QTable
+	additionTable     *qlearn.QTable
 	qPrevState        map[int64]string
 	qPrevAction       map[int64]qlearn.ActionType
 	points            float64
@@ -51,7 +51,7 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 	}
 	sort.Strings(cache.aiFeatureMapOrder)
 
-	cache.qTable = &qlearn.QTable{}
+	cache.additionTable = &qlearn.QTable{}
 	inputLengths := []int{}
 	for _, featureName := range cache.aiFeatureMapOrder {
 		curFeature, _ := cache.aiFeatureMap[featureName]
@@ -62,7 +62,7 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 		inputLengths = append(inputLengths, curLen)
 	}
 	logger.Info("[Generate QTable]")
-	cache.qTable.Init(inputLengths)
+	cache.additionTable.Init(inputLengths)
 	logger.Info("[Done]")
 
 	return nil
@@ -106,8 +106,8 @@ func (cache *AIRL) Dumps() [][]byte {
 		outData = append(outData, record)
 	}
 	// ----- qtable -----
-	dumpInfo, _ := json.Marshal(DumpInfo{Type: "QTABLE"})
-	dumpStats, _ := json.Marshal(cache.qTable)
+	dumpInfo, _ := json.Marshal(DumpInfo{Type: "ADDQTABLE"})
+	dumpStats, _ := json.Marshal(cache.additionTable)
 	record, _ := json.Marshal(DumpRecord{
 		Info: string(dumpInfo),
 		Data: string(dumpStats),
@@ -161,9 +161,9 @@ func (cache *AIRL) Loads(inputString [][]byte) {
 			var curFileStats FileStats
 			unmarshalErr = json.Unmarshal([]byte(curRecord.Data), &curFileStats)
 			cache.Stats.fileStats[curRecord.Filename] = &curFileStats
-		case "QTABLE":
-			unmarshalErr = json.Unmarshal([]byte(curRecord.Data), cache.qTable)
-			cache.qTable.ResetParams()
+		case "ADDQTABLE":
+			unmarshalErr = json.Unmarshal([]byte(curRecord.Data), cache.additionTable)
+			cache.additionTable.ResetParams()
 		}
 		if unmarshalErr != nil {
 			panic(fmt.Sprintf("%+v", unmarshalErr))
@@ -329,10 +329,10 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 	)
 
 	// Check learning phase or not
-	expTradeoff := cache.qTable.GetRandomFloat()
+	expTradeoff := cache.additionTable.GetRandomFloat()
 
-	if expTradeoff > cache.qTable.Epsilon {
-		//if cache.qTable.Epsilon <= cache.qTable.MinEpsilon { // Force learning until epsilon is > min epsilon
+	if expTradeoff > cache.additionTable.Epsilon {
+		//if cache.additionTable.Epsilon <= cache.additionTable.MinEpsilon { // Force learning until epsilon is > min epsilon
 		// ########################
 		// ##### Normal phase #####
 		// ########################
@@ -343,7 +343,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			// ########################
 
 			curState = qlearn.State2String(cache.getState(request, fileStats))
-			curAction = cache.qTable.GetBestAction(curState)
+			curAction = cache.additionTable.GetBestAction(curState)
 			logger.Info("Normal MISS branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
 			// ----------------------------------
 			// QLearn - Take the action NOT STORE
@@ -390,7 +390,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			curState = qlearn.State2String(cache.getState(request, fileStats))
 
 			// ----- Random choice -----
-			if randomAction := cache.qTable.GetRandomFloat(); randomAction > 0.5 {
+			if randomAction := cache.additionTable.GetRandomFloat(); randomAction > 0.5 {
 				curAction = qlearn.ActionStore
 			} else {
 				curAction = qlearn.ActionNotStore
@@ -418,9 +418,9 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				}
 
 				// Update table
-				cache.qTable.Update(curState, curAction, reward)
+				cache.additionTable.Update(curState, curAction, reward)
 				// Update epsilon
-				cache.qTable.UpdateEpsilon()
+				cache.additionTable.UpdateEpsilon()
 				return added
 			}
 
@@ -461,9 +461,9 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				cache.qPrevAction[request.Filename] = curAction
 
 				// Update table
-				cache.qTable.Update(curState, curAction, reward)
+				cache.additionTable.Update(curState, curAction, reward)
 				// Update epsilon
-				cache.qTable.UpdateEpsilon()
+				cache.additionTable.UpdateEpsilon()
 			}
 
 		} else {
@@ -488,9 +488,9 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				}
 
 				// Update table
-				cache.qTable.Update(curState, curAction, reward)
+				cache.additionTable.Update(curState, curAction, reward)
 				// Update epsilon
-				cache.qTable.UpdateEpsilon()
+				cache.additionTable.UpdateEpsilon()
 			}
 
 		}
@@ -569,7 +569,7 @@ func (cache *AIRL) CheckWatermark() bool {
 
 // ExtraStats for output
 func (cache *AIRL) ExtraStats() string {
-	return fmt.Sprintf("SCov:%0.2f%%|ACov:%0.2f%%|Eps:%0.5f|P:%0.0f|HMRatio:%v|bandR:%v", cache.qTable.GetStateCoverage(), cache.qTable.GetActionCoverage(), cache.qTable.Epsilon, cache.points, cache.dailyReadOnHit > cache.dailyReadOnMiss/2.0, cache.dailyReadOnMiss <= bandwidthLimit)
+	return fmt.Sprintf("SCov:%0.2f%%|ACov:%0.2f%%|Eps:%0.5f|P:%0.0f|HMRatio:%v|bandR:%v", cache.additionTable.GetStateCoverage(), cache.additionTable.GetActionCoverage(), cache.additionTable.Epsilon, cache.points, cache.dailyReadOnHit > cache.dailyReadOnMiss/2.0, cache.dailyReadOnMiss <= bandwidthLimit)
 }
 
 // ExtraOutput for output specific information
@@ -586,5 +586,5 @@ func (cache AIRL) ExtraOutput(info string) string {
 
 // GetQTable return a string of the qtable in csv format
 func (cache AIRL) GetQTable() string {
-	return cache.qTable.ToString(&cache.aiFeatureMap, &cache.aiFeatureMapOrder)
+	return cache.additionTable.ToString(&cache.aiFeatureMap, &cache.aiFeatureMapOrder)
 }
