@@ -16,16 +16,28 @@ type ActionType int
 // RLUpdateType are the possible update functions
 type RLUpdateType int
 
+// QTableRole are the possible table roles
+type QTableRole int
+
 const (
 	// ActionNotStore indicates to store an element in cache
-	ActionNotStore ActionType = iota - 2
+	ActionNotStore ActionType = iota - 4
 	// ActionStore indicates to not store an element in cache
 	ActionStore
+	// ActionRemoveFile indicates to remove a file during the eviction
+	ActionRemoveFile
+	// ActionNotRemoveFile indicates to not remove a file during the eviction
+	ActionNotRemoveFile
 
 	// RLSARSA indicates the standard RL update algorithm SARSA
 	RLSARSA RLUpdateType = iota - 2
 	// RLQLearning indicates the Bellman equation
 	RLQLearning
+
+	// EvictionTable indicates the table to choose which files to delete
+	EvictionTable QTableRole = iota - 2
+	// AdditionTable indicates the table to accept file requests
+	AdditionTable
 )
 
 var (
@@ -51,7 +63,7 @@ type QTable struct {
 }
 
 // Init initilizes the QTable struct
-func (table *QTable) Init(featureLenghts []int) {
+func (table *QTable) Init(featureLenghts []int, role QTableRole) {
 	logger = zap.L()
 
 	table.LearningRate = 0.9 // also named Alpha
@@ -60,15 +72,29 @@ func (table *QTable) Init(featureLenghts []int) {
 	table.Epsilon = 1.0
 	table.MaxEpsilon = 1.0
 	table.MinEpsilon = 0.1
-	// With getArgMax the first action is the default choice
-	table.Actions = []ActionType{
-		ActionNotStore,
-		ActionStore,
+	switch role {
+	case AdditionTable:
+		// With getArgMax the first action is the default choice
+		table.Actions = []ActionType{
+			ActionNotStore,
+			ActionStore,
+		}
+		table.ActionStrings = []string{
+			"ActionNotStore",
+			"ActionStore",
+		}
+	case EvictionTable:
+		// With getArgMax the first action is the default choice
+		table.Actions = []ActionType{
+			ActionNotRemoveFile,
+			ActionRemoveFile,
+		}
+		table.ActionStrings = []string{
+			"ActionNotRemoveFile",
+			"ActionRemoveFile",
+		}
 	}
-	table.ActionStrings = []string{
-		"ActionNotStore",
-		"ActionStore",
-	}
+
 	table.UpdateFunction = RLQLearning
 	table.RGenerator = rand.New(rand.NewSource(42))
 

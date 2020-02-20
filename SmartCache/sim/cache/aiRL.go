@@ -25,6 +25,7 @@ type AIRL struct {
 	aiFeatureMap      map[string]featuremap.Obj
 	aiFeatureMapOrder []string
 	additionTable     *qlearn.QTable
+	evictionTable     *qlearn.QTable
 	qPrevState        map[int64]string
 	qPrevAction       map[int64]qlearn.ActionType
 	points            float64
@@ -62,7 +63,7 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 		inputLengths = append(inputLengths, curLen)
 	}
 	logger.Info("[Generate QTable]")
-	cache.additionTable.Init(inputLengths)
+	cache.additionTable.Init(inputLengths, qlearn.AdditionTable)
 	logger.Info("[Done]")
 
 	return nil
