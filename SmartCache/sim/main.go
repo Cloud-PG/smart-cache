@@ -289,7 +289,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			dumpFileName := baseName + ".json.gz"
 			resultFileName := baseName + "_results.csv"
 			resultRunStatsName := baseName + "_run_stats.json"
-			resultReportStatsName := baseName + "_report_stats.json"
+			resultReportStatsName := baseName + "_report_stats.csv"
 			resultQTableName := baseName + "_qtable.csv"
 
 			// Create cache
