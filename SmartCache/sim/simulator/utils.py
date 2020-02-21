@@ -7,7 +7,7 @@ import coloredlogs
 import pandas as pd
 
 
-def get_logger(filename: str = __name__, level: str='INFO') -> 'logger.Logger':
+def get_logger(filename: str = __name__, level: str = 'INFO') -> 'logger.Logger':
     # Get the top-level logger object
     logger = logging.getLogger(filename)
     # make it print to the console.
@@ -17,7 +17,7 @@ def get_logger(filename: str = __name__, level: str='INFO') -> 'logger.Logger':
 
     logger.addHandler(console)
     coloredlogs.install(level=level, logger=logger)
-    
+
     return logger
 
 
@@ -85,12 +85,12 @@ def get_result_section(cur_path: str, source_folder: str):
     return section
 
 
-def load_results(folder: str) -> dict:
+def load_results(folder: str, top_10: bool = False) -> dict:
     results = {}
     for root, _, files in walk(folder):
         for file_ in files:
-            _, ext = path.splitext(file_)
-            if ext == ".csv":
+            head, ext = path.splitext(file_)
+            if ext == ".csv" and head.find("_results") != -1:
                 section = get_result_section(root, folder)
                 cur_section = results
                 while len(section) > 1:
@@ -104,5 +104,22 @@ def load_results(folder: str) -> dict:
                     file_path
                 )
                 cur_section[last_section] = df
+
+    if top_10:
+        if 'run_full_normal' in results:
+            ranks = {}
+            void = []
+            for cache_name, df in results['run_full_normal'].items():
+                if df.shape[0] > 0:
+                    cost = df['written data'] + \
+                        df['deleted data'] + df['read on miss data']
+                    ranks[cache_name] = cost.mean()
+                elif cache_name.lower().find("lru_") == -1 or cache_name.lower().index("lru_") != 0:
+                    void.append(cache_name)
+            for name in void:
+                del results['run_full_normal'][name]
+            for name, _ in sorted(ranks.items(), key=lambda elm: elm[1])[10:]:
+                if name.lower().find("lru_") == -1 or name.lower().index("lru_") != 0:
+                    del results['run_full_normal'][name]
 
     return results

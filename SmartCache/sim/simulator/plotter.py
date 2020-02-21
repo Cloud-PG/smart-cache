@@ -7,7 +7,7 @@ from bokeh.io import export_png
 from bokeh.layouts import column, row
 from bokeh.models import (BasicTickFormatter, BoxZoomTool, Legend, PanTool,
                           Range1d, ResetTool, SaveTool, Span, WheelZoomTool)
-from bokeh.palettes import Set1
+from bokeh.palettes import Category20
 from bokeh.plotting import Figure, figure, output_file, save
 from tqdm import tqdm
 
@@ -18,7 +18,7 @@ _LINE_WIDTH = 2.8
 
 def update_colors(new_name: str, color_table: dict):
     names = list(color_table.keys()) + [new_name]
-    colors = cycle(Set1[8])
+    colors = cycle(Category20[20])
     for name in sorted(names):
         cur_color = next(colors)
         color_table[name] = cur_color

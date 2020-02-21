@@ -143,6 +143,9 @@ def main():
     parser.add_argument('--force-exe-build', type='bool',
                         default=True,
                         help='Force to build the simulation executable [DEFAULT: True]')
+    parser.add_argument('--top-10', type='bool',
+                        default=False,
+                        help='Plots only the top 10 results (ordered by cost) [DEFAULT: False]')
     parser.add_argument('--cache-size', type=int,
                         default=104857600,
                         help='Size of the cache to simulate in Mega Bytes [DEFAULT: 104857600]')
@@ -443,7 +446,7 @@ def main():
             print(f"Cannot find folder '{args.source}'")
             exit(-1)
         filters = [elm for elm in args.plot_filters.split(",") if elm]
-        results = load_results(args.source)
+        results = load_results(args.source, args.top_10)
         plot_width, plot_height = [
             int(elm) for elm in args.plot_resolution.split(",")
             if elm
