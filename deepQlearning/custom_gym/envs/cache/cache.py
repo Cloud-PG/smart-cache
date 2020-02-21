@@ -8,11 +8,15 @@ from datetime import datetime, timedelta
 import numpy as np
 import pandas as pd
 import gym
+import math
 
 bandwidthLimit = (1000000. / 8.) * 60. * 60. * 24
+time_slots = 1000
 
 
 class FileStats(object):
+
+    __slots__ = ["_size", "_hit", "_miss", "_last_request", "recency"]
 
     def __init__(self, size: float):
         self._size: float = size
@@ -23,11 +27,6 @@ class FileStats(object):
 
     def update_retrieve(self, size: float, hit: bool = False):
         self._size = size
-        #if hit:
-        #    self._hit += 1
-        #else:
-        #    self._miss += 1
-
         self.recency = 0
 
     def update(self, size: float, hit: bool = False):
@@ -75,16 +74,6 @@ class Stats(object):
 class cache(object):
 
     def __init__(self, size: float = 104857600, h_watermark: float = 95., l_watermark: float = 75.):
-        """Init of the cache object
-
-        :param size: The size of the cache, defaults to 104857600 (100Terabytes)
-        :type size: float, optional
-        :param h_watermark: hight watermark (percentage), defaults to 95.
-        :type h_watermark: float, optional
-        :param l_watermark: lower watermark (percentage), defaults to 75.
-        :type l_watermark: float, optional
-        """
-
         self._size: float = 0.0
         self._max_size = size
 
@@ -93,6 +82,7 @@ class cache(object):
         self._filesSize = OrderedDict()
 
         self._stats = Stats()
+
         # Stat attributes
         self._hit: int = 0
         self._miss: int = 0
@@ -170,53 +160,42 @@ class cache(object):
         else:
             size_to_remove = amount * (self._max_size / 100.)
         tot_removed = 0.0
-        #if action == 2:
-        #    filesLFU =  OrderedDict(sorted(self._filesLRU.items(), key=lambda t: t[1].tot_requests))
-        #if action == 3 or action == 4:
-        #    filesSize =  OrderedDict(sorted(self._filesLRU.items(), key=lambda t: t[1]._size))
         print("I have to remove with action " + str(action))
-        #print(self._filesLRU)
         while tot_removed < size_to_remove:
             if action == 1:                                                                         
                 _, file_stats = self._filesLRU.popitem(last = False)
-                #del self._filesLRU[_]
-                print("removed with action 1")
+                print("removed with action 1 - " + str(self.capacity)  +'%')
             elif action == 2:
                 filesLFU =  OrderedDict(sorted(self._filesLRU.items(), key=lambda t: t[1].tot_requests))
                 _, file_stats = filesLFU.popitem(last = False)
                 del self._filesLRU[_]
-                print("removed with action 2")
+                print("removed with action 2 - " + str(self.capacity)  +'%')
             elif action == 3:
                 filesSize =  OrderedDict(sorted(self._filesLRU.items(), key=lambda t: t[1]._size))
                 _, file_stats = filesSize.popitem(last = False)
                 del self._filesLRU[_]
-                print("removed with action 3")
+                print("removed with action 3 - " + str(self.capacity)  +'%')
             elif action == 4:
                 filesSize =  OrderedDict(sorted(self._filesLRU.items(), key=lambda t: t[1]._size))
                 _, file_stats = filesSize.popitem(last = True)
                 del self._filesLRU[_]
-                print("removed with action 4")                
+                print("removed with action 4 - " + str(self.capacity)  +'%')              
             tot_removed += file_stats.size
             self._size -= file_stats.size
             self._deleted_data += file_stats.size
 
     def check_watermark_and_free(self, action):
-        """Check if the cache reached the hight watermark.
-
-        If it is true, the cache free space until
-        the lower watermark is reached
-        """
-        
-        if self.capacity >= self._h_watermark:
-            percentage = self.capacity - self._l_watermark
-            self.__free(amount = percentage, action = action)
+        if self.capacity >= self._h_watermark and action != 0:
+            #to_free = math.ceil(self.capacity - self._l_watermark)
+            to_free = self.capacity - self._l_watermark
+            print(to_free)
+            self.__free(amount = to_free, action = action, percentage=True)
     
     def update_recency(self):
         for _, value in self._filesLRU.items():
             value.recency += 1
 
     def _get_mean_recency(self, curRequest):
-        #print(list(self._filesLRU))
         if curRequest == 0:
             return 0.
         else:
@@ -285,7 +264,7 @@ class CacheEnv(gym.Env):
 
     def write_stats(self):
         if self.curDay == self._idx_start:
-            with open('../dQleviction_100T_it_results_{}_startmonth{}_endmonth{}.csv'.format('onehot'+ str(self._one_hot),self._startMonth,self._endMonth), 'w', newline='') as file:
+            with open('../dQleviction_100T_it_results_shuffle_{}_startmonth{}_endmonth{}.csv'.format('onehot'+ str(self._one_hot),self._startMonth,self._endMonth), 'w', newline='') as file:
                 writer = csv.writer(file)
                 writer.writerow(
                     ['date',
@@ -303,7 +282,7 @@ class CacheEnv(gym.Env):
                      'CPU miss efficiency',
                      'cost'])
 
-        with open('../dQleviction_100T_it_results_{}_startmonth{}_endmonth{}.csv'.format('onehot'+ str(self._one_hot),self._startMonth,self._endMonth), 'a', newline='') as file:
+        with open('../dQleviction_100T_it_results_shuffle_{}_startmonth{}_endmonth{}.csv'.format('onehot'+ str(self._one_hot),self._startMonth,self._endMonth), 'a', newline='') as file:
             writer = csv.writer(file)
             writer.writerow(
                 [str(datetime.fromtimestamp(self.df.loc[0, 'reqDay']) + timedelta(days=1) ) + ' +0200 UTC',
@@ -344,6 +323,7 @@ class CacheEnv(gym.Env):
         return
 
     def get_dataframe(self, i):
+        '''
         directory = "/home/ubuntu/source2018"
         file_ = sorted(os.listdir(directory))[i]
         with gzip.open(directory + '/' + str(file_)) as f:
@@ -352,6 +332,15 @@ class CacheEnv(gym.Env):
             df_['Size'] = df_['Size']/1.049e+6
             df_ = df_[df_['region'] == 'IT']
             df_ = df_.reset_index()
+            self.df = df_
+            self.df_length = len(self.df)
+        print(file_)
+        '''
+        directory = "/home/ubuntu/source2018_numeric_it_shuffle_42"
+        file_ = sorted(os.listdir(directory))[i]
+        with gzip.open(directory + '/' + str(file_)) as f:
+            df_ = pd.read_csv(f)
+            df_['Size'] = df_['Size']/1.049e+6
             self.df = df_
             self.df_length = len(self.df)
         print(file_)
@@ -364,7 +353,8 @@ class CacheEnv(gym.Env):
         l.append(self.curRequest - filestats._last_request)
         l.append(self._cache._size/self._cache._max_size)
         datatype = (df_line['DataType'])
-        if datatype == 'data':
+        #if datatype == 'data':
+        if datatype == 0:
             l.append(0.)
         else:
             l.append(1.)
@@ -450,29 +440,27 @@ class CacheEnv(gym.Env):
             #print('Size big')
             toadd = True
 
-
-        #print(self._cache._filesLRU)
-
         # retrieve the updated stats before choice for this request
         hit = self._cache.check(self.df.loc[self.curRequest, 'Filename'])
         filename = self.df.loc[self.curRequest, 'Filename']
         size = self.df.loc[self.curRequest, 'Size']
         filestats = self._cache.before_request_retrieve(
             self.df.loc[self.curRequest, 'Filename'], hit, self.df.loc[self.curRequest, 'Size'], self.curRequest)
-        #filestats = self._cache._filesLRU[filename]
         cputime = self.df.loc[self.curRequest, 'CPUTime']
         walltime = self.df.loc[self.curRequest, 'WrapWC']
-
-        #print(filestats.tot_requests)
 
         # modify cache and update stats according to the chosen action
         added = self._cache.update_policy(filename, filestats, hit, action)
 
-        #print(filestats.tot_requests)
         self._cache.after_request(filestats, hit, added)
+        #print('Before check: ' + str(self._cache.capacity))
         self._cache.check_watermark_and_free(action)
-        #print(filestats.tot_requests)
+        #print('After check: ' + str(self._cache.capacity))
+        #print()
+
         # compute the reward
+
+
         if hit == False:
             self._cache._WALLtime_miss += walltime
             self._cache._CPUtime_miss += cputime
@@ -504,8 +492,7 @@ class CacheEnv(gym.Env):
         # if the day is over, go to the next day, saving and resetting LRU stats
         done = False
         self.size_tot +=size
-        print(str(self.curRequest) + ' / ' + str(self.df_length), end="\r")
-
+        print('Request: ' + str(self.curRequest) + ' / ' + str(self.df_length) + '  -  Occupancy: ' + str(round(self._cache.capacity,2)) + '%  -  ' + 'Hit rate: ' + str(round(self._cache._hit/(self._cache._hit + self._cache._miss)*100,2)) +'%', end="\r")
         if (self.curRequest + 1) == self.df_length:
             self.write_stats()
             self.reset_stats()
