@@ -1,30 +1,31 @@
 package cache
 
 import (
-	"math/rand"
 	"testing"
 	"time"
 	// "fmt"
 )
 
 const (
-	WeightedLRUEXP   float32 = 2.0
-	WeightedCacheEXP float32 = 2.0
+	WeightedLRUEXP   float64 = 2.0
+	WeightedCacheEXP float64 = 2.0
 )
 
 func TestWeightedLRUBaseMultipleInsert(t *testing.T) {
 	testCache := &WeightedLRU{
 		LRUCache: LRUCache{
-			MaxSize: 3.0,
+			MaxSize:       3.0,
+			HighWaterMark: 100.,
+			LowWaterMark:  100.,
 		},
 		SelFunctionType: FuncWeightedRequests,
 	}
 	testCache.Init()
 
-	res := GetFile(testCache, "/a/b/c/d/file0", size1, floatZero, floatZero, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file0", size1, floatZero, floatZero, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file0", size1, floatZero, floatZero, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file0", size1, floatZero, floatZero, time.Now().Unix())
+	res := GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
 
 	if !res {
 		t.Fatalf("First insert error -> Expected %t but got %t", true, res)
@@ -42,16 +43,18 @@ func TestWeightedLRUBaseMultipleInsert(t *testing.T) {
 func TestWeightedLRUClear(t *testing.T) {
 	testCache := &WeightedLRU{
 		LRUCache: LRUCache{
-			MaxSize: 3.0,
+			MaxSize:       3.0,
+			HighWaterMark: 100.,
+			LowWaterMark:  100.,
 		},
 		SelFunctionType: FuncWeightedRequests,
 	}
 	testCache.Init()
 
-	GetFile(testCache, "/a/b/c/d/file0", size1, floatZero, floatZero, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file0", size1, floatZero, floatZero, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file0", size1, floatZero, floatZero, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file0", size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
 
 	testCache.Clear()
 
@@ -63,8 +66,8 @@ func TestWeightedLRUClear(t *testing.T) {
 		t.Fatalf("Written data error -> Expected %f but got %f", 0., testCache.DataWritten())
 	} else if testCache.DataReadOnHit() != 0. {
 		t.Fatalf("Read on hit error -> Expected %f but got %f", 0., testCache.DataReadOnHit())
-	} else if testCache.queue.Len() != 0 {
-		t.Fatalf("Queue error -> Expected %d but got %d", 0, testCache.queue.Len())
+	} else if len(testCache.queue) != 0 {
+		t.Fatalf("Queue error -> Expected %d but got %d", 0, len(testCache.queue))
 	} else if len(testCache.files) != 0 {
 		t.Fatalf("Cache error -> Expected %d but got %d", 0, len(testCache.files))
 	}
@@ -73,27 +76,29 @@ func TestWeightedLRUClear(t *testing.T) {
 func TestWeightedLRUInsert(t *testing.T) {
 	testCache := &WeightedLRU{
 		LRUCache: LRUCache{
-			MaxSize: 5.0,
+			MaxSize:       5.0,
+			HighWaterMark: 100.,
+			LowWaterMark:  100.,
 		},
 		SelFunctionType: FuncWeightedRequests,
 	}
 	testCache.Init()
 
-	GetFile(testCache, "/a/b/c/d/file0", size1, floatZero, floatZero, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file1", size2, floatZero, floatZero, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file2", size1, floatZero, floatZero, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file3", size1, floatZero, floatZero, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file1", size2, floatZero, floatZero, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file1", size2, floatZero, floatZero, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file1", size2, floatZero, floatZero, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file4", size1, floatZero, floatZero, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file3", size1, floatZero, floatZero, time.Now().Unix())
-	GetFile(testCache, "/a/b/c/d/file4", size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, int64(1), size2, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, int64(2), size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, int64(3), size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, int64(1), size2, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, int64(1), size2, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, int64(1), size2, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, int64(4), size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, int64(3), size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, int64(4), size1, floatZero, floatZero, time.Now().Unix())
 
-	if testCache.HitRate() != 30.000002 {
-		t.Fatalf("Hit rate error -> Expected %f but got %f", 30.000002, testCache.HitRate())
-	} else if testCache.Size() != 4.0 {
-		t.Fatalf("Size error -> Expected %f but got %f", 4.0, testCache.Size())
+	if testCache.HitRate() != 30.0 {
+		t.Fatalf("Hit rate error -> Expected %f but got %f", 30.0, testCache.HitRate())
+	} else if testCache.Size() != 5.0 {
+		t.Fatalf("Size error -> Expected %f but got %f", 5.0, testCache.Size())
 	} else if testCache.DataWritten() != 6. {
 		t.Fatalf("Written data error -> Expected %f but got %f", 6., testCache.DataWritten())
 	} else if testCache.DataReadOnHit() != 5. {
@@ -101,26 +106,26 @@ func TestWeightedLRUInsert(t *testing.T) {
 	}
 }
 
-func BenchmarkWeightedLRU(b *testing.B) {
-	var maxSize float64 = 1024. * 1024. * 10.
-	var LetterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+// func BenchmarkWeightedLRU(b *testing.B) {
+// 	var maxSize float64 = 1024. * 1024. * 10.
+// 	var LetterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 
-	genRandomFilePath := func(num int32) string {
-		filepath := make([]rune, num)
-		for idx := range filepath {
-			filepath[idx] = LetterRunes[rand.Intn(len(LetterRunes))]
-		}
-		return string(filepath)
-	}
+// 	genRandomFilePath := func(num int32) string {
+// 		filepath := make([]rune, num)
+// 		for idx := range filepath {
+// 			filepath[idx] = LetterRunes[rand.Intn(len(LetterRunes))]
+// 		}
+// 		return string(filepath)
+// 	}
 
-	testCache := &WeightedLRU{
-		LRUCache: LRUCache{
-			MaxSize: maxSize,
-		},
-	}
-	testCache.Init()
+// 	testCache := &WeightedLRU{
+// 		LRUCache: LRUCache{
+// 			MaxSize: maxSize,
+// 		},
+// 	}
+// 	testCache.Init()
 
-	for n := 0; n < b.N; n++ {
-		GetFile(testCache, genRandomFilePath(5), rand.Float64()*maxSize, 0.0, 0.0)
-	}
-}
+// 	for n := 0; n < b.N; n++ {
+// 		GetFile(testCache, genRandomFilePath(5), rand.Float64()*maxSize, 0.0, 0.0)
+// 	}
+// }

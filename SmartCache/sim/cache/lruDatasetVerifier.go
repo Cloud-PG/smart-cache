@@ -2,7 +2,6 @@ package cache
 
 import (
 	"compress/gzip"
-	"container/list"
 	"encoding/json"
 	"log"
 	"os"
@@ -25,7 +24,7 @@ func (cache *LRUDatasetVerifier) Init(args ...interface{}) interface{} {
 
 	cache.files = make(map[int64]float64)
 	cache.Stats.fileStats = make(map[int64]*FileStats)
-	cache.queue = list.New()
+	cache.queue = make([]int64, 0)
 
 	cache.datasetFileMap = make(map[int64]bool)
 	datasetFilePath := args[0].(string)
@@ -70,7 +69,7 @@ func (cache *LRUDatasetVerifier) UpdatePolicy(request *Request, fileStats *FileS
 			}
 			if cache.Size()+requestedFileSize <= cache.MaxSize {
 				cache.files[requestedFilename] = requestedFileSize
-				cache.queue.PushBack(requestedFilename)
+				cache.queue = append(cache.queue, requestedFilename)
 				cache.size += requestedFileSize
 				added = true
 			}

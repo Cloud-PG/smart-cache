@@ -2,7 +2,6 @@ package cache
 
 import (
 	"compress/gzip"
-	"container/list"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -20,7 +19,7 @@ import (
 type LRUCache struct {
 	Stats
 	files                              map[int64]float64
-	queue                              *list.List
+	queue                              []int64
 	hit, miss, size, MaxSize           float64
 	hitCPUTime, missCPUTime            float64
 	hitWTime, missWTime                float64
@@ -34,7 +33,7 @@ type LRUCache struct {
 func (cache *LRUCache) Init(_ ...interface{}) interface{} {
 	cache.Stats.Init()
 	cache.files = make(map[int64]float64)
-	cache.queue = list.New()
+	cache.queue = make([]int64, 0)
 	if cache.HighWaterMark == 0.0 {
 		cache.HighWaterMark = 95.0
 	}
@@ -59,18 +58,7 @@ func (cache *LRUCache) ClearFiles() {
 func (cache *LRUCache) Clear() {
 	cache.Stats.Init()
 	cache.ClearFiles()
-	tmpVal := cache.queue.Front()
-	for {
-		if tmpVal == nil {
-			break
-		} else if tmpVal.Next() == nil {
-			cache.queue.Remove(tmpVal)
-			break
-		}
-		tmpVal = tmpVal.Next()
-		cache.queue.Remove(tmpVal.Prev())
-	}
-	cache.queue = list.New()
+	cache.queue = make([]int64, 0)
 	cache.hit = 0.
 	cache.miss = 0.
 	cache.dataWritten = 0.
@@ -293,7 +281,7 @@ func (cache *LRUCache) UpdatePolicy(request *Request, fileStats *FileStats, hit 
 		}
 		if cache.Size()+requestedFileSize <= cache.MaxSize {
 			cache.files[requestedFilename] = requestedFileSize
-			cache.queue.PushBack(requestedFilename)
+			cache.queue = append(cache.queue, requestedFilename)
 			cache.size += requestedFileSize
 			added = true
 		}
@@ -331,15 +319,12 @@ func (cache *LRUCache) AfterRequest(request *Request, hit bool, added bool) {
 
 // UpdateFileInQueue move the file requested on the back of the queue
 func (cache *LRUCache) UpdateFileInQueue(filename int64) {
-	var elm2move *list.Element
-	for tmpVal := cache.queue.Front(); tmpVal != nil; tmpVal = tmpVal.Next() {
-		if tmpVal.Value.(int64) == filename {
-			elm2move = tmpVal
+	for idx, elm := range cache.queue {
+		if elm == filename {
+			cache.queue = append(cache.queue[:idx], cache.queue[idx+1:]...)
+			cache.queue = append(cache.queue, elm)
 			break
 		}
-	}
-	if elm2move != nil {
-		cache.queue.MoveToBack(elm2move)
 	}
 }
 
@@ -354,30 +339,24 @@ func (cache *LRUCache) Free(amount float64, percentage bool) float64 {
 	} else {
 		sizeToDelete = amount
 	}
-	tmpVal := cache.queue.Front()
-	for {
-		if tmpVal == nil {
-			break
-		}
-		fileName := tmpVal.Value.(int64)
-		fileSize := cache.files[fileName]
-		// Update sizes
-		cache.size -= fileSize
-		cache.dataDeleted += fileSize
-		totalDeleted += fileSize
+	if sizeToDelete > 0. {
+		var maxIdx2Delete int
+		for idx, fileName := range cache.queue {
+			fileSize := cache.files[fileName]
+			// Update sizes
+			cache.size -= fileSize
+			cache.dataDeleted += fileSize
+			totalDeleted += fileSize
 
-		// Remove from queue
-		delete(cache.files, fileName)
-		tmpVal = tmpVal.Next()
-		// Check if all files are deleted
-		if tmpVal == nil {
-			break
-		}
-		cache.queue.Remove(tmpVal.Prev())
+			// Remove from queue
+			delete(cache.files, fileName)
+			maxIdx2Delete = idx
 
-		if totalDeleted >= sizeToDelete {
-			break
+			if totalDeleted >= sizeToDelete {
+				break
+			}
 		}
+		cache.queue = cache.queue[maxIdx2Delete+1:]
 	}
 	return totalDeleted
 }

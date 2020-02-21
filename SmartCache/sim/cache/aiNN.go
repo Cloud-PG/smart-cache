@@ -333,7 +333,7 @@ func (cache *AINN) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 		}
 		if cache.Size()+requestedFileSize <= cache.MaxSize {
 			cache.files[requestedFilename] = requestedFileSize
-			cache.queue.PushBack(requestedFilename)
+			cache.queue = append(cache.queue, requestedFilename)
 			cache.size += requestedFileSize
 			added = true
 		}

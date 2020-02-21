@@ -363,7 +363,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			}
 			if cache.Size()+requestedFileSize <= cache.MaxSize {
 				cache.files[requestedFilename] = requestedFileSize
-				cache.queue.PushBack(requestedFilename)
+				cache.queue = append(cache.queue, requestedFilename)
 				cache.size += requestedFileSize
 				added = true
 
@@ -431,7 +431,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			}
 			if cache.Size()+requestedFileSize <= cache.MaxSize {
 				cache.files[requestedFilename] = requestedFileSize
-				cache.queue.PushBack(requestedFilename)
+				cache.queue = append(cache.queue, requestedFilename)
 				cache.size += requestedFileSize
 				added = true
 
@@ -522,39 +522,32 @@ func (cache *AIRL) Free(amount float64, percentage bool) float64 {
 	} else {
 		sizeToDelete = amount
 	}
-	tmpVal := cache.queue.Front()
-	for {
-		if tmpVal == nil {
-			break
-		}
-		curFilename2Delete := tmpVal.Value.(int64)
-		fileSize := cache.files[curFilename2Delete]
-		curStats, added := cache.GetOrCreate(curFilename2Delete, fileSize)
-		if added {
-			panic("File in cache was removed from stats...")
-		}
-		// curFilePoints := curStats.Points
-		// cache.points -= curFilePoints
+	if sizeToDelete > 0. {
+		var maxIdx2Delete int
+		for idx, curFilename2Delete := range cache.queue {
+			fileSize := cache.files[curFilename2Delete]
+			curStats, added := cache.GetOrCreate(curFilename2Delete, fileSize)
+			if added {
+				panic("File in cache was removed from stats...")
+			}
+			// curFilePoints := curStats.Points
+			// cache.points -= curFilePoints
 
-		// Update stats
-		cache.size -= fileSize
-		cache.dataDeleted += fileSize
-		totalDeleted += fileSize
-		curStats.removeFromCache()
+			// Update sizes
+			cache.size -= fileSize
+			cache.dataDeleted += fileSize
+			totalDeleted += fileSize
+			curStats.removeFromCache()
 
-		// Remove from queue
-		delete(cache.files, curFilename2Delete)
-		tmpVal = tmpVal.Next()
+			// Remove from queue
+			delete(cache.files, curFilename2Delete)
+			maxIdx2Delete = idx
 
-		// Check if all files are deleted
-		if tmpVal == nil {
-			break
+			if totalDeleted >= sizeToDelete {
+				break
+			}
 		}
-		cache.queue.Remove(tmpVal.Prev())
-
-		if totalDeleted >= sizeToDelete {
-			break
-		}
+		cache.queue = cache.queue[maxIdx2Delete+1:]
 	}
 	return totalDeleted
 }
