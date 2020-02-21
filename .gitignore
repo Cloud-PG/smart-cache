@@ -251,3 +251,6 @@ cache_old.py
 test.py
 deepQlearning/reward.csv
 deepQlearning/reward.csv
+deepQlearning/reward.csv
+smart-cache-results/test_dql_may_june/results.html
+deepQlearning/reward.csv
