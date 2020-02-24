@@ -134,7 +134,7 @@ def plot_column(tools: list,
             if normalize:
                 y_max_range = max([y_max_range] + points.to_list())
                 cur_fig.y_range = Range1d(0, y_max_range)
-            if upper_bound and upper_bound_points is None and not np.array_equal(lower_bound_points, values[lower_bound].to_numpy()):
+            if upper_bound is not None and upper_bound_points is None and not np.array_equal(upper_bound_points, values[upper_bound].to_numpy()):
                 points = upper_bound_points = values[upper_bound].to_numpy()
                 cur_line = cur_fig.line(
                     dates,
@@ -143,6 +143,7 @@ def plot_column(tools: list,
                     line_dash="dotted",
                     line_width=2.4,
                 )
+                legend_items.append(("Upper Bound", [cur_line]))
                 mean_point = sum(points) / len(points)
                 cur_line = cur_fig.line(
                     dates,
@@ -155,7 +156,7 @@ def plot_column(tools: list,
                     (f"Mean Upper Bound -> {mean_point:0.2f}{'%' if normalize else ''}",
                      [cur_line])
                 )
-            if lower_bound and lower_bound_points is None and not np.array_equal(lower_bound_points, values[lower_bound].to_numpy()):
+            if lower_bound is not None and lower_bound_points is None and not np.array_equal(lower_bound_points, values[lower_bound].to_numpy()):
                 points = lower_bound_points = values[lower_bound].to_numpy()
                 cur_line = cur_fig.line(
                     dates,
@@ -164,6 +165,7 @@ def plot_column(tools: list,
                     line_dash="dotted",
                     line_width=2.4,
                 )
+                legend_items.append(("Lower Bound", [cur_line]))
                 mean_point = sum(points) / len(points)
                 cur_line = cur_fig.line(
                     dates,
@@ -846,6 +848,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             y_axis_label="read (MB)",
             plot_width=plot_width,
             plot_height=plot_height,
+            upper_bound="read data",
         )
         run_full_normal_data_read_stats_figs.append(read_data_fig)
     pbar.update(1)
@@ -869,6 +872,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             y_axis_label="miss (MB)",
             plot_width=plot_width,
             plot_height=plot_height,
+            upper_bound="read data",
         )
         run_full_normal_data_read_stats_figs.append(read_data_fig)
     pbar.update(1)
