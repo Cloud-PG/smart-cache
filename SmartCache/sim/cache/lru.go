@@ -499,9 +499,6 @@ func (cache LRUCache) MeanSize() float64 {
 	totSize := 0.0
 	for filename := range cache.files {
 		fileStats := cache.Stats.Get(filename)
-		if fileStats == nil {
-			println(filename)
-		}
 		totSize += fileStats.Size
 	}
 	return totSize / float64(len(cache.files))
