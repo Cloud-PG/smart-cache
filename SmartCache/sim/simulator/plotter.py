@@ -81,6 +81,8 @@ def plot_column(tools: list,
                 datetimes: list = [],
                 plot_width: int = 640,
                 plot_height: int = 480,
+                upper_bound: str = None,
+                lower_bound: str = None,
                 ) -> 'Figure':
     cur_fig = figure(
         tools=tools,
@@ -98,6 +100,9 @@ def plot_column(tools: list,
 
     legend_items = []
     y_max_range = 100.
+
+    upper_bound_points = None
+    lower_bound_points = None
 
     for cache_name, values in filter_results(
         results, run_type, filters
@@ -129,6 +134,48 @@ def plot_column(tools: list,
             if normalize:
                 y_max_range = max([y_max_range] + points.to_list())
                 cur_fig.y_range = Range1d(0, y_max_range)
+            if upper_bound and upper_bound_points is None and not np.array_equal(lower_bound_points, values[lower_bound].to_numpy()):
+                points = upper_bound_points = values[upper_bound].to_numpy()
+                cur_line = cur_fig.line(
+                    dates,
+                    points,
+                    line_color="red",
+                    line_dash="dotted",
+                    line_width=2.4,
+                )
+                mean_point = sum(points) / len(points)
+                cur_line = cur_fig.line(
+                    dates,
+                    [mean_point for _ in range(len(dates))],
+                    line_color="red",
+                    line_dash="dotdash",
+                    line_width=3.,
+                )
+                legend_items.append(
+                    (f"Mean Upper Bound -> {mean_point:0.2f}{'%' if normalize else ''}",
+                     [cur_line])
+                )
+            if lower_bound and lower_bound_points is None and not np.array_equal(lower_bound_points, values[lower_bound].to_numpy()):
+                points = lower_bound_points = values[lower_bound].to_numpy()
+                cur_line = cur_fig.line(
+                    dates,
+                    points,
+                    line_color="red",
+                    line_dash="dotted",
+                    line_width=2.4,
+                )
+                mean_point = sum(points) / len(points)
+                cur_line = cur_fig.line(
+                    dates,
+                    [mean_point for _ in range(len(dates))],
+                    line_color="red",
+                    line_dash="dotdash",
+                    line_width=3.,
+                )
+                legend_items.append(
+                    (f"Mean Lower Bound -> {mean_point:0.2f}{'%' if normalize else ''}",
+                     [cur_line])
+                )
         elif run_type == "run_single_window":
             points = results['run_full_normal'][cache_name][column]
             cur_line = cur_fig.line(
@@ -327,13 +374,13 @@ def plot_measure(tools: list,
         plot_height=plot_height,
     )
 
-    if target != None and target not in ['cpu_eff', 'network_in_saturation', 'network_out_saturation']:
+    if target is not None and target not in ['cpu_eff', 'network_in_saturation', 'network_out_saturation']:
         hline_1 = Span(
             location=1.0, dimension='width', line_dash="dashed",
             line_color="black", line_width=_LINE_WIDTH,
         )
         cur_fig.renderers.extend([hline_1])
-    elif target != None and target.find("network_") != -1:
+    elif target is not None and target.find("network_") != -1:
         hline_1 = Span(
             location=100.0, dimension='width', line_dash="dashed",
             line_color="black", line_width=_LINE_WIDTH,
@@ -342,9 +389,6 @@ def plot_measure(tools: list,
 
     read_data_type = 'read on hit data' if read_on_hit else 'read data'
     legend_items = []
-
-    y_range_min = 0.
-    y_range_max = 100.
 
     for cache_name, values in filter_results(
         results, run_type, filters
@@ -359,22 +403,6 @@ def plot_measure(tools: list,
             elif target == "network_out_saturation":
                 points = (values['read data'] /
                           ((10000. / 8.) * 60. * 60. * 24.)) * 100.  # 10Gbit x 1 day
-            elif target == "cpu_eff":
-                lru_values = get_lru(results, run_type)
-                if read_on_hit:
-                    points = (
-                        (
-                            values['read on hit data'] -
-                            lru_values['read on hit data']
-                        ) / (1000. / 8.)
-                    ) * 0.15
-                else:
-                    points = (
-                        (
-                            values['read on miss data'] -
-                            lru_values['read on miss data']
-                        ) / (1000. / 8.)
-                    ) * 0.15
             else:
                 raise Exception(f"Unknown target '{target}'")
             cur_line = cur_fig.line(
@@ -861,6 +889,8 @@ def plot_results(folder: str, results: dict, cache_size: float,
             y_axis_label="%",
             plot_width=plot_width,
             plot_height=plot_height,
+            upper_bound="CPU efficiency upper bound",
+            lower_bound="CPU efficiency lower bound",
         )
         run_full_normal_cpu_eff_figs.append(cpu_eff)
     pbar.update(1)
