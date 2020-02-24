@@ -23,6 +23,7 @@ type LRUCache struct {
 	hit, miss, size, MaxSize           float64
 	hitCPUTime, missCPUTime            float64
 	hitWTime, missWTime                float64
+	idealCPUTime, idealWTime           float64
 	dataWritten, dataRead, dataDeleted float64
 	dataReadOnHit, dataReadOnMiss      float64
 	HighWaterMark                      float64
@@ -70,6 +71,8 @@ func (cache *LRUCache) Clear() {
 	cache.missCPUTime = 0.
 	cache.hitWTime = 0.
 	cache.missWTime = 0.
+	cache.idealWTime = 0.
+	cache.idealCPUTime = 0.
 }
 
 // ClearHitMissStats the cache stats
@@ -85,6 +88,8 @@ func (cache *LRUCache) ClearHitMissStats() {
 	cache.missCPUTime = 0.
 	cache.hitWTime = 0.
 	cache.missWTime = 0.
+	cache.idealWTime = 0.
+	cache.idealCPUTime = 0.
 }
 
 // Dumps the LRUCache cache
@@ -293,6 +298,9 @@ func (cache *LRUCache) UpdatePolicy(request *Request, fileStats *FileStats, hit 
 
 // AfterRequest of LRU cache
 func (cache *LRUCache) AfterRequest(request *Request, hit bool, added bool) {
+	cache.idealCPUTime += request.CPUTime
+	cache.idealWTime += request.WTime
+
 	if hit {
 		cache.hit += 1.
 		cache.dataReadOnHit += request.Size
@@ -463,4 +471,14 @@ func (cache LRUCache) CPUHitEff() float64 {
 func (cache LRUCache) CPUMissEff() float64 {
 	// Add the 15% to wall time -> estimated loss time to retrieve the files
 	return (cache.missCPUTime / (cache.missWTime * 1.15)) * 100.
+}
+
+// CPUEffUpperBound returns the ideal CPU efficiency upper bound
+func (cache LRUCache) CPUEffUpperBound() float64 {
+	return (cache.idealCPUTime / cache.idealWTime) * 100.
+}
+
+// CPUEffLowerBound returns the ideal CPU efficiency lower bound
+func (cache LRUCache) CPUEffLowerBound() float64 {
+	return (cache.idealCPUTime / (cache.idealWTime * 1.15)) * 100.
 }

@@ -381,6 +381,8 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				"CPU efficiency",
 				"CPU hit efficiency",
 				"CPU miss efficiency",
+				"CPU efficiency upper bound",
+				"CPU efficiency lower bound",
 			})
 
 			csvSimReport := cache.OutputCSV{}
@@ -470,6 +472,8 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 								fmt.Sprintf("%f", curCacheInstance.CPUEff()),
 								fmt.Sprintf("%f", curCacheInstance.CPUHitEff()),
 								fmt.Sprintf("%f", curCacheInstance.CPUMissEff()),
+								fmt.Sprintf("%f", curCacheInstance.IdealUpperCPUEff()),
+								fmt.Sprintf("%f", curCacheInstance.IdealLowerCPUEff()),
 							})
 							curCacheInstance.ClearHitMissStats()
 						}

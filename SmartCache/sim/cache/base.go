@@ -71,6 +71,8 @@ type Cache interface {
 	CPUEff() float64
 	CPUHitEff() float64
 	CPUMissEff() float64
+	CPUEffUpperBound() float64
+	CPUEffLowerBound() float64
 
 	Check(int64) bool
 	CheckWatermark() bool
