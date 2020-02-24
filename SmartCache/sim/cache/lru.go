@@ -482,3 +482,13 @@ func (cache LRUCache) CPUEffUpperBound() float64 {
 func (cache LRUCache) CPUEffLowerBound() float64 {
 	return (cache.idealCPUTime / (cache.idealWTime * 1.15)) * 100.
 }
+
+// MeanSize returns the average size of the files in cache
+func (cache LRUCache) MeanSize() float64 {
+	return cache.DataWritten() / float64(len(cache.files))
+}
+
+// MeanFrequency returns the average frequency of the files in cache
+func (cache LRUCache) MeanFrequency() float64 {
+	return cache.DataWritten() / (cache.hit + cache.miss)
+}
