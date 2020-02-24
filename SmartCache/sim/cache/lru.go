@@ -339,7 +339,12 @@ func (cache *LRUCache) UpdateFileInQueue(filename int64) {
 
 // Free removes files from the cache
 func (cache *LRUCache) Free(amount float64, percentage bool) float64 {
-	fmt.Printf("Mean size: %f\tMean frequency: %f\tMean recency: %f\n", cache.MeanSize(), cache.MeanFrequency(), cache.MeanRecency())
+	logger.Info(
+		"Cache free",
+		zap.Float64("mean size", cache.MeanSize()),
+		zap.Float64("mean frequency", cache.MeanFrequency()),
+		zap.Float64("mean recency", cache.MeanRecency()),
+	)
 	var (
 		totalDeleted float64
 		sizeToDelete float64
