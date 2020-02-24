@@ -261,6 +261,15 @@ func (stats *FileStats) updateWeight(functionType FunctionType, alpha float64, b
 			beta,
 			gamma,
 		)
+	case FuncAdditiveExp:
+		stats.Weight = fileWeightedAdditiveExpFunction(
+			stats.TotRequests(),
+			stats.Size,
+			stats.RequestTicksMean,
+			alpha,
+			beta,
+			gamma,
+		)
 	case FuncMultiplicative:
 		stats.Weight = fileWeightedMultiplicativeFunction(
 			stats.TotRequests(),
