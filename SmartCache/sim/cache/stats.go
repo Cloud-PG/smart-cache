@@ -49,11 +49,18 @@ func (statStruct *Stats) PurgeStats() {
 	statStruct.firstUpdateTime = statStruct.lastUpdateTime
 }
 
+// Get returns the stats without update them
+func (statStruct Stats) Get(filename int64) *FileStats {
+	curStats, _ := statStruct.fileStats[filename]
+	return curStats
+}
+
 // GetOrCreate add the file into stats and returns (stats, is new file)
-func (statStruct *Stats) GetOrCreate(filename int64, vars ...interface{}) (*FileStats, bool) {
+func (statStruct *Stats) GetOrCreate(filename int64, vars ...interface{}) (*FileStats, bool, int64) {
 	var (
-		size    float64
-		reqTime time.Time
+		size                 float64
+		diffDeltaLastRequest int64
+		reqTime              time.Time
 	)
 
 	switch {
@@ -82,13 +89,15 @@ func (statStruct *Stats) GetOrCreate(filename int64, vars ...interface{}) (*File
 		statStruct.fileStats[filename] = curStats
 	} else {
 		curStats.Size = size
+		diffDeltaLastRequest = curStats.DeltaLastRequest
 		curStats.DeltaLastRequest = statStruct.numRequests - curStats.LastRequest
+		diffDeltaLastRequest = curStats.DeltaLastRequest - diffDeltaLastRequest
 		curStats.LastRequest = statStruct.numRequests
 	}
 
 	statStruct.numRequests++
 
-	return curStats, !inStats
+	return curStats, !inStats, diffDeltaLastRequest
 }
 
 // UpdateWeight update the weight of a file and also the sum of all weights

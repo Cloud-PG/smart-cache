@@ -28,6 +28,7 @@ type LRUCache struct {
 	dataReadOnHit, dataReadOnMiss      float64
 	HighWaterMark                      float64
 	LowWaterMark                       float64
+	recencyCounter                     int64
 }
 
 // Init the LRU struct
@@ -73,6 +74,7 @@ func (cache *LRUCache) Clear() {
 	cache.missWTime = 0.
 	cache.idealWTime = 0.
 	cache.idealCPUTime = 0.
+	cache.recencyCounter = 0
 }
 
 // ClearHitMissStats the cache stats
@@ -90,6 +92,7 @@ func (cache *LRUCache) ClearHitMissStats() {
 	cache.missWTime = 0.
 	cache.idealWTime = 0.
 	cache.idealCPUTime = 0.
+	cache.recencyCounter = 0
 }
 
 // Dumps the LRUCache cache
@@ -266,7 +269,10 @@ func (cache *LRUCache) SimLoads(stream pb.SimService_SimLoadsServer) error {
 
 // BeforeRequest of LRU cache
 func (cache *LRUCache) BeforeRequest(request *Request, hit bool) *FileStats {
-	curStats, _ := cache.GetOrCreate(request.Filename, request.Size, request.DayTime)
+	curStats, _, diffDeltaLastRequest := cache.GetOrCreate(request.Filename, request.Size, request.DayTime)
+	if hit {
+		cache.recencyCounter += diffDeltaLastRequest
+	}
 	curStats.updateStats(hit, request.Size, request.UserID, request.SiteName, request.DayTime)
 	return curStats
 }
@@ -288,6 +294,7 @@ func (cache *LRUCache) UpdatePolicy(request *Request, fileStats *FileStats, hit 
 			cache.files[requestedFilename] = requestedFileSize
 			cache.queue = append(cache.queue, requestedFilename)
 			cache.size += requestedFileSize
+			cache.recencyCounter += fileStats.DeltaLastRequest
 			added = true
 		}
 	} else {
@@ -351,10 +358,12 @@ func (cache *LRUCache) Free(amount float64, percentage bool) float64 {
 		var maxIdx2Delete int
 		for idx, fileName := range cache.queue {
 			fileSize := cache.files[fileName]
+			curFileStats := cache.Stats.Get(fileName)
 			// Update sizes
 			cache.size -= fileSize
 			cache.dataDeleted += fileSize
 			totalDeleted += fileSize
+			cache.recencyCounter -= curFileStats.DeltaLastRequest
 
 			// Remove from queue
 			delete(cache.files, fileName)
@@ -491,4 +500,9 @@ func (cache LRUCache) MeanSize() float64 {
 // MeanFrequency returns the average frequency of the files in cache
 func (cache LRUCache) MeanFrequency() float64 {
 	return cache.DataWritten() / (cache.hit + cache.miss)
+}
+
+// MeanRecency returns the average recency of the files in cache
+func (cache LRUCache) MeanRecency() float64 {
+	return float64(cache.recencyCounter) / float64(len(cache.files))
 }

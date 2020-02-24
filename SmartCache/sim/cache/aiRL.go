@@ -287,7 +287,10 @@ func (cache AIRL) GetPoints() float64 {
 
 // BeforeRequest of LRU cache
 func (cache *AIRL) BeforeRequest(request *Request, hit bool) *FileStats {
-	fileStats, _ := cache.GetOrCreate(request.Filename, request.Size, request.DayTime)
+	fileStats, _, diffDeltaLastRequest := cache.GetOrCreate(request.Filename, request.Size, request.DayTime)
+	if hit {
+		cache.recencyCounter += diffDeltaLastRequest
+	}
 
 	cache.prevTime = cache.curTime
 	cache.curTime = request.DayTime
@@ -365,6 +368,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				cache.files[requestedFilename] = requestedFileSize
 				cache.queue = append(cache.queue, requestedFilename)
 				cache.size += requestedFileSize
+				cache.recencyCounter += fileStats.DeltaLastRequest
 				added = true
 
 				// fileStats.addInCache(&request.DayTime)
@@ -433,6 +437,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				cache.files[requestedFilename] = requestedFileSize
 				cache.queue = append(cache.queue, requestedFilename)
 				cache.size += requestedFileSize
+				cache.recencyCounter += fileStats.DeltaLastRequest
 				added = true
 
 				// fileStats.addInCache(&request.DayTime)
@@ -526,10 +531,12 @@ func (cache *AIRL) Free(amount float64, percentage bool) float64 {
 		var maxIdx2Delete int
 		for idx, curFilename2Delete := range cache.queue {
 			fileSize := cache.files[curFilename2Delete]
-			curStats, added := cache.GetOrCreate(curFilename2Delete, fileSize)
-			if added {
-				panic("File in cache was removed from stats...")
-			}
+			curStats := cache.Stats.Get(curFilename2Delete)
+			// Update sizes
+			cache.size -= fileSize
+			cache.dataDeleted += fileSize
+			totalDeleted += fileSize
+
 			// curFilePoints := curStats.Points
 			// cache.points -= curFilePoints
 
@@ -537,6 +544,7 @@ func (cache *AIRL) Free(amount float64, percentage bool) float64 {
 			cache.size -= fileSize
 			cache.dataDeleted += fileSize
 			totalDeleted += fileSize
+			cache.recencyCounter -= curStats.DeltaLastRequest
 			curStats.removeFromCache()
 
 			// Remove from queue
