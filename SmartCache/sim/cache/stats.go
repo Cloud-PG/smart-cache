@@ -8,7 +8,7 @@ import (
 
 const (
 	// MaxNumDaysStat limit to stay in the stats
-	MaxNumDaysStat = 21.
+	MaxNumDaysStat = 14.
 	// NumDays2Purge limit the clean action of the stats
 	NumDays2Purge = 7.
 )
@@ -56,11 +56,10 @@ func (statStruct Stats) Get(filename int64) *FileStats {
 }
 
 // GetOrCreate add the file into stats and returns (stats, is new file)
-func (statStruct *Stats) GetOrCreate(filename int64, vars ...interface{}) (*FileStats, bool, int64) {
+func (statStruct *Stats) GetOrCreate(filename int64, vars ...interface{}) (*FileStats, bool) {
 	var (
-		size                 float64
-		diffDeltaLastRequest int64
-		reqTime              time.Time
+		size    float64
+		reqTime time.Time
 	)
 
 	switch {
@@ -89,15 +88,13 @@ func (statStruct *Stats) GetOrCreate(filename int64, vars ...interface{}) (*File
 		statStruct.fileStats[filename] = curStats
 	} else {
 		curStats.Size = size
-		diffDeltaLastRequest = curStats.DeltaLastRequest
 		curStats.DeltaLastRequest = statStruct.numRequests - curStats.LastRequest
-		diffDeltaLastRequest = curStats.DeltaLastRequest - diffDeltaLastRequest
 		curStats.LastRequest = statStruct.numRequests
 	}
 
 	statStruct.numRequests++
 
-	return curStats, !inStats, diffDeltaLastRequest
+	return curStats, !inStats
 }
 
 // UpdateWeight update the weight of a file and also the sum of all weights
@@ -173,7 +170,9 @@ func (stats *FileStats) loads(inString string) *FileStats {
 }
 
 func (stats *FileStats) addInCache(curTime *time.Time) {
-	stats.InCacheSince = *curTime
+	if curTime != nil {
+		stats.InCacheSince = *curTime
+	}
 	stats.InCache = true
 }
 
