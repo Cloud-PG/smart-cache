@@ -79,9 +79,9 @@ def prepare_process_call(args, simulator_exe, cache_type, working_dir: str,
             exe_args.append(f"--aiModel={model_weights_file}")
         elif cache_type == "aiRL":
             exe_args.append(
-                f"----aiRLAdditionFeatureMap={path.abspath(args.ai_rl_addition_feature_map)}")
+                f"--aiRLAdditionFeatureMap={path.abspath(args.ai_rl_addition_feature_map)}")
             exe_args.append(
-                f"----aiRLEvictionFeatureMap={path.abspath(args.ai_rl_eviction_feature_map)}")
+                f"--aiRLEvictionFeatureMap={path.abspath(args.ai_rl_eviction_feature_map)}")
     elif cache_type == 'lruDatasetVerifier':
         dataset_file = path.abspath(
             path.join(
