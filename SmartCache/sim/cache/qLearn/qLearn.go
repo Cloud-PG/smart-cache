@@ -21,13 +21,17 @@ type QTableRole int
 
 const (
 	// ActionNotStore indicates to store an element in cache
-	ActionNotStore ActionType = iota - 4
+	ActionNotStore ActionType = iota - 6
 	// ActionStore indicates to not store an element in cache
 	ActionStore
-	// ActionRemoveFile indicates to remove a file during the eviction
-	ActionRemoveFile
-	// ActionNotRemoveFile indicates to not remove a file during the eviction
-	ActionNotRemoveFile
+	// ActionRemoveWithLRU indicates to remove a file with LRU policy
+	ActionRemoveWithLRU
+	// ActionRemoveWithLFU indicates to remove a file with LFU policy
+	ActionRemoveWithLFU
+	// ActionRemoveWithSizeSmall indicates to remove a file with Size Small policy
+	ActionRemoveWithSizeSmall
+	// ActionRemoveWithSizeBig indicates to remove a file with Size Big policy
+	ActionRemoveWithSizeBig
 
 	// RLSARSA indicates the standard RL update algorithm SARSA
 	RLSARSA RLUpdateType = iota - 2
@@ -86,12 +90,16 @@ func (table *QTable) Init(featureLenghts []int, role QTableRole) {
 	case EvictionTable:
 		// With getArgMax the first action is the default choice
 		table.Actions = []ActionType{
-			ActionNotRemoveFile,
-			ActionRemoveFile,
+			ActionRemoveWithLRU,
+			ActionRemoveWithLFU,
+			ActionRemoveWithSizeBig,
+			ActionRemoveWithSizeSmall,
 		}
 		table.ActionStrings = []string{
-			"ActionNotRemoveFile",
-			"ActionRemoveFile",
+			"ActionRemoveWithLRU",
+			"ActionRemoveWithLFU",
+			"ActionRemoveWithSizeBig",
+			"ActionRemoveWithSizeSmall",
 		}
 	}
 
@@ -104,7 +112,7 @@ func (table *QTable) Init(featureLenghts []int, role QTableRole) {
 	}
 	table.NumStates = numStates
 
-	logger.Info("Num generated states", zap.Int("numStates", numStates))
+	// logger.Info("Num generated states", zap.Int("numStates", numStates))
 	table.States = make(map[string][]float64, numStates)
 
 	for state := range table.genAllStates(featureLenghts) {
@@ -119,7 +127,7 @@ func (table *QTable) Init(featureLenghts []int, role QTableRole) {
 
 	}
 	table.NumVars = table.NumStates * len(table.Actions)
-	logger.Info("Num action values", zap.Int("numActionValues", table.NumVars))
+	// logger.Info("Num action values", zap.Int("numActionValues", table.NumVars))
 }
 
 // ResetParams resets the learning parameters
@@ -134,7 +142,7 @@ func (table *QTable) ResetParams() {
 	table.MinEpsilon = 0.1
 	table.StepNum = 0
 
-	logger.Info("Parameters restored as default...")
+	// logger.Info("Parameters restored as default...")
 }
 
 func (table QTable) genAllStates(featureLenghts []int) chan []bool {
@@ -260,7 +268,7 @@ func (table QTable) GetAction(stateIdx string, action ActionType) float64 {
 func (table QTable) GetBestAction(state string) ActionType {
 	values := table.States[state]
 	maxValueIdx := getArgMax(values)
-	logger.Info("Get best action", zap.Float64s("values", values), zap.Int("idx max value", maxValueIdx))
+	// logger.Info("Get best action", zap.Float64s("values", values), zap.Int("idx max value", maxValueIdx))
 	return table.Actions[maxValueIdx]
 }
 

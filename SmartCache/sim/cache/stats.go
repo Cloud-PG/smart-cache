@@ -316,11 +316,36 @@ func (stats FileStats) getMeanReqTimes() float64 {
 	return 0.
 }
 
-// ByWeight implements sort.Interface based on the Weight field.
-type ByWeight []*FileStats
+// Other policy utils
+type fileSupportData struct {
+	Filename  int64
+	Frequency int64
+	Size      float64
+}
 
-func (a ByWeight) Len() int { return len(a) }
+// ByFrequency implements sort.Interface based on the frequency field.
+type ByFrequency []fileSupportData
 
-// Order from the highest weight to the smallest
-func (a ByWeight) Less(i, j int) bool { return a[i].Weight > a[j].Weight }
-func (a ByWeight) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (slice ByFrequency) Len() int { return len(slice) }
+
+// Order from the lower frequent to the highest
+func (slice ByFrequency) Less(i, j int) bool { return slice[i].Frequency < slice[j].Frequency }
+func (slice ByFrequency) Swap(i, j int)      { slice[i], slice[j] = slice[j], slice[i] }
+
+// ByBigSize implements sort.Interface based on the size field.
+type ByBigSize []fileSupportData
+
+func (slice ByBigSize) Len() int { return len(slice) }
+
+// Order from the biggest size to the smallest
+func (slice ByBigSize) Less(i, j int) bool { return slice[i].Size > slice[j].Size }
+func (slice ByBigSize) Swap(i, j int)      { slice[i], slice[j] = slice[j], slice[i] }
+
+// BySmallSize implements sort.Interface based on the size field.
+type BySmallSize []fileSupportData
+
+func (slice BySmallSize) Len() int { return len(slice) }
+
+// Order from the smallest size to the biggest
+func (slice BySmallSize) Less(i, j int) bool { return slice[i].Size < slice[j].Size }
+func (slice BySmallSize) Swap(i, j int)      { slice[i], slice[j] = slice[j], slice[i] }

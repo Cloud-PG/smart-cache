@@ -28,8 +28,10 @@ type AIRL struct {
 	evictionFeatureMapOrder []string
 	additionTable           *qlearn.QTable
 	evictionTable           *qlearn.QTable
-	qPrevState              map[int64]string
-	qPrevAction             map[int64]qlearn.ActionType
+	qAdditionPrevState      map[int64]string
+	qAdditionPrevAction     map[int64]qlearn.ActionType
+	qEvictionPrevState      string
+	qEvictionPrevAction     qlearn.ActionType
 	points                  float64
 	prevPoints              float64
 	dailyReadOnHit          float64
@@ -45,10 +47,10 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 	additionFeatureMap := args[0].(string)
 	evictionFeatureMap := args[1].(string)
 
-	logger.Info("Feature maps", zap.String("addition map", additionFeatureMap), zap.String("eviction map", evictionFeatureMap))
+	// logger.Info("Feature maps", zap.String("addition map", additionFeatureMap), zap.String("eviction map", evictionFeatureMap))
 
-	cache.qPrevState = make(map[int64]string, 0)
-	cache.qPrevAction = make(map[int64]qlearn.ActionType, 0)
+	cache.qAdditionPrevState = make(map[int64]string, 0)
+	cache.qAdditionPrevAction = make(map[int64]qlearn.ActionType, 0)
 
 	cache.additionFeatureMap = featuremap.Parse(additionFeatureMap)
 	cache.evictionFeatureMap = featuremap.Parse(evictionFeatureMap)
@@ -79,9 +81,9 @@ func makeQtable(featureMap map[string]featuremap.Obj, featureOrder []string, rol
 		}
 		inputLengths = append(inputLengths, curLen)
 	}
-	logger.Info("[Generate QTable]")
+	// logger.Info("[Generate QTable]")
 	curTable.Init(inputLengths, role)
-	logger.Info("[Done]")
+	// logger.Info("[Done]")
 	return curTable
 }
 
@@ -122,10 +124,19 @@ func (cache *AIRL) Dumps() [][]byte {
 		record = append(record, newLine...)
 		outData = append(outData, record)
 	}
-	// ----- qtable -----
+	// ----- addition qtable -----
 	dumpInfo, _ := json.Marshal(DumpInfo{Type: "ADDQTABLE"})
 	dumpStats, _ := json.Marshal(cache.additionTable)
 	record, _ := json.Marshal(DumpRecord{
+		Info: string(dumpInfo),
+		Data: string(dumpStats),
+	})
+	record = append(record, newLine...)
+	outData = append(outData, record)
+	// ----- addition qtable -----
+	dumpInfo, _ = json.Marshal(DumpInfo{Type: "EVCQTABLE"})
+	dumpStats, _ = json.Marshal(cache.evictionTable)
+	record, _ = json.Marshal(DumpRecord{
 		Info: string(dumpInfo),
 		Data: string(dumpStats),
 	})
@@ -137,7 +148,7 @@ func (cache *AIRL) Dumps() [][]byte {
 
 // Dump the AIRL cache
 func (cache *AIRL) Dump(filename string) {
-	logger.Info("Dump cache", zap.String("filename", filename))
+	// logger.Info("Dump cache", zap.String("filename", filename))
 	outFile, osErr := os.Create(filename)
 	if osErr != nil {
 		panic(fmt.Sprintf("Error dump file creation: %s", osErr))
@@ -181,6 +192,9 @@ func (cache *AIRL) Loads(inputString [][]byte) {
 		case "ADDQTABLE":
 			unmarshalErr = json.Unmarshal([]byte(curRecord.Data), cache.additionTable)
 			cache.additionTable.ResetParams()
+		case "EVCQTABLE":
+			unmarshalErr = json.Unmarshal([]byte(curRecord.Data), cache.evictionTable)
+			cache.evictionTable.ResetParams()
 		}
 		if unmarshalErr != nil {
 			panic(fmt.Sprintf("%+v", unmarshalErr))
@@ -189,14 +203,14 @@ func (cache *AIRL) Loads(inputString [][]byte) {
 
 }
 
-func (cache *AIRL) getCategory(catKey string, value interface{}) []bool {
+func (cache *AIRL) getCategory(featureMap map[string]featuremap.Obj, catKey string, value interface{}) []bool {
 	var (
 		res         []bool
 		inputValueI int64
 		inputValueF float64
 		inputValueS string
 	)
-	curCategory := cache.additionFeatureMap[catKey]
+	curCategory := featureMap[catKey]
 
 	if curCategory.UnknownValues == true || curCategory.BucketOpenRight == true {
 		res = make([]bool, curCategory.GetLenKeys()+1)
@@ -255,34 +269,46 @@ func (cache *AIRL) getCategory(catKey string, value interface{}) []bool {
 	panic(fmt.Sprintf("Cannot convert a value '%v' of category %s", value, catKey))
 }
 
-func (cache *AIRL) getState(request *Request, fileStats *FileStats) []bool {
+func (cache *AIRL) getState(request *Request, fileStats *FileStats, featureOrder []string, featureMap map[string]featuremap.Obj) []bool {
 	var (
 		inputVector []bool
 		tmpArr      []bool
+		size        float64
+		numReq      float64
+		dataType    int64
 	)
 
-	dataType := request.DataType
-
-	numReq, _, _ := fileStats.getStats()
-	size := request.Size
+	if fileStats != nil {
+		numReq, _, _ = fileStats.getStats()
+	}
+	if request != nil {
+		size = request.Size
+		dataType = request.DataType
+	}
 
 	cacheCapacity := float64(cache.Capacity())
 	deltaHighWatermark := float64(cache.HighWaterMark) - cacheCapacity
 
-	for _, featureName := range cache.additionFeatureMapOrder {
+	for _, featureName := range featureOrder {
 		switch featureName {
 		case "size":
-			tmpArr = cache.getCategory(featureName, float64(size))
+			tmpArr = cache.getCategory(featureMap, featureName, size)
 		case "numReq":
-			tmpArr = cache.getCategory(featureName, float64(numReq))
+			tmpArr = cache.getCategory(featureMap, featureName, numReq)
 		case "cacheUsage":
-			tmpArr = cache.getCategory(featureName, cacheCapacity)
+			tmpArr = cache.getCategory(featureMap, featureName, cacheCapacity)
 		case "dataType":
-			tmpArr = cache.getCategory(featureName, dataType)
+			tmpArr = cache.getCategory(featureMap, featureName, dataType)
 		case "deltaNumLastRequest":
-			tmpArr = cache.getCategory(featureName, float64(fileStats.DeltaLastRequest))
+			tmpArr = cache.getCategory(featureMap, featureName, float64(fileStats.DeltaLastRequest))
 		case "deltaHighWatermark":
-			tmpArr = cache.getCategory(featureName, deltaHighWatermark)
+			tmpArr = cache.getCategory(featureMap, featureName, deltaHighWatermark)
+		case "meanSize":
+			tmpArr = cache.getCategory(featureMap, featureName, cache.MeanSize())
+		case "meanFrequency":
+			tmpArr = cache.getCategory(featureMap, featureName, cache.MeanFrequency())
+		case "meanRecency":
+			tmpArr = cache.getCategory(featureMap, featureName, cache.MeanRecency())
 		default:
 			panic(fmt.Sprintf("Cannot prepare input %s", featureName))
 		}
@@ -346,9 +372,29 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 	)
 
 	// Check learning phase or not
-	expTradeoff := cache.additionTable.GetRandomFloat()
+	expEvictionTradeoff := cache.evictionTable.GetRandomFloat()
+	if expEvictionTradeoff < cache.evictionTable.Epsilon {
+		// ###################################
+		// ##### Eviction Learning phase #####
+		// ###################################
+		if cache.qEvictionPrevAction != 0 && len(cache.qEvictionPrevState) != 0 {
+			reward := 0.
+			if hit {
+				reward += request.Size
+			} else {
+				reward -= request.Size
+			}
+			// Update table
+			cache.evictionTable.Update(cache.qEvictionPrevState, cache.qEvictionPrevAction, reward)
+			// Update epsilon
+			cache.evictionTable.UpdateEpsilon()
+		}
+	}
 
-	if expTradeoff > cache.additionTable.Epsilon {
+	// Check learning phase or not
+	expAdditionTradeoff := cache.additionTable.GetRandomFloat()
+
+	if expAdditionTradeoff > cache.additionTable.Epsilon {
 		//if cache.additionTable.Epsilon <= cache.additionTable.MinEpsilon { // Force learning until epsilon is > min epsilon
 		// ########################
 		// ##### Normal phase #####
@@ -359,17 +405,17 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			// ##### MISS branch  #####
 			// ########################
 
-			curState = qlearn.State2String(cache.getState(request, fileStats))
+			curState = qlearn.State2String(cache.getState(request, fileStats, cache.additionFeatureMapOrder, cache.additionFeatureMap))
 			curAction = cache.additionTable.GetBestAction(curState)
-			logger.Info("Normal MISS branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
+			// logger.Info("Normal MISS branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
 			// ----------------------------------
 			// QLearn - Take the action NOT STORE
 			// ----------------------------------
 			if curAction == qlearn.ActionNotStore {
-				logger.Info("Normal MISS branch NOT TO STORE ACTION")
+				// logger.Info("Normal MISS branch NOT TO STORE ACTION")
 				return added
 			}
-			logger.Info("Normal MISS branch STORE ACTION")
+			// logger.Info("Normal MISS branch STORE ACTION")
 			// ------------------------------
 			// QLearn - Take the action STORE
 			// ------------------------------
@@ -391,20 +437,20 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			// #######################
 			// ##### HIT branch  #####
 			// #######################
-			logger.Info("Normal hit branch")
+			// logger.Info("Normal hit branch")
 			cache.UpdateFileInQueue(requestedFilename)
 		}
 	} else {
-		// ##########################
-		// ##### Learning phase #####
-		// ##########################
+		// ###################################
+		// ##### Addition Learning phase #####
+		// ###################################
 
 		if !hit {
 			// ########################
 			// ##### MISS branch  #####
 			// ########################
 
-			curState = qlearn.State2String(cache.getState(request, fileStats))
+			curState = qlearn.State2String(cache.getState(request, fileStats, cache.additionFeatureMapOrder, cache.additionFeatureMap))
 
 			// ----- Random choice -----
 			if randomAction := cache.additionTable.GetRandomFloat(); randomAction > 0.5 {
@@ -413,7 +459,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				curAction = qlearn.ActionNotStore
 			}
 
-			logger.Info("Learning MISS branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
+			// logger.Info("Learning MISS branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
 
 			// ----------------------------------
 			// QLearn - Take the action NOT STORE
@@ -474,8 +520,8 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				} else {
 					reward += float64(request.Size)
 				}
-				cache.qPrevState[request.Filename] = curState
-				cache.qPrevAction[request.Filename] = curAction
+				cache.qAdditionPrevState[request.Filename] = curState
+				cache.qAdditionPrevAction[request.Filename] = curAction
 
 				// Update table
 				cache.additionTable.Update(curState, curAction, reward)
@@ -491,10 +537,10 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 			// ------------------------------
 			// QLearn - hit reward on best action
-			curState = cache.qPrevState[request.Filename]
-			curAction = cache.qPrevAction[request.Filename]
+			curState = cache.qAdditionPrevState[request.Filename]
+			curAction = cache.qAdditionPrevAction[request.Filename]
 
-			logger.Info("Learning HIT branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
+			// logger.Info("Learning HIT branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
 
 			if curState != "" { // Some action are not taken randomly
 				reward := 0.0
@@ -527,56 +573,180 @@ func (cache *AIRL) AfterRequest(request *Request, hit bool, added bool) {
 	}
 }
 
+func (cache *AIRL) deleteFromList(sizeToDelete float64, list []fileSupportData) []int64 {
+	totalDeleted := 0.0
+	deletedFiles := []int64{}
+	for _, curFile := range list {
+		curFilename2Delete := curFile.Filename
+		fileSize := cache.files[curFilename2Delete]
+		curStats := cache.stats.Get(curFilename2Delete)
+		// Update sizes
+		cache.size -= fileSize
+		cache.dataDeleted += fileSize
+		totalDeleted += fileSize
+
+		// curFilePoints := curStats.Points
+		// cache.points -= curFilePoints
+
+		// Update sizes
+		cache.size -= fileSize
+		cache.dataDeleted += fileSize
+		totalDeleted += fileSize
+		curStats.removeFromCache()
+
+		delete(cache.files, curFilename2Delete)
+		deletedFiles = append(deletedFiles, curFilename2Delete)
+
+		if totalDeleted >= sizeToDelete {
+			break
+		}
+	}
+	return deletedFiles
+}
+
+func (cache *AIRL) removeFilesFromQueue(deletedFiles []int64) {
+	newQueue := []int64{}
+	for _, curFile := range cache.queue {
+		found := false
+		for _, filename := range deletedFiles {
+			if curFile == filename {
+				found = true
+				break
+			}
+		}
+		if !found {
+			newQueue = append(newQueue, curFile)
+		}
+	}
+	cache.queue = newQueue
+}
+
 // Free removes files from the cache
 func (cache *AIRL) Free(amount float64, percentage bool) float64 {
+	logger.Info(
+		"Cache free",
+		zap.Float64("mean size", cache.MeanSize()),
+		zap.Float64("mean frequency", cache.MeanFrequency()),
+		zap.Float64("mean recency", cache.MeanRecency()),
+	)
 	var (
 		totalDeleted float64
 		sizeToDelete float64
+		curAction    qlearn.ActionType
+		curState     string
 	)
 	if percentage {
 		sizeToDelete = amount * (cache.MaxSize / 100.)
 	} else {
 		sizeToDelete = amount
 	}
+
 	if sizeToDelete > 0. {
-		var maxIdx2Delete int
-		for idx, curFilename2Delete := range cache.queue {
-			fileSize := cache.files[curFilename2Delete]
-			curStats := cache.stats.Get(curFilename2Delete)
-			// Update sizes
-			cache.size -= fileSize
-			cache.dataDeleted += fileSize
-			totalDeleted += fileSize
+		// Check learning phase or not
+		expEvictionTradeoff := cache.evictionTable.GetRandomFloat()
+		curState = qlearn.State2String(cache.getState(nil, nil, cache.evictionFeatureMapOrder, cache.evictionFeatureMap))
 
-			// curFilePoints := curStats.Points
-			// cache.points -= curFilePoints
+		if expEvictionTradeoff > cache.evictionTable.Epsilon {
+			// ########################
+			// ##### Normal phase #####
+			// ########################
+			curAction = cache.evictionTable.GetBestAction(curState)
+		} else {
+			// ##########################
+			// ##### Learning phase #####
+			// ##########################
 
-			// Update sizes
-			cache.size -= fileSize
-			cache.dataDeleted += fileSize
-			totalDeleted += fileSize
-			curStats.removeFromCache()
-
-			// Remove from queue
-			delete(cache.files, curFilename2Delete)
-			maxIdx2Delete = idx
-
-			if totalDeleted >= sizeToDelete {
-				break
-			}
+			// ----- Random choice -----
+			randomActionIdx := int(cache.evictionTable.GetRandomFloat() * float64(len(cache.evictionFeatureMap)))
+			curAction = cache.evictionTable.Actions[randomActionIdx]
 		}
-		cache.queue = cache.queue[maxIdx2Delete+1:]
+
+		cache.qEvictionPrevState = curState
+		cache.qEvictionPrevAction = curAction
+
+		switch curAction {
+		case qlearn.ActionRemoveWithLRU:
+			var maxIdx2Delete int
+			for idx, curFilename2Delete := range cache.queue {
+				fileSize := cache.files[curFilename2Delete]
+				curStats := cache.stats.Get(curFilename2Delete)
+				// Update sizes
+				cache.size -= fileSize
+				cache.dataDeleted += fileSize
+				totalDeleted += fileSize
+
+				// curFilePoints := curStats.Points
+				// cache.points -= curFilePoints
+
+				// Update sizes
+				cache.size -= fileSize
+				cache.dataDeleted += fileSize
+				totalDeleted += fileSize
+				curStats.removeFromCache()
+
+				// Remove from queue
+				delete(cache.files, curFilename2Delete)
+				maxIdx2Delete = idx
+
+				if totalDeleted >= sizeToDelete {
+					break
+				}
+			}
+			cache.queue = cache.queue[maxIdx2Delete+1:]
+		case qlearn.ActionRemoveWithLFU:
+			var lfuQueue ByFrequency = make([]fileSupportData, 0)
+			for filename := range cache.files {
+				fileStats := cache.stats.Get(filename)
+				lfuQueue = append(lfuQueue, fileSupportData{
+					Filename:  filename,
+					Frequency: fileStats.TotRequests(),
+				})
+			}
+			sort.Sort(lfuQueue)
+			deletedFiles := cache.deleteFromList(sizeToDelete, lfuQueue)
+			cache.removeFilesFromQueue(deletedFiles)
+		case qlearn.ActionRemoveWithSizeBig:
+			var bigSizeQueue ByBigSize = make([]fileSupportData, 0)
+			for filename := range cache.files {
+				fileStats := cache.stats.Get(filename)
+				bigSizeQueue = append(bigSizeQueue, fileSupportData{
+					Filename:  filename,
+					Frequency: fileStats.TotRequests(),
+				})
+			}
+			sort.Sort(bigSizeQueue)
+			deletedFiles := cache.deleteFromList(sizeToDelete, bigSizeQueue)
+			cache.removeFilesFromQueue(deletedFiles)
+		case qlearn.ActionRemoveWithSizeSmall:
+			var smallSizeQueue BySmallSize = make([]fileSupportData, 0)
+			for filename := range cache.files {
+				fileStats := cache.stats.Get(filename)
+				smallSizeQueue = append(smallSizeQueue, fileSupportData{
+					Filename:  filename,
+					Frequency: fileStats.TotRequests(),
+				})
+			}
+			sort.Sort(smallSizeQueue)
+			deletedFiles := cache.deleteFromList(sizeToDelete, smallSizeQueue)
+			cache.removeFilesFromQueue(deletedFiles)
+		}
+
 	}
+
 	return totalDeleted
 }
 
 // CheckWatermark checks the watermark levels and resolve the situation
 func (cache *AIRL) CheckWatermark() bool {
-	goodStatus := cache.LRUCache.CheckWatermark()
-	// if !goodStatus {
-	// 	cache.points = cache.GetPoints()
-	// }
-	return goodStatus
+	ok := true
+	if cache.Capacity() >= cache.HighWaterMark {
+		ok = false
+		cache.Free(
+			cache.Capacity()-cache.LowWaterMark,
+			true,
+		)
+	}
+	return ok
 }
 
 // ExtraStats for output
