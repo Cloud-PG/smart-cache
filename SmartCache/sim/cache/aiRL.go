@@ -95,7 +95,7 @@ func (cache *AIRL) Dumps() [][]byte {
 		outData = append(outData, record)
 	}
 	// ----- Stats -----
-	for filename, stats := range cache.Stats.fileStats {
+	for filename, stats := range cache.stats.fileStats {
 		dumpInfo, _ := json.Marshal(DumpInfo{Type: "STATS"})
 		dumpStats, _ := json.Marshal(stats)
 		record, _ := json.Marshal(DumpRecord{
@@ -161,7 +161,7 @@ func (cache *AIRL) Loads(inputString [][]byte) {
 		case "STATS":
 			var curFileStats FileStats
 			unmarshalErr = json.Unmarshal([]byte(curRecord.Data), &curFileStats)
-			cache.Stats.fileStats[curRecord.Filename] = &curFileStats
+			cache.stats.fileStats[curRecord.Filename] = &curFileStats
 		case "ADDQTABLE":
 			unmarshalErr = json.Unmarshal([]byte(curRecord.Data), cache.additionTable)
 			cache.additionTable.ResetParams()
@@ -280,14 +280,14 @@ func (cache *AIRL) getState(request *Request, fileStats *FileStats) []bool {
 func (cache AIRL) GetPoints() float64 {
 	points := 0.0
 	for filename := range cache.files {
-		points += cache.updateFilesPoints(filename, &cache.curTime)
+		points += cache.stats.updateFilesPoints(filename, &cache.curTime)
 	}
 	return float64(points)
 }
 
 // BeforeRequest of LRU cache
 func (cache *AIRL) BeforeRequest(request *Request, hit bool) *FileStats {
-	fileStats, _ := cache.GetOrCreate(request.Filename, request.Size, request.DayTime)
+	fileStats, _ := cache.stats.GetOrCreate(request.Filename, request.Size, request.DayTime)
 
 	cache.prevTime = cache.curTime
 	cache.curTime = request.DayTime
@@ -526,7 +526,7 @@ func (cache *AIRL) Free(amount float64, percentage bool) float64 {
 		var maxIdx2Delete int
 		for idx, curFilename2Delete := range cache.queue {
 			fileSize := cache.files[curFilename2Delete]
-			curStats := cache.Stats.Get(curFilename2Delete)
+			curStats := cache.stats.Get(curFilename2Delete)
 			// Update sizes
 			cache.size -= fileSize
 			cache.dataDeleted += fileSize

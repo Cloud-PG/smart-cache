@@ -119,7 +119,7 @@ func (cache *AINN) Dumps() [][]byte {
 		outData = append(outData, record)
 	}
 	// ----- Stats -----
-	for _, stats := range cache.Stats.fileStats {
+	for _, stats := range cache.stats.fileStats {
 		dumpInfo, _ := json.Marshal(DumpInfo{Type: "STATS"})
 		dumpStats, _ := json.Marshal(stats)
 		record, _ := json.Marshal(DumpRecord{
@@ -149,7 +149,7 @@ func (cache *AINN) Loads(inputString [][]byte) {
 			cache.files[curFile.Filename] = curFile.Size
 			cache.size += curFile.Size
 		case "STATS":
-			json.Unmarshal([]byte(curRecord.Data), &cache.Stats.fileStats)
+			json.Unmarshal([]byte(curRecord.Data), &cache.stats.fileStats)
 		}
 	}
 }
@@ -256,7 +256,7 @@ func (cache *AINN) composeFeatures(vars ...interface{}) []float64 {
 func (cache AINN) GetPoints() float64 {
 	points := 0.0
 	for filename := range cache.files {
-		points += cache.updateFilesPoints(filename, &cache.curTime)
+		points += cache.stats.updateFilesPoints(filename, &cache.curTime)
 	}
 	return float64(points)
 }

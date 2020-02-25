@@ -14,7 +14,6 @@ type WeightedFunctionParameters struct {
 // WeightedLRU cache
 type WeightedLRU struct {
 	LRUCache
-	Stats
 	Parameters      WeightedFunctionParameters
 	SelFunctionType FunctionType
 }
@@ -22,7 +21,6 @@ type WeightedLRU struct {
 // Init the WeightedLRU struct
 func (cache *WeightedLRU) Init(_ ...interface{}) interface{} {
 	cache.LRUCache.Init()
-	cache.Stats.Init()
 
 	return cache
 }
@@ -31,7 +29,6 @@ func (cache *WeightedLRU) Init(_ ...interface{}) interface{} {
 func (cache *WeightedLRU) Clear() {
 	cache.LRUCache.Clear()
 	cache.LRUCache.Init()
-	cache.Stats.Init()
 }
 
 // Dumps the WeightedLRU cache
@@ -54,7 +51,7 @@ func (cache *WeightedLRU) Dumps() [][]byte {
 		outData = append(outData, record)
 	}
 	// ----- Stats -----
-	for _, stats := range cache.Stats.fileStats {
+	for _, stats := range cache.stats.fileStats {
 		dumpInfo, _ := json.Marshal(DumpInfo{Type: "STATS"})
 		dumpStats, _ := json.Marshal(stats)
 		record, _ := json.Marshal(DumpRecord{
@@ -83,16 +80,16 @@ func (cache *WeightedLRU) Loads(inputString [][]byte) {
 			cache.files[curFile.Filename] = curFile.Size
 			cache.size += curFile.Size
 		case "STATS":
-			json.Unmarshal([]byte(curRecord.Data), &cache.Stats.fileStats)
+			json.Unmarshal([]byte(curRecord.Data), &cache.stats.fileStats)
 		}
 	}
 }
 
 // BeforeRequest of LRU cache
 func (cache *WeightedLRU) BeforeRequest(request *Request, hit bool) *FileStats {
-	curStats, newFile := cache.GetOrCreate(request.Filename, request.Size, request.DayTime)
+	curStats, newFile := cache.stats.GetOrCreate(request.Filename, request.Size, request.DayTime)
 	curStats.updateStats(hit, request.Size, request.UserID, request.SiteName, request.DayTime)
-	cache.updateWeight(curStats, newFile, cache.SelFunctionType, cache.Parameters.Alpha, cache.Parameters.Beta, cache.Parameters.Gamma)
+	cache.stats.updateWeight(curStats, newFile, cache.SelFunctionType, cache.Parameters.Alpha, cache.Parameters.Beta, cache.Parameters.Gamma)
 	return curStats
 }
 
@@ -107,7 +104,7 @@ func (cache *WeightedLRU) UpdatePolicy(request *Request, fileStats *FileStats, h
 
 		// If weight is higher exit and return added = false
 		// and skip the file insertion
-		if fileStats.Weight > cache.GetWeightMedian() {
+		if fileStats.Weight > cache.stats.GetWeightMedian() {
 			return added
 		}
 		// Insert with LRU mechanism

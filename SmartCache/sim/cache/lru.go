@@ -17,7 +17,7 @@ import (
 
 // LRUCache cache
 type LRUCache struct {
-	Stats
+	stats                              Stats
 	files                              map[int64]float64
 	queue                              []int64
 	hit, miss, size, MaxSize           float64
@@ -32,7 +32,7 @@ type LRUCache struct {
 
 // Init the LRU struct
 func (cache *LRUCache) Init(_ ...interface{}) interface{} {
-	cache.Stats.Init()
+	cache.stats.Init()
 	cache.files = make(map[int64]float64)
 	cache.queue = make([]int64, 0)
 	if cache.HighWaterMark == 0.0 {
@@ -57,7 +57,7 @@ func (cache *LRUCache) ClearFiles() {
 
 // Clear the LRU struct
 func (cache *LRUCache) Clear() {
-	cache.Stats.Init()
+	cache.stats.Init()
 	cache.ClearFiles()
 	cache.queue = make([]int64, 0)
 	cache.hit = 0.
@@ -266,7 +266,7 @@ func (cache *LRUCache) SimLoads(stream pb.SimService_SimLoadsServer) error {
 
 // BeforeRequest of LRU cache
 func (cache *LRUCache) BeforeRequest(request *Request, hit bool) *FileStats {
-	curStats, _ := cache.GetOrCreate(request.Filename, request.Size, request.DayTime)
+	curStats, _ := cache.stats.GetOrCreate(request.Filename, request.Size, request.DayTime)
 	curStats.updateStats(hit, request.Size, request.UserID, request.SiteName, request.DayTime)
 	return curStats
 }
@@ -321,8 +321,8 @@ func (cache *LRUCache) AfterRequest(request *Request, hit bool, added bool) {
 	}
 	cache.dataRead += request.Size
 
-	if cache.Stats.DirtyStats() {
-		cache.Stats.PurgeStats()
+	if cache.stats.Dirty() {
+		cache.stats.Purge()
 	}
 }
 
@@ -357,8 +357,9 @@ func (cache *LRUCache) Free(amount float64, percentage bool) float64 {
 	if sizeToDelete > 0. {
 		var maxIdx2Delete int
 		for idx, file2Delete := range cache.queue {
+			// logger.Debug("delete", zap.Int64("filename", file2Delete))
 			fileSize := cache.files[file2Delete]
-			curFileStats := cache.Stats.Get(file2Delete)
+			curFileStats := cache.stats.Get(file2Delete)
 			// Update sizes
 			cache.size -= fileSize
 			cache.dataDeleted += fileSize
@@ -498,7 +499,7 @@ func (cache LRUCache) MeanSize() float64 {
 	// return cache.DataWritten() / float64(len(cache.files))
 	totSize := 0.0
 	for filename := range cache.files {
-		fileStats := cache.Stats.Get(filename)
+		fileStats := cache.stats.Get(filename)
 		totSize += fileStats.Size
 	}
 	return totSize / float64(len(cache.files))
@@ -509,7 +510,7 @@ func (cache LRUCache) MeanFrequency() float64 {
 	// return cache.DataWritten() / (cache.hit + cache.miss)
 	totRequests := 0.0
 	for filename := range cache.files {
-		fileStats := cache.Stats.Get(filename)
+		fileStats := cache.stats.Get(filename)
 		totRequests += float64(fileStats.TotRequests())
 	}
 	return totRequests / float64(len(cache.files))
@@ -519,7 +520,7 @@ func (cache LRUCache) MeanFrequency() float64 {
 func (cache LRUCache) MeanRecency() float64 {
 	totRecency := 0.0
 	for filename := range cache.files {
-		fileStats := cache.Stats.Get(filename)
+		fileStats := cache.stats.Get(filename)
 		totRecency += float64(fileStats.DeltaLastRequest)
 	}
 	return totRecency / float64(len(cache.files))

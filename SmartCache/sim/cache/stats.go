@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"math"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 const (
@@ -30,7 +32,7 @@ func (statStruct *Stats) Init() {
 }
 
 // DirtyStats indicates if the stats needs a purge
-func (statStruct Stats) DirtyStats() bool {
+func (statStruct Stats) Dirty() bool {
 	numDays := statStruct.lastUpdateTime.Sub(statStruct.firstUpdateTime).Hours() / 24.
 	if numDays >= NumDays2Purge {
 		return true
@@ -39,9 +41,10 @@ func (statStruct Stats) DirtyStats() bool {
 }
 
 // PurgeStats remove older stats
-func (statStruct *Stats) PurgeStats() {
+func (statStruct *Stats) Purge() {
 	for filename, stats := range statStruct.fileStats {
 		if !stats.InCache && stats.DiffLastUpdate() >= MaxNumDaysStat {
+			logger.Debug("Purge", zap.Bool("in cache", stats.InCache))
 			statStruct.weightSum -= stats.Weight
 			delete(statStruct.fileStats, filename)
 		}
@@ -51,7 +54,10 @@ func (statStruct *Stats) PurgeStats() {
 
 // Get returns the stats without update them
 func (statStruct Stats) Get(filename int64) *FileStats {
-	curStats, _ := statStruct.fileStats[filename]
+	curStats, inStats := statStruct.fileStats[filename]
+	if !inStats {
+		logger.Error("Get: no file found", zap.Int64("filename", filename))
+	}
 	return curStats
 }
 
@@ -79,7 +85,7 @@ func (statStruct *Stats) GetOrCreate(filename int64, vars ...interface{}) (*File
 	// Update file stats
 	curStats, inStats := statStruct.fileStats[filename]
 
-	if !inStats || curStats == nil {
+	if !inStats {
 		curStats = &FileStats{
 			Size:             size,
 			FirstTime:        reqTime,
