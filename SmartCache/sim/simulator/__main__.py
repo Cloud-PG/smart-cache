@@ -79,7 +79,9 @@ def prepare_process_call(args, simulator_exe, cache_type, working_dir: str,
             exe_args.append(f"--aiModel={model_weights_file}")
         elif cache_type == "aiRL":
             exe_args.append(
-                f"--aiFeatureMap={path.abspath(args.ai_feature_map)}")
+                f"----aiRLAdditionFeatureMap={path.abspath(args.ai_rl_addition_feature_map)}")
+            exe_args.append(
+                f"----aiRLEvictionFeatureMap={path.abspath(args.ai_rl_eviction_feature_map)}")
     elif cache_type == 'lruDatasetVerifier':
         dataset_file = path.abspath(
             path.join(
@@ -209,6 +211,15 @@ def main():
     parser.add_argument('--ai-feature-map', type=str,
                         default="",
                         help='Ai feature map file [DEFAULT: ""]')
+    parser.add_argument('--ai-feature-map', type=str,
+                        default="",
+                        help='Ai feature map file [DEFAULT: ""]')
+    parser.add_argument('--ai-rl-addition-feature-map', type=str,
+                        default="",
+                        help='Ai feature map file for the addition table in Q-Learning [DEFAULT: ""]')
+    parser.add_argument('--ai-rl-eviction-feature-map', type=str,
+                        default="",
+                        help='Ai feature map file for the eviction table in Q-Learning [DEFAULT: ""]')
 
     args, _ = parser.parse_known_args()
 
