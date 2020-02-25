@@ -3,7 +3,7 @@ import gzip
 import json
 import os
 import subprocess
-from datetime import datetime, timedelta
+from datetime import datetime
 from os import path, walk
 
 import pandas as pd
