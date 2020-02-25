@@ -762,15 +762,12 @@ func (cache *AIRL) ExtraStats() string {
 func (cache AIRL) ExtraOutput(info string) string {
 	result := ""
 	switch info {
-	case "qtable":
-		result = cache.GetQTable()
+	case "additionQtable":
+		result = cache.additionTable.ToString(&cache.additionFeatureMap, &cache.additionFeatureMapOrder)
+	case "evictionQtable":
+		result = cache.evictionTable.ToString(&cache.evictionFeatureMap, &cache.evictionFeatureMapOrder)
 	default:
 		result = "NONE"
 	}
 	return result
-}
-
-// GetQTable return a string of the qtable in csv format
-func (cache AIRL) GetQTable() string {
-	return cache.additionTable.ToString(&cache.additionFeatureMap, &cache.additionFeatureMapOrder)
 }

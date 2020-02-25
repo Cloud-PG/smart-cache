@@ -292,7 +292,8 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			resultFileName := baseName + "_results.csv"
 			resultRunStatsName := baseName + "_run_stats.json"
 			resultReportStatsName := baseName + "_report_stats.csv"
-			resultQTableName := baseName + "_qtable.csv"
+			resultAdditionQTableName := baseName + "_additionQtable.csv"
+			resultEvictionQTableName := baseName + "_evictionQtable.csv"
 
 			// Create cache
 			var grpcConn interface{} = nil
@@ -595,13 +596,9 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				AvgSpeed:      fmt.Sprintf("Num.Records/s = %0.2f", avgSpeed),
 			})
 			if cacheType == "aiRL" {
-				// Save run statistics
-				qtableFile, errCreateQTablecsv := os.Create(resultQTableName)
-				defer qtableFile.Close()
-				if errCreateQTablecsv != nil {
-					panic(errCreateQTablecsv)
-				}
-				qtableFile.WriteString(curCacheInstance.ExtraOutput("qtable"))
+				// Save tables
+				writeQTable(resultAdditionQTableName, curCacheInstance.ExtraOutput("additionQtable"))
+				writeQTable(resultEvictionQTableName, curCacheInstance.ExtraOutput("evictionQtable"))
 			}
 
 			if errMarshal != nil {
@@ -648,6 +645,15 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 		)
 	}
 	return cmd
+}
+
+func writeQTable(outFilename string, data string) {
+	qtableAdditionFile, errCreateQTablecsv := os.Create(outFilename)
+	defer qtableAdditionFile.Close()
+	if errCreateQTablecsv != nil {
+		panic(errCreateQTablecsv)
+	}
+	qtableAdditionFile.WriteString(data)
 }
 
 func commandSimulate() *cobra.Command {
