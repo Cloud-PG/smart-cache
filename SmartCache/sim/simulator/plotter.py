@@ -5,8 +5,8 @@ import numpy as np
 import pandas as pd
 from bokeh.io import export_png
 from bokeh.layouts import column, row
-from bokeh.models import (BasicTickFormatter, BoxZoomTool, Legend, PanTool,
-                          Range1d, ResetTool, SaveTool, Span, WheelZoomTool)
+from bokeh.models import (BasicTickFormatter, BoxZoomTool, LassoSelectTool,
+                          Legend, PanTool, Range1d, ResetTool, SaveTool, Span)
 from bokeh.palettes import Category20
 from bokeh.plotting import Figure, figure, output_file, save
 from tqdm import tqdm
@@ -623,8 +623,14 @@ def plot_results(folder: str, results: dict, cache_size: float,
         )
 
     # Tools
-    tools = [BoxZoomTool(dimensions='width'), PanTool(
-        dimensions='width'), ResetTool()]
+    tools = [
+        BoxZoomTool(dimensions='width'),
+        BoxZoomTool(dimensions='height'),
+        LassoSelectTool(),
+        PanTool(dimensions='width'),
+        PanTool(dimensions='height'),
+        ResetTool(),
+    ]
 
     # Update colors
     for cache_name, _ in filter_results(
@@ -774,6 +780,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             filters,
             color_table,
             window_size,
+            x_range=size_fig.x_range,
             column="written data",
             # normalize="read data",
             # title="Written data / Read data - Full Normal Run",
@@ -797,6 +804,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             filters,
             color_table,
             window_size,
+            x_range=size_fig.x_range,
             column="read data",
             title="Read data - Full Normal Run",
             y_axis_label="Read data (MB)",
@@ -817,6 +825,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             filters,
             color_table,
             window_size,
+            x_range=size_fig.x_range,
             column="deleted data",
             # normalize="read data",
             # title="Deleted data / Read data - Full Normal Run",
@@ -840,6 +849,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             filters,
             color_table,
             window_size,
+            x_range=size_fig.x_range,
             column="read on hit data",
             # normalize="read data",
             # title="Read on hit data / Read data - Full Normal Run",
@@ -864,6 +874,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             filters,
             color_table,
             window_size,
+            x_range=size_fig.x_range,
             column="read on miss data",
             # normalize="read data",
             # title="Read on miss data / Read data - Full Normal Run",
@@ -888,6 +899,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             filters,
             color_table,
             window_size,
+            x_range=size_fig.x_range,
             column="CPU efficiency",
             title="CPU efficiency",
             y_axis_label="%",
@@ -910,6 +922,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             filters,
             color_table,
             window_size,
+            x_range=size_fig.x_range,
             column="CPU hit efficiency",
             title="CPU efficiency on hit",
             y_axis_label="%",
@@ -930,6 +943,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             filters,
             color_table,
             window_size,
+            x_range=size_fig.x_range,
             column="CPU miss efficiency",
             title="CPU efficiency on miss",
             y_axis_label="%",
