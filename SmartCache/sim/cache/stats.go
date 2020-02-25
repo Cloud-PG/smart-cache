@@ -31,7 +31,7 @@ func (statStruct *Stats) Init() {
 	statStruct.numRequests = 0
 }
 
-// DirtyStats indicates if the stats needs a purge
+// Dirty indicates if the stats needs a purge
 func (statStruct Stats) Dirty() bool {
 	numDays := statStruct.lastUpdateTime.Sub(statStruct.firstUpdateTime).Hours() / 24.
 	if numDays >= NumDays2Purge {
@@ -40,7 +40,7 @@ func (statStruct Stats) Dirty() bool {
 	return false
 }
 
-// PurgeStats remove older stats
+// Purge remove older stats
 func (statStruct *Stats) Purge() {
 	for filename, stats := range statStruct.fileStats {
 		if !stats.InCache && stats.DiffLastUpdate() >= MaxNumDaysStat {
