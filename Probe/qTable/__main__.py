@@ -1,7 +1,9 @@
 import argparse
 
 import pandas as pd
-from..utils import STATUS_ARROW, STATUS_WARNING, STATUS_OK, STATUS_ERROR
+from colorama import Fore, Style
+
+from..utils import STATUS_ARROW
 
 
 def main():
@@ -15,34 +17,40 @@ def main():
 
     df = pd.read_csv(args.path)
 
-    df = df.sort_values(
-        by=['numReq', 'size', 'cacheUsage', 'dataType', 'deltaNumLastRequest'])
+    print(df)
 
-    print("-"*42)
-    print(f"numReq\tsize\tcacheUsage\tdataType\tdeltaNumLastRequest")
-    print("-"*42)
+    sort_by = [column for column in df.columns if column.find("Action") == -1]
+    actions = list(set(df.columns) - set(sort_by))
+    action_counters = [0 for _ in range(len(actions))]
 
-    action_explored = 0
+    df = df.sort_values(by=sort_by)
+
+    print("-"*80)
+    print(" | ".join(sort_by+['Action']))
+    print("-"*80)
+
     state_not_explored = 0
 
-    for row in df.itertuples():
-        if row.ActionNotStore != 0.:
-            action_explored += 1
-        if row.ActionStore != 0.:
-            action_explored += 1
+    for idx, row in enumerate(df.itertuples()):
+        action_values = [getattr(row, value) for value in actions]
+        best_action = actions[action_values.index(max(action_values))]
+        for idx, value in enumerate(action_values):
+            if value != 0.:
+                action_counters[idx] += 1
 
-        if row.ActionNotStore == row.ActionStore == 0.0:
-            print(f"{row.cacheUsage}\t{row.numReq}\t{row.size}\t{row.dataType}\t{row.deltaNumLastRequest}\t{STATUS_ARROW} {STATUS_WARNING('NOT EXPLORED')}")
+        if all([value == 0.0 for value in action_values]):
+            state_values = " | ".join(
+                [str(getattr(row, value)) for value in sort_by])
+            print(f"{Style.DIM}{Fore.YELLOW}{state_values} {STATUS_ARROW} {Style.DIM}{Fore.YELLOW}{'NOT EXPLORED'}{Style.RESET_ALL}")
             state_not_explored += 1
-        elif row.ActionNotStore >= row.ActionStore:
-            print(f"{row.cacheUsage}\t{row.numReq}\t{row.size}\t{row.dataType}\t{row.deltaNumLastRequest}\t{STATUS_ARROW} {STATUS_ERROR('NOT STORE')}")
         else:
-            print(
-                f"{row.cacheUsage}\t{row.numReq}\t{row.size}\t{row.dataType}\t{row.deltaNumLastRequest}\t{STATUS_ARROW} {STATUS_OK('STORE')}")
+            state_values = " | ".join(
+                [str(getattr(row, value)) for value in sort_by])
+            print(f"{Style.BRIGHT}{state_values} {STATUS_ARROW} {Style.BRIGHT}{best_action}{Style.RESET_ALL}")
 
     print("-"*42)
     print(
-        f"Explored {((df.shape[0] - state_not_explored) / df.shape[0])*100.:0.2f}% states and {(action_explored / (df.shape[0] * 2))*100.:0.2f}% of actions"
+        f"Explored {((df.shape[0] - state_not_explored) / df.shape[0])*100.:0.2f}% states and {(sum(action_counters) / (df.shape[0] * 2))*100.:0.2f}% of actions"
     )
     print("-"*42)
 
