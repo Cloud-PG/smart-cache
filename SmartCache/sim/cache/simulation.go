@@ -54,7 +54,7 @@ var (
 type SimulationStats struct {
 	TimeElapsed   string `json:"timeElapsed"`
 	Extra         string `json:"extra"`
-	TotNumRecords int    `json:"totNumRecords"`
+	TotNumRecords int64  `json:"totNumRecords"`
 	AvgSpeed      string `json:"avgSpeed"`
 }
 
@@ -178,7 +178,7 @@ func OpenSimFile(filePath string) chan CSVRecord {
 		// Discar header
 		header, errCSVRead := csvReader.Read()
 		headerStr := strings.Join(header, ",")
-		logger.Info("File header", zap.String("CSV header", headerStr), zap.String("file", filePath))
+		logger.Debug("File header", zap.String("CSV header", headerStr), zap.String("file", filePath))
 		if headerStr != csvHeader {
 			headerMap = getHeaderIndexes(header)
 		}
@@ -191,7 +191,7 @@ func OpenSimFile(filePath string) chan CSVRecord {
 		// Discar header
 		header, errCSVRead := csvReader.Read()
 		headerStr := strings.Join(header, ",")
-		logger.Info("FIle header", zap.String("CSV header", headerStr), zap.String("file", filePath))
+		logger.Debug("FIle header", zap.String("CSV header", headerStr), zap.String("file", filePath))
 		if headerStr != csvHeader {
 			headerMap = getHeaderIndexes(header)
 		}

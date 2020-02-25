@@ -47,7 +47,7 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 	additionFeatureMap := args[0].(string)
 	evictionFeatureMap := args[1].(string)
 
-	// logger.Info("Feature maps", zap.String("addition map", additionFeatureMap), zap.String("eviction map", evictionFeatureMap))
+	logger.Info("Feature maps", zap.String("addition map", additionFeatureMap), zap.String("eviction map", evictionFeatureMap))
 
 	cache.qAdditionPrevState = make(map[int64]string, 0)
 	cache.qAdditionPrevAction = make(map[int64]qlearn.ActionType, 0)
@@ -81,9 +81,9 @@ func makeQtable(featureMap map[string]featuremap.Obj, featureOrder []string, rol
 		}
 		inputLengths = append(inputLengths, curLen)
 	}
-	// logger.Info("[Generate QTable]")
+	logger.Info("[Generate QTable]")
 	curTable.Init(inputLengths, role)
-	// logger.Info("[Done]")
+	logger.Info("[Done]")
 	return curTable
 }
 
@@ -148,7 +148,7 @@ func (cache *AIRL) Dumps() [][]byte {
 
 // Dump the AIRL cache
 func (cache *AIRL) Dump(filename string) {
-	// logger.Info("Dump cache", zap.String("filename", filename))
+	logger.Info("Dump cache", zap.String("filename", filename))
 	outFile, osErr := os.Create(filename)
 	if osErr != nil {
 		panic(fmt.Sprintf("Error dump file creation: %s", osErr))
@@ -407,15 +407,15 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 			curState = qlearn.State2String(cache.getState(request, fileStats, cache.additionFeatureMapOrder, cache.additionFeatureMap))
 			curAction = cache.additionTable.GetBestAction(curState)
-			// logger.Info("Normal MISS branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
+			logger.Info("Normal MISS branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
 			// ----------------------------------
 			// QLearn - Take the action NOT STORE
 			// ----------------------------------
 			if curAction == qlearn.ActionNotStore {
-				// logger.Info("Normal MISS branch NOT TO STORE ACTION")
+				logger.Info("Normal MISS branch NOT TO STORE ACTION")
 				return added
 			}
-			// logger.Info("Normal MISS branch STORE ACTION")
+			logger.Info("Normal MISS branch STORE ACTION")
 			// ------------------------------
 			// QLearn - Take the action STORE
 			// ------------------------------
@@ -437,7 +437,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			// #######################
 			// ##### HIT branch  #####
 			// #######################
-			// logger.Info("Normal hit branch")
+			logger.Info("Normal hit branch")
 			cache.UpdateFileInQueue(requestedFilename)
 		}
 	} else {
@@ -459,7 +459,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				curAction = qlearn.ActionNotStore
 			}
 
-			// logger.Info("Learning MISS branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
+			logger.Info("Learning MISS branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
 
 			// ----------------------------------
 			// QLearn - Take the action NOT STORE
@@ -540,7 +540,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			curState = cache.qAdditionPrevState[request.Filename]
 			curAction = cache.qAdditionPrevAction[request.Filename]
 
-			// logger.Info("Learning HIT branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
+			logger.Info("Learning HIT branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
 
 			if curState != "" { // Some action are not taken randomly
 				reward := 0.0
@@ -623,7 +623,7 @@ func (cache *AIRL) removeFilesFromQueue(deletedFiles []int64) {
 
 // Free removes files from the cache
 func (cache *AIRL) Free(amount float64, percentage bool) float64 {
-	logger.Info(
+	logger.Debug(
 		"Cache free",
 		zap.Float64("mean size", cache.MeanSize()),
 		zap.Float64("mean frequency", cache.MeanFrequency()),

@@ -112,7 +112,7 @@ func (table *QTable) Init(featureLenghts []int, role QTableRole) {
 	}
 	table.NumStates = numStates
 
-	// logger.Info("Num generated states", zap.Int("numStates", numStates))
+	logger.Info("Num generated states", zap.Int("numStates", numStates))
 	table.States = make(map[string][]float64, numStates)
 
 	for state := range table.genAllStates(featureLenghts) {
@@ -127,7 +127,7 @@ func (table *QTable) Init(featureLenghts []int, role QTableRole) {
 
 	}
 	table.NumVars = table.NumStates * len(table.Actions)
-	// logger.Info("Num action values", zap.Int("numActionValues", table.NumVars))
+	logger.Info("Num action values", zap.Int("numActionValues", table.NumVars))
 }
 
 // ResetParams resets the learning parameters
@@ -142,7 +142,7 @@ func (table *QTable) ResetParams() {
 	table.MinEpsilon = 0.1
 	table.StepNum = 0
 
-	// logger.Info("Parameters restored as default...")
+	logger.Info("Parameters restored as default...")
 }
 
 func (table QTable) genAllStates(featureLenghts []int) chan []bool {
@@ -268,7 +268,7 @@ func (table QTable) GetAction(stateIdx string, action ActionType) float64 {
 func (table QTable) GetBestAction(state string) ActionType {
 	values := table.States[state]
 	maxValueIdx := getArgMax(values)
-	// logger.Info("Get best action", zap.Float64s("values", values), zap.Int("idx max value", maxValueIdx))
+	logger.Info("Get best action", zap.Float64s("values", values), zap.Int("idx max value", maxValueIdx))
 	return table.Actions[maxValueIdx]
 }
 

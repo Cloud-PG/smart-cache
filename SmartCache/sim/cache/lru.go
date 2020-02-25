@@ -339,7 +339,7 @@ func (cache *LRUCache) UpdateFileInQueue(filename int64) {
 
 // Free removes files from the cache
 func (cache *LRUCache) Free(amount float64, percentage bool) float64 {
-	logger.Info(
+	logger.Debug(
 		"Cache free",
 		zap.Float64("mean size", cache.MeanSize()),
 		zap.Float64("mean frequency", cache.MeanFrequency()),
@@ -357,7 +357,7 @@ func (cache *LRUCache) Free(amount float64, percentage bool) float64 {
 	if sizeToDelete > 0. {
 		var maxIdx2Delete int
 		for idx, file2Delete := range cache.queue {
-			// logger.Debug("delete", zap.Int64("filename", file2Delete))
+			logger.Debug("delete", zap.Int64("filename", file2Delete))
 			fileSize := cache.files[file2Delete]
 			curFileStats := cache.stats.Get(file2Delete)
 			// Update sizes

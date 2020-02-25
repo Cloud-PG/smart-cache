@@ -41,7 +41,7 @@ var (
 	cacheSize              float64
 	cpuprofile             string
 	dataset2TestPath       string
-	enableDebug            bool
+	logLevel               string
 	githash                string
 	memprofile             string
 	outputUpdateDelay      float64
@@ -129,9 +129,9 @@ func main() {
 		&weightGamma, "weightGamma", 1.0,
 		"[Simulation] Parameter Gamma of the weighted function",
 	)
-	rootCmd.PersistentFlags().BoolVar(
-		&enableDebug, "debug", false,
-		"[Debugging] Enable or not code debug",
+	rootCmd.PersistentFlags().StringVar(
+		&logLevel, "logLevel", "INFO",
+		"[Debugging] Enable or not a level of logging",
 	)
 
 	if err := rootCmd.Execute(); err != nil {
@@ -244,24 +244,27 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Run: func(cmd *cobra.Command, args []string) {
+			logger := zap.L()
 			if len(args) != 2 {
 				fmt.Println("ERR: You need to specify the cache type and a file or a folder")
 				os.Exit(-1)
 			}
 
 			// CHECK DEBUG MODE
-			if enableDebug {
-				logger.Println("[DEBUG]")
+			switch logLevel {
+			case "INFO", "info":
+				logger.Info("ENABLE INFO LOG")
+				loggerMgr := initZapLog(zap.InfoLevel)
+				zap.ReplaceGlobals(loggerMgr)
+				defer loggerMgr.Sync() // flushes buffer, if any
+			case "DEBUG", "debug":
+				logger.Info("ENABLE DEBUG LOG")
 				loggerMgr := initZapLog(zap.DebugLevel)
 				zap.ReplaceGlobals(loggerMgr)
 				defer loggerMgr.Sync() // flushes buffer, if any
-			} else {
-				logger.Println("[NO DEBUG]")
-				loggerMgr := initZapLog(zap.ErrorLevel)
-				zap.ReplaceGlobals(loggerMgr)
-				defer loggerMgr.Sync() // flushes buffer, if any
-
 			}
+			// Update logger
+			logger = zap.L()
 
 			cacheType := args[0]
 			pathString := args[1]
@@ -333,22 +336,22 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			}
 
 			if simLoadDump {
-				logger.Printf("[Loading cache dump file %s]\n", simLoadDumpFileName)
+				logger.Info("Loading cache dump", zap.String("filename", simLoadDumpFileName))
 
 				loadedDump := curCacheInstance.Load(simLoadDumpFileName)
 				curCacheInstance.Loads(loadedDump)
 
-				logger.Println("[Cache dump loaded!]")
+				logger.Info("Cache dump loaded!")
 				if simColdStart {
 					if simColdStartNoStats {
 						curCacheInstance.Clear()
-						logger.Println("[Cache Files deleted][COLD START][NO STATISTICS]")
+						logger.Info("Cache Files deleted... COLD START with NO STATISTICS")
 					} else {
 						curCacheInstance.ClearFiles()
-						logger.Println("[Cache Files deleted][COLD START]")
+						logger.Info("Cache Files deleted... COLD START")
 					}
 				} else {
-					logger.Println("[Cache Files stored][HOT START]")
+					logger.Info("Cache Files stored... HOT START")
 				}
 			}
 
@@ -413,8 +416,8 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			}
 
 			var (
-				numRecords        int
-				totNumRecords     int
+				numRecords        int64
+				totNumRecords     int64
 				totIterations     uint32
 				numIterations     uint32
 				windowStepCounter uint32
@@ -436,7 +439,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				defer pprof.StopCPUProfile()
 			}
 
-			logger.Println("[Simulation START]")
+			logger.Info("Simulation START")
 
 			for record := range iterator {
 				totNumRecords++
@@ -513,25 +516,22 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 
 					if time.Now().Sub(start).Seconds() >= outputUpdateDelay {
 						elapsedTime := time.Now().Sub(simBeginTime)
-						outString := strings.Join(
-							[]string{
-								fmt.Sprintf("[%s]", baseName),
-								fmt.Sprintf("[Elapsed Time: %02d:%02d:%02d]",
-									int(elapsedTime.Hours()),
-									int(elapsedTime.Minutes())%60,
-									int(elapsedTime.Seconds())%60,
-								),
-								fmt.Sprintf("[Window %d]", windowCounter),
-								fmt.Sprintf("[Step %d/%d]", windowStepCounter+1, simWindowSize),
-								fmt.Sprintf("[Num.Records %d]", numRecords),
-								fmt.Sprintf("[HitRate %.2f%%]", curCacheInstance.HitRate()),
-								fmt.Sprintf("[Capacity %.2f%%]", curCacheInstance.Capacity()),
-								fmt.Sprintf("[Extra-> %s]", curCacheInstance.ExtraStats()),
-								fmt.Sprintf("[%0.0f it/s]", float64(numIterations)/time.Now().Sub(start).Seconds()),
-							},
-							"",
+						logger.Info("Simulation",
+							zap.String("cache", baseName),
+							zap.String("elapsedTime", fmt.Sprintf("%02d:%02d:%02d]",
+								int(elapsedTime.Hours()),
+								int(elapsedTime.Minutes())%60,
+								int(elapsedTime.Seconds())%60,
+							)),
+							zap.Uint32("window", windowCounter),
+							zap.Uint32("step", windowStepCounter),
+							zap.Uint32("windowSize", simWindowSize),
+							zap.Int64("numRecords", numRecords),
+							zap.Float64("hitRate", curCacheInstance.HitRate()),
+							zap.Float64("capacity", curCacheInstance.Capacity()),
+							zap.String("extra", curCacheInstance.ExtraStats()),
+							zap.Float64("it/s", float64(numIterations)/time.Now().Sub(start).Seconds()),
 						)
-						logger.Println(outString)
 						totIterations += numIterations
 						numIterations = 0
 						start = time.Now()
@@ -542,18 +542,18 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 						windowStepCounter = 0
 					}
 				} else if windowStepCounter == simWindowSize {
-					logger.Printf("[Jump %d records of window %d]\n",
-						numRecords,
-						windowCounter,
+					logger.Info("Jump records",
+						zap.Int64("numRecords", numRecords),
+						zap.Uint32("window", windowCounter),
 					)
 					windowCounter++
 					windowStepCounter = 0
 					numRecords = 0
 				} else {
 					if time.Now().Sub(start).Seconds() >= outputUpdateDelay {
-						logger.Printf("[Jump %d records of window %d]\n",
-							numRecords,
-							windowCounter,
+						logger.Info("Jump records",
+							zap.Int64("numRecords", numRecords),
+							zap.Uint32("window", windowCounter),
 						)
 						start = time.Now()
 					}
@@ -562,7 +562,10 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				if memprofile != "" {
 					profileOut, err := os.Create(memprofile)
 					if err != nil {
-						fmt.Printf("ERR: Can not create Memory profile file %s.\n", err)
+						logger.Error("Cannot create Memory profile file",
+							zap.Error(err),
+							zap.String("filename", memprofile),
+						)
 						os.Exit(-1)
 					}
 					pprof.WriteHeapProfile(profileOut)
@@ -576,12 +579,10 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			elTM := int(elapsedTime.Minutes()) % 60
 			elTS := int(elapsedTime.Seconds()) % 60
 			avgSpeed := float64(totIterations) / elapsedTime.Seconds()
-			logger.Printf("[Simulation END][elapsed Time: %02d:%02d:%02d][Num. Records: %d][Mean Records/s: %0.0f]\n",
-				elTH,
-				elTM,
-				elTS,
-				numRecords,
-				avgSpeed,
+			logger.Info("Simulation END!",
+				zap.String("elapsedTime", fmt.Sprintf("%02d:%02d:%02d", elTH, elTM, elTS)),
+				zap.Float64("avg it/s", avgSpeed),
+				zap.Int64("totRecords", numRecords),
 			)
 			// Save run statistics
 			statFile, errCreateStat := os.Create(resultRunStatsName)
@@ -669,37 +670,48 @@ func testDataset() *cobra.Command {
 }
 
 func genCache(cacheType string) cache.Cache {
+	logger := zap.L()
 	var cacheInstance cache.Cache
 	switch cacheType {
 	case "lru":
-		logger.Printf("[Create LRU Cache][Size: %f]\n", cacheSize)
+		logger.Info("Create LRU Cache",
+			zap.Float64("cacheSize", cacheSize),
+		)
 		cacheInstance = &cache.LRUCache{
 			MaxSize: cacheSize,
 		}
 		cacheInstance.Init()
 	case "lruDatasetVerifier":
-		logger.Printf("[Create lruDatasetVerifier Cache][Size: %f]\n", cacheSize)
+		logger.Info("Create lruDatasetVerifier Cache",
+			zap.Float64("cacheSize", cacheSize),
+		)
 		cacheInstance = &cache.LRUDatasetVerifier{
 			LRUCache: cache.LRUCache{
 				MaxSize: cacheSize,
 			},
 		}
 	case "aiNN":
-		logger.Printf("[Create aiNN Cache][Size: %f]\n", cacheSize)
+		logger.Info("Create aiNN Cache",
+			zap.Float64("cacheSize", cacheSize),
+		)
 		cacheInstance = &cache.AINN{
 			LRUCache: cache.LRUCache{
 				MaxSize: cacheSize,
 			},
 		}
 	case "aiRL":
-		logger.Printf("[Create aiRL Cache][Size: %f]\n", cacheSize)
+		logger.Info("Create aiRL Cache",
+			zap.Float64("cacheSize", cacheSize),
+		)
 		cacheInstance = &cache.AIRL{
 			LRUCache: cache.LRUCache{
 				MaxSize: cacheSize,
 			},
 		}
 	case "weightedLRU":
-		logger.Printf("[Create Weighted Cache][Size: %f]\n", cacheSize)
+		logger.Info("Create Weighted Cache",
+			zap.Float64("cacheSize", cacheSize),
+		)
 
 		var (
 			selFunctionType cache.FunctionType
