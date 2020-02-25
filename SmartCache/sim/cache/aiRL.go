@@ -710,8 +710,8 @@ func (cache *AIRL) Free(amount float64, percentage bool) float64 {
 			for filename := range cache.files {
 				fileStats := cache.stats.Get(filename)
 				bigSizeQueue = append(bigSizeQueue, fileSupportData{
-					Filename:  filename,
-					Frequency: fileStats.TotRequests(),
+					Filename: filename,
+					Size:     fileStats.Size,
 				})
 			}
 			sort.Sort(bigSizeQueue)
@@ -722,8 +722,8 @@ func (cache *AIRL) Free(amount float64, percentage bool) float64 {
 			for filename := range cache.files {
 				fileStats := cache.stats.Get(filename)
 				smallSizeQueue = append(smallSizeQueue, fileSupportData{
-					Filename:  filename,
-					Frequency: fileStats.TotRequests(),
+					Filename: filename,
+					Size:     fileStats.Size,
 				})
 			}
 			sort.Sort(smallSizeQueue)
