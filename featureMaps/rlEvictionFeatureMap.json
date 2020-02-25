@@ -1,0 +1,58 @@
+{
+  "meanSize": {
+    "feature": "meanSize",
+    "type": "int",
+    "keys": [
+      3000,
+      4000,
+      5000
+    ],
+    "values": {
+      "3000": 0,
+      "4000": 1,
+      "5000": 2,
+      "max": 3
+    },
+    "unknown_values": false,
+    "buckets": true,
+    "bucket_open_right": true
+  },
+  "meanFrequency": {
+    "feature": "meanFrequency",
+    "type": "int",
+    "keys": [
+      2,
+      3,
+      4,
+      5
+    ],
+    "values": {
+      "2": 0,
+      "3": 1,
+      "4": 2,
+      "5": 3,
+      "max": 4
+    },
+    "unknown_values": false,
+    "buckets": true,
+    "bucket_open_right": true
+  },
+  "meanRecency": {
+    "feature": "meanRecency",
+    "type": "int",
+    "keys": [
+      100000,
+      150000,
+      200000
+    ],
+    "values": {
+      "100000": 0,
+      "150000": 1,
+      "200000": 2,
+      "max": 3
+    },
+    "unknown_values": false,
+    "buckets": true,
+    "bucket_open_right": true
+  }
+}

@@ -1,0 +1,89 @@
+{
+  "size": {
+    "feature": "size",
+    "type": "int",
+    "keys": [
+      1000,
+      2000,
+      4000
+    ],
+    "values": {
+      "1000": 0,
+      "2000": 1,
+      "4000": 2,
+      "max": 3
+    },
+    "unknown_values": false,
+    "buckets": true,
+    "bucket_open_right": true
+  },
+  "numReq": {
+    "feature": "numReq",
+    "type": "int",
+    "keys": [
+      1,
+      25,
+      50,
+      75
+    ],
+    "values": {
+      "1": 0,
+      "25": 1,
+      "50": 2,
+      "75": 3,
+      "max": 4
+    },
+    "unknown_values": false,
+    "buckets": true,
+    "bucket_open_right": true
+  },
+  "deltaNumLastRequest": {
+    "feature": "deltaNumLastRequest",
+    "type": "int",
+    "keys": [
+      10000
+    ],
+    "values": {
+      "10000": 0,
+      "max": 1
+    },
+    "unknown_values": false,
+    "buckets": true,
+    "bucket_open_right": true
+  },
+  "dataType": {
+    "feature": "dataType",
+    "type": "int",
+    "keys": [
+      0,
+      1
+    ],
+    "values": {
+      "0": 0,
+      "1": 1
+    },
+    "unknown_values": false,
+    "buckets": false,
+    "bucket_open_right": false
+  },
+  "deltaHighWatermark": {
+    "feature": "deltaHighWatermark",
+    "type": "float",
+    "keys": [
+      1.0,
+      5.0,
+      10.0,
+      20.0
+    ],
+    "values": {
+      "1.0": 0,
+      "5.0": 1,
+      "10.0": 2,
+      "20.0": 3,
+      "max": 4
+    },
+    "unknown_values": false,
+    "buckets": true,
+    "bucket_open_right": true
+  }
+}
