@@ -211,9 +211,6 @@ def main():
     parser.add_argument('--ai-feature-map', type=str,
                         default="",
                         help='Ai feature map file [DEFAULT: ""]')
-    parser.add_argument('--ai-feature-map', type=str,
-                        default="",
-                        help='Ai feature map file [DEFAULT: ""]')
     parser.add_argument('--ai-rl-addition-feature-map', type=str,
                         default="",
                         help='Ai feature map file for the addition table in Q-Learning [DEFAULT: ""]')
