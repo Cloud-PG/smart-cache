@@ -268,7 +268,7 @@ func (table QTable) GetAction(stateIdx string, action ActionType) float64 {
 func (table QTable) GetBestAction(state string) ActionType {
 	values := table.States[state]
 	maxValueIdx := getArgMax(values)
-	logger.Info("Get best action", zap.Float64s("values", values), zap.Int("idx max value", maxValueIdx))
+	logger.Debug("Get best action", zap.Float64s("values", values), zap.Int("idx max value", maxValueIdx))
 	return table.Actions[maxValueIdx]
 }
 

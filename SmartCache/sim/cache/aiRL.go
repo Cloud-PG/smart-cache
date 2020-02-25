@@ -407,15 +407,15 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 			curState = qlearn.State2String(cache.getState(request, fileStats, cache.additionFeatureMapOrder, cache.additionFeatureMap))
 			curAction = cache.additionTable.GetBestAction(curState)
-			logger.Info("Normal MISS branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
+			logger.Debug("Normal MISS branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
 			// ----------------------------------
 			// QLearn - Take the action NOT STORE
 			// ----------------------------------
 			if curAction == qlearn.ActionNotStore {
-				logger.Info("Normal MISS branch NOT TO STORE ACTION")
+				logger.Debug("Normal MISS branch NOT TO STORE ACTION")
 				return added
 			}
-			logger.Info("Normal MISS branch STORE ACTION")
+			logger.Debug("Normal MISS branch STORE ACTION")
 			// ------------------------------
 			// QLearn - Take the action STORE
 			// ------------------------------
@@ -437,7 +437,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			// #######################
 			// ##### HIT branch  #####
 			// #######################
-			logger.Info("Normal hit branch")
+			logger.Debug("Normal hit branch")
 			cache.UpdateFileInQueue(requestedFilename)
 		}
 	} else {
@@ -459,7 +459,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				curAction = qlearn.ActionNotStore
 			}
 
-			logger.Info("Learning MISS branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
+			logger.Debug("Learning MISS branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
 
 			// ----------------------------------
 			// QLearn - Take the action NOT STORE
@@ -540,7 +540,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			curState = cache.qAdditionPrevState[request.Filename]
 			curAction = cache.qAdditionPrevAction[request.Filename]
 
-			logger.Info("Learning HIT branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
+			logger.Debug("Learning HIT branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
 
 			if curState != "" { // Some action are not taken randomly
 				reward := 0.0
