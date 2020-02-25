@@ -3,7 +3,6 @@ package featuremap
 import (
 	"compress/gzip"
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 
@@ -11,10 +10,6 @@ import (
 )
 
 type mapType int
-
-var (
-	logger = zap.L()
-)
 
 const (
 	// TypeBool is the type bool for the feature map
@@ -69,31 +64,38 @@ func Parse(featureMapFilePath string) map[string]Obj {
 
 // GetEntries returns the entries of a feature map
 func GetEntries(featureMapFilePath string) chan Entry {
+	logger := zap.L()
+
 	var tmpMap interface{}
 	fileExtension := filepath.Ext(featureMapFilePath)
 
 	featureMapFile, errOpenFile := os.Open(featureMapFilePath)
 	if errOpenFile != nil {
-		logger.Error(fmt.Sprintf("Cannot open file '%s'\n", errOpenFile))
+		logger.Error("Cannot open file", zap.Error(errOpenFile))
+		os.Exit(-1)
 	}
 
 	if fileExtension == ".gzip" || fileExtension == ".gz" {
 		featureMapFileGz, errOpenZipFile := gzip.NewReader(featureMapFile)
 		if errOpenZipFile != nil {
-			logger.Error(fmt.Sprintf("Cannot open zip stream from file '%s'\nError: %s\n", featureMapFilePath, errOpenZipFile))
+			logger.Error("Cannot open zip stream from file", zap.String("filename", featureMapFilePath), zap.Error(errOpenZipFile))
+			os.Exit(-1)
 		}
 
 		errJSONUnmarshal := json.NewDecoder(featureMapFileGz).Decode(&tmpMap)
 		if errJSONUnmarshal != nil {
-			logger.Error(fmt.Sprintf("Cannot unmarshal gzipped json from file '%s'\nError: %s\n", featureMapFilePath, errJSONUnmarshal))
+			logger.Error("Cannot unmarshal gzipped json from file", zap.String("filename", featureMapFilePath), zap.Error(errJSONUnmarshal))
+			os.Exit(-1)
 		}
 	} else if fileExtension == ".json" {
 		errJSONUnmarshal := json.NewDecoder(featureMapFile).Decode(&tmpMap)
 		if errJSONUnmarshal != nil {
-			logger.Error(fmt.Sprintf("Cannot unmarshal plain json from file '%s'\nError: %s\n", featureMapFilePath, errJSONUnmarshal))
+			logger.Error("Cannot unmarshal plain json from file", zap.String("filename", featureMapFilePath), zap.Error(errJSONUnmarshal))
+			os.Exit(-1)
 		}
 	} else {
-		logger.Error(fmt.Sprintf("Cannot unmarshal '%s' with extension '%s'", featureMapFilePath, fileExtension))
+		logger.Error("Cannot unmarshal", zap.String("filename", featureMapFilePath), zap.String("extension", fileExtension))
+		os.Exit(-1)
 	}
 
 	channel := make(chan Entry)

@@ -20,18 +20,20 @@ const (
 // AIRL cache
 type AIRL struct {
 	LRUCache
-	prevTime          time.Time
-	curTime           time.Time
-	aiFeatureMap      map[string]featuremap.Obj
-	aiFeatureMapOrder []string
-	additionTable     *qlearn.QTable
-	evictionTable     *qlearn.QTable
-	qPrevState        map[int64]string
-	qPrevAction       map[int64]qlearn.ActionType
-	points            float64
-	prevPoints        float64
-	dailyReadOnHit    float64
-	dailyReadOnMiss   float64
+	prevTime                time.Time
+	curTime                 time.Time
+	additionFeatureMap      map[string]featuremap.Obj
+	additionFeatureMapOrder []string
+	evictionFeatureMap      map[string]featuremap.Obj
+	evictionFeatureMapOrder []string
+	additionTable           *qlearn.QTable
+	evictionTable           *qlearn.QTable
+	qPrevState              map[int64]string
+	qPrevAction             map[int64]qlearn.ActionType
+	points                  float64
+	prevPoints              float64
+	dailyReadOnHit          float64
+	dailyReadOnMiss         float64
 }
 
 // Init the AIRL struct
@@ -40,22 +42,37 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 
 	cache.LRUCache.Init()
 
-	featureMapFilePath := args[0].(string)
+	additionFeatureMap := args[0].(string)
+	evictionFeatureMap := args[1].(string)
+
+	logger.Info("Feature maps", zap.String("addition map", additionFeatureMap), zap.String("eviction map", evictionFeatureMap))
 
 	cache.qPrevState = make(map[int64]string, 0)
 	cache.qPrevAction = make(map[int64]qlearn.ActionType, 0)
 
-	cache.aiFeatureMap = featuremap.Parse(featureMapFilePath)
+	cache.additionFeatureMap = featuremap.Parse(additionFeatureMap)
+	cache.evictionFeatureMap = featuremap.Parse(evictionFeatureMap)
 
-	for key := range cache.aiFeatureMap {
-		cache.aiFeatureMapOrder = append(cache.aiFeatureMapOrder, key)
+	for key := range cache.additionFeatureMap {
+		cache.additionFeatureMapOrder = append(cache.additionFeatureMapOrder, key)
 	}
-	sort.Strings(cache.aiFeatureMapOrder)
+	sort.Strings(cache.additionFeatureMapOrder)
+	for key := range cache.evictionFeatureMap {
+		cache.evictionFeatureMapOrder = append(cache.evictionFeatureMapOrder, key)
+	}
+	sort.Strings(cache.evictionFeatureMapOrder)
 
-	cache.additionTable = &qlearn.QTable{}
+	cache.additionTable = makeQtable(cache.additionFeatureMap, cache.additionFeatureMapOrder, qlearn.AdditionTable)
+	cache.evictionTable = makeQtable(cache.evictionFeatureMap, cache.evictionFeatureMapOrder, qlearn.EvictionTable)
+
+	return nil
+}
+
+func makeQtable(featureMap map[string]featuremap.Obj, featureOrder []string, role qlearn.QTableRole) *qlearn.QTable {
+	curTable := &qlearn.QTable{}
 	inputLengths := []int{}
-	for _, featureName := range cache.aiFeatureMapOrder {
-		curFeature, _ := cache.aiFeatureMap[featureName]
+	for _, featureName := range featureOrder {
+		curFeature, _ := featureMap[featureName]
 		curLen := len(curFeature.Values)
 		if curFeature.UnknownValues {
 			curLen++
@@ -63,10 +80,9 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 		inputLengths = append(inputLengths, curLen)
 	}
 	logger.Info("[Generate QTable]")
-	cache.additionTable.Init(inputLengths, qlearn.AdditionTable)
+	curTable.Init(inputLengths, role)
 	logger.Info("[Done]")
-
-	return nil
+	return curTable
 }
 
 // Clear the AIRL struct
@@ -180,7 +196,7 @@ func (cache *AIRL) getCategory(catKey string, value interface{}) []bool {
 		inputValueF float64
 		inputValueS string
 	)
-	curCategory := cache.aiFeatureMap[catKey]
+	curCategory := cache.additionFeatureMap[catKey]
 
 	if curCategory.UnknownValues == true || curCategory.BucketOpenRight == true {
 		res = make([]bool, curCategory.GetLenKeys()+1)
@@ -253,7 +269,7 @@ func (cache *AIRL) getState(request *Request, fileStats *FileStats) []bool {
 	cacheCapacity := float64(cache.Capacity())
 	deltaHighWatermark := float64(cache.HighWaterMark) - cacheCapacity
 
-	for _, featureName := range cache.aiFeatureMapOrder {
+	for _, featureName := range cache.additionFeatureMapOrder {
 		switch featureName {
 		case "size":
 			tmpArr = cache.getCategory(featureName, float64(size))
@@ -582,5 +598,5 @@ func (cache AIRL) ExtraOutput(info string) string {
 
 // GetQTable return a string of the qtable in csv format
 func (cache AIRL) GetQTable() string {
-	return cache.additionTable.ToString(&cache.aiFeatureMap, &cache.aiFeatureMapOrder)
+	return cache.additionTable.ToString(&cache.additionFeatureMap, &cache.additionFeatureMapOrder)
 }

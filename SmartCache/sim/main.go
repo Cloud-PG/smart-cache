@@ -31,37 +31,39 @@ func initZapLog(level zapcore.Level) *zap.Logger {
 }
 
 var (
-	aiFeatureMap        string
-	aiHost              string
-	aiModel             string
-	aiPort              string
-	buildstamp          string
-	cacheSize           float64
-	cpuprofile          string
-	dataset2TestPath    string
-	enableDebug         bool
-	githash             string
-	memprofile          string
-	outputUpdateDelay   float64
-	serviceHost         string
-	servicePort         int32
-	simColdStart        bool
-	simColdStartNoStats bool
-	simDump             bool
-	simDumpFileName     string
-	simLoadDump         bool
-	simLoadDumpFileName string
-	simOutFile          string
-	simRegion           string
-	simFileType         string
-	simStartFromWindow  uint32
-	simStopWindow       uint32
-	simWindowSize       uint32
-	weightedFunc        string
-	weightAlpha         float64
-	weightBeta          float64
-	weightGamma         float64
-	logger              = log.New(os.Stderr, color.MagentaString("[SIM] "), log.Lshortfile|log.LstdFlags)
+	aiFeatureMap           string
+	aiRLAdditionFeatureMap string
+	aiRLEvictionFeatureMap string
+	aiHost                 string
+	aiModel                string
+	aiPort                 string
+	buildstamp             string
+	cacheSize              float64
+	cpuprofile             string
+	dataset2TestPath       string
+	enableDebug            bool
+	githash                string
+	memprofile             string
+	outputUpdateDelay      float64
+	serviceHost            string
+	servicePort            int32
+	simColdStart           bool
+	simColdStartNoStats    bool
+	simDump                bool
+	simDumpFileName        string
+	simLoadDump            bool
+	simLoadDumpFileName    string
+	simOutFile             string
+	simRegion              string
+	simFileType            string
+	simStartFromWindow     uint32
+	simStopWindow          uint32
+	simWindowSize          uint32
+	weightedFunc           string
+	weightAlpha            float64
+	weightBeta             float64
+	weightGamma            float64
+	logger                 = log.New(os.Stderr, color.MagentaString("[SIM] "), log.Lshortfile|log.LstdFlags)
 )
 
 type simDetailCmd int
@@ -298,18 +300,25 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 
 			switch typeCmd {
 			case aiSimCmd:
-				if aiFeatureMap == "" {
-					fmt.Println("ERR: No feature map indicated...")
-					os.Exit(-1)
-				}
 				switch cacheType {
 				case "aiNN":
+					if aiFeatureMap == "" {
+						fmt.Println("ERR: No feature map indicated...")
+						os.Exit(-1)
+					}
 					grpcConn = curCacheInstance.Init(aiHost, aiPort, aiFeatureMap, aiModel)
 					if grpcConn != nil {
 						defer grpcConn.(*grpc.ClientConn).Close()
 					}
 				case "aiRL":
-					curCacheInstance.Init(aiFeatureMap)
+					if aiRLAdditionFeatureMap == "" {
+						fmt.Println("ERR: No addition feature map indicated...")
+						os.Exit(-1)
+					} else if aiRLEvictionFeatureMap == "" {
+						fmt.Println("ERR: No eviction feature map indicated...")
+						os.Exit(-1)
+					}
+					curCacheInstance.Init(aiRLAdditionFeatureMap, aiRLEvictionFeatureMap)
 				}
 			case testDatasetCmd:
 				curCacheInstance.Init(dataset2TestPath)
@@ -619,6 +628,14 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 		cmd.PersistentFlags().StringVar(
 			&aiFeatureMap, "aiFeatureMap", "",
 			"the feature map file for data conversions",
+		)
+		cmd.PersistentFlags().StringVar(
+			&aiRLAdditionFeatureMap, "aiRLAdditionFeatureMap", "",
+			"the RL addition feature map file for data conversions",
+		)
+		cmd.PersistentFlags().StringVar(
+			&aiRLEvictionFeatureMap, "aiRLEvictionFeatureMap", "",
+			"the RL eviction feature map file for data conversions",
 		)
 		cmd.PersistentFlags().StringVar(
 			&aiModel, "aiModel", "",
