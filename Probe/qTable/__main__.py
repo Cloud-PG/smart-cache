@@ -17,7 +17,7 @@ def main():
 
     df = pd.read_csv(args.path)
 
-    print(df)
+    # print(df)
 
     sort_by = [column for column in df.columns if column.find("Action") == -1]
     actions = list(set(df.columns) - set(sort_by))
