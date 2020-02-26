@@ -32,17 +32,18 @@ func initZapLog(level zapcore.Level) *zap.Logger {
 
 var (
 	aiFeatureMap           string
-	aiRLAdditionFeatureMap string
-	aiRLEvictionFeatureMap string
 	aiHost                 string
 	aiModel                string
 	aiPort                 string
+	aiRLAdditionFeatureMap string
+	aiRLEvictionFeatureMap string
 	buildstamp             string
 	cacheSize              float64
 	cpuprofile             string
 	dataset2TestPath       string
-	logLevel               string
 	githash                string
+	logger                 = log.New(os.Stderr, color.MagentaString("[SIM] "), log.Lshortfile|log.LstdFlags)
+	logLevel               string
 	memprofile             string
 	outputUpdateDelay      float64
 	serviceHost            string
@@ -51,19 +52,19 @@ var (
 	simColdStartNoStats    bool
 	simDump                bool
 	simDumpFileName        string
+	simEpsilonStart        float64
+	simFileType            string
 	simLoadDump            bool
 	simLoadDumpFileName    string
 	simOutFile             string
 	simRegion              string
-	simFileType            string
 	simStartFromWindow     uint32
 	simStopWindow          uint32
 	simWindowSize          uint32
-	weightedFunc           string
 	weightAlpha            float64
 	weightBeta             float64
+	weightedFunc           string
 	weightGamma            float64
-	logger                 = log.New(os.Stderr, color.MagentaString("[SIM] "), log.Lshortfile|log.LstdFlags)
 )
 
 type simDetailCmd int
@@ -222,6 +223,10 @@ func addSimFlags(cmd *cobra.Command) {
 		&simColdStartNoStats, "simColdStartNoStats", false,
 		"indicates if the cache have to be empty and without any stats after a dump load",
 	)
+	cmd.PersistentFlags().Float64Var(
+		&simEpsilonStart, "simEpsilonStart", 1.0,
+		"indicates the initial value of Epsilon in the RL method",
+	)
 }
 
 func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
@@ -322,7 +327,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 						fmt.Println("ERR: No eviction feature map indicated...")
 						os.Exit(-1)
 					}
-					curCacheInstance.Init(aiRLAdditionFeatureMap, aiRLEvictionFeatureMap)
+					curCacheInstance.Init(aiRLAdditionFeatureMap, aiRLEvictionFeatureMap, simEpsilonStart)
 				}
 			case testDatasetCmd:
 				curCacheInstance.Init(dataset2TestPath)
@@ -518,7 +523,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 						elapsedTime := time.Now().Sub(simBeginTime)
 						logger.Info("Simulation",
 							zap.String("cache", baseName),
-							zap.String("elapsedTime", fmt.Sprintf("%02d:%02d:%02d]",
+							zap.String("elapsedTime", fmt.Sprintf("%02d:%02d:%02d",
 								int(elapsedTime.Hours()),
 								int(elapsedTime.Minutes())%60,
 								int(elapsedTime.Seconds())%60,
