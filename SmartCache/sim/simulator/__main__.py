@@ -82,6 +82,9 @@ def prepare_process_call(args, simulator_exe, cache_type, working_dir: str,
                 f"--aiRLAdditionFeatureMap={path.abspath(args.ai_rl_addition_feature_map)}")
             exe_args.append(
                 f"--aiRLEvictionFeatureMap={path.abspath(args.ai_rl_eviction_feature_map)}")
+            exe_args.append(
+                f"--simEpsilonStart={args.init_epsilon}")
+
     elif cache_type == 'lruDatasetVerifier':
         dataset_file = path.abspath(
             path.join(
@@ -217,6 +220,9 @@ def main():
     parser.add_argument('--ai-rl-eviction-feature-map', type=str,
                         default="",
                         help='Ai feature map file for the eviction table in Q-Learning [DEFAULT: ""]')
+    parser.add_argument('--init-epsilon', type=float,
+                        default=1.0,
+                        help="The initial value of Epsilon in the RL approach [DEFAULT: 1.0]")
 
     args, _ = parser.parse_known_args()
 
