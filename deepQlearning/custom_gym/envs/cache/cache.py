@@ -11,7 +11,7 @@ import gym
 import math
 
 bandwidthLimit = (1000000. / 8.) * 60. * 60. * 24
-time_span = 1000
+time_span = 30000
 
 
 class FileStats(object):
@@ -141,6 +141,7 @@ class cache(object):
             self._dailyReadOnMiss += fileStats.size
 
         if added:
+            self._size += fileStats.size
             self._written_data += fileStats.size
 
         self._read_data += fileStats.size
@@ -288,24 +289,26 @@ class CacheEnv(gym.Env):
 
     def update_time_span_filenames_list(self):
         l=[]
+        self.tmp_df = self.df
+        self.tmp_req_index = self.curRequest
+        self.tmp_day_index = self.curDay
+        self.tmp_df_length = self.df_length
+        
         for _ in range(time_span):
-            self.tmp_df = self.df
-            self.tmp_req_index = self.curRequest
-            self.tmp_day_index = self.curDay
+
             self.tmp_req_index += 1
         
-            if (self.tmp_req_index + 1) == self.df_length:
+            if (self.tmp_req_index + 1) == self.tmp_df_length:
+                
                 self.tmp_day_index += 1
                 directory = "/home/ubuntu/source2018_numeric_it_shuffle_42"
                 file_ = sorted(os.listdir(directory))[self.tmp_day_index]
                 with gzip.open(directory + '/' + str(file_)) as f:
                     df_ = pd.read_csv(f)
                     df_['Size'] = df_['Size']/1.049e+6
-                    self.df = df_
-                    self.df_length = len(self.df)
-
+                    self.tmp_df = df_
+                    self.tmp_df_length = len(self.tmp_df)
                 self.tmp_req_index = 0
-                self.get_dataframe(self.tmp_day_index)
 
             filename = self.tmp_df.loc[self.tmp_req_index, 'Filename']
             l.append(filename)
@@ -327,6 +330,7 @@ class CacheEnv(gym.Env):
                 return +size
     
     def get_next_request_stats(self):
+        
         self.curRequest += 1
 
         if (self.curRequest + 1) == self.df_length:
@@ -380,10 +384,9 @@ class CacheEnv(gym.Env):
             self._cache._WALLtime_hit += walltime
             self._cache._CPUtime_hit += cputime
         self._cache.update_recency()
-        self._cache._size +=size
         added = self._cache.update_policy(filename, filestats, hit)
         self._cache.after_request(filestats, hit, added)
-        print('Request: ' + str(self.curRequest) + ' / ' + str(self.df_length) + '  -  Occupancy: ' + str(round(self._cache.capacity,2)) + '%  -  ' + 'Hit rate: ' + str(round(self._cache._hit/(self._cache._hit + self._cache._miss)*100,2)) +'%', end="\r")
+        print('Request: ' + str(self.curRequest) + ' / ' + str(self.df_length) + '  -  Occupancy: ' + str(round(self._cache.capacity,2)) + '%  -  ' + 'Hit rate: ' + str(round(self._cache._hit/(self._cache._hit + self._cache._miss)*100,2)) +'%' + ' ' + str(self._cache._get_mean_size(self.curRequest) * len(self._cache._filesLRU) / self._cache._max_size))
 
     def __init__(self, one_hot: bool = True, start_month: int = 1, end_month: int = 2 ):
 
@@ -432,7 +435,7 @@ class CacheEnv(gym.Env):
         print('Environment initialized')
 
     def step(self, action):
-        print('Freeing memory ' + str(self._filesLRU_index) + '/' + str(len(self._filesLRUkeys)) + '  -  Occupancy: ' + str(round(self._cache.capacity,2)) + '%  - action: ' + str(action))
+        print('Freeing memory ' + str(self._filesLRU_index) + '/' + str(len(self._filesLRUkeys)) + '  -  Occupancy: ' + str(round(self._cache.capacity,2)) + '%  - action: ' + str(action) + ' ' + str(self._cache._get_mean_size(self.curRequest) * len(self._cache._filesLRU) / self._cache._max_size))
         curFilename, curSize = self.get_filename_and_size_of_current_cache_file()
 
         if action == 1:
@@ -440,7 +443,7 @@ class CacheEnv(gym.Env):
             self._cache._size -= curSize
             self._cache._deleted_data += curSize
         
-        with open('eviction_choices.csv', 'a') as file:
+        with open('eviction_choices_{}.csv'.format(self.eviction_counter), 'a') as file:
             writer = csv.writer(file)
             writer.writerow([action])
 
@@ -451,6 +454,10 @@ class CacheEnv(gym.Env):
             writer.writerow([reward])
 
         if self._filesLRU_index + 1 == len(self._filesLRUkeys):
+            self.eviction_counter += 1
+            with open('eviction_choices_{}.csv'.format(self.eviction_counter), 'w') as file:
+                writer = csv.writer(file)
+                writer.writerow(['eviction_choice'])
             with open('occupancy.csv', 'a') as file:
                 writer = csv.writer(file)
                 writer.writerow([self._cache.capacity])
@@ -472,9 +479,9 @@ class CacheEnv(gym.Env):
             writer = csv.writer(file)
             writer.writerow(['reward'])
 
-        with open('eviction_choices.csv', 'w') as file:
-            writer = csv.writer(file)
-            writer.writerow(['eviction_choice'])
+        #with open('eviction_choices.csv', 'w') as file:
+        #    writer = csv.writer(file)
+        #    writer.writerow(['eviction_choice'])
 
         with open('occupancy.csv', 'w') as file:
             writer = csv.writer(file)
@@ -486,6 +493,14 @@ class CacheEnv(gym.Env):
         self.curRequest = 0
         self.get_dataframe(self.curDay)
         self._filesLRU_index = -1
+        self.eviction_counter = 0
+
+        self.eviction_counter += 1
+        with open('eviction_choices_{}.csv'.format(self.eviction_counter), 'w') as file:
+            writer = csv.writer(file)
+            writer.writerow(['eviction_choice'])
+
+
 
         #counter =0
         while self._cache.capacity < self._cache._h_watermark:
