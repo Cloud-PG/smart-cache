@@ -399,6 +399,8 @@ def plot_measure(tools: list,
             if target == "cost":
                 points = values['written data'] + \
                     values['deleted data'] + values['read on miss data']
+            elif target == "miss":
+                points = values['read on miss data'] - values['written data']
             elif target == "network_in_saturation":
                 points = (values['read on miss data'] /
                           ((10000. / 8.) * 60. * 60. * 24.)) * 100.  # 10Gbit x 1 day
@@ -660,7 +662,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
     run_single_window_figs = []
     run_next_period_figs = []
 
-    pbar = tqdm(total=19, desc="Plot results", ascii=True)
+    pbar = tqdm(total=20, desc="Plot results", ascii=True)
 
     ###########################################################################
     # Size plot of full normal run
@@ -720,6 +722,29 @@ def plot_results(folder: str, results: dict, cache_size: float,
             plot_height=plot_height,
             read_on_hit=True,
             target="cost",
+            y_axis_label="MB",
+        )
+        run_full_normal_hit_rate_figs.append(cost_fig)
+    pbar.update(1)
+
+    ###########################################################################
+    # Miss plot of full normal run
+    ###########################################################################
+    with ignored(Exception):
+        cost_fig = plot_measure(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            x_range=size_fig.x_range,
+            y_axis_type="log",
+            title="Miss",
+            plot_width=plot_width,
+            plot_height=plot_height,
+            read_on_hit=True,
+            target="miss",
             y_axis_label="MB",
         )
         run_full_normal_hit_rate_figs.append(cost_fig)
