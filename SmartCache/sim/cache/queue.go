@@ -76,11 +76,13 @@ const (
 // Manager manages the files in cache
 type Manager struct {
 	files map[int64]*FileSupportData
+	queue []*FileSupportData
 }
 
 // Init initialize the struct
-func (man *Manager) Init(_ ...queueType) {
+func (man *Manager) Init() {
 	man.files = make(map[int64]*FileSupportData, 0)
+	man.queue = make([]*FileSupportData, 0)
 }
 
 // Check if a file is in cache
@@ -99,10 +101,11 @@ func (man Manager) Get(queue queueType) chan *FileSupportData {
 	ch := make(chan *FileSupportData)
 	go func() {
 		defer close(ch)
-
+		// Filtering trick
+		// https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
 		switch queue {
 		case LRUQueue:
-			var curQueue ByRecency
+			var curQueue ByRecency = man.queue[:0]
 			for _, file := range man.files {
 				curQueue = append(curQueue, file)
 			}
@@ -111,7 +114,7 @@ func (man Manager) Get(queue queueType) chan *FileSupportData {
 				ch <- file
 			}
 		case LFUQueue:
-			var curQueue ByFrequency
+			var curQueue ByFrequency = man.queue[:0]
 			for _, file := range man.files {
 				curQueue = append(curQueue, file)
 			}
@@ -120,7 +123,7 @@ func (man Manager) Get(queue queueType) chan *FileSupportData {
 				ch <- file
 			}
 		case SizeBigQueue:
-			var curQueue ByBigSize
+			var curQueue ByBigSize = man.queue[:0]
 			for _, file := range man.files {
 				curQueue = append(curQueue, file)
 			}
@@ -129,7 +132,7 @@ func (man Manager) Get(queue queueType) chan *FileSupportData {
 				ch <- file
 			}
 		case SizeSmallQueue:
-			var curQueue BySmallSize
+			var curQueue BySmallSize = man.queue[:0]
 			for _, file := range man.files {
 				curQueue = append(curQueue, file)
 			}
@@ -147,23 +150,22 @@ func (man *Manager) Remove(files []int64) {
 	for _, file := range files {
 		delete(man.files, file)
 	}
+	man.queue = man.queue[:len(man.files)]
 }
 
 // Insert a file into the queue manager
-func (man *Manager) Insert(file FileSupportData) error {
-	_, inCache := man.files[file.Filename]
-	if !inCache {
-		man.files[file.Filename] = &file
-		return nil
-	}
-	return errors.New("File already in manager")
+func (man *Manager) Insert(file FileSupportData) {
+	man.files[file.Filename] = &file
+	man.queue = append(man.queue, make([]*FileSupportData, 1)...)
 }
 
 // Update a file into the queue manager
 func (man *Manager) Update(file FileSupportData) error {
-	_, inCache := man.files[file.Filename]
+	curFile, inCache := man.files[file.Filename]
 	if inCache {
-		man.files[file.Filename] = &file
+		curFile.Frequency = file.Frequency
+		curFile.Recency = file.Recency
+		curFile.Size = file.Size
 		return nil
 	}
 	return errors.New("File not in manager")

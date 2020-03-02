@@ -21,7 +21,6 @@ type WeightedLRU struct {
 // Init the WeightedLRU struct
 func (cache *WeightedLRU) Init(_ ...interface{}) interface{} {
 	cache.LRUCache.Init()
-	cache.files.Init(LRUQueue)
 	return cache
 }
 

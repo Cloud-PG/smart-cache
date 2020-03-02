@@ -43,7 +43,6 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 	logger = zap.L()
 
 	cache.LRUCache.Init()
-	cache.files.Init(LRUQueue, LFUQueue, SizeBigQueue, SizeSmallQueue)
 
 	additionFeatureMap := args[0].(string)
 	evictionFeatureMap := args[1].(string)
@@ -92,8 +91,6 @@ func makeQtable(featureMap map[string]featuremap.Obj, featureOrder []string, rol
 // Clear the AIRL struct
 func (cache *AIRL) Clear() {
 	cache.LRUCache.Clear()
-	cache.LRUCache.Init()
-	cache.files.Init(LRUQueue, LFUQueue, SizeBigQueue, SizeSmallQueue)
 }
 
 // Dumps the AIRL cache
