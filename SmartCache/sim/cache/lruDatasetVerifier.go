@@ -22,9 +22,8 @@ type LRUDatasetVerifier struct {
 func (cache *LRUDatasetVerifier) Init(args ...interface{}) interface{} {
 	cache.LRUCache.Init()
 
-	cache.files = make(map[int64]float64)
+	cache.files = Manager{}
 	cache.stats.fileStats = make(map[int64]*FileStats)
-	cache.queue = make([]int64, 0)
 
 	cache.datasetFileMap = make(map[int64]bool)
 	datasetFilePath := args[0].(string)
@@ -68,14 +67,25 @@ func (cache *LRUDatasetVerifier) UpdatePolicy(request *Request, fileStats *FileS
 				cache.Free(requestedFileSize, false)
 			}
 			if cache.Size()+requestedFileSize <= cache.MaxSize {
-				cache.files[requestedFilename] = requestedFileSize
-				cache.queue = append(cache.queue, requestedFilename)
+				cache.files.Insert(FileSupportData{
+					Filename:  request.Filename,
+					Size:      request.Size,
+					Frequency: fileStats.TotRequests(),
+					Recency:   fileStats.DeltaLastRequest,
+				})
+
 				cache.size += requestedFileSize
+				fileStats.addInCache(nil)
 				added = true
 			}
 		}
 	} else {
-		cache.UpdateFileInQueue(requestedFilename)
+		cache.files.Update(FileSupportData{
+			Filename:  request.Filename,
+			Size:      request.Size,
+			Frequency: fileStats.TotRequests(),
+			Recency:   fileStats.DeltaLastRequest,
+		})
 	}
 
 	return added

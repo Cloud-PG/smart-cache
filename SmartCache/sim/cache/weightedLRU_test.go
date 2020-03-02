@@ -66,10 +66,8 @@ func TestWeightedLRUClear(t *testing.T) {
 		t.Fatalf("Written data error -> Expected %f but got %f", 0., testCache.DataWritten())
 	} else if testCache.DataReadOnHit() != 0. {
 		t.Fatalf("Read on hit error -> Expected %f but got %f", 0., testCache.DataReadOnHit())
-	} else if len(testCache.queue) != 0 {
-		t.Fatalf("Queue error -> Expected %d but got %d", 0, len(testCache.queue))
-	} else if len(testCache.files) != 0 {
-		t.Fatalf("Cache error -> Expected %d but got %d", 0, len(testCache.files))
+	} else if testCache.files.Len() != 0 {
+		t.Fatalf("Queue error -> Expected %d but got %d", 0, testCache.files.Len())
 	}
 }
 

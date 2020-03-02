@@ -1,7 +1,6 @@
 package cache
 
 import (
-	"fmt"
 	_ "fmt"
 	"testing"
 	"time"
@@ -63,10 +62,10 @@ func TestLRUCacheClear(t *testing.T) {
 		t.Fatalf("Written data error -> Expected %f but got %f", 0., testCache.DataWritten())
 	} else if testCache.DataReadOnHit() != 0. {
 		t.Fatalf("Read on hit error -> Expected %f but got %f", 0., testCache.DataReadOnHit())
-	} else if len(testCache.queue) != 0 {
-		t.Fatalf("Queue error -> Expected %d but got %d", 0, len(testCache.queue))
-	} else if len(testCache.files) != 0 {
-		t.Fatalf("Cache error -> Expected %d but got %d", 0, len(testCache.files))
+	} else if testCache.files.Len() != 0 {
+		t.Fatalf("Queue error -> Expected %d but got %d", 0, testCache.files.Len())
+	} else if testCache.files.Len() != 0 {
+		t.Fatalf("Cache error -> Expected %d but got %d", 0, testCache.files.Len())
 	}
 }
 
@@ -79,27 +78,17 @@ func TestLRUCacheInsert(t *testing.T) {
 	testCache.Init()
 
 	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
-	fmt.Println("step 0", testCache.queue)
 	GetFile(testCache, int64(1), size2, floatZero, floatZero, time.Now().Unix())
-	fmt.Println("step 1", testCache.queue)
 	GetFile(testCache, int64(2), size1, floatZero, floatZero, time.Now().Unix())
-	fmt.Println("step 2", testCache.queue)
 	GetFile(testCache, int64(3), size1, floatZero, floatZero, time.Now().Unix())
-	fmt.Println("step 3", testCache.queue)
 	GetFile(testCache, int64(1), size2, floatZero, floatZero, time.Now().Unix())
-	fmt.Println("step 4", testCache.queue)
 	GetFile(testCache, int64(1), size2, floatZero, floatZero, time.Now().Unix())
-	fmt.Println("step 5", testCache.queue)
 	GetFile(testCache, int64(1), size2, floatZero, floatZero, time.Now().Unix())
-	fmt.Println("step 6", testCache.queue)
 	GetFile(testCache, int64(4), size1, floatZero, floatZero, time.Now().Unix())
-	fmt.Println("step 7", testCache.queue)
 	GetFile(testCache, int64(3), size1, floatZero, floatZero, time.Now().Unix())
-	fmt.Println("step 8", testCache.queue)
 	GetFile(testCache, int64(4), size1, floatZero, floatZero, time.Now().Unix())
-	fmt.Println("step 10", testCache.queue)
 
-	// for tmpVal := testCache.queue.Front(); tmpVal != nil; tmpVal = tmpVal.Next() {
+	// for tmpVal := testCache.policyLRU.Front(); tmpVal != nil; tmpVal = tmpVal.Next() {
 	// 	println(tmpVal.Value.(string))
 	// }
 	// println()
@@ -112,10 +101,6 @@ func TestLRUCacheInsert(t *testing.T) {
 		t.Fatalf("Written data error -> Expected %f but got %f", 6.0, testCache.DataWritten())
 	} else if testCache.DataReadOnHit() != 8. {
 		t.Fatalf("Read on hit error -> Expected %f but got %f", 8., testCache.DataReadOnHit())
-	} else if testCache.queue[len(testCache.queue)-1] != 4 {
-		t.Fatalf("Element error -> Expected %d but got %d", 4, testCache.queue[len(testCache.queue)-1])
-	} else if testCache.queue[0] != 2 {
-		t.Fatalf("Element error -> Expected %d but got %d", 2, testCache.queue[0])
 	}
 }
 

@@ -21,7 +21,7 @@ type WeightedLRU struct {
 // Init the WeightedLRU struct
 func (cache *WeightedLRU) Init(_ ...interface{}) interface{} {
 	cache.LRUCache.Init()
-
+	cache.files.Init(LRUQueue)
 	return cache
 }
 
@@ -37,12 +37,9 @@ func (cache *WeightedLRU) Dumps() [][]byte {
 	var newLine = []byte("\n")
 
 	// ----- Files -----
-	for filename, size := range cache.files {
+	for file := range cache.files.Get(LRUQueue) {
 		dumpInfo, _ := json.Marshal(DumpInfo{Type: "FILES"})
-		dumpFile, _ := json.Marshal(FileDump{
-			Filename: filename,
-			Size:     size,
-		})
+		dumpFile, _ := json.Marshal(file)
 		record, _ := json.Marshal(DumpRecord{
 			Info: string(dumpInfo),
 			Data: string(dumpFile),
@@ -75,9 +72,9 @@ func (cache *WeightedLRU) Loads(inputString [][]byte) {
 		json.Unmarshal([]byte(curRecord.Info), &curRecordInfo)
 		switch curRecordInfo.Type {
 		case "FILES":
-			var curFile FileDump
+			var curFile FileSupportData
 			json.Unmarshal([]byte(curRecord.Data), &curFile)
-			cache.files[curFile.Filename] = curFile.Size
+			cache.files.Insert(curFile)
 			cache.size += curFile.Size
 		case "STATS":
 			json.Unmarshal([]byte(curRecord.Data), &cache.stats.fileStats)
@@ -98,7 +95,6 @@ func (cache *WeightedLRU) UpdatePolicy(request *Request, fileStats *FileStats, h
 	var added = false
 
 	requestedFileSize := request.Size
-	requestedFilename := request.Filename
 
 	if !hit {
 
@@ -112,14 +108,24 @@ func (cache *WeightedLRU) UpdatePolicy(request *Request, fileStats *FileStats, h
 			cache.Free(requestedFileSize, false)
 		}
 		if cache.Size()+requestedFileSize <= cache.MaxSize {
-			cache.files[requestedFilename] = requestedFileSize
-			cache.queue = append(cache.queue, requestedFilename)
+			cache.files.Insert(FileSupportData{
+				Filename:  request.Filename,
+				Size:      request.Size,
+				Frequency: fileStats.TotRequests(),
+				Recency:   fileStats.DeltaLastRequest,
+			})
+
 			cache.size += requestedFileSize
 			fileStats.addInCache(nil)
 			added = true
 		}
 	} else {
-		cache.UpdateFileInQueue(requestedFilename)
+		cache.files.Update(FileSupportData{
+			Filename:  request.Filename,
+			Size:      request.Size,
+			Frequency: fileStats.TotRequests(),
+			Recency:   fileStats.DeltaLastRequest,
+		})
 	}
 	return added
 }

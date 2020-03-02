@@ -105,12 +105,9 @@ func (cache *AINN) Dumps() [][]byte {
 	var newLine = []byte("\n")
 
 	// ----- Files -----
-	for filename, size := range cache.files {
+	for file := range cache.files.Get(LRUQueue) {
 		dumpInfo, _ := json.Marshal(DumpInfo{Type: "FILES"})
-		dumpFile, _ := json.Marshal(FileDump{
-			Filename: filename,
-			Size:     size,
-		})
+		dumpFile, _ := json.Marshal(file)
 		record, _ := json.Marshal(DumpRecord{
 			Info: string(dumpInfo),
 			Data: string(dumpFile),
@@ -144,9 +141,9 @@ func (cache *AINN) Loads(inputString [][]byte) {
 		json.Unmarshal([]byte(curRecord.Info), &curRecordInfo)
 		switch curRecordInfo.Type {
 		case "FILES":
-			var curFile FileDump
+			var curFile FileSupportData
 			json.Unmarshal([]byte(curRecord.Data), &curFile)
-			cache.files[curFile.Filename] = curFile.Size
+			cache.files.Insert(curFile)
 			cache.size += curFile.Size
 		case "STATS":
 			json.Unmarshal([]byte(curRecord.Data), &cache.stats.fileStats)
@@ -253,10 +250,10 @@ func (cache *AINN) composeFeatures(vars ...interface{}) []float64 {
 }
 
 // GetPoints returns the total amount of points for the files in cache
-func (cache AINN) GetPoints() float64 {
+func (cache *AINN) GetPoints() float64 {
 	points := 0.0
-	for filename := range cache.files {
-		points += cache.stats.updateFilesPoints(filename, &cache.curTime)
+	for file := range cache.files.Get(LRUQueue) {
+		points += cache.stats.updateFilesPoints(file.Filename, &cache.curTime)
 	}
 	return float64(points)
 }
@@ -332,14 +329,24 @@ func (cache *AINN) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			cache.Free(requestedFileSize, false)
 		}
 		if cache.Size()+requestedFileSize <= cache.MaxSize {
-			cache.files[requestedFilename] = requestedFileSize
-			cache.queue = append(cache.queue, requestedFilename)
+			cache.files.Insert(FileSupportData{
+				Filename:  request.Filename,
+				Size:      request.Size,
+				Frequency: fileStats.TotRequests(),
+				Recency:   fileStats.DeltaLastRequest,
+			})
+
 			cache.size += requestedFileSize
+			fileStats.addInCache(nil)
 			added = true
 		}
-
 	} else {
-		cache.UpdateFileInQueue(requestedFilename)
+		cache.files.Update(FileSupportData{
+			Filename:  request.Filename,
+			Size:      request.Size,
+			Frequency: fileStats.TotRequests(),
+			Recency:   fileStats.DeltaLastRequest,
+		})
 	}
 
 	return added

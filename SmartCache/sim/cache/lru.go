@@ -18,8 +18,7 @@ import (
 // LRUCache cache
 type LRUCache struct {
 	stats                              Stats
-	files                              map[int64]float64
-	queue                              []int64
+	files                              Manager
 	hit, miss, size, MaxSize           float64
 	hitCPUTime, missCPUTime            float64
 	hitWTime, missWTime                float64
@@ -33,8 +32,8 @@ type LRUCache struct {
 // Init the LRU struct
 func (cache *LRUCache) Init(_ ...interface{}) interface{} {
 	cache.stats.Init()
-	cache.files = make(map[int64]float64)
-	cache.queue = make([]int64, 0)
+	cache.files.Init()
+
 	if cache.HighWaterMark == 0.0 {
 		cache.HighWaterMark = 95.0
 	}
@@ -51,15 +50,16 @@ func (cache *LRUCache) Init(_ ...interface{}) interface{} {
 
 // ClearFiles remove the cache files
 func (cache *LRUCache) ClearFiles() {
-	cache.files = make(map[int64]float64)
+	cache.files.Init()
 	cache.size = 0.
 }
 
 // Clear the LRU struct
 func (cache *LRUCache) Clear() {
 	cache.stats.Init()
+	cache.files.Init()
+
 	cache.ClearFiles()
-	cache.queue = make([]int64, 0)
 	cache.hit = 0.
 	cache.miss = 0.
 	cache.dataWritten = 0.
@@ -98,12 +98,9 @@ func (cache *LRUCache) Dumps() [][]byte {
 	var newLine = []byte("\n")
 
 	// Files
-	for filename, size := range cache.files {
+	for file := range cache.files.Get(LRUQueue) {
 		dumpInfo, _ := json.Marshal(DumpInfo{Type: "FILES"})
-		dumpFile, _ := json.Marshal(FileDump{
-			Filename: filename,
-			Size:     size,
-		})
+		dumpFile, _ := json.Marshal(file)
 		record, _ := json.Marshal(DumpRecord{
 			Info: string(dumpInfo),
 			Data: string(dumpFile),
@@ -138,16 +135,16 @@ func (cache *LRUCache) Loads(inputString [][]byte) {
 		json.Unmarshal([]byte(curRecord.Info), &curRecordInfo)
 		switch curRecordInfo.Type {
 		case "FILES":
-			var curFile FileDump
+			var curFile FileSupportData
 			json.Unmarshal([]byte(curRecord.Data), &curFile)
-			cache.files[curFile.Filename] = curFile.Size
+			cache.files.Insert(curFile)
 			cache.size += curFile.Size
 		}
 	}
 }
 
 // Load the LRUCache cache
-func (cache LRUCache) Load(filename string) [][]byte {
+func (cache *LRUCache) Load(filename string) [][]byte {
 	logger.Info("Dump cache", zap.String("filename", filename))
 
 	inFile, err := os.Open(filename)
@@ -274,10 +271,8 @@ func (cache *LRUCache) BeforeRequest(request *Request, hit bool) *FileStats {
 // UpdatePolicy of LRU cache
 func (cache *LRUCache) UpdatePolicy(request *Request, fileStats *FileStats, hit bool) bool {
 	var (
-		added = false
-
+		added             = false
 		requestedFileSize = request.Size
-		requestedFilename = request.Filename
 	)
 
 	if !hit {
@@ -285,14 +280,24 @@ func (cache *LRUCache) UpdatePolicy(request *Request, fileStats *FileStats, hit 
 			cache.Free(requestedFileSize, false)
 		}
 		if cache.Size()+requestedFileSize <= cache.MaxSize {
-			cache.files[requestedFilename] = requestedFileSize
-			cache.queue = append(cache.queue, requestedFilename)
+			cache.files.Insert(FileSupportData{
+				Filename:  request.Filename,
+				Size:      request.Size,
+				Frequency: fileStats.TotRequests(),
+				Recency:   fileStats.DeltaLastRequest,
+			})
+
 			cache.size += requestedFileSize
 			fileStats.addInCache(nil)
 			added = true
 		}
 	} else {
-		cache.UpdateFileInQueue(requestedFilename)
+		cache.files.Update(FileSupportData{
+			Filename:  request.Filename,
+			Size:      request.Size,
+			Frequency: fileStats.TotRequests(),
+			Recency:   fileStats.DeltaLastRequest,
+		})
 	}
 	return added
 }
@@ -326,17 +331,6 @@ func (cache *LRUCache) AfterRequest(request *Request, hit bool, added bool) {
 	}
 }
 
-// UpdateFileInQueue move the file requested on the back of the queue
-func (cache *LRUCache) UpdateFileInQueue(filename int64) {
-	for idx, elm := range cache.queue {
-		if elm == filename {
-			cache.queue = append(cache.queue[:idx], cache.queue[idx+1:]...)
-			cache.queue = append(cache.queue, elm)
-			break
-		}
-	}
-}
-
 // Free removes files from the cache
 func (cache *LRUCache) Free(amount float64, percentage bool) float64 {
 	logger.Debug(
@@ -355,27 +349,29 @@ func (cache *LRUCache) Free(amount float64, percentage bool) float64 {
 		sizeToDelete = amount
 	}
 	if sizeToDelete > 0. {
-		var maxIdx2Delete int
-		for idx, file2Delete := range cache.queue {
-			logger.Debug("delete", zap.Int64("filename", file2Delete))
-			fileSize := cache.files[file2Delete]
-			curFileStats := cache.stats.Get(file2Delete)
-			// Update sizes
-			cache.size -= fileSize
-			cache.dataDeleted += fileSize
-			totalDeleted += fileSize
+		deletedFiles := make([]int64, 0)
+		for curFile := range cache.files.Get(LRUQueue) {
+			logger.Debug("delete",
+				zap.Int64("filename", curFile.Filename),
+				zap.Float64("fileSize", curFile.Size),
+				zap.Float64("cacheSize", cache.Size()),
+			)
 
-			// Remove
-			delete(cache.files, file2Delete)
+			curFileStats := cache.stats.Get(curFile.Filename)
 			curFileStats.removeFromCache()
-			maxIdx2Delete = idx
+
+			// Update sizes
+			cache.size -= curFile.Size
+			cache.dataDeleted += curFile.Size
+			totalDeleted += curFile.Size
+
+			deletedFiles = append(deletedFiles, curFile.Filename)
 
 			if totalDeleted >= sizeToDelete {
 				break
 			}
 		}
-		// Remove from queue
-		cache.queue = cache.queue[maxIdx2Delete+1:]
+		cache.files.Remove(deletedFiles)
 	}
 	return totalDeleted
 }
@@ -394,7 +390,7 @@ func (cache *LRUCache) CheckWatermark() bool {
 }
 
 // HitRate of the cache
-func (cache LRUCache) HitRate() float64 {
+func (cache *LRUCache) HitRate() float64 {
 	perc := (cache.hit / (cache.hit + cache.miss)) * 100.
 	if math.IsNaN(float64(perc)) {
 		return 0.0
@@ -403,7 +399,7 @@ func (cache LRUCache) HitRate() float64 {
 }
 
 // HitOverMiss of the cache
-func (cache LRUCache) HitOverMiss() float64 {
+func (cache *LRUCache) HitOverMiss() float64 {
 	if cache.hit == 0. || cache.miss == 0. {
 		return 0.
 	}
@@ -411,117 +407,113 @@ func (cache LRUCache) HitOverMiss() float64 {
 }
 
 // WeightedHitRate of the cache
-func (cache LRUCache) WeightedHitRate() float64 {
+func (cache *LRUCache) WeightedHitRate() float64 {
 	return cache.HitRate() * cache.dataReadOnHit
 }
 
 // Size of the cache
-func (cache LRUCache) Size() float64 {
+func (cache *LRUCache) Size() float64 {
 	return cache.size
 }
 
 // Capacity of the cache
-func (cache LRUCache) Capacity() float64 {
+func (cache *LRUCache) Capacity() float64 {
 	return (cache.Size() / cache.MaxSize) * 100.
 }
 
 // DataWritten of the cache
-func (cache LRUCache) DataWritten() float64 {
+func (cache *LRUCache) DataWritten() float64 {
 	return cache.dataWritten
 }
 
 // DataRead of the cache
-func (cache LRUCache) DataRead() float64 {
+func (cache *LRUCache) DataRead() float64 {
 	return cache.dataRead
 }
 
 // DataReadOnHit of the cache
-func (cache LRUCache) DataReadOnHit() float64 {
+func (cache *LRUCache) DataReadOnHit() float64 {
 	return cache.dataReadOnHit
 }
 
 // DataReadOnMiss of the cache
-func (cache LRUCache) DataReadOnMiss() float64 {
+func (cache *LRUCache) DataReadOnMiss() float64 {
 	return cache.dataReadOnMiss
 }
 
 // DataDeleted of the cache
-func (cache LRUCache) DataDeleted() float64 {
+func (cache *LRUCache) DataDeleted() float64 {
 	return cache.dataDeleted
 }
 
 // Check returns if a file is in cache or not
-func (cache LRUCache) Check(key int64) bool {
-	_, ok := cache.files[key]
-	return ok
+func (cache *LRUCache) Check(key int64) bool {
+	return cache.files.Check(key)
 }
 
 // ExtraStats for output
-func (cache LRUCache) ExtraStats() string {
+func (cache *LRUCache) ExtraStats() string {
 	return "NONE"
 }
 
 // ExtraOutput for output specific information
-func (cache LRUCache) ExtraOutput(info string) string {
+func (cache *LRUCache) ExtraOutput(info string) string {
 	return "NONE"
 }
 
 // CPUEff returns the CPU efficiency
-func (cache LRUCache) CPUEff() float64 {
+func (cache *LRUCache) CPUEff() float64 {
 	totCPUTime := cache.hitCPUTime + cache.missCPUTime
 	totWtime := cache.hitWTime + (cache.missWTime * 1.15)
 	return (totCPUTime / totWtime) * 100.
 }
 
 // CPUHitEff returns the CPU efficiency for hit data
-func (cache LRUCache) CPUHitEff() float64 {
+func (cache *LRUCache) CPUHitEff() float64 {
 	return (cache.hitCPUTime / cache.hitWTime) * 100.
 }
 
 // CPUMissEff returns the CPU efficiency for miss data
-func (cache LRUCache) CPUMissEff() float64 {
+func (cache *LRUCache) CPUMissEff() float64 {
 	// Add the 15% to wall time -> estimated loss time to retrieve the files
 	return (cache.missCPUTime / (cache.missWTime * 1.15)) * 100.
 }
 
 // CPUEffUpperBound returns the ideal CPU efficiency upper bound
-func (cache LRUCache) CPUEffUpperBound() float64 {
+func (cache *LRUCache) CPUEffUpperBound() float64 {
 	return (cache.idealCPUTime / cache.idealWTime) * 100.
 }
 
 // CPUEffLowerBound returns the ideal CPU efficiency lower bound
-func (cache LRUCache) CPUEffLowerBound() float64 {
+func (cache *LRUCache) CPUEffLowerBound() float64 {
 	return (cache.idealCPUTime / (cache.idealWTime * 1.15)) * 100.
 }
 
 // MeanSize returns the average size of the files in cache
-func (cache LRUCache) MeanSize() float64 {
+func (cache *LRUCache) MeanSize() float64 {
 	// return cache.DataWritten() / float64(len(cache.files))
 	totSize := 0.0
-	for filename := range cache.files {
-		fileStats := cache.stats.Get(filename)
-		totSize += fileStats.Size
+	for file := range cache.files.Get(LRUQueue) {
+		totSize += file.Size
 	}
-	return totSize / float64(len(cache.files))
+	return totSize / float64(cache.files.Len())
 }
 
 // MeanFrequency returns the average frequency of the files in cache
-func (cache LRUCache) MeanFrequency() float64 {
+func (cache *LRUCache) MeanFrequency() float64 {
 	// return cache.DataWritten() / (cache.hit + cache.miss)
 	totRequests := 0.0
-	for filename := range cache.files {
-		fileStats := cache.stats.Get(filename)
-		totRequests += float64(fileStats.TotRequests())
+	for file := range cache.files.Get(LRUQueue) {
+		totRequests += float64(file.Frequency)
 	}
-	return totRequests / float64(len(cache.files))
+	return totRequests / float64(cache.files.Len())
 }
 
 // MeanRecency returns the average recency of the files in cache
-func (cache LRUCache) MeanRecency() float64 {
+func (cache *LRUCache) MeanRecency() float64 {
 	totRecency := 0.0
-	for filename := range cache.files {
-		fileStats := cache.stats.Get(filename)
-		totRecency += float64(fileStats.DeltaLastRequest)
+	for file := range cache.files.Get(LRUQueue) {
+		totRecency += float64(file.Recency)
 	}
-	return totRecency / float64(len(cache.files))
+	return totRecency / float64(cache.files.Len())
 }

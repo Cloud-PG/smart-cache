@@ -43,9 +43,11 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 	logger = zap.L()
 
 	cache.LRUCache.Init()
+	cache.files.Init(LRUQueue, LFUQueue, SizeBigQueue, SizeSmallQueue)
 
 	additionFeatureMap := args[0].(string)
 	evictionFeatureMap := args[1].(string)
+	initEpsilon := args[2].(float64)
 
 	logger.Info("Feature maps", zap.String("addition map", additionFeatureMap), zap.String("eviction map", evictionFeatureMap))
 
@@ -64,13 +66,13 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 	}
 	sort.Strings(cache.evictionFeatureMapOrder)
 
-	cache.additionTable = makeQtable(cache.additionFeatureMap, cache.additionFeatureMapOrder, qlearn.AdditionTable)
-	cache.evictionTable = makeQtable(cache.evictionFeatureMap, cache.evictionFeatureMapOrder, qlearn.EvictionTable)
+	cache.additionTable = makeQtable(cache.additionFeatureMap, cache.additionFeatureMapOrder, qlearn.AdditionTable, initEpsilon)
+	cache.evictionTable = makeQtable(cache.evictionFeatureMap, cache.evictionFeatureMapOrder, qlearn.EvictionTable, initEpsilon)
 
 	return nil
 }
 
-func makeQtable(featureMap map[string]featuremap.Obj, featureOrder []string, role qlearn.QTableRole) *qlearn.QTable {
+func makeQtable(featureMap map[string]featuremap.Obj, featureOrder []string, role qlearn.QTableRole, initEpsilon float64) *qlearn.QTable {
 	curTable := &qlearn.QTable{}
 	inputLengths := []int{}
 	for _, featureName := range featureOrder {
@@ -82,7 +84,7 @@ func makeQtable(featureMap map[string]featuremap.Obj, featureOrder []string, rol
 		inputLengths = append(inputLengths, curLen)
 	}
 	logger.Info("[Generate QTable]")
-	curTable.Init(inputLengths, role)
+	curTable.Init(inputLengths, role, initEpsilon)
 	logger.Info("[Done]")
 	return curTable
 }
@@ -91,6 +93,7 @@ func makeQtable(featureMap map[string]featuremap.Obj, featureOrder []string, rol
 func (cache *AIRL) Clear() {
 	cache.LRUCache.Clear()
 	cache.LRUCache.Init()
+	cache.files.Init(LRUQueue, LFUQueue, SizeBigQueue, SizeSmallQueue)
 }
 
 // Dumps the AIRL cache
@@ -99,12 +102,9 @@ func (cache *AIRL) Dumps() [][]byte {
 	var newLine = []byte("\n")
 
 	// ----- Files -----
-	for filename, size := range cache.files {
+	for file := range cache.files.Get(LRUQueue) {
 		dumpInfo, _ := json.Marshal(DumpInfo{Type: "FILES"})
-		dumpFile, _ := json.Marshal(FileDump{
-			Filename: filename,
-			Size:     size,
-		})
+		dumpFile, _ := json.Marshal(file)
 		record, _ := json.Marshal(DumpRecord{
 			Info: string(dumpInfo),
 			Data: string(dumpFile),
@@ -181,9 +181,9 @@ func (cache *AIRL) Loads(inputString [][]byte) {
 		}
 		switch curRecordInfo.Type {
 		case "FILES":
-			var curFile FileDump
-			unmarshalErr = json.Unmarshal([]byte(curRecord.Data), &curFile)
-			cache.files[curFile.Filename] = curFile.Size
+			var curFile FileSupportData
+			json.Unmarshal([]byte(curRecord.Data), &curFile)
+			cache.files.Insert(curFile)
 			cache.size += curFile.Size
 		case "STATS":
 			var curFileStats FileStats
@@ -319,10 +319,10 @@ func (cache *AIRL) getState(request *Request, fileStats *FileStats, featureOrder
 }
 
 // GetPoints returns the total amount of points for the files in cache
-func (cache AIRL) GetPoints() float64 {
+func (cache *AIRL) GetPoints() float64 {
 	points := 0.0
-	for filename := range cache.files {
-		points += cache.stats.updateFilesPoints(filename, &cache.curTime)
+	for file := range cache.files.Get(LRUQueue) {
+		points += cache.stats.updateFilesPoints(file.Filename, &cache.curTime)
 	}
 	return float64(points)
 }
@@ -363,11 +363,9 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) *FileStats {
 // UpdatePolicy of AIRL cache
 func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool) bool {
 	var (
-		added     = false
-		curAction qlearn.ActionType
-		curState  string
-
-		requestedFilename = request.Filename
+		added             = false
+		curAction         qlearn.ActionType
+		curState          string
 		requestedFileSize = request.Size
 	)
 
@@ -424,12 +422,16 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				cache.Free(requestedFileSize, false)
 			}
 			if cache.Size()+requestedFileSize <= cache.MaxSize {
-				cache.files[requestedFilename] = requestedFileSize
-				cache.queue = append(cache.queue, requestedFilename)
-				cache.size += requestedFileSize
-				added = true
+				cache.files.Insert(FileSupportData{
+					Filename:  request.Filename,
+					Size:      request.Size,
+					Frequency: fileStats.TotRequests(),
+					Recency:   fileStats.DeltaLastRequest,
+				})
 
+				cache.size += requestedFileSize
 				fileStats.addInCache(&request.DayTime)
+				added = true
 				// fileStats.updateFilePoints(&cache.curTime)
 				// cache.points += fileStats.Points
 			}
@@ -438,7 +440,12 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			// ##### HIT branch  #####
 			// #######################
 			logger.Debug("Normal hit branch")
-			cache.UpdateFileInQueue(requestedFilename)
+			cache.files.Update(FileSupportData{
+				Filename:  request.Filename,
+				Size:      request.Size,
+				Frequency: fileStats.TotRequests(),
+				Recency:   fileStats.DeltaLastRequest,
+			})
 		}
 	} else {
 		// ###################################
@@ -492,12 +499,17 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				cache.Free(requestedFileSize, false)
 			}
 			if cache.Size()+requestedFileSize <= cache.MaxSize {
-				cache.files[requestedFilename] = requestedFileSize
-				cache.queue = append(cache.queue, requestedFilename)
+				cache.files.Insert(FileSupportData{
+					Filename:  request.Filename,
+					Size:      request.Size,
+					Frequency: fileStats.TotRequests(),
+					Recency:   fileStats.DeltaLastRequest,
+				})
+
 				cache.size += requestedFileSize
+				fileStats.addInCache(&request.DayTime)
 				added = true
 
-				fileStats.addInCache(&request.DayTime)
 				// fileStats.updateFilePoints(&cache.curTime)
 				// cache.points += fileStats.Points
 			}
@@ -533,7 +545,12 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			// #######################
 			// ##### HIT branch  #####
 			// #######################
-			cache.UpdateFileInQueue(requestedFilename)
+			cache.files.Update(FileSupportData{
+				Filename:  request.Filename,
+				Size:      request.Size,
+				Frequency: fileStats.TotRequests(),
+				Recency:   fileStats.DeltaLastRequest,
+			})
 
 			// ------------------------------
 			// QLearn - hit reward on best action
@@ -571,54 +588,6 @@ func (cache *AIRL) AfterRequest(request *Request, hit bool, added bool) {
 	} else {
 		cache.dailyReadOnMiss += request.Size
 	}
-}
-
-func (cache *AIRL) deleteFromList(sizeToDelete float64, list []fileSupportData) []int64 {
-	totalDeleted := 0.0
-	deletedFiles := []int64{}
-	for _, curFile := range list {
-		curFilename2Delete := curFile.Filename
-		fileSize := cache.files[curFilename2Delete]
-		curStats := cache.stats.Get(curFilename2Delete)
-		// Update sizes
-		cache.size -= fileSize
-		cache.dataDeleted += fileSize
-		totalDeleted += fileSize
-
-		// curFilePoints := curStats.Points
-		// cache.points -= curFilePoints
-
-		// Update sizes
-		cache.size -= fileSize
-		cache.dataDeleted += fileSize
-		totalDeleted += fileSize
-		curStats.removeFromCache()
-
-		delete(cache.files, curFilename2Delete)
-		deletedFiles = append(deletedFiles, curFilename2Delete)
-
-		if totalDeleted >= sizeToDelete {
-			break
-		}
-	}
-	return deletedFiles
-}
-
-func (cache *AIRL) removeFilesFromQueue(deletedFiles []int64) {
-	newQueue := []int64{}
-	for _, curFile := range cache.queue {
-		found := false
-		for _, filename := range deletedFiles {
-			if curFile == filename {
-				found = true
-				break
-			}
-		}
-		if !found {
-			newQueue = append(newQueue, curFile)
-		}
-	}
-	cache.queue = newQueue
 }
 
 // Free removes files from the cache
@@ -663,73 +632,38 @@ func (cache *AIRL) Free(amount float64, percentage bool) float64 {
 
 		cache.qEvictionPrevState = curState
 		cache.qEvictionPrevAction = curAction
+		var curPolicy queueType
 
 		switch curAction {
 		case qlearn.ActionRemoveWithLRU:
-			var maxIdx2Delete int
-			for idx, curFilename2Delete := range cache.queue {
-				fileSize := cache.files[curFilename2Delete]
-				curStats := cache.stats.Get(curFilename2Delete)
-				// Update sizes
-				cache.size -= fileSize
-				cache.dataDeleted += fileSize
-				totalDeleted += fileSize
-
-				// curFilePoints := curStats.Points
-				// cache.points -= curFilePoints
-
-				// Update sizes
-				cache.size -= fileSize
-				cache.dataDeleted += fileSize
-				totalDeleted += fileSize
-				curStats.removeFromCache()
-
-				// Remove from queue
-				delete(cache.files, curFilename2Delete)
-				maxIdx2Delete = idx
-
-				if totalDeleted >= sizeToDelete {
-					break
-				}
-			}
-			cache.queue = cache.queue[maxIdx2Delete+1:]
+			curPolicy = LRUQueue
 		case qlearn.ActionRemoveWithLFU:
-			var lfuQueue ByFrequency = make([]fileSupportData, 0)
-			for filename := range cache.files {
-				fileStats := cache.stats.Get(filename)
-				lfuQueue = append(lfuQueue, fileSupportData{
-					Filename:  filename,
-					Frequency: fileStats.TotRequests(),
-				})
-			}
-			sort.Sort(lfuQueue)
-			deletedFiles := cache.deleteFromList(sizeToDelete, lfuQueue)
-			cache.removeFilesFromQueue(deletedFiles)
+			curPolicy = LFUQueue
 		case qlearn.ActionRemoveWithSizeBig:
-			var bigSizeQueue ByBigSize = make([]fileSupportData, 0)
-			for filename := range cache.files {
-				fileStats := cache.stats.Get(filename)
-				bigSizeQueue = append(bigSizeQueue, fileSupportData{
-					Filename: filename,
-					Size:     fileStats.Size,
-				})
-			}
-			sort.Sort(bigSizeQueue)
-			deletedFiles := cache.deleteFromList(sizeToDelete, bigSizeQueue)
-			cache.removeFilesFromQueue(deletedFiles)
+			curPolicy = SizeBigQueue
 		case qlearn.ActionRemoveWithSizeSmall:
-			var smallSizeQueue BySmallSize = make([]fileSupportData, 0)
-			for filename := range cache.files {
-				fileStats := cache.stats.Get(filename)
-				smallSizeQueue = append(smallSizeQueue, fileSupportData{
-					Filename: filename,
-					Size:     fileStats.Size,
-				})
-			}
-			sort.Sort(smallSizeQueue)
-			deletedFiles := cache.deleteFromList(sizeToDelete, smallSizeQueue)
-			cache.removeFilesFromQueue(deletedFiles)
+			curPolicy = SizeSmallQueue
 		}
+
+		deletedFiles := make([]int64, 0)
+		for curFile := range cache.files.Get(curPolicy) {
+			logger.Debug("delete", zap.Int64("filename", curFile.Filename))
+
+			curFileStats := cache.stats.Get(curFile.Filename)
+			curFileStats.removeFromCache()
+
+			// Update sizes
+			cache.size -= curFile.Size
+			cache.dataDeleted += curFile.Size
+			totalDeleted += curFile.Size
+
+			deletedFiles = append(deletedFiles, curFile.Filename)
+
+			if totalDeleted >= sizeToDelete {
+				break
+			}
+		}
+		cache.files.Remove(deletedFiles)
 
 	}
 
@@ -759,7 +693,7 @@ func (cache *AIRL) ExtraStats() string {
 }
 
 // ExtraOutput for output specific information
-func (cache AIRL) ExtraOutput(info string) string {
+func (cache *AIRL) ExtraOutput(info string) string {
 	result := ""
 	switch info {
 	case "additionQtable":
