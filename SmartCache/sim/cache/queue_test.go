@@ -93,7 +93,7 @@ func TestLRUQueue(t *testing.T) {
 func TestLFUQueue(t *testing.T) {
 	r := rand.New(rand.NewSource(42))
 	man := Manager{}
-	man.Init(LFUQueue)
+	man.Init()
 
 	insertedFiles := []int64{}
 
@@ -139,7 +139,7 @@ func TestLFUQueue(t *testing.T) {
 func TestSizeQueue(t *testing.T) {
 	r := rand.New(rand.NewSource(42))
 	man := Manager{}
-	man.Init(SizeBigQueue)
+	man.Init()
 
 	insertedFiles := []int64{}
 
