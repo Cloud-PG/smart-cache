@@ -32,6 +32,7 @@ func (cache *WeightedLRU) Clear() {
 
 // Dumps the WeightedLRU cache
 func (cache *WeightedLRU) Dumps() [][]byte {
+	logger.Info("Dump cache into byte string")
 	outData := make([][]byte, 0)
 	var newLine = []byte("\n")
 
@@ -62,6 +63,7 @@ func (cache *WeightedLRU) Dumps() [][]byte {
 
 // Loads the WeightedLRU cache
 func (cache *WeightedLRU) Loads(inputString [][]byte) {
+	logger.Info("Load cache dump string")
 	var curRecord DumpRecord
 	var curRecordInfo DumpInfo
 
@@ -110,8 +112,8 @@ func (cache *WeightedLRU) UpdatePolicy(request *Request, fileStats *FileStats, h
 			cache.files.Insert(FileSupportData{
 				Filename:  request.Filename,
 				Size:      request.Size,
-				Frequency: fileStats.TotRequests(),
-				Recency:   fileStats.DeltaLastRequest,
+				Frequency: fileStats.Frequency,
+				Recency:   fileStats.Recency,
 			})
 
 			cache.size += requestedFileSize
@@ -122,8 +124,8 @@ func (cache *WeightedLRU) UpdatePolicy(request *Request, fileStats *FileStats, h
 		cache.files.Update(FileSupportData{
 			Filename:  request.Filename,
 			Size:      request.Size,
-			Frequency: fileStats.TotRequests(),
-			Recency:   fileStats.DeltaLastRequest,
+			Frequency: fileStats.Frequency,
+			Recency:   fileStats.Recency,
 		})
 	}
 	return added

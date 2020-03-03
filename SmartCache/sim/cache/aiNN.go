@@ -217,7 +217,7 @@ func (cache *AINN) composeFeatures(vars ...interface{}) []float64 {
 	dataType := vars[3].(string)
 	campain := vars[4].(string)
 	process := vars[5].(string)
-	totRequests := float64(vars[6].(uint32))
+	Frequency := float64(vars[6].(uint32))
 	avgTime := float64(vars[7].(float32))
 	size := float64(vars[8].(float32))
 
@@ -228,7 +228,7 @@ func (cache *AINN) composeFeatures(vars ...interface{}) []float64 {
 		dataType,
 		campain,
 		process,
-		totRequests,
+		Frequency,
 		avgTime,
 		size,
 	}
@@ -285,7 +285,7 @@ func (cache *AINN) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			dataType,
 			campain,
 			process,
-			fileStats.TotRequests,
+			fileStats.Frequency,
 			fileStats.RequestTicksMean,
 			requestedFileSize,
 		)
@@ -305,7 +305,7 @@ func (cache *AINN) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				fmt.Println(requestedFilename)
 				fmt.Println(siteName)
 				fmt.Println(userID)
-				fmt.Println(fileStats.TotRequests())
+				fmt.Println(fileStats.Frequency)
 				fmt.Println(fileStats.RequestTicksMean)
 				fmt.Println(requestedFileSize)
 				fmt.Println(featureVector)
@@ -332,7 +332,7 @@ func (cache *AINN) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			cache.files.Insert(FileSupportData{
 				Filename:  request.Filename,
 				Size:      request.Size,
-				Frequency: fileStats.TotRequests(),
+				Frequency: fileStats.Frequency,
 				Recency:   fileStats.DeltaLastRequest,
 			})
 
@@ -344,7 +344,7 @@ func (cache *AINN) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 		cache.files.Update(FileSupportData{
 			Filename:  request.Filename,
 			Size:      request.Size,
-			Frequency: fileStats.TotRequests(),
+			Frequency: fileStats.Frequency,
 			Recency:   fileStats.DeltaLastRequest,
 		})
 	}

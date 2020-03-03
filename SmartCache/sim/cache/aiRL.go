@@ -95,6 +95,7 @@ func (cache *AIRL) Clear() {
 
 // Dumps the AIRL cache
 func (cache *AIRL) Dumps() [][]byte {
+	logger.Info("Dump cache into byte string")
 	outData := make([][]byte, 0)
 	var newLine = []byte("\n")
 
@@ -161,6 +162,7 @@ func (cache *AIRL) Dump(filename string) {
 
 // Loads the AIRL cache
 func (cache *AIRL) Loads(inputString [][]byte) {
+	logger.Info("Loads cache dump string")
 	var (
 		curRecord     DumpRecord
 		curRecordInfo DumpInfo
@@ -297,7 +299,7 @@ func (cache *AIRL) getState(request *Request, fileStats *FileStats, featureOrder
 		case "dataType":
 			tmpArr = cache.getCategory(featureMap, featureName, dataType)
 		case "deltaNumLastRequest":
-			tmpArr = cache.getCategory(featureMap, featureName, float64(fileStats.DeltaLastRequest))
+			tmpArr = cache.getCategory(featureMap, featureName, float64(fileStats.Recency))
 		case "deltaHighWatermark":
 			tmpArr = cache.getCategory(featureMap, featureName, deltaHighWatermark)
 		case "meanSize":
@@ -422,8 +424,8 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				cache.files.Insert(FileSupportData{
 					Filename:  request.Filename,
 					Size:      request.Size,
-					Frequency: fileStats.TotRequests(),
-					Recency:   fileStats.DeltaLastRequest,
+					Frequency: fileStats.Frequency,
+					Recency:   fileStats.Recency,
 				})
 
 				cache.size += requestedFileSize
@@ -440,8 +442,8 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			cache.files.Update(FileSupportData{
 				Filename:  request.Filename,
 				Size:      request.Size,
-				Frequency: fileStats.TotRequests(),
-				Recency:   fileStats.DeltaLastRequest,
+				Frequency: fileStats.Frequency,
+				Recency:   fileStats.Recency,
 			})
 		}
 	} else {
@@ -499,8 +501,8 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				cache.files.Insert(FileSupportData{
 					Filename:  request.Filename,
 					Size:      request.Size,
-					Frequency: fileStats.TotRequests(),
-					Recency:   fileStats.DeltaLastRequest,
+					Frequency: fileStats.Frequency,
+					Recency:   fileStats.Recency,
 				})
 
 				cache.size += requestedFileSize
@@ -545,8 +547,8 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			cache.files.Update(FileSupportData{
 				Filename:  request.Filename,
 				Size:      request.Size,
-				Frequency: fileStats.TotRequests(),
-				Recency:   fileStats.DeltaLastRequest,
+				Frequency: fileStats.Frequency,
+				Recency:   fileStats.Recency,
 			})
 
 			// ------------------------------

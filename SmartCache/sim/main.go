@@ -440,6 +440,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 					fmt.Printf("ERR: Can not create CPU profile file %s.\n", err)
 					os.Exit(-1)
 				}
+				logger.Info("Enable CPU profiliing", zap.String("filename", cpuprofile))
 				pprof.StartCPUProfile(profileOut)
 				defer pprof.StopCPUProfile()
 			}
@@ -563,22 +564,23 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 						start = time.Now()
 					}
 				}
-
-				if memprofile != "" {
-					profileOut, err := os.Create(memprofile)
-					if err != nil {
-						logger.Error("Cannot create Memory profile file",
-							zap.Error(err),
-							zap.String("filename", memprofile),
-						)
-						os.Exit(-1)
-					}
-					pprof.WriteHeapProfile(profileOut)
-					profileOut.Close()
-					return
-				}
-
 			}
+
+			if memprofile != "" {
+				profileOut, err := os.Create(memprofile)
+				if err != nil {
+					logger.Error("Cannot create Memory profile file",
+						zap.Error(err),
+						zap.String("filename", memprofile),
+					)
+					os.Exit(-1)
+				}
+				logger.Info("Write memprofile", zap.String("filename", memprofile))
+				pprof.WriteHeapProfile(profileOut)
+				profileOut.Close()
+				return
+			}
+
 			elapsedTime := time.Now().Sub(simBeginTime)
 			elTH := int(elapsedTime.Hours())
 			elTM := int(elapsedTime.Minutes()) % 60

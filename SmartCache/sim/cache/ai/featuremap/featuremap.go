@@ -189,8 +189,8 @@ func (curMap Obj) GetKeys() chan Key {
 	go func() {
 		defer close(channel)
 		numKeys := curMap.GetLenKeys()
+		curKey := Key{}
 		for idx := 0; idx < numKeys; idx++ {
-			curKey := Key{}
 			switch curMap.Type {
 			case TypeBool:
 				curKey.ValueB = curMap.KeysB[idx]

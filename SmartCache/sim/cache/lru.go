@@ -94,6 +94,7 @@ func (cache *LRUCache) ClearHitMissStats() {
 
 // Dumps the LRUCache cache
 func (cache *LRUCache) Dumps() [][]byte {
+	logger.Info("Dump cache into byte string")
 	outData := make([][]byte, 0)
 	var newLine = []byte("\n")
 
@@ -113,6 +114,7 @@ func (cache *LRUCache) Dumps() [][]byte {
 
 // Dump the LRUCache cache
 func (cache *LRUCache) Dump(filename string) {
+	logger.Info("Dump cache", zap.String("filename", filename))
 	outFile, osErr := os.Create(filename)
 	if osErr != nil {
 		panic(fmt.Sprintf("Error dump file creation: %s", osErr))
@@ -128,6 +130,7 @@ func (cache *LRUCache) Dump(filename string) {
 
 // Loads the LRUCache cache
 func (cache *LRUCache) Loads(inputString [][]byte) {
+	logger.Info("Load cache dump string")
 	var curRecord DumpRecord
 	var curRecordInfo DumpInfo
 	for _, record := range inputString {
@@ -145,7 +148,7 @@ func (cache *LRUCache) Loads(inputString [][]byte) {
 
 // Load the LRUCache cache
 func (cache *LRUCache) Load(filename string) [][]byte {
-	logger.Info("Dump cache", zap.String("filename", filename))
+	logger.Info("Load cache Dump", zap.String("filename", filename))
 
 	inFile, err := os.Open(filename)
 	if err != nil {
@@ -283,8 +286,8 @@ func (cache *LRUCache) UpdatePolicy(request *Request, fileStats *FileStats, hit 
 			cache.files.Insert(FileSupportData{
 				Filename:  request.Filename,
 				Size:      request.Size,
-				Frequency: fileStats.TotRequests(),
-				Recency:   fileStats.DeltaLastRequest,
+				Frequency: fileStats.Frequency,
+				Recency:   fileStats.Recency,
 			})
 
 			cache.size += requestedFileSize
@@ -295,8 +298,8 @@ func (cache *LRUCache) UpdatePolicy(request *Request, fileStats *FileStats, hit 
 		cache.files.Update(FileSupportData{
 			Filename:  request.Filename,
 			Size:      request.Size,
-			Frequency: fileStats.TotRequests(),
-			Recency:   fileStats.DeltaLastRequest,
+			Frequency: fileStats.Frequency,
+			Recency:   fileStats.Recency,
 		})
 	}
 	return added

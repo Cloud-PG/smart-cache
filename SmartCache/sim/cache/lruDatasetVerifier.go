@@ -70,7 +70,7 @@ func (cache *LRUDatasetVerifier) UpdatePolicy(request *Request, fileStats *FileS
 				cache.files.Insert(FileSupportData{
 					Filename:  request.Filename,
 					Size:      request.Size,
-					Frequency: fileStats.TotRequests(),
+					Frequency: fileStats.Frequency,
 					Recency:   fileStats.DeltaLastRequest,
 				})
 
@@ -83,7 +83,7 @@ func (cache *LRUDatasetVerifier) UpdatePolicy(request *Request, fileStats *FileS
 		cache.files.Update(FileSupportData{
 			Filename:  request.Filename,
 			Size:      request.Size,
-			Frequency: fileStats.TotRequests(),
+			Frequency: fileStats.Frequency,
 			Recency:   fileStats.DeltaLastRequest,
 		})
 	}

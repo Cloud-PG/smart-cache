@@ -11,8 +11,8 @@ import (
 const (
 	// MaxNumDaysStat limit to stay in the stats
 	MaxNumDaysStat = 14.
-	// NumDays2Purge limit the clean action of the stats
-	NumDays2Purge = 7.
+	// DeltaDays2Purge limit the clean action of the stats
+	DeltaDays2Purge = 2.
 )
 
 // Stats collector of statistics for weighted cache
@@ -34,7 +34,11 @@ func (statStruct *Stats) Init() {
 // Dirty indicates if the stats needs a purge
 func (statStruct Stats) Dirty() bool {
 	numDays := statStruct.lastUpdateTime.Sub(statStruct.firstUpdateTime).Hours() / 24.
-	if numDays >= NumDays2Purge {
+	if numDays >= DeltaDays2Purge {
+		logger.Debug("Dirty Stats", zap.Float64("numDays", numDays),
+			zap.String("lastTime", statStruct.lastUpdateTime.Format(time.UnixDate)),
+			zap.String("firstTime", statStruct.firstUpdateTime.Format(time.UnixDate)),
+		)
 		return true
 	}
 	return false
@@ -42,13 +46,16 @@ func (statStruct Stats) Dirty() bool {
 
 // Purge remove older stats
 func (statStruct *Stats) Purge() {
+	numDeletedFiles := 0
 	for filename, stats := range statStruct.fileStats {
 		if !stats.InCache && stats.DiffLastUpdate() >= MaxNumDaysStat {
 			logger.Debug("Purge", zap.Bool("in cache", stats.InCache))
 			statStruct.weightSum -= stats.Weight
 			delete(statStruct.fileStats, filename)
+			numDeletedFiles++
 		}
 	}
+	logger.Info("Stats purged", zap.Int("NumDeletedFiles", numDeletedFiles))
 	statStruct.firstUpdateTime = statStruct.lastUpdateTime
 }
 
@@ -78,6 +85,7 @@ func (statStruct *Stats) GetOrCreate(filename int64, vars ...interface{}) (*File
 
 	// Stats age update
 	if statStruct.firstUpdateTime.IsZero() {
+		logger.Info("Update first time")
 		statStruct.firstUpdateTime = reqTime
 	}
 	statStruct.lastUpdateTime = reqTime
@@ -90,13 +98,13 @@ func (statStruct *Stats) GetOrCreate(filename int64, vars ...interface{}) (*File
 			Size:             size,
 			FirstTime:        reqTime,
 			DeltaLastRequest: 0,
-			LastRequest:      statStruct.numRequests,
+			Recency:          statStruct.numRequests,
 		}
 		statStruct.fileStats[filename] = curStats
 	} else {
 		curStats.Size = size
-		curStats.DeltaLastRequest = statStruct.numRequests - curStats.LastRequest
-		curStats.LastRequest = statStruct.numRequests
+		curStats.DeltaLastRequest = statStruct.numRequests - curStats.Recency
+		curStats.Recency = statStruct.numRequests
 	}
 
 	statStruct.numRequests++
@@ -138,9 +146,11 @@ type cacheEmptyMsg struct{}
 
 // FileStats contains file statistics collected by weighted caches
 type FileStats struct {
+	Filename          int64       `json:"filename"`
 	Weight            float64     `json:"weight"`
 	Points            float64     `json:"points"`
 	Size              float64     `json:"size"`
+	Frequency         int64       `json:"frequency"`
 	NHits             int64       `json:"nHits"`
 	NMiss             int64       `json:"nMiss"`
 	FirstTime         time.Time   `json:"firstTime"`
@@ -151,7 +161,7 @@ type FileStats struct {
 	RequestTicks      []time.Time `json:"requestTicks"`
 	IdxLastRequest    int         `json:"idxLastRequest"`
 	DeltaLastRequest  int64       `json:"deltaLastRequest"`
-	LastRequest       int64       `json:"lastRequest"`
+	Recency           int64       `json:"recency"`
 	Users             []int64     `json:"users"`
 	Sites             []int64     `json:"sites"`
 }
@@ -159,11 +169,6 @@ type FileStats struct {
 // DiffLastUpdate returns the number of days from the last update stats
 func (stats FileStats) DiffLastUpdate() float64 {
 	return stats.LastTimeRequested.Sub(stats.FirstTime).Hours() / 24.
-}
-
-// TotRequests returns the total amount of requests
-func (stats FileStats) TotRequests() int64 {
-	return stats.NHits + stats.NMiss
 }
 
 func (stats FileStats) dumps() []byte {
@@ -212,6 +217,8 @@ func (stats *FileStats) updateStats(hit bool, size float64, userID int64, siteNa
 	stats.addUser(userID)
 	stats.addSite(siteName)
 
+	stats.Frequency++
+
 	if hit {
 		stats.NHits++
 	} else {
@@ -243,7 +250,7 @@ func (stats FileStats) getRealTimeStats(curTime *time.Time) (float64, float64, f
 
 // getStats returns number of requests, users and sites
 func (stats FileStats) getStats() (float64, float64, float64) {
-	numReq := float64(stats.TotRequests())
+	numReq := float64(stats.Frequency)
 	numUsers := float64(len(stats.Users))
 	numSites := float64(len(stats.Sites))
 	return numReq, numUsers, numSites
@@ -269,7 +276,7 @@ func (stats *FileStats) updateWeight(functionType FunctionType, alpha float64, b
 	switch functionType {
 	case FuncAdditive:
 		stats.Weight = fileWeightedAdditiveFunction(
-			stats.TotRequests(),
+			stats.Frequency,
 			stats.Size,
 			stats.RequestTicksMean,
 			alpha,
@@ -278,7 +285,7 @@ func (stats *FileStats) updateWeight(functionType FunctionType, alpha float64, b
 		)
 	case FuncAdditiveExp:
 		stats.Weight = fileWeightedAdditiveExpFunction(
-			stats.TotRequests(),
+			stats.Frequency,
 			stats.Size,
 			stats.RequestTicksMean,
 			alpha,
@@ -287,7 +294,7 @@ func (stats *FileStats) updateWeight(functionType FunctionType, alpha float64, b
 		)
 	case FuncMultiplicative:
 		stats.Weight = fileWeightedMultiplicativeFunction(
-			stats.TotRequests(),
+			stats.Frequency,
 			stats.Size,
 			stats.RequestTicksMean,
 			alpha,
@@ -296,7 +303,7 @@ func (stats *FileStats) updateWeight(functionType FunctionType, alpha float64, b
 		)
 	case FuncWeightedRequests:
 		stats.Weight = fileWeightedRequest(
-			stats.TotRequests(),
+			stats.Frequency,
 			stats.Size,
 			stats.RequestTicksMean,
 		)
