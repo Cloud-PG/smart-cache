@@ -12,7 +12,7 @@ const (
 	// MaxNumDaysStat limit to stay in the stats
 	MaxNumDaysStat = 14.
 	// DeltaDays2Purge limit the clean action of the stats
-	DeltaDays2Purge = 2.
+	DeltaDays2Purge = 7.
 )
 
 // Stats collector of statistics for weighted cache
