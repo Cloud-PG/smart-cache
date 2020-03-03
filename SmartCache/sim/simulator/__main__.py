@@ -125,6 +125,7 @@ def main():
     parser.add_argument('--weighted-function', type=str,
                         choices=[
                             "FuncAdditive",
+                            "FuncAdditiveExp",
                             "FuncMultiplicative",
                             "FuncWeightedRequests",
                         ],
