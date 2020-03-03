@@ -85,7 +85,7 @@ func (statStruct *Stats) GetOrCreate(filename int64, vars ...interface{}) (*File
 
 	// Stats age update
 	if statStruct.firstUpdateTime.IsZero() {
-		logger.Info("Update first time")
+		logger.Info("Updated first time")
 		statStruct.firstUpdateTime = reqTime
 	}
 	statStruct.lastUpdateTime = reqTime

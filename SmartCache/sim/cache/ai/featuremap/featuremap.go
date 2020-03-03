@@ -35,6 +35,7 @@ type Obj struct {
 	UnknownValues   bool
 	Buckets         bool
 	BucketOpenRight bool
+	channel         chan interface{}
 }
 
 // Key is a key of the map
@@ -184,25 +185,23 @@ func (curMap Obj) GetLenKeys() int {
 }
 
 // GetKeys returns all the keys
-func (curMap Obj) GetKeys() chan Key {
-	channel := make(chan Key)
+func (curMap *Obj) GetKeys() chan interface{} {
+	curMap.channel = make(chan interface{})
 	go func() {
-		defer close(channel)
+		defer close(curMap.channel)
 		numKeys := curMap.GetLenKeys()
-		curKey := Key{}
 		for idx := 0; idx < numKeys; idx++ {
 			switch curMap.Type {
 			case TypeBool:
-				curKey.ValueB = curMap.KeysB[idx]
+				curMap.channel <- curMap.KeysB[idx]
 			case TypeInt:
-				curKey.ValueI = curMap.KeysI[idx]
+				curMap.channel <- curMap.KeysI[idx]
 			case TypeFloat:
-				curKey.ValueF = curMap.KeysF[idx]
+				curMap.channel <- curMap.KeysF[idx]
 			case TypeString:
-				curKey.ValueS = curMap.KeysS[idx]
+				curMap.channel <- curMap.KeysS[idx]
 			}
-			channel <- curKey
 		}
 	}()
-	return channel
+	return curMap.channel
 }

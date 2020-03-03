@@ -180,20 +180,20 @@ func (cache *AINN) getCategory(catKey string, value interface{}) []float64 {
 		switch curCategory.Type {
 		case featuremap.TypeInt:
 			inputValue := int64(value.(float64))
-			if inputValue <= curKey.ValueI {
-				res[curCategory.Values[fmt.Sprintf("%d", curKey.ValueI)]] = 1.0
+			if inputValue <= curKey.(int64) {
+				res[curCategory.Values[fmt.Sprintf("%d", curKey.(int64))]] = 1.0
 				return res
 			}
 		case featuremap.TypeFloat:
 			inputValue := value.(float64)
-			if inputValue <= curKey.ValueF {
-				res[curCategory.Values[fmt.Sprintf("%0.2f", curKey.ValueF)]] = 1.0
+			if inputValue <= curKey.(float64) {
+				res[curCategory.Values[fmt.Sprintf("%0.2f", curKey.(float64))]] = 1.0
 				return res
 			}
 		case featuremap.TypeString:
 			inputValue := value.(string)
-			if inputValue <= curKey.ValueS {
-				res[curCategory.Values[fmt.Sprintf("%s", curKey.ValueS)]] = 1.0
+			if inputValue <= curKey.(string) {
+				res[curCategory.Values[fmt.Sprintf("%s", curKey.(string))]] = 1.0
 				return res
 			}
 		}

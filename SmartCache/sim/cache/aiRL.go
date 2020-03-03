@@ -36,6 +36,9 @@ type AIRL struct {
 	prevPoints              float64
 	dailyReadOnHit          float64
 	dailyReadOnMiss         float64
+	bufferCategory          []bool
+	bufferInputVector       []bool
+	chanCategory            chan bool
 }
 
 // Init the AIRL struct
@@ -202,79 +205,96 @@ func (cache *AIRL) Loads(inputString [][]byte) {
 
 }
 
-func (cache *AIRL) getCategory(featureMap map[string]featuremap.Obj, catKey string, value interface{}) []bool {
+func (cache *AIRL) getCategory(featureMap map[string]featuremap.Obj, catKey string, value interface{}) chan bool {
 	var (
-		res         []bool
 		inputValueI int64
 		inputValueF float64
 		inputValueS string
+		resPrepared bool = false
 	)
+	cache.chanCategory = make(chan bool)
+
 	curCategory := featureMap[catKey]
 
+	cache.bufferCategory = cache.bufferCategory[:0]
+
 	if curCategory.UnknownValues == true || curCategory.BucketOpenRight == true {
-		res = make([]bool, curCategory.GetLenKeys()+1)
+		cache.bufferCategory = append(cache.bufferCategory, make([]bool, curCategory.GetLenKeys()+1)...)
 	} else {
-		res = make([]bool, curCategory.GetLenKeys())
+		cache.bufferCategory = append(cache.bufferCategory, make([]bool, curCategory.GetLenKeys())...)
 	}
 
 	if curCategory.Buckets == false {
 		if curCategory.UnknownValues {
 			oneHot, inMap := curCategory.Values[value.(string)]
 			if inMap {
-				res[oneHot] = true
+				cache.bufferCategory[oneHot] = true
 			} else {
-				res[0] = true
+				cache.bufferCategory[0] = true
 			}
 		} else {
-			res[curCategory.Values[string(value.(int64))]] = true
+			cache.bufferCategory[curCategory.Values[string(value.(int64))]] = true
 		}
-		return res
+		resPrepared = true
 	}
 
-	switch curCategory.Type {
-	case featuremap.TypeInt:
-		inputValueI = int64(value.(float64))
-	case featuremap.TypeFloat:
-		inputValueF = value.(float64)
-	case featuremap.TypeString:
-		inputValueS = value.(string)
-	}
-
-	for curKey := range curCategory.GetKeys() {
+	if !resPrepared {
 		switch curCategory.Type {
 		case featuremap.TypeInt:
-			if inputValueI <= curKey.ValueI {
-				res[curCategory.Values[fmt.Sprintf("%d", curKey.ValueI)]] = true
-				return res
-			}
+			inputValueI = int64(value.(float64))
 		case featuremap.TypeFloat:
-			if inputValueF <= curKey.ValueF {
-				res[curCategory.Values[fmt.Sprintf("%0.2f", curKey.ValueF)]] = true
-				return res
-			}
+			inputValueF = value.(float64)
 		case featuremap.TypeString:
-			if inputValueS <= curKey.ValueS {
-				res[curCategory.Values[fmt.Sprintf("%s", curKey.ValueS)]] = true
-				return res
+			inputValueS = value.(string)
+		}
+
+		for curKey := range curCategory.GetKeys() {
+			switch curCategory.Type {
+			case featuremap.TypeInt:
+				if inputValueI <= curKey.(int64) {
+					cache.bufferCategory[curCategory.Values[fmt.Sprintf("%d", curKey.(int64))]] = true
+					resPrepared = true
+				}
+			case featuremap.TypeFloat:
+				if inputValueF <= curKey.(float64) {
+					cache.bufferCategory[curCategory.Values[fmt.Sprintf("%0.2f", curKey.(float64))]] = true
+					resPrepared = true
+				}
+			case featuremap.TypeString:
+				if inputValueS <= curKey.(string) {
+					cache.bufferCategory[curCategory.Values[fmt.Sprintf("%s", curKey.(string))]] = true
+					resPrepared = true
+				}
+			}
+			if resPrepared {
+				break
+			}
+		}
+		if !resPrepared {
+			if curCategory.BucketOpenRight == true {
+				cache.bufferCategory[curCategory.Values["max"]] = true
+			} else {
+				panic(fmt.Sprintf("Cannot convert a value '%v' of category %s", value, catKey))
 			}
 		}
 	}
 
-	if curCategory.BucketOpenRight == true {
-		res[curCategory.Values["max"]] = true
-		return res
-	}
+	go func() {
+		defer close(cache.chanCategory)
+		for _, value := range cache.bufferCategory {
+			cache.chanCategory <- value
+		}
+	}()
 
-	panic(fmt.Sprintf("Cannot convert a value '%v' of category %s", value, catKey))
+	return cache.chanCategory
 }
 
 func (cache *AIRL) getState(request *Request, fileStats *FileStats, featureOrder []string, featureMap map[string]featuremap.Obj) []bool {
 	var (
-		inputVector []bool
-		tmpArr      []bool
-		size        float64
-		numReq      float64
-		dataType    int64
+		size     float64
+		numReq   float64
+		dataType int64
+		channel  chan bool
 	)
 
 	if fileStats != nil {
@@ -288,33 +308,36 @@ func (cache *AIRL) getState(request *Request, fileStats *FileStats, featureOrder
 	cacheCapacity := float64(cache.Capacity())
 	deltaHighWatermark := float64(cache.HighWaterMark) - cacheCapacity
 
+	cache.bufferInputVector = cache.bufferInputVector[:0]
+
 	for _, featureName := range featureOrder {
 		switch featureName {
 		case "size":
-			tmpArr = cache.getCategory(featureMap, featureName, size)
+			channel = cache.getCategory(featureMap, featureName, size)
 		case "numReq":
-			tmpArr = cache.getCategory(featureMap, featureName, numReq)
+			channel = cache.getCategory(featureMap, featureName, numReq)
 		case "cacheUsage":
-			tmpArr = cache.getCategory(featureMap, featureName, cacheCapacity)
+			channel = cache.getCategory(featureMap, featureName, cacheCapacity)
 		case "dataType":
-			tmpArr = cache.getCategory(featureMap, featureName, dataType)
+			channel = cache.getCategory(featureMap, featureName, dataType)
 		case "deltaNumLastRequest":
-			tmpArr = cache.getCategory(featureMap, featureName, float64(fileStats.Recency))
+			channel = cache.getCategory(featureMap, featureName, float64(fileStats.Recency))
 		case "deltaHighWatermark":
-			tmpArr = cache.getCategory(featureMap, featureName, deltaHighWatermark)
+			channel = cache.getCategory(featureMap, featureName, deltaHighWatermark)
 		case "meanSize":
-			tmpArr = cache.getCategory(featureMap, featureName, cache.MeanSize())
+			channel = cache.getCategory(featureMap, featureName, cache.MeanSize())
 		case "meanFrequency":
-			tmpArr = cache.getCategory(featureMap, featureName, cache.MeanFrequency())
+			channel = cache.getCategory(featureMap, featureName, cache.MeanFrequency())
 		case "meanRecency":
-			tmpArr = cache.getCategory(featureMap, featureName, cache.MeanRecency())
+			channel = cache.getCategory(featureMap, featureName, cache.MeanRecency())
 		default:
 			panic(fmt.Sprintf("Cannot prepare input %s", featureName))
 		}
-		inputVector = append(inputVector, tmpArr...)
+		for value := range channel {
+			cache.bufferInputVector = append(cache.bufferInputVector, value)
+		}
 	}
-
-	return inputVector
+	return cache.bufferInputVector
 }
 
 // GetPoints returns the total amount of points for the files in cache
