@@ -1,5 +1,5 @@
 import sqlite3
-from os import path
+from os import path, walk
 
 import pandas as pd
 from tqdm import tqdm
@@ -9,7 +9,7 @@ from..utils import STATUS_ARROW, STATUS_WARNING, STATUS_OK
 
 def str2bool(v: str):
     """Check if a string is a boolean True.
-    
+
     :param v: the input string
     :type v: str
     :return: True if it is a true boolean string
@@ -29,6 +29,59 @@ def shuffle_df(df: 'pd.DataFrame', seed: int = 42) -> 'pd.DataFrame':
     :rtype: pandas.DataFrame
     """
     return df.sample(frac=1, random_state=seed).reset_index(drop=True)
+
+
+def sort_from_avro(df: 'pd.DataFrame', cur_filename: str, order_folder: str) -> 'pd.DataFrame':
+    """Shuffle a dataframe with the given seed
+
+    :param df: the input dataframe
+    :type df: pandas.DataFrame
+    :param cur_filename: the initial file name
+    :type cur_filename: str
+    :param order_folder: the order_folder path
+    :type order_folder: str
+    :return: the shuffled dataframe
+    :rtype: pandas.DataFrame
+    """
+
+    real_filename = cur_filename.split(".", 1)[0].replace("results_", "")
+
+    for root, _, files in walk(order_folder):
+        for file_ in files:
+            if file_.find(real_filename) != -1:
+                ord_df = pd.read_csv(path.join(root, file_))
+
+    indexes = {}
+    new_indexes = []
+
+    for row in tqdm(
+        ord_df.itertuples(),
+        desc=f"{STATUS_ARROW}[File:{STATUS_WARNING(cur_filename)}] Get ordered indexes",
+        position=0,
+        total=ord_df.shape[0],
+    ):
+        indexes[row.FileName] = df[df.Filename == row.FileName].index.to_list()
+
+    for row in tqdm(
+        ord_df.itertuples(),
+        desc=f"{STATUS_ARROW}[File:{STATUS_WARNING(cur_filename)}] Prepare indexes",
+        position=0,
+        total=ord_df.shape[0],
+    ):
+        new_indexes.append(indexes[row.FileName].pop(0))
+
+    print(f"{STATUS_ARROW}[Order dataframe with avro indexes]")
+    df = df.reindex(new_indexes)
+
+    for idx, row in tqdm(
+        enumerate(ord_df.itertuples()),
+        desc=f"{STATUS_ARROW}[File:{STATUS_WARNING(cur_filename)}] Check file order",
+        position=0,
+        total=ord_df.shape[0],
+    ):
+        assert row.FileName == df.iloc[idx].Filename, "File name not equal..."
+
+    return df
 
 
 class CategoryContainer:

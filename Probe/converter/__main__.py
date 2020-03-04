@@ -10,7 +10,7 @@ from ..utils import STATUS_ARROW, STATUS_WARNING
 from .extractor import (check_filename_info, check_region_info,
                         get_object_columns, get_unique_values)
 from .utils import (CategoryContainer, convert_categories, save_numeric_df,
-                    shuffle_df, str2bool)
+                    shuffle_df, sort_from_avro, str2bool)
 
 
 def main():
@@ -33,6 +33,9 @@ def main():
     parser.add_argument('--shuffle', type='bool',
                         default=False,
                         help='Shuffle the dataframe [DEFAULT: True]')
+    parser.add_argument('--order-folder', type=str,
+                        default="",
+                        help='Folder with file order from AVRO source [DEFAULT: ""]')
 
     args, _ = parser.parse_known_args()
 
@@ -56,11 +59,19 @@ def main():
         ):
 
             head, tail = path.split(filepath)
+            cur_filename = tail
             if args.shuffle:
                 output_filename = path.join(
                     head,
                     tail.replace(
                         "results_", f"results_numeric_{args.region}_shuffle_{args.seed}"
+                    )
+                )
+            elif args.order_folder:
+                output_filename = path.join(
+                    head,
+                    tail.replace(
+                        "results_", f"results_numeric_{args.region}_avro_order"
                     )
                 )
             else:
@@ -83,6 +94,9 @@ def main():
                 if args.shuffle:
                     print(f"{STATUS_ARROW}Shuffle DataFrame...")
                     df = shuffle_df(df, args.seed)
+
+                if args.order_folder:
+                    df = sort_from_avro(df, cur_filename, args.order_folder)
 
                 columns = get_object_columns(df)
                 categories = dict(
