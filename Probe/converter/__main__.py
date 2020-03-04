@@ -71,7 +71,7 @@ def main():
                 output_filename = path.join(
                     head,
                     tail.replace(
-                        "results_", f"results_numeric_{args.region}_avro_order"
+                        "results_", f"results_numeric_{args.region}_avro_order_"
                     )
                 )
             else:
