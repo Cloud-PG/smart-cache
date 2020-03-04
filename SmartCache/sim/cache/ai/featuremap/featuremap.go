@@ -186,6 +186,7 @@ func (curMap Obj) GetLenKeys() int {
 
 // GetKeys returns all the keys
 func (curMap *Obj) GetKeys() chan interface{} {
+	// TODO: optimize this function to parse the values from AIRL and return the already made vector of bools
 	curMap.channel = make(chan interface{})
 	go func() {
 		defer close(curMap.channel)
