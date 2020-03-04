@@ -56,19 +56,12 @@ def sort_from_avro(df: 'pd.DataFrame', cur_filename: str, order_folder: str) -> 
 
     for row in tqdm(
         ord_df.itertuples(),
-        desc=f"{STATUS_ARROW}[File:{STATUS_WARNING(cur_filename)}] Get ordered indexes",
+        desc=f"{STATUS_ARROW}[File:{STATUS_WARNING(cur_filename)}] Get and prepare ordered indexes",
         position=0,
         total=ord_df.shape[0],
     ):
         if row.FileName not in indexes:
             indexes[row.FileName] = df[df.Filename == row.FileName].index.to_list()
-
-    for row in tqdm(
-        ord_df.itertuples(),
-        desc=f"{STATUS_ARROW}[File:{STATUS_WARNING(cur_filename)}] Prepare indexes",
-        position=0,
-        total=ord_df.shape[0],
-    ):
         new_indexes.append(indexes[row.FileName].pop(0))
 
     print(f"{STATUS_ARROW}[File:{STATUS_WARNING(cur_filename)}][Order dataframe with avro indexes]")
