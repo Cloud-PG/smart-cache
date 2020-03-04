@@ -60,7 +60,8 @@ def sort_from_avro(df: 'pd.DataFrame', cur_filename: str, order_folder: str) -> 
         position=0,
         total=ord_df.shape[0],
     ):
-        indexes[row.FileName] = df[df.Filename == row.FileName].index.to_list()
+        if row.FileName not in indexes:
+            indexes[row.FileName] = df[df.Filename == row.FileName].index.to_list()
 
     for row in tqdm(
         ord_df.itertuples(),
