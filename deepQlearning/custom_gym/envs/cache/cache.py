@@ -452,9 +452,9 @@ class CacheEnv(gym.Env):
         print('Environment initialized')
 
     def purge(self):
-        for key, value in self._cache._stats.items():
+        for key, value in self._cache._stats._files.items():
             if value.recency > purge_delta:
-                del self._cache._stats[key]
+                del self._cache._stats._files[key]
 
     def step(self, action):
         if (self.curDay+1)%7 == 0:
