@@ -14,13 +14,13 @@ type DatasetFiles struct {
 
 // LRUDatasetVerifier cache
 type LRUDatasetVerifier struct {
-	LRUCache
+	SimpleCache
 	datasetFileMap map[int64]bool
 }
 
 // Init the LRU struct
 func (cache *LRUDatasetVerifier) Init(args ...interface{}) interface{} {
-	cache.LRUCache.Init()
+	cache.SimpleCache.Init()
 
 	cache.files = Manager{}
 	cache.stats.fileStats = make(map[int64]*FileStats)

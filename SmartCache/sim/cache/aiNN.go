@@ -18,7 +18,7 @@ import (
 
 // AINN cache
 type AINN struct {
-	LRUCache
+	SimpleCache
 	prevTime           time.Time
 	curTime            time.Time
 	Exp                float32
@@ -36,7 +36,7 @@ type AINN struct {
 
 // Init the AINN struct
 func (cache *AINN) Init(args ...interface{}) interface{} {
-	cache.LRUCache.Init()
+	cache.SimpleCache.Init()
 
 	cache.aiClientHost = args[0].(string)
 	cache.aiClientPort = args[1].(string)
@@ -95,8 +95,8 @@ func (cache *AINN) Init(args ...interface{}) interface{} {
 
 // Clear the AINN struct
 func (cache *AINN) Clear() {
-	cache.LRUCache.Clear()
-	cache.LRUCache.Init()
+	cache.SimpleCache.Clear()
+	cache.SimpleCache.Init()
 }
 
 // Dumps the AINN cache

@@ -15,10 +15,11 @@ import (
 	"go.uber.org/zap"
 )
 
-// LRUCache cache
-type LRUCache struct {
+// SimpleCache cache
+type SimpleCache struct {
 	stats                              Stats
 	files                              Manager
+	ordType                            queueType
 	hit, miss, size, MaxSize           float64
 	hitCPUTime, missCPUTime            float64
 	hitWTime, missWTime                float64
@@ -30,7 +31,13 @@ type LRUCache struct {
 }
 
 // Init the LRU struct
-func (cache *LRUCache) Init(_ ...interface{}) interface{} {
+func (cache *SimpleCache) Init(vars ...interface{}) interface{} {
+	if len(vars) == 0 {
+		cache.ordType = LRUQueue
+	} else {
+		cache.ordType = vars[0].(queueType)
+	}
+
 	cache.stats.Init()
 	cache.files.Init()
 
@@ -49,13 +56,13 @@ func (cache *LRUCache) Init(_ ...interface{}) interface{} {
 }
 
 // ClearFiles remove the cache files
-func (cache *LRUCache) ClearFiles() {
+func (cache *SimpleCache) ClearFiles() {
 	cache.files.Init()
 	cache.size = 0.
 }
 
 // Clear the LRU struct
-func (cache *LRUCache) Clear() {
+func (cache *SimpleCache) Clear() {
 	cache.stats.Init()
 	cache.files.Init()
 
@@ -76,7 +83,7 @@ func (cache *LRUCache) Clear() {
 }
 
 // ClearHitMissStats the cache stats
-func (cache *LRUCache) ClearHitMissStats() {
+func (cache *SimpleCache) ClearHitMissStats() {
 	cache.hit = 0.
 	cache.miss = 0.
 	cache.dataWritten = 0.
@@ -92,8 +99,8 @@ func (cache *LRUCache) ClearHitMissStats() {
 	cache.idealCPUTime = 0.
 }
 
-// Dumps the LRUCache cache
-func (cache *LRUCache) Dumps() [][]byte {
+// Dumps the SimpleCache cache
+func (cache *SimpleCache) Dumps() [][]byte {
 	logger.Info("Dump cache into byte string")
 	outData := make([][]byte, 0)
 	var newLine = []byte("\n")
@@ -112,8 +119,8 @@ func (cache *LRUCache) Dumps() [][]byte {
 	return outData
 }
 
-// Dump the LRUCache cache
-func (cache *LRUCache) Dump(filename string) {
+// Dump the SimpleCache cache
+func (cache *SimpleCache) Dump(filename string) {
 	logger.Info("Dump cache", zap.String("filename", filename))
 	outFile, osErr := os.Create(filename)
 	if osErr != nil {
@@ -128,8 +135,8 @@ func (cache *LRUCache) Dump(filename string) {
 	gwriter.Close()
 }
 
-// Loads the LRUCache cache
-func (cache *LRUCache) Loads(inputString [][]byte) {
+// Loads the SimpleCache cache
+func (cache *SimpleCache) Loads(inputString [][]byte) {
 	logger.Info("Load cache dump string")
 	var curRecord DumpRecord
 	var curRecordInfo DumpInfo
@@ -146,8 +153,8 @@ func (cache *LRUCache) Loads(inputString [][]byte) {
 	}
 }
 
-// Load the LRUCache cache
-func (cache *LRUCache) Load(filename string) [][]byte {
+// Load the SimpleCache cache
+func (cache *SimpleCache) Load(filename string) [][]byte {
 	logger.Info("Load cache Dump", zap.String("filename", filename))
 
 	inFile, err := os.Open(filename)
@@ -195,7 +202,7 @@ func (cache *LRUCache) Load(filename string) [][]byte {
 }
 
 // SimGet updates the cache from a protobuf message
-func (cache *LRUCache) SimGet(ctx context.Context, commonFile *pb.SimCommonFile) (*pb.ActionResult, error) {
+func (cache *SimpleCache) SimGet(ctx context.Context, commonFile *pb.SimCommonFile) (*pb.ActionResult, error) {
 	added := GetFile(cache, commonFile.Filename, commonFile.Size, 0.0, 0.0)
 	return &pb.ActionResult{
 		Filename: commonFile.Filename,
@@ -204,34 +211,34 @@ func (cache *LRUCache) SimGet(ctx context.Context, commonFile *pb.SimCommonFile)
 }
 
 // SimClear deletes all cache content
-func (cache *LRUCache) SimClear(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
+func (cache *SimpleCache) SimClear(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
 	cache.Clear()
 	curStatus := GetSimCacheStatus(cache)
 	return curStatus, nil
 }
 
 // SimClearFiles deletes all cache content
-func (cache *LRUCache) SimClearFiles(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
+func (cache *SimpleCache) SimClearFiles(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
 	cache.ClearFiles()
 	curStatus := GetSimCacheStatus(cache)
 	return curStatus, nil
 }
 
 // SimClearHitMissStats deletes all cache content
-func (cache *LRUCache) SimClearHitMissStats(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
+func (cache *SimpleCache) SimClearHitMissStats(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
 	cache.ClearHitMissStats()
 	curStatus := GetSimCacheStatus(cache)
 	return curStatus, nil
 }
 
 // SimGetInfoCacheStatus returns the current simulation status
-func (cache *LRUCache) SimGetInfoCacheStatus(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
+func (cache *SimpleCache) SimGetInfoCacheStatus(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
 	curStatus := GetSimCacheStatus(cache)
 	return curStatus, nil
 }
 
 // SimDumps returns the content of the cache
-func (cache *LRUCache) SimDumps(_ *empty.Empty, stream pb.SimService_SimDumpsServer) error {
+func (cache *SimpleCache) SimDumps(_ *empty.Empty, stream pb.SimService_SimDumpsServer) error {
 	for _, record := range cache.Dumps() {
 		curRecord := &pb.SimDumpRecord{
 			Raw: record,
@@ -244,7 +251,7 @@ func (cache *LRUCache) SimDumps(_ *empty.Empty, stream pb.SimService_SimDumpsSer
 }
 
 // SimLoads loads a cache state
-func (cache *LRUCache) SimLoads(stream pb.SimService_SimLoadsServer) error {
+func (cache *SimpleCache) SimLoads(stream pb.SimService_SimLoadsServer) error {
 	var records [][]byte
 	records = make([][]byte, 0)
 
@@ -265,14 +272,14 @@ func (cache *LRUCache) SimLoads(stream pb.SimService_SimLoadsServer) error {
 }
 
 // BeforeRequest of LRU cache
-func (cache *LRUCache) BeforeRequest(request *Request, hit bool) *FileStats {
+func (cache *SimpleCache) BeforeRequest(request *Request, hit bool) *FileStats {
 	curStats, _ := cache.stats.GetOrCreate(request.Filename, request.Size, request.DayTime)
 	curStats.updateStats(hit, request.Size, request.UserID, request.SiteName, request.DayTime)
 	return curStats
 }
 
 // UpdatePolicy of LRU cache
-func (cache *LRUCache) UpdatePolicy(request *Request, fileStats *FileStats, hit bool) bool {
+func (cache *SimpleCache) UpdatePolicy(request *Request, fileStats *FileStats, hit bool) bool {
 	var (
 		added             = false
 		requestedFileSize = request.Size
@@ -306,7 +313,7 @@ func (cache *LRUCache) UpdatePolicy(request *Request, fileStats *FileStats, hit 
 }
 
 // AfterRequest of LRU cache
-func (cache *LRUCache) AfterRequest(request *Request, hit bool, added bool) {
+func (cache *SimpleCache) AfterRequest(request *Request, hit bool, added bool) {
 	cache.idealCPUTime += request.CPUTime
 	cache.idealWTime += request.WTime
 
@@ -335,7 +342,7 @@ func (cache *LRUCache) AfterRequest(request *Request, hit bool, added bool) {
 }
 
 // Free removes files from the cache
-func (cache *LRUCache) Free(amount float64, percentage bool) float64 {
+func (cache *SimpleCache) Free(amount float64, percentage bool) float64 {
 	logger.Debug(
 		"Cache free",
 		zap.Float64("mean size", cache.MeanSize()),
@@ -353,7 +360,7 @@ func (cache *LRUCache) Free(amount float64, percentage bool) float64 {
 	}
 	if sizeToDelete > 0. {
 		deletedFiles := make([]int64, 0)
-		for curFile := range cache.files.Get(LRUQueue) {
+		for curFile := range cache.files.Get(cache.ordType) {
 			logger.Debug("delete",
 				zap.Int64("filename", curFile.Filename),
 				zap.Float64("fileSize", curFile.Size),
@@ -380,7 +387,7 @@ func (cache *LRUCache) Free(amount float64, percentage bool) float64 {
 }
 
 // CheckWatermark checks the watermark levels and resolve the situation
-func (cache *LRUCache) CheckWatermark() bool {
+func (cache *SimpleCache) CheckWatermark() bool {
 	ok := true
 	if cache.Capacity() >= cache.HighWaterMark {
 		ok = false
@@ -393,7 +400,7 @@ func (cache *LRUCache) CheckWatermark() bool {
 }
 
 // HitRate of the cache
-func (cache *LRUCache) HitRate() float64 {
+func (cache *SimpleCache) HitRate() float64 {
 	perc := (cache.hit / (cache.hit + cache.miss)) * 100.
 	if math.IsNaN(float64(perc)) {
 		return 0.0
@@ -402,7 +409,7 @@ func (cache *LRUCache) HitRate() float64 {
 }
 
 // HitOverMiss of the cache
-func (cache *LRUCache) HitOverMiss() float64 {
+func (cache *SimpleCache) HitOverMiss() float64 {
 	if cache.hit == 0. || cache.miss == 0. {
 		return 0.
 	}
@@ -410,90 +417,90 @@ func (cache *LRUCache) HitOverMiss() float64 {
 }
 
 // WeightedHitRate of the cache
-func (cache *LRUCache) WeightedHitRate() float64 {
+func (cache *SimpleCache) WeightedHitRate() float64 {
 	return cache.HitRate() * cache.dataReadOnHit
 }
 
 // Size of the cache
-func (cache *LRUCache) Size() float64 {
+func (cache *SimpleCache) Size() float64 {
 	return cache.size
 }
 
 // Capacity of the cache
-func (cache *LRUCache) Capacity() float64 {
+func (cache *SimpleCache) Capacity() float64 {
 	return (cache.Size() / cache.MaxSize) * 100.
 }
 
 // DataWritten of the cache
-func (cache *LRUCache) DataWritten() float64 {
+func (cache *SimpleCache) DataWritten() float64 {
 	return cache.dataWritten
 }
 
 // DataRead of the cache
-func (cache *LRUCache) DataRead() float64 {
+func (cache *SimpleCache) DataRead() float64 {
 	return cache.dataRead
 }
 
 // DataReadOnHit of the cache
-func (cache *LRUCache) DataReadOnHit() float64 {
+func (cache *SimpleCache) DataReadOnHit() float64 {
 	return cache.dataReadOnHit
 }
 
 // DataReadOnMiss of the cache
-func (cache *LRUCache) DataReadOnMiss() float64 {
+func (cache *SimpleCache) DataReadOnMiss() float64 {
 	return cache.dataReadOnMiss
 }
 
 // DataDeleted of the cache
-func (cache *LRUCache) DataDeleted() float64 {
+func (cache *SimpleCache) DataDeleted() float64 {
 	return cache.dataDeleted
 }
 
 // Check returns if a file is in cache or not
-func (cache *LRUCache) Check(key int64) bool {
+func (cache *SimpleCache) Check(key int64) bool {
 	return cache.files.Check(key)
 }
 
 // ExtraStats for output
-func (cache *LRUCache) ExtraStats() string {
+func (cache *SimpleCache) ExtraStats() string {
 	return "NONE"
 }
 
 // ExtraOutput for output specific information
-func (cache *LRUCache) ExtraOutput(info string) string {
+func (cache *SimpleCache) ExtraOutput(info string) string {
 	return "NONE"
 }
 
 // CPUEff returns the CPU efficiency
-func (cache *LRUCache) CPUEff() float64 {
+func (cache *SimpleCache) CPUEff() float64 {
 	totCPUTime := cache.hitCPUTime + cache.missCPUTime
 	totWtime := cache.hitWTime + (cache.missWTime * 1.15)
 	return (totCPUTime / totWtime) * 100.
 }
 
 // CPUHitEff returns the CPU efficiency for hit data
-func (cache *LRUCache) CPUHitEff() float64 {
+func (cache *SimpleCache) CPUHitEff() float64 {
 	return (cache.hitCPUTime / cache.hitWTime) * 100.
 }
 
 // CPUMissEff returns the CPU efficiency for miss data
-func (cache *LRUCache) CPUMissEff() float64 {
+func (cache *SimpleCache) CPUMissEff() float64 {
 	// Add the 15% to wall time -> estimated loss time to retrieve the files
 	return (cache.missCPUTime / (cache.missWTime * 1.15)) * 100.
 }
 
 // CPUEffUpperBound returns the ideal CPU efficiency upper bound
-func (cache *LRUCache) CPUEffUpperBound() float64 {
+func (cache *SimpleCache) CPUEffUpperBound() float64 {
 	return (cache.idealCPUTime / cache.idealWTime) * 100.
 }
 
 // CPUEffLowerBound returns the ideal CPU efficiency lower bound
-func (cache *LRUCache) CPUEffLowerBound() float64 {
+func (cache *SimpleCache) CPUEffLowerBound() float64 {
 	return (cache.idealCPUTime / (cache.idealWTime * 1.15)) * 100.
 }
 
 // MeanSize returns the average size of the files in cache
-func (cache *LRUCache) MeanSize() float64 {
+func (cache *SimpleCache) MeanSize() float64 {
 	// return cache.DataWritten() / float64(len(cache.files))
 	totSize := 0.0
 	for file := range cache.files.Get(LRUQueue) {
@@ -503,7 +510,7 @@ func (cache *LRUCache) MeanSize() float64 {
 }
 
 // MeanFrequency returns the average frequency of the files in cache
-func (cache *LRUCache) MeanFrequency() float64 {
+func (cache *SimpleCache) MeanFrequency() float64 {
 	// return cache.DataWritten() / (cache.hit + cache.miss)
 	totRequests := 0.0
 	for file := range cache.files.Get(LRUQueue) {
@@ -513,7 +520,7 @@ func (cache *LRUCache) MeanFrequency() float64 {
 }
 
 // MeanRecency returns the average recency of the files in cache
-func (cache *LRUCache) MeanRecency() float64 {
+func (cache *SimpleCache) MeanRecency() float64 {
 	totRecency := 0.0
 	for file := range cache.files.Get(LRUQueue) {
 		totRecency += float64(file.Recency)

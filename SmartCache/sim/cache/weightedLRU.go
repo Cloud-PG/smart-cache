@@ -13,21 +13,21 @@ type WeightedFunctionParameters struct {
 
 // WeightedLRU cache
 type WeightedLRU struct {
-	LRUCache
+	SimpleCache
 	Parameters      WeightedFunctionParameters
 	SelFunctionType FunctionType
 }
 
 // Init the WeightedLRU struct
 func (cache *WeightedLRU) Init(_ ...interface{}) interface{} {
-	cache.LRUCache.Init()
+	cache.SimpleCache.Init()
 	return cache
 }
 
 // Clear the WeightedLRU struct
 func (cache *WeightedLRU) Clear() {
-	cache.LRUCache.Clear()
-	cache.LRUCache.Init()
+	cache.SimpleCache.Clear()
+	cache.SimpleCache.Init()
 }
 
 // Dumps the WeightedLRU cache

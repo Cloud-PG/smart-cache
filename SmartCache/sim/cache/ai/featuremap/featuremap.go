@@ -99,7 +99,7 @@ func GetEntries(featureMapFilePath string) chan Entry {
 		os.Exit(-1)
 	}
 
-	channel := make(chan Entry)
+	var channel chan Entry
 	go func() {
 
 		defer close(channel)

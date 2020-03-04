@@ -118,7 +118,7 @@ func TestAIRLInit(t *testing.T) {
 	tmpFile.WriteString(featureMapStringRL)
 
 	ai := AIRL{
-		LRUCache: LRUCache{
+		SimpleCache: SimpleCache{
 			MaxSize: 5.0,
 		},
 	}

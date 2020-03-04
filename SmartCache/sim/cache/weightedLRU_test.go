@@ -13,7 +13,7 @@ const (
 
 func TestWeightedLRUBaseMultipleInsert(t *testing.T) {
 	testCache := &WeightedLRU{
-		LRUCache: LRUCache{
+		SimpleCache: SimpleCache{
 			MaxSize:       3.0,
 			HighWaterMark: 100.,
 			LowWaterMark:  100.,
@@ -42,7 +42,7 @@ func TestWeightedLRUBaseMultipleInsert(t *testing.T) {
 
 func TestWeightedLRUClear(t *testing.T) {
 	testCache := &WeightedLRU{
-		LRUCache: LRUCache{
+		SimpleCache: SimpleCache{
 			MaxSize:       3.0,
 			HighWaterMark: 100.,
 			LowWaterMark:  100.,
@@ -73,7 +73,7 @@ func TestWeightedLRUClear(t *testing.T) {
 
 func TestWeightedLRUInsert(t *testing.T) {
 	testCache := &WeightedLRU{
-		LRUCache: LRUCache{
+		SimpleCache: SimpleCache{
 			MaxSize:       5.0,
 			HighWaterMark: 100.,
 			LowWaterMark:  100.,
@@ -117,7 +117,7 @@ func TestWeightedLRUInsert(t *testing.T) {
 // 	}
 
 // 	testCache := &WeightedLRU{
-// 		LRUCache: LRUCache{
+// 		SimpleCache: SimpleCache{
 // 			MaxSize: maxSize,
 // 		},
 // 	}

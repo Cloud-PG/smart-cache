@@ -12,8 +12,8 @@ const (
 	size2     float64 = 2.0
 )
 
-func TestLRUCacheBaseMultipleInsert(t *testing.T) {
-	testCache := &LRUCache{
+func TestSimpleCacheBaseMultipleInsert(t *testing.T) {
+	testCache := &SimpleCache{
 		MaxSize:       3.0,
 		HighWaterMark: 100.,
 		LowWaterMark:  100.,
@@ -39,8 +39,8 @@ func TestLRUCacheBaseMultipleInsert(t *testing.T) {
 	}
 }
 
-func TestLRUCacheClear(t *testing.T) {
-	testCache := &LRUCache{
+func TestSimpleCacheClear(t *testing.T) {
+	testCache := &SimpleCache{
 		MaxSize:       3.0,
 		HighWaterMark: 100.,
 		LowWaterMark:  100.,
@@ -69,8 +69,8 @@ func TestLRUCacheClear(t *testing.T) {
 	}
 }
 
-func TestLRUCacheInsert(t *testing.T) {
-	testCache := &LRUCache{
+func TestSimpleCacheInsert(t *testing.T) {
+	testCache := &SimpleCache{
 		MaxSize:       5.0,
 		HighWaterMark: 100.,
 		LowWaterMark:  100.,
@@ -104,7 +104,7 @@ func TestLRUCacheInsert(t *testing.T) {
 	}
 }
 
-// func BenchmarkLRUCache(b *testing.B) {
+// func BenchmarkSimpleCache(b *testing.B) {
 // 	var maxSize float64 = 1024. * 1024. * 10.
 // 	var LetterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 
@@ -116,7 +116,7 @@ func TestLRUCacheInsert(t *testing.T) {
 // 		return string(filepath)
 // 	}
 
-// 	testCache := &LRUCache{
+// 	testCache := &SimpleCache{
 // 		MaxSize: maxSize,
 // 	}
 // 	testCache.Init()

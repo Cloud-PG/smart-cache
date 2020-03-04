@@ -19,15 +19,15 @@ const (
 
 // AIRL cache
 type AIRL struct {
-	LRUCache
+	SimpleCache
 	prevTime                time.Time
 	curTime                 time.Time
 	additionFeatureMap      map[string]featuremap.Obj
 	additionFeatureMapOrder []string
 	evictionFeatureMap      map[string]featuremap.Obj
 	evictionFeatureMapOrder []string
-	additionTable           *qlearn.QTable
-	evictionTable           *qlearn.QTable
+	additionTable           qlearn.QTable
+	evictionTable           qlearn.QTable
 	qAdditionPrevState      map[int64]string
 	qAdditionPrevAction     map[int64]qlearn.ActionType
 	qEvictionPrevState      string
@@ -45,7 +45,7 @@ type AIRL struct {
 func (cache *AIRL) Init(args ...interface{}) interface{} {
 	logger = zap.L()
 
-	cache.LRUCache.Init()
+	cache.SimpleCache.Init()
 
 	additionFeatureMap := args[0].(string)
 	evictionFeatureMap := args[1].(string)
@@ -74,8 +74,8 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 	return nil
 }
 
-func makeQtable(featureMap map[string]featuremap.Obj, featureOrder []string, role qlearn.QTableRole, initEpsilon float64) *qlearn.QTable {
-	curTable := &qlearn.QTable{}
+func makeQtable(featureMap map[string]featuremap.Obj, featureOrder []string, role qlearn.QTableRole, initEpsilon float64) qlearn.QTable {
+	curTable := qlearn.QTable{}
 	inputLengths := []int{}
 	for _, featureName := range featureOrder {
 		curFeature, _ := featureMap[featureName]
@@ -93,7 +93,7 @@ func makeQtable(featureMap map[string]featuremap.Obj, featureOrder []string, rol
 
 // Clear the AIRL struct
 func (cache *AIRL) Clear() {
-	cache.LRUCache.Clear()
+	cache.SimpleCache.Clear()
 }
 
 // Dumps the AIRL cache
@@ -192,10 +192,10 @@ func (cache *AIRL) Loads(inputString [][]byte) {
 			unmarshalErr = json.Unmarshal([]byte(curRecord.Data), &curFileStats)
 			cache.stats.fileStats[curRecord.Filename] = &curFileStats
 		case "ADDQTABLE":
-			unmarshalErr = json.Unmarshal([]byte(curRecord.Data), cache.additionTable)
+			unmarshalErr = json.Unmarshal([]byte(curRecord.Data), &cache.additionTable)
 			cache.additionTable.ResetParams()
 		case "EVCQTABLE":
-			unmarshalErr = json.Unmarshal([]byte(curRecord.Data), cache.evictionTable)
+			unmarshalErr = json.Unmarshal([]byte(curRecord.Data), &cache.evictionTable)
 			cache.evictionTable.ResetParams()
 		}
 		if unmarshalErr != nil {
@@ -604,7 +604,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 // AfterRequest of LRU cache
 func (cache *AIRL) AfterRequest(request *Request, hit bool, added bool) {
-	cache.LRUCache.AfterRequest(request, hit, added)
+	cache.SimpleCache.AfterRequest(request, hit, added)
 	if hit {
 		cache.dailyReadOnHit += request.Size
 	} else {

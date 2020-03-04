@@ -684,16 +684,40 @@ func genCache(cacheType string) cache.Cache {
 		logger.Info("Create LRU Cache",
 			zap.Float64("cacheSize", cacheSize),
 		)
-		cacheInstance = &cache.LRUCache{
+		cacheInstance = &cache.SimpleCache{
 			MaxSize: cacheSize,
 		}
 		cacheInstance.Init()
+	case "lfu":
+		logger.Info("Create LFU Cache",
+			zap.Float64("cacheSize", cacheSize),
+		)
+		cacheInstance = &cache.SimpleCache{
+			MaxSize: cacheSize,
+		}
+		cacheInstance.Init(cache.LFUQueue)
+	case "sizeBig":
+		logger.Info("Create Size Big Cache",
+			zap.Float64("cacheSize", cacheSize),
+		)
+		cacheInstance = &cache.SimpleCache{
+			MaxSize: cacheSize,
+		}
+		cacheInstance.Init(cache.SizeBigQueue)
+	case "sizeSmall":
+		logger.Info("Create Size Small Cache",
+			zap.Float64("cacheSize", cacheSize),
+		)
+		cacheInstance = &cache.SimpleCache{
+			MaxSize: cacheSize,
+		}
+		cacheInstance.Init(cache.SizeSmallQueue)
 	case "lruDatasetVerifier":
 		logger.Info("Create lruDatasetVerifier Cache",
 			zap.Float64("cacheSize", cacheSize),
 		)
 		cacheInstance = &cache.LRUDatasetVerifier{
-			LRUCache: cache.LRUCache{
+			SimpleCache: cache.SimpleCache{
 				MaxSize: cacheSize,
 			},
 		}
@@ -702,7 +726,7 @@ func genCache(cacheType string) cache.Cache {
 			zap.Float64("cacheSize", cacheSize),
 		)
 		cacheInstance = &cache.AINN{
-			LRUCache: cache.LRUCache{
+			SimpleCache: cache.SimpleCache{
 				MaxSize: cacheSize,
 			},
 		}
@@ -711,7 +735,7 @@ func genCache(cacheType string) cache.Cache {
 			zap.Float64("cacheSize", cacheSize),
 		)
 		cacheInstance = &cache.AIRL{
-			LRUCache: cache.LRUCache{
+			SimpleCache: cache.SimpleCache{
 				MaxSize: cacheSize,
 			},
 		}
@@ -739,7 +763,7 @@ func genCache(cacheType string) cache.Cache {
 		}
 
 		cacheInstance = &cache.WeightedLRU{
-			LRUCache: cache.LRUCache{
+			SimpleCache: cache.SimpleCache{
 				MaxSize: cacheSize,
 			},
 			Parameters: cache.WeightedFunctionParameters{
