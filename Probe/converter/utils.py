@@ -70,7 +70,7 @@ def sort_from_avro(df: 'pd.DataFrame', cur_filename: str, order_folder: str) -> 
     ):
         new_indexes.append(indexes[row.FileName].pop(0))
 
-    print(f"{STATUS_ARROW}[Order dataframe with avro indexes]")
+    print(f"{STATUS_ARROW}[File:{STATUS_WARNING(cur_filename)}][Order dataframe with avro indexes]")
     df = df.reindex(new_indexes)
 
     for idx, row in tqdm(
