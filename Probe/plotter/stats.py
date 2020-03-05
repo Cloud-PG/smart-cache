@@ -344,20 +344,21 @@ def plot_week_stats(df: 'pd.DataFrame',
         "General week stats",
         all_weeks,
         ['num_users', 'num_sites', 'num_jobs', 'num_tasks'],
+        ['Num. users', 'Num. sites', 'Num. jobs', 'Num. tasks'],
         stats,
     )
 
     fig_request_stats = make_week_bars(
         "Request stats",
         all_weeks,
-        ['num_files', 'num_requests'],
+        ['Num. files', 'Num. requests'],
         stats,
     )
 
     fig_avg_request_stats = make_week_bars(
         "Average request stats",
         all_weeks,
-        ['num_reqXfile', 'num_reqXfile_reqGr1'],
+        ['Avg. num. req. per file', 'Avg. num. req. per file (files > 1 req.)'],
         stats,
     )
 
@@ -379,7 +380,7 @@ def plot_week_stats(df: 'pd.DataFrame',
         export_png(plot, filename=f"{output_filename}.png")
 
 
-def make_week_bars(title: str, weeks: list, categories: list, stats: list):
+def make_week_bars(title: str, weeks: list, categories: list, legends: list, stats: list):
     cur_data = {
         'weeks': weeks
     }
@@ -396,7 +397,7 @@ def make_week_bars(title: str, weeks: list, categories: list, stats: list):
     cur_fig = figure(
         x_range=weeks,
         y_axis_type='log',
-        plot_height=600,
+        plot_height=480,
         title=title,
         toolbar_location=None, tools=""
     )
@@ -406,13 +407,13 @@ def make_week_bars(title: str, weeks: list, categories: list, stats: list):
             x=dodge('weeks', idx*bar_size-0.42, range=cur_fig.x_range),
             top=category, bottom=1,
             width=bar_size, source=source,
-            legend_label=category,
+            legend_label=legends[idx],
             color=Accent[8][idx]
         )
 
     cur_fig.x_range.range_padding = 0.1
     cur_fig.xgrid.grid_line_color = None
-    cur_fig.legend.location = "top_left"
+    cur_fig.legend.location = "bottom_right"
     cur_fig.legend.orientation = "horizontal"
     cur_fig.yaxis.formatter = BasicTickFormatter(use_scientific=False)
 
