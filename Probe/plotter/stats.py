@@ -2,7 +2,7 @@ import pandas as pd
 from bokeh.io import export_png
 from bokeh.layouts import column, row
 from bokeh.models import BasicTickFormatter, ColumnDataSource, Span
-from bokeh.palettes import Category10
+from bokeh.palettes import Accent
 from bokeh.plotting import figure, output_file, save, show
 from bokeh.transform import dodge
 from tqdm import tqdm
@@ -361,7 +361,7 @@ def plot_week_stats(df: 'pd.DataFrame',
         stats,
     )
 
-    plot = column(
+    plot = row(
         fig_general_stats,
         fig_request_stats,
         fig_avg_request_stats,
@@ -396,18 +396,18 @@ def make_week_bars(title: str, weeks: list, categories: list, stats: list):
     cur_fig = figure(
         x_range=weeks,
         y_axis_type='log',
-        plot_height=420,
+        plot_height=600,
         title=title,
         toolbar_location=None, tools=""
     )
 
     for idx, category in enumerate(categories):
         cur_fig.vbar(
-            x=dodge('weeks', idx*bar_size-0.5, range=cur_fig.x_range),
+            x=dodge('weeks', idx*bar_size-0.42, range=cur_fig.x_range),
             top=category, bottom=1,
             width=bar_size, source=source,
             legend_label=category,
-            color=Category10[5][idx]
+            color=Accent[8][idx]
         )
 
     cur_fig.x_range.range_padding = 0.1
