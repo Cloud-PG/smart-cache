@@ -361,7 +361,7 @@ def plot_week_stats(df: 'pd.DataFrame',
 
     p.vbar(
         x=dodge('weeks', -0.25, range=p.x_range), 
-        top='num_users', bottom=0.001,
+        top='num_users', bottom=1,
         width=0.2, source=source,
         legend_label="num_users",
         color=Category10[5][0]
@@ -369,7 +369,7 @@ def plot_week_stats(df: 'pd.DataFrame',
 
     p.vbar(
         x=dodge('weeks', 0.0, range=p.x_range), 
-        top='num_sites', bottom=0.001,
+        top='num_sites', bottom=1,
         width=0.2, source=source,
         legend_label="num_sites",
         color=Category10[5][1]
@@ -377,7 +377,7 @@ def plot_week_stats(df: 'pd.DataFrame',
 
     p.vbar(
         x=dodge('weeks', 0.25, range=p.x_range), 
-        top='num_jobs', bottom=0.001,
+        top='num_jobs', bottom=1,
         width=0.2, source=source,
         legend_label="num_jobs",
         color=Category10[5][2]
@@ -385,7 +385,7 @@ def plot_week_stats(df: 'pd.DataFrame',
 
     p.vbar(
         x=dodge('weeks', 0.5, range=p.x_range), 
-        top='num_tasks', bottom=0.001,
+        top='num_tasks', bottom=1,
         width=0.2, source=source,
         legend_label="num_tasks",
         color=Category10[5][3]
