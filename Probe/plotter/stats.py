@@ -404,7 +404,6 @@ def make_week_bars(title: str, weeks: list, categories: list, legends: list, sta
         y_axis_type='log',
         plot_height=480,
         title=title,
-        toolbar_location=None, tools=""
     )
 
     for idx, category in enumerate(categories):
