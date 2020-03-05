@@ -338,7 +338,7 @@ def plot_week_stats(df: 'pd.DataFrame',
             'num_reqXfile_reqGr1': reqXfile[reqXfile.iloc[:] > 1].mean(),
         })
 
-    all_weeks = [f"week {idx}" for idx in range(len(stats))]
+    all_weeks = [f"week {idx+1}" for idx in range(len(stats))]
     cur_categories = ['num_users', 'num_sites', 'num_jobs', 'num_tasks']
     cur_data = {
         'weeks': all_weeks
