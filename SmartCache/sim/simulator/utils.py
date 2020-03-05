@@ -120,8 +120,8 @@ def load_results(folder: str, top_10: bool = False) -> dict:
                 columns=["cacheName", "readOnHit", "cost"]
             )
             top10_df = top10_df.sort_values(
-                by=["readOnHit", "cost"],
-                ascending=False
+                by=["cost", "readOnHit"],
+                ascending=[True, False]
             )
             top10 = top10_df.cacheName.to_list()[:10]
             to_delete = []
