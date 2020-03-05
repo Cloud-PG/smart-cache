@@ -13,6 +13,7 @@ def main():
     parser.add_argument('path', default=None,
                         help='Folder or file to open')
     parser.add_argument('analysis', default="dailystats",
+                        choices=["dailystats", "weekstats"],
                         help='Folder or file to open')
     parser.add_argument('--output-filename', type=str,
                         default="dailystats",

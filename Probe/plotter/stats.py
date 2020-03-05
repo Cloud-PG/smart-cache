@@ -339,73 +339,65 @@ def plot_week_stats(df: 'pd.DataFrame',
         })
 
     all_weeks = [f"week {idx+1}" for idx in range(len(stats))]
-    cur_categories = ['num_users', 'num_sites', 'num_jobs', 'num_tasks']
+
+    fig_general_stats = make_week_bars(
+        "General week stats",
+        all_weeks,
+        ['num_users', 'num_sites', 'num_jobs', 'num_tasks'],
+        stats,
+    )
+
+    plot = column(
+        fig_general_stats,
+    )
+
+    if output_type == 'show':
+        print(f"{STATUS_ARROW}Show results")
+        show(plot)
+    elif output_type == 'html':
+        output_file(f"{output_filename}.html", mode="inline")
+        print(f"{STATUS_ARROW}Save result HTML in: {output_filename}.html")
+        save(plot)
+    elif output_type == 'png':
+        print(f"{STATUS_ARROW}Save result PNG in: {output_filename}.png")
+        export_png(plot, filename=f"{output_filename}.png")
+
+
+def make_week_bars(title: str, weeks: list, categories: list, stats: list):
     cur_data = {
-        'weeks': all_weeks
+        'weeks': weeks
     }
 
-    for category in cur_categories:
+    for category in categories:
         cur_data[category] = []
         for stat in stats:
             cur_data[category].append(stat[category])
 
     source = ColumnDataSource(data=cur_data)
-
-    p = figure(
-        x_range=all_weeks,
+    
+    bar_size = .8 / len(categories)
+    
+    cur_fig = figure(
+        x_range=weeks,
         y_axis_type='log',
-        plot_height=320,
-        title="General week stats",
+        plot_height=420,
+        title=title,
         toolbar_location=None, tools=""
     )
+    
+    for idx, category in categories:
+        cur_fig.vbar(
+            x=dodge('weeks', idx*bar_size-0.5, range=cur_fig.x_range),
+            top=category, bottom=1,
+            width=bar_size, source=source,
+            legend_label=category,
+            color=Category10[5][idx]
+        )
 
-    p.vbar(
-        x=dodge('weeks', -0.25, range=p.x_range), 
-        top='num_users', bottom=1,
-        width=0.2, source=source,
-        legend_label="num_users",
-        color=Category10[5][0]
-    )
+    cur_fig.x_range.range_padding = 0.1
+    cur_fig.xgrid.grid_line_color = None
+    cur_fig.legend.location = "top_left"
+    cur_fig.legend.orientation = "horizontal"
+    cur_fig.yaxis.formatter = BasicTickFormatter(use_scientific=False)
 
-    p.vbar(
-        x=dodge('weeks', 0.0, range=p.x_range), 
-        top='num_sites', bottom=1,
-        width=0.2, source=source,
-        legend_label="num_sites",
-        color=Category10[5][1]
-    )
-
-    p.vbar(
-        x=dodge('weeks', 0.25, range=p.x_range), 
-        top='num_jobs', bottom=1,
-        width=0.2, source=source,
-        legend_label="num_jobs",
-        color=Category10[5][2]
-    )
-
-    p.vbar(
-        x=dodge('weeks', 0.5, range=p.x_range), 
-        top='num_tasks', bottom=1,
-        width=0.2, source=source,
-        legend_label="num_tasks",
-        color=Category10[5][3]
-    )
-
-    p.x_range.range_padding = 0.1
-    p.xgrid.grid_line_color = None
-    p.legend.location = "top_left"
-    p.legend.orientation = "horizontal"
-    p.yaxis.formatter = BasicTickFormatter(use_scientific=False)
-
-    show(p)
-
-    # if output_type == 'show':
-    #     print(f"{STATUS_ARROW}Show results")
-    #     show(plot)
-    # elif output_type == 'html':
-    #     output_file(f"{output_filename}.html", mode="inline")
-    #     print(f"{STATUS_ARROW}Save result HTML in: {output_filename}.html")
-    #     save(plot)
-    # elif output_type == 'png':
-    #     print(f"{STATUS_ARROW}Save result PNG in: {output_filename}.png")
-    #     export_png(plot, filename=f"{output_filename}.png")
+    return cur_fig
