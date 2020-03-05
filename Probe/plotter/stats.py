@@ -320,7 +320,10 @@ def plot_week_stats(df: 'pd.DataFrame',
 
     for idx in range(0, len(days), 7):
         cur_week = []
-        for day_idx in range(min([7, len(days[idx:])])):
+        num_days = min([7, len(days[idx:])])
+        if num_days != 7:
+            break
+        for day_idx in range(num_days):
             cur_week.append(days[idx+day_idx])
         weeks.append(cur_week)
 
