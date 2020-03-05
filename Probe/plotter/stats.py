@@ -1,8 +1,10 @@
 import pandas as pd
 from bokeh.io import export_png
 from bokeh.layouts import column, row
-from bokeh.models import BasicTickFormatter, Span
+from bokeh.models import BasicTickFormatter, ColumnDataSource, Span
+from bokeh.palettes import Category10
 from bokeh.plotting import figure, output_file, save, show
+from bokeh.transform import dodge
 from tqdm import tqdm
 
 from ..utils import STATUS_ARROW
@@ -305,3 +307,101 @@ def plot_daily_stats(df: 'pd.DataFrame',
     elif output_type == 'png':
         print(f"{STATUS_ARROW}Save result PNG in: {output_filename}.png")
         export_png(plot, filename=f"{output_filename}.png")
+
+
+def plot_week_stats(df: 'pd.DataFrame',
+                    output_filename: str = 'dailystats',
+                    output_type: str = 'show',
+                    reset_stat_days: int = 0):
+
+    days = df["reqDay"].unique().tolist()
+    weeks = []
+    stats = []
+
+    for idx in range(0, len(days), 7):
+        cur_week = []
+        for day_idx in range(min([7, len(days[idx:])])):
+            cur_week.append(days[idx+day_idx])
+        weeks.append(cur_week)
+
+    for week in weeks:
+        cur_week = df[df['reqDay'].isin(week)]
+        reqXfile = cur_week.Filename.value_counts()
+        stats.append({
+            'num_users': len(cur_week.UserID.unique()),
+            'num_tasks': len(cur_week.TaskID.unique()),
+            'num_jobs': len(cur_week.JobID.unique()),
+            'num_sites': len(cur_week.SiteName.unique()),
+            'num_files': len(cur_week.Filename.unique()),
+            'num_requests': len(cur_week.index),
+            'num_reqXfile': reqXfile.mean(),
+            'num_reqXfile_reqGr1': reqXfile[reqXfile.iloc[:] > 1].mean(),
+        })
+
+    all_weeks = [f"week {idx}" for idx in range(len(stats))]
+    cur_categories = ['num_users', 'num_sites', 'num_jobs', 'num_tasks']
+    cur_data = {
+        'weeks': all_weeks
+    }
+
+    for category in cur_categories:
+        cur_data[category] = []
+        for stat in stats:
+            cur_data[category].append(stat[category])
+
+    source = ColumnDataSource(data=cur_data)
+
+    p = figure(
+        x_range=all_weeks,
+        y_axis_type='log',
+        plot_height=320,
+        title="General week stats",
+        toolbar_location=None, tools=""
+    )
+
+    p.vbar(
+        x=dodge('weeks', -0.25, range=p.x_range), top='num_users',
+        width=0.2, source=source,
+        legend_label="num_users",
+        color=Category10[5][0]
+    )
+
+    p.vbar(
+        x=dodge('weeks', 0.0, range=p.x_range), top='num_sites',
+        width=0.2, source=source,
+        legend_label="num_sites",
+        color=Category10[5][1]
+    )
+
+    p.vbar(
+        x=dodge('weeks', 0.25, range=p.x_range), top='num_jobs',
+        width=0.2, source=source,
+        legend_label="num_jobs",
+        color=Category10[5][2]
+    )
+
+    p.vbar(
+        x=dodge('weeks', 0.5, range=p.x_range), top='num_tasks',
+        width=0.2, source=source,
+        legend_label="num_tasks",
+        color=Category10[5][0]
+    )
+
+    p.x_range.range_padding = 0.1
+    p.xgrid.grid_line_color = None
+    p.legend.location = "top_left"
+    p.legend.orientation = "horizontal"
+    p.yaxis.formatter = BasicTickFormatter(use_scientific=False)
+
+    show(p)
+
+    # if output_type == 'show':
+    #     print(f"{STATUS_ARROW}Show results")
+    #     show(plot)
+    # elif output_type == 'html':
+    #     output_file(f"{output_filename}.html", mode="inline")
+    #     print(f"{STATUS_ARROW}Save result HTML in: {output_filename}.html")
+    #     save(plot)
+    # elif output_type == 'png':
+    #     print(f"{STATUS_ARROW}Save result PNG in: {output_filename}.png")
+    #     export_png(plot, filename=f"{output_filename}.png")

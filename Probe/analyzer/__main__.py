@@ -12,6 +12,8 @@ def main():
 
     parser.add_argument('path', default=None,
                         help='Folder or file to open')
+    parser.add_argument('analysis', default="dailystats",
+                        help='Folder or file to open')
     parser.add_argument('--output-filename', type=str,
                         default="dailystats",
                         help='The output file name [DEFAULT: "dailystats"]')
@@ -44,15 +46,26 @@ def main():
         )
         print(f"{STATUS_ARROW}Sort data by date...")
         utils.sort_by_date(df)
-        print(f"{STATUS_ARROW}Extract stats...")
-        plotter.plot_daily_stats(
-            df,
-            output_filename=args.output_filename,
-            output_type=args.output_type,
-            reset_stat_days=args.reset_stat_days
-        )
-        print(df.columns)
-        print(df.JobStart.astype('datetime64[ms]'))
+        if args.analysis == "dailystats":
+            print(f"{STATUS_ARROW}Extract daily stats...")
+            plotter.plot_daily_stats(
+                df,
+                output_filename=args.output_filename,
+                output_type=args.output_type,
+                reset_stat_days=args.reset_stat_days
+            )
+            print(df.columns)
+            print(df.JobStart.astype('datetime64[ms]'))
+        elif args.analysis == "weekstats":
+            print(f"{STATUS_ARROW}Extract daily stats...")
+            plotter.plot_week_stats(
+                df,
+                output_filename=args.output_filename,
+                output_type=args.output_type,
+                reset_stat_days=args.reset_stat_days
+            )
+        else:
+            raise Exception(f"I cannot apply {args.analysis} analysis...")
 
 
 if __name__ == "__main__":
