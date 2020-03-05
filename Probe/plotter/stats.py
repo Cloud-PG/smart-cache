@@ -360,28 +360,32 @@ def plot_week_stats(df: 'pd.DataFrame',
     )
 
     p.vbar(
-        x=dodge('weeks', -0.25, range=p.x_range), top='num_users',
+        x=dodge('weeks', -0.25, range=p.x_range), 
+        top='num_users', bottom=0.001,
         width=0.2, source=source,
         legend_label="num_users",
         color=Category10[5][0]
     )
 
     p.vbar(
-        x=dodge('weeks', 0.0, range=p.x_range), top='num_sites',
+        x=dodge('weeks', 0.0, range=p.x_range), 
+        top='num_sites', bottom=0.001,
         width=0.2, source=source,
         legend_label="num_sites",
         color=Category10[5][1]
     )
 
     p.vbar(
-        x=dodge('weeks', 0.25, range=p.x_range), top='num_jobs',
+        x=dodge('weeks', 0.25, range=p.x_range), 
+        top='num_jobs', bottom=0.001,
         width=0.2, source=source,
         legend_label="num_jobs",
         color=Category10[5][2]
     )
 
     p.vbar(
-        x=dodge('weeks', 0.5, range=p.x_range), top='num_tasks',
+        x=dodge('weeks', 0.5, range=p.x_range), 
+        top='num_tasks', bottom=0.001,
         width=0.2, source=source,
         legend_label="num_tasks",
         color=Category10[5][0]
