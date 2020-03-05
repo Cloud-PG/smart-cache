@@ -351,6 +351,7 @@ def plot_week_stats(df: 'pd.DataFrame',
     fig_request_stats = make_week_bars(
         "Request stats",
         all_weeks,
+        ['num_files', 'num_requests'],
         ['Num. files', 'Num. requests'],
         stats,
     )
@@ -358,6 +359,7 @@ def plot_week_stats(df: 'pd.DataFrame',
     fig_avg_request_stats = make_week_bars(
         "Average request stats",
         all_weeks,
+        ['num_reqXfile', 'num_reqXfile_reqGr1'],
         ['Avg. num. req. per file', 'Avg. num. req. per file (files > 1 req.)'],
         stats,
     )
