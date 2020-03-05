@@ -388,7 +388,7 @@ def plot_week_stats(df: 'pd.DataFrame',
         top='num_tasks', bottom=0.001,
         width=0.2, source=source,
         legend_label="num_tasks",
-        color=Category10[5][0]
+        color=Category10[5][3]
     )
 
     p.x_range.range_padding = 0.1
