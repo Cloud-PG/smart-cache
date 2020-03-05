@@ -401,6 +401,8 @@ def plot_measure(tools: list,
                     values['deleted data'] + values['read on miss data']
             elif target == "miss":
                 points = values['read on miss data'] - values['written data']
+            elif target == "throughput":
+                points = values['read on hit data'] / values['written data']
             elif target == "network_in_saturation":
                 points = (values['read on miss data'] /
                           ((10000. / 8.) * 60. * 60. * 24.)) * 100.  # 10Gbit x 1 day
@@ -746,6 +748,28 @@ def plot_results(folder: str, results: dict, cache_size: float,
             read_on_hit=True,
             target="miss",
             y_axis_label="MB",
+        )
+        run_full_normal_hit_rate_figs.append(cost_fig)
+    pbar.update(1)
+    
+    ###########################################################################
+    # Throughput plot of full normal run
+    ###########################################################################
+    with ignored(Exception):
+        cost_fig = plot_measure(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            x_range=size_fig.x_range,
+            title="Throughput",
+            plot_width=plot_width,
+            plot_height=plot_height,
+            read_on_hit=True,
+            target="throughput",
+            y_axis_label="ratio",
         )
         run_full_normal_hit_rate_figs.append(cost_fig)
     pbar.update(1)

@@ -120,9 +120,10 @@ def load_results(folder: str, top_10: bool = False) -> dict:
                 columns=["cacheName", "readOnHit", "cost"]
             )
             top10_df = top10_df.sort_values(
-                by=["readOnHit", "cost"])
-            top10 = top10_df.sort_values(
-                by=["readOnHit", "cost"]).cacheName.to_list()[:10]
+                by=["readOnHit", "cost"],
+                ascending=False
+            )
+            top10 = top10_df.cacheName.to_list()[:10]
             to_delete = []
             for cache_name, _ in tqdm(results['run_full_normal'].items(), desc="Filter top 10 results"):
                 if cache_name.lower().find("lru_") == -1 or cache_name.lower().index("lru_") != 0:
