@@ -310,7 +310,7 @@ def plot_daily_stats(df: 'pd.DataFrame',
 
 
 def plot_week_stats(df: 'pd.DataFrame',
-                    output_filename: str = 'dailystats',
+                    output_filename: str = 'weekstats',
                     output_type: str = 'show',
                     reset_stat_days: int = 0):
 
@@ -347,8 +347,24 @@ def plot_week_stats(df: 'pd.DataFrame',
         stats,
     )
 
+    fig_request_stats = make_week_bars(
+        "Request stats",
+        all_weeks,
+        ['num_files', 'num_requests'],
+        stats,
+    )
+
+    fig_avg_request_stats = make_week_bars(
+        "Average request stats",
+        all_weeks,
+        ['num_reqXfile', 'num_reqXfile_reqGr1'],
+        stats,
+    )
+
     plot = column(
         fig_general_stats,
+        fig_request_stats,
+        fig_avg_request_stats,
     )
 
     if output_type == 'show':
@@ -374,9 +390,9 @@ def make_week_bars(title: str, weeks: list, categories: list, stats: list):
             cur_data[category].append(stat[category])
 
     source = ColumnDataSource(data=cur_data)
-    
+
     bar_size = .8 / len(categories)
-    
+
     cur_fig = figure(
         x_range=weeks,
         y_axis_type='log',
@@ -384,8 +400,8 @@ def make_week_bars(title: str, weeks: list, categories: list, stats: list):
         title=title,
         toolbar_location=None, tools=""
     )
-    
-    for idx, category in categories:
+
+    for idx, category in enumerate(categories):
         cur_fig.vbar(
             x=dodge('weeks', idx*bar_size-0.5, range=cur_fig.x_range),
             top=category, bottom=1,

@@ -58,7 +58,7 @@ def main():
             print(df.columns)
             print(df.JobStart.astype('datetime64[ms]'))
         elif args.analysis == "weekstats":
-            print(f"{STATUS_ARROW}Extract daily stats...")
+            print(f"{STATUS_ARROW}Extract weekstats stats...")
             plotter.plot_week_stats(
                 df,
                 output_filename=args.output_filename,
