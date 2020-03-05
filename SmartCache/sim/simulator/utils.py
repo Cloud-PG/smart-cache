@@ -1,10 +1,11 @@
+import logging
 import subprocess
 from contextlib import contextmanager
 from os import path, walk
-import logging
-import coloredlogs
 
+import coloredlogs
 import pandas as pd
+from tqdm import tqdm
 
 
 def get_logger(filename: str = __name__, level: str = 'INFO') -> 'logger.Logger':
@@ -107,19 +108,27 @@ def load_results(folder: str, top_10: bool = False) -> dict:
 
     if top_10:
         if 'run_full_normal' in results:
-            ranks = {}
-            void = []
-            for cache_name, df in results['run_full_normal'].items():
-                if df.shape[0] > 0:
-                    cost = df['written data'] + \
-                        df['deleted data'] + df['read on miss data']
-                    ranks[cache_name] = cost.mean()
-                elif cache_name.lower().find("lru_") == -1 or cache_name.lower().index("lru_") != 0:
-                    void.append(cache_name)
-            for name in void:
-                del results['run_full_normal'][name]
-            for name, _ in sorted(ranks.items(), key=lambda elm: elm[1])[10:]:
-                if name.lower().find("lru_") == -1 or name.lower().index("lru_") != 0:
-                    del results['run_full_normal'][name]
+            leaderboard = []
+            for cache_name, df in tqdm(results['run_full_normal'].items(), desc="Create stats for top 10"):
+                cost = df['written data'] + \
+                    df['deleted data'] + df['read on miss data']
+                leaderboard.append(
+                    [cache_name, df['read on hit data'].mean(), cost.mean()]
+                )
+            top10_df = pd.DataFrame(
+                leaderboard,
+                columns=["cacheName", "readOnHit", "cost"]
+            )
+            top10_df = top10_df.sort_values(
+                by=["readOnHit", "cost"])
+            top10 = top10_df.sort_values(
+                by=["readOnHit", "cost"]).cacheName.to_list()[:10]
+            to_delete = []
+            for cache_name, _ in tqdm(results['run_full_normal'].items(), desc="Filter top 10 results"):
+                if cache_name.lower().find("lru_") == -1 or cache_name.lower().index("lru_") != 0:
+                    if cache_name not in top10:
+                        to_delete.append(cache_name)
+            for cache_name in tqdm(to_delete, desc="Remove lower results"):
+                del results['run_full_normal'][cache_name]
 
     return results
