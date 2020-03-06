@@ -4,34 +4,34 @@ import (
 	"encoding/json"
 )
 
-// WeightedFunctionParameters are the input parameters of the weighted function
-type WeightedFunctionParameters struct {
+// WeightFunctionParameters are the input parameters of the weighted function
+type WeightFunctionParameters struct {
 	Alpha float64
 	Beta  float64
 	Gamma float64
 }
 
-// WeightedLRU cache
-type WeightedLRU struct {
+// WeightFunLRU cache
+type WeightFunLRU struct {
 	SimpleCache
-	Parameters      WeightedFunctionParameters
+	Parameters      WeightFunctionParameters
 	SelFunctionType FunctionType
 }
 
-// Init the WeightedLRU struct
-func (cache *WeightedLRU) Init(_ ...interface{}) interface{} {
+// Init the WeightFunLRU struct
+func (cache *WeightFunLRU) Init(_ ...interface{}) interface{} {
 	cache.SimpleCache.Init()
 	return cache
 }
 
-// Clear the WeightedLRU struct
-func (cache *WeightedLRU) Clear() {
+// Clear the WeightFunLRU struct
+func (cache *WeightFunLRU) Clear() {
 	cache.SimpleCache.Clear()
 	cache.SimpleCache.Init()
 }
 
-// Dumps the WeightedLRU cache
-func (cache *WeightedLRU) Dumps() [][]byte {
+// Dumps the WeightFunLRU cache
+func (cache *WeightFunLRU) Dumps() [][]byte {
 	logger.Info("Dump cache into byte string")
 	outData := make([][]byte, 0)
 	var newLine = []byte("\n")
@@ -61,8 +61,8 @@ func (cache *WeightedLRU) Dumps() [][]byte {
 	return outData
 }
 
-// Loads the WeightedLRU cache
-func (cache *WeightedLRU) Loads(inputString [][]byte) {
+// Loads the WeightFunLRU cache
+func (cache *WeightFunLRU) Loads(inputString [][]byte) {
 	logger.Info("Load cache dump string")
 	var curRecord DumpRecord
 	var curRecordInfo DumpInfo
@@ -84,15 +84,15 @@ func (cache *WeightedLRU) Loads(inputString [][]byte) {
 }
 
 // BeforeRequest of LRU cache
-func (cache *WeightedLRU) BeforeRequest(request *Request, hit bool) *FileStats {
+func (cache *WeightFunLRU) BeforeRequest(request *Request, hit bool) *FileStats {
 	curStats, newFile := cache.stats.GetOrCreate(request.Filename, request.Size, request.DayTime)
 	curStats.updateStats(hit, request.Size, request.UserID, request.SiteName, request.DayTime)
 	cache.stats.updateWeight(curStats, newFile, cache.SelFunctionType, cache.Parameters.Alpha, cache.Parameters.Beta, cache.Parameters.Gamma)
 	return curStats
 }
 
-// UpdatePolicy of WeightedLRU cache
-func (cache *WeightedLRU) UpdatePolicy(request *Request, fileStats *FileStats, hit bool) bool {
+// UpdatePolicy of WeightFunLRU cache
+func (cache *WeightFunLRU) UpdatePolicy(request *Request, fileStats *FileStats, hit bool) bool {
 	var added = false
 
 	requestedFileSize := request.Size

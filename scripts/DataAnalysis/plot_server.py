@@ -139,7 +139,7 @@ def plot_info_window(window: int, filename: str, **kwargs):
             ]
 
             ##
-            # Files in weighted cache
+            # Files in weight function cache
             pf_fileW_hit_weighted_cache = figure(
                 title=f"File in {cache_name} (sorted by weight function score, gray area)",
                 tools="box_zoom,pan,reset,save",
@@ -239,7 +239,7 @@ def plot_info_window(window: int, filename: str, **kwargs):
             ])
 
             ##
-            # Number hits x file in weighted cache
+            # Number hits x file in weight function cache
             pf_fileSize_hit_weighted_cache = figure(
                 title=f"Number of hits x file in {cache_name} (sorted by file size value, gray area)",
                 tools="box_zoom,pan,reset,save",
@@ -260,7 +260,7 @@ def plot_info_window(window: int, filename: str, **kwargs):
             )
 
             ##
-            # Number miss x file in weighted cache
+            # Number miss x file in weight function cache
             pf_fileSize_miss_weighted_cache = figure(
                 title=f"Number of miss x file in {cache_name} (sorted by file size value, gray area)",
                 tools="box_zoom,pan,reset,save",

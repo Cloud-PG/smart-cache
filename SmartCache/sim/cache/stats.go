@@ -15,7 +15,7 @@ const (
 	DeltaDays2Purge = 7.
 )
 
-// Stats collector of statistics for weighted cache
+// Stats collector of statistics for weight function cache
 type Stats struct {
 	fileStats       map[int64]*FileStats
 	weightSum       float64
@@ -144,7 +144,7 @@ const (
 
 type cacheEmptyMsg struct{}
 
-// FileStats contains file statistics collected by weighted caches
+// FileStats contains file statistics collected by weight function caches
 type FileStats struct {
 	Filename          int64       `json:"filename"`
 	Weight            float64     `json:"weight"`
@@ -275,7 +275,7 @@ func (stats *FileStats) updateFilePoints(curTime *time.Time) float64 {
 func (stats *FileStats) updateWeight(functionType FunctionType, alpha float64, beta float64, gamma float64) float64 {
 	switch functionType {
 	case FuncAdditive:
-		stats.Weight = fileWeightedAdditiveFunction(
+		stats.Weight = fileAdditiveWeightFunction(
 			stats.Frequency,
 			stats.Size,
 			stats.RequestTicksMean,
@@ -284,7 +284,7 @@ func (stats *FileStats) updateWeight(functionType FunctionType, alpha float64, b
 			gamma,
 		)
 	case FuncAdditiveExp:
-		stats.Weight = fileWeightedAdditiveExpFunction(
+		stats.Weight = fileAdditiveExpWeightFunction(
 			stats.Frequency,
 			stats.Size,
 			stats.RequestTicksMean,
@@ -293,7 +293,7 @@ func (stats *FileStats) updateWeight(functionType FunctionType, alpha float64, b
 			gamma,
 		)
 	case FuncMultiplicative:
-		stats.Weight = fileWeightedMultiplicativeFunction(
+		stats.Weight = fileMultiplicativeWeightFunction(
 			stats.Frequency,
 			stats.Size,
 			stats.RequestTicksMean,

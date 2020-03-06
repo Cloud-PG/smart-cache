@@ -63,7 +63,7 @@ var (
 	simWindowSize          uint32
 	weightAlpha            float64
 	weightBeta             float64
-	weightedFunc           string
+	weightFunc             string
 	weightGamma            float64
 )
 
@@ -115,20 +115,20 @@ func main() {
 		"[Simulation] time delay for cmd output",
 	)
 	rootCmd.PersistentFlags().StringVar(
-		&weightedFunc, "weightedFunc", "FuncWeightedRequests",
-		"[WeightedLRU] function to use with weighted cache",
+		&weightFunc, "weightFunc", "FuncWeightedRequests",
+		"[WeightFunLRU] function to use with weight cache",
 	)
 	rootCmd.PersistentFlags().Float64Var(
 		&weightAlpha, "weightAlpha", 1.0,
-		"[Simulation] Parameter Alpha of the weighted function",
+		"[Simulation] Parameter Alpha of the weight function",
 	)
 	rootCmd.PersistentFlags().Float64Var(
 		&weightBeta, "weightBeta", 1.0,
-		"[Simulation] Parameter Beta of the weighted function",
+		"[Simulation] Parameter Beta of the weight function",
 	)
 	rootCmd.PersistentFlags().Float64Var(
 		&weightGamma, "weightGamma", 1.0,
-		"[Simulation] Parameter Gamma of the weighted function",
+		"[Simulation] Parameter Gamma of the weight function",
 	)
 	rootCmd.PersistentFlags().StringVar(
 		&logLevel, "logLevel", "INFO",
@@ -290,7 +290,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				}, "_")
 				baseName = strings.Join([]string{
 					baseName,
-					weightedFunc,
+					weightFunc,
 					parameters,
 				}, "_")
 			}
@@ -739,8 +739,8 @@ func genCache(cacheType string) cache.Cache {
 				MaxSize: cacheSize,
 			},
 		}
-	case "weightedLRU":
-		logger.Info("Create Weighted Cache",
+	case "weightFunLRU":
+		logger.Info("Create Weight Function Cache",
 			zap.Float64("cacheSize", cacheSize),
 		)
 
@@ -748,7 +748,7 @@ func genCache(cacheType string) cache.Cache {
 			selFunctionType cache.FunctionType
 		)
 
-		switch weightedFunc {
+		switch weightFunc {
 		case "FuncAdditive":
 			selFunctionType = cache.FuncAdditive
 		case "FuncAdditiveExp":
@@ -762,11 +762,11 @@ func genCache(cacheType string) cache.Cache {
 			os.Exit(-1)
 		}
 
-		cacheInstance = &cache.WeightedLRU{
+		cacheInstance = &cache.WeightFunLRU{
 			SimpleCache: cache.SimpleCache{
 				MaxSize: cacheSize,
 			},
-			Parameters: cache.WeightedFunctionParameters{
+			Parameters: cache.WeightFunctionParameters{
 				Alpha: weightAlpha,
 				Beta:  weightBeta,
 				Gamma: weightGamma,

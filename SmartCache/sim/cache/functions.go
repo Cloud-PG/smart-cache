@@ -8,25 +8,25 @@ import (
 type FunctionType int
 
 const (
-	// FuncAdditive indicates the simple function for weighted cache with parameters
+	// FuncAdditive indicates the simple function for weight function cache with parameters
 	FuncAdditive FunctionType = iota - 4
-	// FuncAdditiveExp indicates the simple function for weighted cache with parameters but exponential
+	// FuncAdditiveExp indicates the simple function for weight function cache with parameters but exponential
 	FuncAdditiveExp
-	// FuncMultiplicative  indicates the simple function for weighted cache with parameter as exponentials
+	// FuncMultiplicative  indicates the simple function for weight function cache with parameter as exponentials
 	FuncMultiplicative
 	// FuncWeightedRequests has a small memory for request time
 	FuncWeightedRequests
 )
 
-func fileWeightedAdditiveFunction(totRequests int64, size float64, meanTicks float64, alpha float64, beta float64, gamma float64) float64 {
+func fileAdditiveWeightFunction(totRequests int64, size float64, meanTicks float64, alpha float64, beta float64, gamma float64) float64 {
 	return alpha*float64(totRequests) + beta*size + gamma*meanTicks
 }
 
-func fileWeightedAdditiveExpFunction(totRequests int64, size float64, meanTicks float64, alpha float64, beta float64, gamma float64) float64 {
+func fileAdditiveExpWeightFunction(totRequests int64, size float64, meanTicks float64, alpha float64, beta float64, gamma float64) float64 {
 	return float64(math.Pow(float64(totRequests), alpha) + math.Pow(float64(size), beta) + math.Pow(float64(meanTicks), gamma))
 }
 
-func fileWeightedMultiplicativeFunction(totRequests int64, size float64, meanTicks float64, alpha float64, beta float64, gamma float64) float64 {
+func fileMultiplicativeWeightFunction(totRequests int64, size float64, meanTicks float64, alpha float64, beta float64, gamma float64) float64 {
 	return float64(math.Pow(float64(totRequests), alpha) * math.Pow(float64(size), beta) * math.Pow(float64(meanTicks), gamma))
 }
 

@@ -55,8 +55,8 @@ def prepare_process_call(args, simulator_exe, cache_type, working_dir: str,
     if cold_start_no_stats:
         exe_args.append("--simColdStartNoStats=true")
 
-    if cache_type == "weightedLRU":
-        exe_args.append(f"--weightedFunc={wf_parameters['function']}")
+    if cache_type == "weightFunLRU":
+        exe_args.append(f"--weightFunc={wf_parameters['function']}")
         exe_args.append(f"--weightAlpha={wf_parameters['alpha']}")
         exe_args.append(f"--weightBeta={wf_parameters['beta']}")
         exe_args.append(f"--weightGamma={wf_parameters['gamma']}")
@@ -98,8 +98,8 @@ def prepare_process_call(args, simulator_exe, cache_type, working_dir: str,
 
 
 def cache_name(cache_type: str, args) -> str:
-    if cache_type == "weightedLRU":
-        cache_name = f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}_{args.weighted_function}_{args.wf_param_alpha:0.2f}_{args.wf_param_beta:0.2f}_{args.wf_param_gamma:0.2f}"
+    if cache_type == "weightFunLRU":
+        cache_name = f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}_{args.weight_function}_{args.wf_param_alpha:0.2f}_{args.wf_param_beta:0.2f}_{args.wf_param_gamma:0.2f}"
     else:
         cache_name = f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}"
     return cache_name
@@ -120,9 +120,9 @@ def main():
                         default="./results_8w_with_sizes_csv",
                         help='The folder where the json results are stored [DEFAULT: "./results_8w_with_sizes_csv"]')
     parser.add_argument('--cache-types', type=str,
-                        default="lru,weightedLRU",
-                        help='Comma separated list of cache to simulate [DEFAULT: "lru,weightedLRU"]')
-    parser.add_argument('--weighted-function', type=str,
+                        default="lru,weightFunLRU",
+                        help='Comma separated list of cache to simulate [DEFAULT: "lru,weightFunLRU"]')
+    parser.add_argument('--weight-function', type=str,
                         choices=[
                             "FuncAdditive",
                             "FuncAdditiveExp",
@@ -265,7 +265,7 @@ def main():
         os.makedirs(single_window_run_dir, exist_ok=True)
 
         weight_function_parameters = {
-            'function': args.weighted_function,
+            'function': args.weight_function,
             'alpha': args.wf_param_alpha,
             'beta': args.wf_param_beta,
             'gamma': args.wf_param_gamma,

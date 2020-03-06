@@ -7,12 +7,12 @@ import (
 )
 
 const (
-	WeightedLRUEXP   float64 = 2.0
+	WeightFunLRUEXP  float64 = 2.0
 	WeightedCacheEXP float64 = 2.0
 )
 
-func TestWeightedLRUBaseMultipleInsert(t *testing.T) {
-	testCache := &WeightedLRU{
+func TestWeightFunLRUBaseMultipleInsert(t *testing.T) {
+	testCache := &WeightFunLRU{
 		SimpleCache: SimpleCache{
 			MaxSize:       3.0,
 			HighWaterMark: 100.,
@@ -40,8 +40,8 @@ func TestWeightedLRUBaseMultipleInsert(t *testing.T) {
 	}
 }
 
-func TestWeightedLRUClear(t *testing.T) {
-	testCache := &WeightedLRU{
+func TestWeightFunLRUClear(t *testing.T) {
+	testCache := &WeightFunLRU{
 		SimpleCache: SimpleCache{
 			MaxSize:       3.0,
 			HighWaterMark: 100.,
@@ -71,8 +71,8 @@ func TestWeightedLRUClear(t *testing.T) {
 	}
 }
 
-func TestWeightedLRUInsert(t *testing.T) {
-	testCache := &WeightedLRU{
+func TestWeightFunLRUInsert(t *testing.T) {
+	testCache := &WeightFunLRU{
 		SimpleCache: SimpleCache{
 			MaxSize:       5.0,
 			HighWaterMark: 100.,
@@ -104,7 +104,7 @@ func TestWeightedLRUInsert(t *testing.T) {
 	}
 }
 
-// func BenchmarkWeightedLRU(b *testing.B) {
+// func BenchmarkWeightFunLRU(b *testing.B) {
 // 	var maxSize float64 = 1024. * 1024. * 10.
 // 	var LetterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 
@@ -116,7 +116,7 @@ func TestWeightedLRUInsert(t *testing.T) {
 // 		return string(filepath)
 // 	}
 
-// 	testCache := &WeightedLRU{
+// 	testCache := &WeightFunLRU{
 // 		SimpleCache: SimpleCache{
 // 			MaxSize: maxSize,
 // 		},
