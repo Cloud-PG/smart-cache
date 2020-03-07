@@ -77,18 +77,18 @@ def job_run(processes: list) -> bool:
 
 
 def get_result_section(cur_path: str, source_folder: str):
-    head, tail = path.split(cur_path)
     section = []
-    while head != source_folder:
-        section.append(tail)
+    target = path.dirname(source_folder) or path.basename(source_folder)
+    head = cur_path
+    while head != target:
         head, tail = path.split(head)
-    section.append(tail)
+        section.append(tail)
     return section
 
 
-def load_results(folder: str, top_10: bool = False) -> dict:
+def load_results(folder: str, top: int = 0) -> dict:
     results = {}
-    for root, _, files in walk(folder):
+    for root, _, files in tqdm(walk(folder), desc="Search and open files"):
         for file_ in files:
             head, ext = path.splitext(file_)
             if ext == ".csv" and head.find("_results") != -1:
@@ -106,7 +106,7 @@ def load_results(folder: str, top_10: bool = False) -> dict:
                 )
                 cur_section[last_section] = df
 
-    if top_10:
+    if top != 0:
         if 'run_full_normal' in results:
             leaderboard = []
             for cache_name, df in tqdm(results['run_full_normal'].items(), desc="Create stats for top 10"):
@@ -115,21 +115,25 @@ def load_results(folder: str, top_10: bool = False) -> dict:
                 leaderboard.append(
                     [cache_name, df['read on hit data'].mean(), cost.mean()]
                 )
-            top10_df = pd.DataFrame(
+            top_df = pd.DataFrame(
                 leaderboard,
                 columns=["cacheName", "readOnHit", "cost"]
             )
-            top10_df = top10_df.sort_values(
-                by=["cost", "readOnHit"],
-                ascending=[True, False]
+            top_df = top_df.sort_values(
+                by=["readOnHit", "cost"],
+                ascending=[False, True]
             )
-            top10 = top10_df.cacheName.to_list()[:10]
+            topResults = top_df.cacheName.to_list()[:top]
             to_delete = []
             for cache_name, _ in tqdm(results['run_full_normal'].items(), desc="Filter top 10 results"):
                 if cache_name.lower().find("lru_") == -1 or cache_name.lower().index("lru_") != 0:
-                    if cache_name not in top10:
+                    if cache_name not in topResults:
                         to_delete.append(cache_name)
             for cache_name in tqdm(to_delete, desc="Remove lower results"):
                 del results['run_full_normal'][cache_name]
+
+            print(results)
+            for cache_name, values in results['run_full_normal'].items():
+                print(cache_name, values)
 
     return results
