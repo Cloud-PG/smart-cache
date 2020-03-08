@@ -16,15 +16,15 @@ from .utils import ignored
 _LINE_WIDTH = 2.8
 
 
-def update_colors(new_name: str, color_table: dict):
-    names = list(color_table.keys()) + [new_name]
+def update_colors(new_names: str, color_table: dict):
+    names = [
+        name for name in list(color_table.keys())
+        if name.find("_single") == -1
+    ] + [new_names]
     colors = cycle(Category20[20])
     for name in sorted(names):
-        cur_color = next(colors)
-        color_table[name] = cur_color
-    for name in sorted(names):
-        cur_color = next(colors)
-        color_table[f'{name}_single'] = cur_color
+        color_table[name] = next(colors)
+        color_table[f'{name}_single'] = next(colors)
 
 
 def add_window_lines(cur_fig, dates: list, window_size: int):
@@ -118,7 +118,8 @@ def plot_column(tools: list,
                 color=color_table[cache_name],
                 line_width=_LINE_WIDTH,
             )
-            legend_items.append((cache_name, [cur_line]))
+            legend_items.append(
+                (get_cache_legend_name(cache_name), [cur_line]))
             mean_point = sum(points) / len(points)
             cur_line = cur_fig.line(
                 dates,
@@ -128,7 +129,7 @@ def plot_column(tools: list,
                 line_width=3.,
             )
             legend_items.append(
-                (f"Mean {cache_name} -> {mean_point:0.2f}{'%' if normalize else ''}",
+                (f"Mean {get_cache_legend_name(cache_name)} -> {mean_point:0.2f}{'%' if normalize else ''}",
                  [cur_line])
             )
             if normalize:
@@ -348,6 +349,12 @@ def plot_column(tools: list,
     return cur_fig
 
 
+def get_cache_legend_name(string: str):
+    if string.find("weightFunLRU") != -1:
+        return "_".join(string.split("_")[3:])
+    return string
+
+
 def plot_measure(tools: list,
                  results: dict,
                  dates: list,
@@ -417,7 +424,8 @@ def plot_measure(tools: list,
                 color=color_table[cache_name],
                 line_width=_LINE_WIDTH,
             )
-            legend_items.append((cache_name, [cur_line]))
+            legend_items.append(
+                (get_cache_legend_name(cache_name), [cur_line]))
             mean_point = sum(points) / len(points)
             cur_line = cur_fig.line(
                 dates,
@@ -427,7 +435,7 @@ def plot_measure(tools: list,
                 line_width=3.,
             )
             legend_items.append(
-                (f"Mean {cache_name} -> {mean_point:0.2f}{'%' if target == 'gain' else ''}",
+                (f"Mean {get_cache_legend_name(cache_name)} -> {mean_point:0.2f}{'%' if target == 'gain' else ''}",
                  [cur_line])
             )
         elif run_type == "run_single_window":
@@ -751,7 +759,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
         )
         run_full_normal_hit_rate_figs.append(cost_fig)
     pbar.update(1)
-    
+
     ###########################################################################
     # Throughput plot of full normal run
     ###########################################################################

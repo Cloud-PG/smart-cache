@@ -152,6 +152,12 @@ def main():
     parser.add_argument('--top', type=int,
                         default=10,
                         help='Plots only the top results (ordered by higher read on hit and lower cost) [DEFAULT: False]')
+    parser.add_argument('--export-table', type='bool',
+                        default=False,
+                        help='Export top results as a csv table [DEFAULT: False]')
+    parser.add_argument('--group-by', type=str,
+                        default="family",
+                        help='Group table results by constraint [DEFAULT: family]')
     parser.add_argument('--cache-size', type=int,
                         default=104857600,
                         help='Size of the cache to simulate in Mega Bytes [DEFAULT: 104857600]')
@@ -461,7 +467,12 @@ def main():
             print(f"Cannot find folder '{args.source}'")
             exit(-1)
         filters = [elm for elm in args.plot_filters.split(",") if elm]
-        results = load_results(args.source, args.top)
+        results = load_results(
+            args.source,
+            args.top,
+            args.export_table,
+            args.group_by
+        )
         plot_width, plot_height = [
             int(elm) for elm in args.plot_resolution.split(",")
             if elm
