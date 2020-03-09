@@ -34,8 +34,6 @@ type AIRL struct {
 	qEvictionPrevAction     qlearn.ActionType
 	points                  float64
 	prevPoints              float64
-	dailyReadOnHit          float64
-	dailyReadOnMiss         float64
 	bufferCategory          []bool
 	bufferInputVector       []bool
 	chanCategory            chan bool
@@ -356,11 +354,6 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) *FileStats {
 	cache.prevTime = cache.curTime
 	cache.curTime = request.DayTime
 
-	if !cache.curTime.Equal(cache.prevTime) {
-		cache.dailyReadOnHit = 0.0
-		cache.dailyReadOnMiss = 0.0
-	}
-
 	// if !cache.curTime.Equal(cache.prevTime) {
 	// 	cache.points = cache.GetPoints()
 	// }
@@ -479,6 +472,22 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			// ##### MISS branch  #####
 			// ########################
 
+			// -----------------------------------------------------------------
+			// QLearn - miss reward on best action
+			curState = cache.qAdditionPrevState[request.Filename]
+			curAction = cache.qAdditionPrevAction[request.Filename]
+
+			logger.Debug("Learning MISS branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
+
+			if curState != "" { // Some action are not taken randomly
+				reward := float64(request.Size)
+				// Update table
+				cache.additionTable.Update(curState, curAction, reward)
+				// Update epsilon
+				cache.additionTable.UpdateEpsilon()
+			}
+			// -----------------------------------------------------------------
+
 			curState = qlearn.State2String(cache.getState(request, fileStats, cache.additionFeatureMapOrder, cache.additionFeatureMap))
 
 			// ----- Random choice -----
@@ -502,17 +511,9 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				// 	reward -= 1.
 				// }
 
-				reward := 0.
-				if cache.dataReadOnHit < cache.dataReadOnMiss/2.0 || cache.dailyReadOnHit < cache.dailyReadOnMiss/2.0 || cache.dailyReadOnMiss > bandwidthLimit {
-					reward -= float64(request.Size)
-				} else {
-					reward += float64(request.Size)
-				}
+				cache.qAdditionPrevState[request.Filename] = curState
+				cache.qAdditionPrevAction[request.Filename] = curAction
 
-				// Update table
-				cache.additionTable.Update(curState, curAction, reward)
-				// Update epsilon
-				cache.additionTable.UpdateEpsilon()
 				return added
 			}
 
@@ -548,19 +549,8 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				// 	reward -= 1.
 				// }
 
-				reward := 0.
-				if cache.dailyReadOnMiss >= bandwidthLimit {
-					reward -= float64(request.Size)
-				} else {
-					reward += float64(request.Size)
-				}
 				cache.qAdditionPrevState[request.Filename] = curState
 				cache.qAdditionPrevAction[request.Filename] = curAction
-
-				// Update table
-				cache.additionTable.Update(curState, curAction, reward)
-				// Update epsilon
-				cache.additionTable.UpdateEpsilon()
 			}
 
 		} else {
@@ -574,7 +564,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				Recency:   fileStats.Recency,
 			})
 
-			// ------------------------------
+			// -----------------------------------------------------------------
 			// QLearn - hit reward on best action
 			curState = cache.qAdditionPrevState[request.Filename]
 			curAction = cache.qAdditionPrevAction[request.Filename]
@@ -582,34 +572,19 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			logger.Debug("Learning HIT branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
 
 			if curState != "" { // Some action are not taken randomly
-				reward := 0.0
-				if cache.dataReadOnHit < cache.dataReadOnMiss/2.0 || cache.dailyReadOnHit < cache.dailyReadOnMiss/2.0 {
-					reward -= float64(request.Size)
-				} else {
-					reward += float64(request.Size)
-				}
-
+				reward := float64(request.Size)
 				// Update table
 				cache.additionTable.Update(curState, curAction, reward)
 				// Update epsilon
 				cache.additionTable.UpdateEpsilon()
 			}
+			// -----------------------------------------------------------------
 
 		}
 
 	}
 
 	return added
-}
-
-// AfterRequest of LRU cache
-func (cache *AIRL) AfterRequest(request *Request, hit bool, added bool) {
-	cache.SimpleCache.AfterRequest(request, hit, added)
-	if hit {
-		cache.dailyReadOnHit += request.Size
-	} else {
-		cache.dailyReadOnMiss += request.Size
-	}
 }
 
 // Free removes files from the cache
