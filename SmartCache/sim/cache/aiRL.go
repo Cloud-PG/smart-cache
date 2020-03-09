@@ -507,8 +507,11 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 				if curState != "" { // Some action are not taken randomly
 					reward := float64(request.Size)
+					if cache.dataReadOnHit/cache.dataReadOnMiss <= 1.0 {
+						reward = -reward
+					}
 					// Update table
-					cache.additionTable.Update(curState, curAction, -reward)
+					cache.additionTable.Update(curState, curAction, reward)
 					// Update epsilon
 					cache.additionTable.UpdateEpsilon()
 				}
@@ -599,6 +602,9 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 				if curState != "" { // Some action are not taken randomly
 					reward := float64(request.Size)
+					if cache.dataReadOnHit/cache.dataReadOnMiss <= 1.0 {
+						reward = -reward
+					}
 					// Update table
 					cache.additionTable.Update(curState, curAction, reward)
 					// Update epsilon
@@ -608,6 +614,10 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			}
 		}
 	} else {
+		// #####################
+		// # NO ADDITION TABLE #
+		// #####################
+
 		if !hit {
 			// ########################
 			// ##### MISS branch  #####
