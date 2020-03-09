@@ -273,6 +273,7 @@ func (curMap *Obj) GetValue(value interface{}) string {
 				if inputValueI <= curKey {
 					result = curMap.OutputValues[curMap.Values[fmt.Sprintf("%d", curKey)]]
 					resPrepared = true
+					break
 				}
 			}
 		case TypeFloat:
@@ -281,6 +282,7 @@ func (curMap *Obj) GetValue(value interface{}) string {
 				if inputValueF <= curKey {
 					result = curMap.OutputValues[curMap.Values[fmt.Sprintf("%0.2f", curKey)]]
 					resPrepared = true
+					break
 				}
 			}
 		case TypeString:
@@ -289,6 +291,7 @@ func (curMap *Obj) GetValue(value interface{}) string {
 				if inputValueS <= curKey {
 					result = curMap.OutputValues[curMap.Values[fmt.Sprintf("%s", curKey)]]
 					resPrepared = true
+					break
 				}
 			}
 		}
