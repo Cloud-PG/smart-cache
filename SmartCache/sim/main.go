@@ -321,11 +321,10 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 					}
 				case "aiRL":
 					if aiRLAdditionFeatureMap == "" {
-						fmt.Println("ERR: No addition feature map indicated...")
-						os.Exit(-1)
-					} else if aiRLEvictionFeatureMap == "" {
-						fmt.Println("ERR: No eviction feature map indicated...")
-						os.Exit(-1)
+						logger.Info("No addition feature map indicated...")
+					}
+					if aiRLEvictionFeatureMap == "" {
+						logger.Info("No eviction feature map indicated...")
 					}
 					curCacheInstance.Init(aiRLAdditionFeatureMap, aiRLEvictionFeatureMap, simEpsilonStart)
 				}
