@@ -508,7 +508,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				if curState != "" { // Some action are not taken randomly
 					reward := float64(request.Size)
 					// Update table
-					cache.additionTable.Update(curState, curAction, reward)
+					cache.additionTable.Update(curState, curAction, -reward)
 					// Update epsilon
 					cache.additionTable.UpdateEpsilon()
 				}
