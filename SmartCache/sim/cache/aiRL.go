@@ -35,6 +35,8 @@ type AIRL struct {
 	qAdditionPrevAction     map[int64]qlearn.ActionType
 	qEvictionPrevState      string
 	qEvictionPrevAction     qlearn.ActionType
+	dailyReadOnHit          float64
+	dailyReadOnMiss         float64
 	points                  float64
 	prevPoints              float64
 	bufferCategory          []bool
@@ -371,6 +373,11 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) *FileStats {
 	cache.prevTime = cache.curTime
 	cache.curTime = request.DayTime
 
+	if !cache.curTime.Equal(cache.prevTime) {
+		cache.dailyReadOnHit = 0.0
+		cache.dailyReadOnMiss = 0.0
+	}
+
 	// if !cache.curTime.Equal(cache.prevTime) {
 	// 	cache.points = cache.GetPoints()
 	// }
@@ -507,7 +514,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 				if curState != "" { // Some action are not taken randomly
 					reward := float64(request.Size)
-					if cache.dataReadOnHit/cache.dataReadOnMiss <= 1.0 {
+					if cache.dailyReadOnHit/cache.dailyReadOnMiss <= 1.0 {
 						reward = -reward
 					}
 					// Update table
@@ -602,7 +609,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 				if curState != "" { // Some action are not taken randomly
 					reward := float64(request.Size)
-					if cache.dataReadOnHit/cache.dataReadOnMiss <= 1.0 {
+					if cache.dailyReadOnHit/cache.dailyReadOnMiss <= 1.0 {
 						reward = -reward
 					}
 					// Update table
@@ -658,6 +665,16 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 	}
 
 	return added
+}
+
+// AfterRequest of cache
+func (cache *AIRL) AfterRequest(request *Request, hit bool, added bool) {
+	cache.SimpleCache.AfterRequest(request, hit, added)
+	if hit {
+		cache.dailyReadOnHit += request.Size
+	} else {
+		cache.dailyReadOnMiss += request.Size
+	}
 }
 
 // Free removes files from the cache
