@@ -176,24 +176,28 @@ func (cache *AINN) getCategory(catKey string, value interface{}) []float64 {
 
 	}
 
-	for curKey := range curCategory.GetKeys() {
-		switch curCategory.Type {
-		case featuremap.TypeInt:
-			inputValue := int64(value.(float64))
-			if inputValue <= curKey.(int64) {
-				res[curCategory.Values[fmt.Sprintf("%d", curKey.(int64))]] = 1.0
+	switch curCategory.Type {
+	case featuremap.TypeInt:
+		inputValue := int64(value.(float64))
+		for _, curKey := range curCategory.KeysI {
+			if inputValue <= curKey {
+				res[curCategory.Values[fmt.Sprintf("%d", curKey)]] = 1.0
 				return res
 			}
-		case featuremap.TypeFloat:
-			inputValue := value.(float64)
-			if inputValue <= curKey.(float64) {
-				res[curCategory.Values[fmt.Sprintf("%0.2f", curKey.(float64))]] = 1.0
+		}
+	case featuremap.TypeFloat:
+		inputValue := value.(float64)
+		for _, curKey := range curCategory.KeysF {
+			if inputValue <= curKey {
+				res[curCategory.Values[fmt.Sprintf("%0.2f", curKey)]] = 1.0
 				return res
 			}
-		case featuremap.TypeString:
-			inputValue := value.(string)
-			if inputValue <= curKey.(string) {
-				res[curCategory.Values[fmt.Sprintf("%s", curKey.(string))]] = 1.0
+		}
+	case featuremap.TypeString:
+		inputValue := value.(string)
+		for _, curKey := range curCategory.KeysS {
+			if inputValue <= curKey {
+				res[curCategory.Values[fmt.Sprintf("%s", curKey)]] = 1.0
 				return res
 			}
 		}

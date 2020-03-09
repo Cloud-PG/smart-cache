@@ -3,6 +3,7 @@ package featuremap
 import (
 	"compress/gzip"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -32,6 +33,7 @@ type Obj struct {
 	KeysF           []float64
 	KeysS           []string
 	Values          map[string]int
+	OutputValues    []string
 	UnknownValues   bool
 	Buckets         bool
 	BucketOpenRight bool
@@ -155,6 +157,8 @@ func GetEntries(featureMapFilePath string) chan Entry {
 				}
 			}
 
+			curStruct.prepareOutputs()
+
 			// Output the structure
 			// fmt.Println(curStruct)
 
@@ -184,25 +188,117 @@ func (curMap Obj) GetLenKeys() int {
 	return lenght
 }
 
-// GetKeys returns all the keys
-func (curMap *Obj) GetKeys() chan interface{} {
-	// TODO: optimize this function to parse the values from AIRL and return the already made vector of bools
-	curMap.channel = make(chan interface{})
-	go func() {
-		defer close(curMap.channel)
-		numKeys := curMap.GetLenKeys()
-		for idx := 0; idx < numKeys; idx++ {
+// GetLenKeys returns the length of a key
+func (curMap *Obj) prepareOutputs() {
+	curMap.OutputValues = make([]string, 0)
+	lenKeys := curMap.GetLenKeys()
+	for idx := 0; idx < lenKeys; idx++ {
+		curVector := make([]bool, lenKeys)
+		curVector[idx] = true
+		curMap.OutputValues = append(curMap.OutputValues, bool2string(curVector))
+	}
+}
+
+// bool2string returns the string of 0s and 1s of a given bool slice
+func bool2string(state []bool) string {
+	var resIdx string
+	for idx := 0; idx < len(state); idx++ {
+		if state[idx] {
+			resIdx += "1"
+		} else {
+			resIdx += "0"
+		}
+	}
+	return resIdx
+}
+
+// GetValue returns the boolean vector representing the value
+func (curMap *Obj) GetValue(value interface{}) string {
+	var result string
+	if curMap.Buckets == false {
+		if curMap.UnknownValues {
 			switch curMap.Type {
 			case TypeBool:
-				curMap.channel <- curMap.KeysB[idx]
+				pos, inMap := curMap.Values[fmt.Sprintf("%t", value.(bool))]
+				if inMap {
+					result = curMap.OutputValues[pos]
+				} else {
+					result = curMap.OutputValues[curMap.Values["unknown"]]
+				}
 			case TypeInt:
-				curMap.channel <- curMap.KeysI[idx]
+				pos, inMap := curMap.Values[string(value.(int64))]
+				if inMap {
+					result = curMap.OutputValues[pos]
+				} else {
+					result = curMap.OutputValues[curMap.Values["unknown"]]
+				}
 			case TypeFloat:
-				curMap.channel <- curMap.KeysF[idx]
+				pos, inMap := curMap.Values[fmt.Sprintf("%0.2f", value.(float64))]
+				if inMap {
+					result = curMap.OutputValues[pos]
+				} else {
+					result = curMap.OutputValues[curMap.Values["unknown"]]
+				}
 			case TypeString:
-				curMap.channel <- curMap.KeysS[idx]
+				pos, inMap := curMap.Values[value.(string)]
+				if inMap {
+					result = curMap.OutputValues[pos]
+				} else {
+					result = curMap.OutputValues[curMap.Values["unknown"]]
+				}
+			}
+		} else {
+			switch curMap.Type {
+			case TypeBool:
+				result = curMap.OutputValues[curMap.Values[fmt.Sprintf("%t", value.(bool))]]
+			case TypeInt:
+				result = curMap.OutputValues[curMap.Values[string(value.(int64))]]
+			case TypeFloat:
+				result = curMap.OutputValues[curMap.Values[fmt.Sprintf("%0.2f", value.(float64))]]
+			case TypeString:
+				result = curMap.OutputValues[curMap.Values[value.(string)]]
 			}
 		}
-	}()
-	return curMap.channel
+	} else {
+		var (
+			inputValueI int64
+			inputValueF float64
+			inputValueS string
+			resPrepared = false
+		)
+		switch curMap.Type {
+		case TypeInt:
+			inputValueI = int64(value.(float64))
+			for _, curKey := range curMap.KeysI {
+				if inputValueI <= curKey {
+					result = curMap.OutputValues[curMap.Values[fmt.Sprintf("%d", curKey)]]
+					resPrepared = true
+				}
+			}
+		case TypeFloat:
+			inputValueF = value.(float64)
+			for _, curKey := range curMap.KeysF {
+				if inputValueF <= curKey {
+					result = curMap.OutputValues[curMap.Values[fmt.Sprintf("%0.2f", curKey)]]
+					resPrepared = true
+				}
+			}
+		case TypeString:
+			inputValueS = value.(string)
+			for _, curKey := range curMap.KeysS {
+				if inputValueS <= curKey {
+					result = curMap.OutputValues[curMap.Values[fmt.Sprintf("%s", curKey)]]
+					resPrepared = true
+				}
+			}
+		}
+		if !resPrepared {
+			if curMap.BucketOpenRight == true {
+				result = curMap.OutputValues[curMap.Values["max"]]
+			} else {
+				panic(fmt.Sprintf("Cannot convert a value '%v'", value))
+			}
+		}
+	}
+	return result
 }

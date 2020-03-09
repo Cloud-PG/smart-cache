@@ -8,6 +8,7 @@ import (
 	"simulator/v2/cache/ai/featuremap"
 	qlearn "simulator/v2/cache/qLearn"
 	"sort"
+	"strings"
 	"time"
 
 	"go.uber.org/zap"
@@ -37,7 +38,7 @@ type AIRL struct {
 	points                  float64
 	prevPoints              float64
 	bufferCategory          []bool
-	bufferInputVector       []bool
+	bufferInputVector       []string
 	chanCategory            chan bool
 }
 
@@ -222,96 +223,95 @@ func (cache *AIRL) Loads(inputString [][]byte) {
 
 }
 
-func (cache *AIRL) getCategory(featureMap map[string]featuremap.Obj, catKey string, value interface{}) chan bool {
-	var (
-		inputValueI int64
-		inputValueF float64
-		inputValueS string
-		resPrepared bool = false
-	)
-	cache.chanCategory = make(chan bool)
+// func (cache *AIRL) getCategory(featureMap map[string]featuremap.Obj, catKey string, value interface{}) chan bool {
+// 	var (
+// 		inputValueI int64
+// 		inputValueF float64
+// 		inputValueS string
+// 		resPrepared bool = false
+// 	)
+// 	cache.chanCategory = make(chan bool)
 
-	curCategory := featureMap[catKey]
+// 	curCategory := featureMap[catKey]
 
-	cache.bufferCategory = cache.bufferCategory[:0]
+// 	cache.bufferCategory = cache.bufferCategory[:0]
 
-	if curCategory.UnknownValues == true || curCategory.BucketOpenRight == true {
-		cache.bufferCategory = append(cache.bufferCategory, make([]bool, curCategory.GetLenKeys()+1)...)
-	} else {
-		cache.bufferCategory = append(cache.bufferCategory, make([]bool, curCategory.GetLenKeys())...)
-	}
+// 	if curCategory.UnknownValues == true || curCategory.BucketOpenRight == true {
+// 		cache.bufferCategory = append(cache.bufferCategory, make([]bool, curCategory.GetLenKeys()+1)...)
+// 	} else {
+// 		cache.bufferCategory = append(cache.bufferCategory, make([]bool, curCategory.GetLenKeys())...)
+// 	}
 
-	if curCategory.Buckets == false {
-		if curCategory.UnknownValues {
-			oneHot, inMap := curCategory.Values[value.(string)]
-			if inMap {
-				cache.bufferCategory[oneHot] = true
-			} else {
-				cache.bufferCategory[0] = true
-			}
-		} else {
-			cache.bufferCategory[curCategory.Values[string(value.(int64))]] = true
-		}
-		resPrepared = true
-	}
+// 	if curCategory.Buckets == false {
+// 		if curCategory.UnknownValues {
+// 			oneHot, inMap := curCategory.Values[value.(string)]
+// 			if inMap {
+// 				cache.bufferCategory[oneHot] = true
+// 			} else {
+// 				cache.bufferCategory[0] = true
+// 			}
+// 		} else {
+// 			cache.bufferCategory[curCategory.Values[string(value.(int64))]] = true
+// 		}
+// 		resPrepared = true
+// 	}
 
-	if !resPrepared {
-		switch curCategory.Type {
-		case featuremap.TypeInt:
-			inputValueI = int64(value.(float64))
-		case featuremap.TypeFloat:
-			inputValueF = value.(float64)
-		case featuremap.TypeString:
-			inputValueS = value.(string)
-		}
+// 	if !resPrepared {
+// 		switch curCategory.Type {
+// 		case featuremap.TypeInt:
+// 			inputValueI = int64(value.(float64))
+// 		case featuremap.TypeFloat:
+// 			inputValueF = value.(float64)
+// 		case featuremap.TypeString:
+// 			inputValueS = value.(string)
+// 		}
 
-		for curKey := range curCategory.GetKeys() {
-			switch curCategory.Type {
-			case featuremap.TypeInt:
-				if inputValueI <= curKey.(int64) {
-					cache.bufferCategory[curCategory.Values[fmt.Sprintf("%d", curKey.(int64))]] = true
-					resPrepared = true
-				}
-			case featuremap.TypeFloat:
-				if inputValueF <= curKey.(float64) {
-					cache.bufferCategory[curCategory.Values[fmt.Sprintf("%0.2f", curKey.(float64))]] = true
-					resPrepared = true
-				}
-			case featuremap.TypeString:
-				if inputValueS <= curKey.(string) {
-					cache.bufferCategory[curCategory.Values[fmt.Sprintf("%s", curKey.(string))]] = true
-					resPrepared = true
-				}
-			}
-			if resPrepared {
-				break
-			}
-		}
-		if !resPrepared {
-			if curCategory.BucketOpenRight == true {
-				cache.bufferCategory[curCategory.Values["max"]] = true
-			} else {
-				panic(fmt.Sprintf("Cannot convert a value '%v' of category %s", value, catKey))
-			}
-		}
-	}
+// 		for curKey := range curCategory.GetKeys() {
+// 			switch curCategory.Type {
+// 			case featuremap.TypeInt:
+// 				if inputValueI <= curKey.(int64) {
+// 					cache.bufferCategory[curCategory.Values[fmt.Sprintf("%d", curKey.(int64))]] = true
+// 					resPrepared = true
+// 				}
+// 			case featuremap.TypeFloat:
+// 				if inputValueF <= curKey.(float64) {
+// 					cache.bufferCategory[curCategory.Values[fmt.Sprintf("%0.2f", curKey.(float64))]] = true
+// 					resPrepared = true
+// 				}
+// 			case featuremap.TypeString:
+// 				if inputValueS <= curKey.(string) {
+// 					cache.bufferCategory[curCategory.Values[fmt.Sprintf("%s", curKey.(string))]] = true
+// 					resPrepared = true
+// 				}
+// 			}
+// 			if resPrepared {
+// 				break
+// 			}
+// 		}
+// 		if !resPrepared {
+// 			if curCategory.BucketOpenRight == true {
+// 				cache.bufferCategory[curCategory.Values["max"]] = true
+// 			} else {
+// 				panic(fmt.Sprintf("Cannot convert a value '%v' of category %s", value, catKey))
+// 			}
+// 		}
+// 	}
 
-	go func() {
-		defer close(cache.chanCategory)
-		for _, value := range cache.bufferCategory {
-			cache.chanCategory <- value
-		}
-	}()
+// 	go func() {
+// 		defer close(cache.chanCategory)
+// 		for _, value := range cache.bufferCategory {
+// 			cache.chanCategory <- value
+// 		}
+// 	}()
 
-	return cache.chanCategory
-}
+// 	return cache.chanCategory
+// }
 
-func (cache *AIRL) getState(request *Request, fileStats *FileStats, featureOrder []string, featureMap map[string]featuremap.Obj) []bool {
+func (cache *AIRL) getState(request *Request, fileStats *FileStats, featureOrder []string, featureMap map[string]featuremap.Obj) string {
 	var (
 		size     float64
 		numReq   float64
 		dataType int64
-		channel  chan bool
 	)
 
 	if fileStats != nil {
@@ -328,33 +328,31 @@ func (cache *AIRL) getState(request *Request, fileStats *FileStats, featureOrder
 	cache.bufferInputVector = cache.bufferInputVector[:0]
 
 	for _, featureName := range featureOrder {
+		curObj, _ := featureMap[featureName]
 		switch featureName {
 		case "size":
-			channel = cache.getCategory(featureMap, featureName, size)
+			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(size))
 		case "numReq":
-			channel = cache.getCategory(featureMap, featureName, numReq)
+			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(numReq))
 		case "cacheUsage":
-			channel = cache.getCategory(featureMap, featureName, cacheCapacity)
+			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(cacheCapacity))
 		case "dataType":
-			channel = cache.getCategory(featureMap, featureName, dataType)
+			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(dataType))
 		case "deltaNumLastRequest":
-			channel = cache.getCategory(featureMap, featureName, float64(fileStats.Recency))
+			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(float64(fileStats.Recency)))
 		case "deltaHighWatermark":
-			channel = cache.getCategory(featureMap, featureName, deltaHighWatermark)
+			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(deltaHighWatermark))
 		case "meanSize":
-			channel = cache.getCategory(featureMap, featureName, cache.MeanSize())
+			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(cache.MeanSize()))
 		case "meanFrequency":
-			channel = cache.getCategory(featureMap, featureName, cache.MeanFrequency())
+			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(cache.MeanFrequency()))
 		case "meanRecency":
-			channel = cache.getCategory(featureMap, featureName, cache.MeanRecency())
+			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(cache.MeanRecency()))
 		default:
 			panic(fmt.Sprintf("Cannot prepare input %s", featureName))
 		}
-		for value := range channel {
-			cache.bufferInputVector = append(cache.bufferInputVector, value)
-		}
 	}
-	return cache.bufferInputVector
+	return strings.Join(cache.bufferInputVector, "")
 }
 
 // GetPoints returns the total amount of points for the files in cache
@@ -446,7 +444,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				// ##### MISS branch  #####
 				// ########################
 
-				curState = qlearn.State2String(cache.getState(request, fileStats, cache.additionFeatureMapOrder, cache.additionFeatureMap))
+				curState = cache.getState(request, fileStats, cache.additionFeatureMapOrder, cache.additionFeatureMap)
 				curAction = cache.additionTable.GetBestAction(curState)
 				logger.Debug("Normal MISS branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
 				// ----------------------------------
@@ -516,7 +514,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				}
 				// -----------------------------------------------------------------
 
-				curState = qlearn.State2String(cache.getState(request, fileStats, cache.additionFeatureMapOrder, cache.additionFeatureMap))
+				curState = cache.getState(request, fileStats, cache.additionFeatureMapOrder, cache.additionFeatureMap)
 
 				// ----- Random choice -----
 				if randomAction := cache.additionTable.GetRandomFloat(); randomAction > 0.5 {
@@ -676,7 +674,7 @@ func (cache *AIRL) Free(amount float64, percentage bool) float64 {
 		if cache.evictionTableOK {
 			// Check learning phase or not
 			expEvictionTradeoff := cache.evictionTable.GetRandomFloat()
-			curState = qlearn.State2String(cache.getState(nil, nil, cache.evictionFeatureMapOrder, cache.evictionFeatureMap))
+			curState = cache.getState(nil, nil, cache.evictionFeatureMapOrder, cache.evictionFeatureMap)
 
 			if expEvictionTradeoff > cache.evictionTable.Epsilon {
 				// ########################
