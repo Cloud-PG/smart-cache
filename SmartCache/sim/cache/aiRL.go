@@ -69,6 +69,8 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 	cache.additionTable = makeQtable(cache.additionFeatureMap, cache.additionFeatureMapOrder, qlearn.AdditionTable, initEpsilon)
 	cache.evictionTable = makeQtable(cache.evictionFeatureMap, cache.evictionFeatureMapOrder, qlearn.EvictionTable, initEpsilon)
 
+	logger.Info("Table creation done")
+
 	return nil
 }
 
