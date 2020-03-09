@@ -37,8 +37,8 @@
     "buckets": true,
     "bucket_open_right": true
   },
-  "deltaNumLastRequest": {
-    "feature": "deltaNumLastRequest",
+  "deltaLastRequest": {
+    "feature": "deltaLastRequest",
     "type": "int",
     "keys": [
       10000
