@@ -103,6 +103,10 @@ func (statStruct *Stats) GetOrCreate(filename int64, vars ...interface{}) (*File
 		statStruct.fileStats[filename] = curStats
 	} else {
 		curStats.Size = size
+		// Reset recency when file stats are loaded
+		if curStats.Recency >= statStruct.numRequests {
+			curStats.Recency = statStruct.numRequests
+		}
 		curStats.DeltaLastRequest = statStruct.numRequests - curStats.Recency
 		curStats.Recency = statStruct.numRequests
 	}
