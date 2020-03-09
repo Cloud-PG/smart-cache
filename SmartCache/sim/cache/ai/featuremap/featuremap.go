@@ -191,7 +191,7 @@ func (curMap Obj) GetLenKeys() int {
 // GetLenKeys returns the length of a key
 func (curMap *Obj) prepareOutputs() {
 	curMap.OutputValues = make([]string, 0)
-	lenKeys := curMap.GetLenKeys()
+	lenKeys := len(curMap.Values)
 	for idx := 0; idx < lenKeys; idx++ {
 		curVector := make([]bool, lenKeys)
 		curVector[idx] = true
