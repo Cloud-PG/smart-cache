@@ -343,7 +343,12 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				logger.Info("Loading cache dump", zap.String("filename", simLoadDumpFileName))
 
 				loadedDump := curCacheInstance.Load(simLoadDumpFileName)
-				curCacheInstance.Loads(loadedDump)
+
+				if cacheType == "aiRL" {
+					curCacheInstance.Loads(loadedDump, simEpsilonStart)
+				} else {
+					curCacheInstance.Loads(loadedDump)
+				}
 
 				logger.Info("Cache dump loaded!")
 				if simColdStart {

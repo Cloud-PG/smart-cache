@@ -182,8 +182,9 @@ func (cache *AIRL) Dump(filename string) {
 }
 
 // Loads the AIRL cache
-func (cache *AIRL) Loads(inputString [][]byte) {
+func (cache *AIRL) Loads(inputString [][]byte, vars ...interface{}) {
 	logger.Info("Loads cache dump string")
+	initEpsilon := vars[0].(float64)
 	var (
 		curRecord     DumpRecord
 		curRecordInfo DumpInfo
@@ -211,11 +212,11 @@ func (cache *AIRL) Loads(inputString [][]byte) {
 			cache.stats.fileStats[curRecord.Filename] = &curFileStats
 		case "ADDQTABLE":
 			unmarshalErr = json.Unmarshal([]byte(curRecord.Data), &cache.additionTable)
-			cache.additionTable.ResetParams()
+			cache.additionTable.ResetParams(initEpsilon)
 			cache.additionTableOK = true
 		case "EVCQTABLE":
 			unmarshalErr = json.Unmarshal([]byte(curRecord.Data), &cache.evictionTable)
-			cache.evictionTable.ResetParams()
+			cache.evictionTable.ResetParams(initEpsilon)
 			cache.evictionTableOK = true
 		}
 		if unmarshalErr != nil {

@@ -131,7 +131,7 @@ func (cache *AINN) Dumps() [][]byte {
 }
 
 // Loads the AINN cache
-func (cache *AINN) Loads(inputString [][]byte) {
+func (cache *AINN) Loads(inputString [][]byte, _ ...interface{}) {
 	var curRecord DumpRecord
 	var curRecordInfo DumpInfo
 

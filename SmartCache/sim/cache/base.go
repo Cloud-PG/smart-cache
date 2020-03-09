@@ -47,7 +47,7 @@ type Cache interface {
 
 	Dumps() [][]byte
 	Dump(filename string)
-	Loads([][]byte)
+	Loads([][]byte, ...interface{})
 	Load(filename string) [][]byte
 
 	Clear()

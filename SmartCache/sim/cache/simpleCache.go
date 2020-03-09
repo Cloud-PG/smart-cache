@@ -136,7 +136,7 @@ func (cache *SimpleCache) Dump(filename string) {
 }
 
 // Loads the SimpleCache cache
-func (cache *SimpleCache) Loads(inputString [][]byte) {
+func (cache *SimpleCache) Loads(inputString [][]byte, _ ...interface{}) {
 	logger.Info("Load cache dump string")
 	var curRecord DumpRecord
 	var curRecordInfo DumpInfo

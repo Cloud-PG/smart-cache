@@ -62,7 +62,7 @@ func (cache *WeightFunLRU) Dumps() [][]byte {
 }
 
 // Loads the WeightFunLRU cache
-func (cache *WeightFunLRU) Loads(inputString [][]byte) {
+func (cache *WeightFunLRU) Loads(inputString [][]byte, _ ...interface{}) {
 	logger.Info("Load cache dump string")
 	var curRecord DumpRecord
 	var curRecordInfo DumpInfo
