@@ -41,11 +41,17 @@
     "feature": "deltaLastRequest",
     "type": "int",
     "keys": [
-      10000
+      10000,
+      100000,
+      200000,
+      300000
     ],
     "values": {
       "10000": 0,
-      "max": 1
+      "100000": 1,
+      "200000": 2,
+      "300000": 3,
+      "max": 4
     },
     "unknown_values": false,
     "buckets": true,
