@@ -409,7 +409,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 		requestedFileSize = request.Size
 	)
 
-	fmt.Println(cache.dailyReadOnHit / cache.dailyReadOnMiss)
+	// fmt.Println(cache.dailyReadOnHit / cache.dailyReadOnMiss)
 
 	if cache.evictionTableOK {
 
