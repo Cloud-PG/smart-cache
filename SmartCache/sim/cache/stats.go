@@ -155,6 +155,7 @@ type FileStats struct {
 	Points            float64     `json:"points"`
 	Size              float64     `json:"size"`
 	Frequency         int64       `json:"frequency"`
+	FrequencyInCache  int64       `json:"frequencyInCache"`
 	NHits             int64       `json:"nHits"`
 	NMiss             int64       `json:"nMiss"`
 	FirstTime         time.Time   `json:"firstTime"`
@@ -195,6 +196,7 @@ func (stats *FileStats) addInCache(curTime *time.Time) {
 func (stats *FileStats) removeFromCache() {
 	stats.InCacheSince = time.Time{}
 	stats.InCache = false
+	stats.FrequencyInCache = 0
 }
 
 func (stats *FileStats) addUser(userID int64) {
@@ -222,6 +224,9 @@ func (stats *FileStats) updateStats(hit bool, size float64, userID int64, siteNa
 	stats.addSite(siteName)
 
 	stats.Frequency++
+	if stats.InCache {
+		stats.FrequencyInCache++
+	}
 
 	if hit {
 		stats.NHits++
