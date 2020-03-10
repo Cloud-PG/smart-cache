@@ -468,7 +468,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					// 	reward -= 1.
 					// }
 					reward := float64(request.Size)
-					if cache.dailyReadOnHit > (cache.dailyReadOnMiss * 0.5) {
+					if cache.dataReadOnHit < (cache.dataReadOnMiss*0.5) || cache.dailyReadOnHit < (cache.dailyReadOnMiss*0.5) || cache.dailyReadOnMiss > bandwidthLimit {
 						reward = -reward
 					}
 					// Update table
@@ -476,8 +476,9 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					// Update epsilon
 					cache.additionTable.UpdateEpsilon()
 
-					cache.qAdditionPrevState[request.Filename] = curState
-					cache.qAdditionPrevAction[request.Filename] = curAction
+					// Store only action that put the file into the cache
+					// cache.qAdditionPrevState[request.Filename] = curState
+					// cache.qAdditionPrevAction[request.Filename] = curAction
 
 					return added
 				}
@@ -516,7 +517,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					// 	reward -= 1.
 					// }
 					reward := float64(request.Size)
-					if cache.dailyReadOnHit <= (cache.dailyReadOnMiss*0.5) || cache.dailyReadOnMiss > bandwidthLimit {
+					if cache.dailyReadOnMiss >= bandwidthLimit {
 						reward = -reward
 					}
 					// Update table
@@ -549,7 +550,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 				if curState != "" { // Some action are not taken randomly
 					reward := float64(request.Size)
-					if cache.dailyReadOnHit <= (cache.dailyReadOnMiss*0.5) || cache.dailyReadOnMiss > bandwidthLimit {
+					if cache.dataReadOnHit < (cache.dataReadOnMiss*0.5) || cache.dailyReadOnHit < (cache.dailyReadOnMiss*0.5) {
 						reward = -reward
 					}
 					// Update table
