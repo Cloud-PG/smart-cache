@@ -606,7 +606,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 				if curState != "" { // Some action are not taken randomly
 					reward := float64(request.Size)
-					if cache.dailyReadOnHit/cache.dailyReadOnMiss < 0.75 {
+					if cache.dailyReadOnHit/cache.dailyReadOnMiss < 0.6 {
 						reward = -reward
 					}
 					// Update table
