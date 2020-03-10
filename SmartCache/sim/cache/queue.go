@@ -10,9 +10,10 @@ import (
 // FileSupportData is a struct used to manae files in cache (useful for the queues)
 type FileSupportData struct {
 	Filename  int64   `json:"filename"`
-	Frequency int64   `json:"Frequency"`
-	Size      float64 `json:"Size"`
-	Recency   int64   `json:"Recency"`
+	Frequency int64   `json:"frequency"`
+	Size      float64 `json:"size"`
+	Recency   int64   `json:"recency"`
+	Weight    float64 `json:"weight"`
 }
 
 // ByName implements sort.Interface based on the filename field.
@@ -60,6 +61,15 @@ func (slice BySmallSize) Len() int { return len(slice) }
 func (slice BySmallSize) Less(i, j int) bool { return slice[i].Size > slice[j].Size }
 func (slice BySmallSize) Swap(i, j int)      { slice[i], slice[j] = slice[j], slice[i] }
 
+// ByWeight implements sort.Interface based on the size field.
+type ByWeight []*FileSupportData
+
+func (slice ByWeight) Len() int { return len(slice) }
+
+// Order from the heaviest to the lightest
+func (slice ByWeight) Less(i, j int) bool { return slice[i].Weight < slice[j].Weight }
+func (slice ByWeight) Swap(i, j int)      { slice[i], slice[j] = slice[j], slice[i] }
+
 type queueType int
 
 const (
@@ -71,6 +81,8 @@ const (
 	SizeBigQueue
 	// SizeSmallQueue is the SizeSmall queue type
 	SizeSmallQueue
+	// WeightQueue is the SizeSmall queue type
+	WeightQueue
 )
 
 // Manager manages the files in cache
@@ -140,6 +152,15 @@ func (man Manager) Get(queue queueType) chan *FileSupportData {
 			for _, file := range curQueue {
 				ch <- file
 			}
+		case WeightQueue:
+			var curQueue ByWeight = man.queue[:0]
+			for _, file := range man.files {
+				curQueue = append(curQueue, file)
+			}
+			sort.Sort(curQueue)
+			for _, file := range curQueue {
+				ch <- file
+			}
 		}
 	}()
 	return ch
@@ -166,6 +187,7 @@ func (man *Manager) Update(file FileSupportData) error {
 		curFile.Frequency = file.Frequency
 		curFile.Recency = file.Recency
 		curFile.Size = file.Size
+		curFile.Weight = file.Weight
 		return nil
 	}
 	return errors.New("File not in manager")
