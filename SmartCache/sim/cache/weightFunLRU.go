@@ -24,12 +24,6 @@ func (cache *WeightFunLRU) Init(_ ...interface{}) interface{} {
 	return cache
 }
 
-// Clear the WeightFunLRU struct
-func (cache *WeightFunLRU) Clear() {
-	cache.SimpleCache.Clear()
-	cache.SimpleCache.Init()
-}
-
 // Dumps the WeightFunLRU cache
 func (cache *WeightFunLRU) Dumps() [][]byte {
 	logger.Info("Dump cache into byte string")

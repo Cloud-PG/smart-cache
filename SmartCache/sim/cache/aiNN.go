@@ -93,12 +93,6 @@ func (cache *AINN) Init(args ...interface{}) interface{} {
 	return nil
 }
 
-// Clear the AINN struct
-func (cache *AINN) Clear() {
-	cache.SimpleCache.Clear()
-	cache.SimpleCache.Init()
-}
-
 // Dumps the AINN cache
 func (cache *AINN) Dumps() [][]byte {
 	outData := make([][]byte, 0)
