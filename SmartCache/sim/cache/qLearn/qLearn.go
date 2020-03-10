@@ -21,7 +21,7 @@ type QTableRole int
 
 const (
 	// ActionNotStore indicates to store an element in cache
-	ActionNotStore ActionType = iota - 6
+	ActionNotStore ActionType = iota - 7
 	// ActionStore indicates to not store an element in cache
 	ActionStore
 	// ActionRemoveWithLRU indicates to remove a file with LRU policy
@@ -32,6 +32,8 @@ const (
 	ActionRemoveWithSizeSmall
 	// ActionRemoveWithSizeBig indicates to remove a file with Size Big policy
 	ActionRemoveWithSizeBig
+	// ActionRemoveWithWeight indicates to remove a file with Weight policy
+	ActionRemoveWithWeight
 
 	// RLSARSA indicates the standard RL update algorithm SARSA
 	RLSARSA RLUpdateType = iota - 2
@@ -39,7 +41,9 @@ const (
 	RLQLearning
 
 	// EvictionTable indicates the table to choose which files to delete
-	EvictionTable QTableRole = iota - 2
+	EvictionTable QTableRole = iota - 3
+	// EvictionTableExtended indicates the table to choose which files to delete version extended
+	EvictionTableExtended
 	// AdditionTable indicates the table to accept file requests
 	AdditionTable
 )
@@ -100,6 +104,22 @@ func (table *QTable) Init(featureLenghts []int, role QTableRole, initEpsilon flo
 			"ActionRemoveWithLFU",
 			"ActionRemoveWithSizeBig",
 			"ActionRemoveWithSizeSmall",
+		}
+	case EvictionTableExtended:
+		// With getArgMax the first action is the default choice
+		table.Actions = []ActionType{
+			ActionRemoveWithLRU,
+			ActionRemoveWithLFU,
+			ActionRemoveWithSizeBig,
+			ActionRemoveWithSizeSmall,
+			ActionRemoveWithWeight,
+		}
+		table.ActionStrings = []string{
+			"ActionRemoveWithLRU",
+			"ActionRemoveWithLFU",
+			"ActionRemoveWithSizeBig",
+			"ActionRemoveWithSizeSmall",
+			"ActionRemoveWithWeight",
 		}
 	}
 
