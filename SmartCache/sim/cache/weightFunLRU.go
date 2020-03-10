@@ -106,7 +106,7 @@ func (cache *WeightFunLRU) UpdatePolicy(request *Request, fileStats *FileStats, 
 			cache.files.Insert(FileSupportData{
 				Filename:  request.Filename,
 				Size:      request.Size,
-				Frequency: fileStats.Frequency,
+				Frequency: fileStats.FrequencyInCache,
 				Recency:   fileStats.Recency,
 			})
 
@@ -118,7 +118,7 @@ func (cache *WeightFunLRU) UpdatePolicy(request *Request, fileStats *FileStats, 
 		cache.files.Update(FileSupportData{
 			Filename:  request.Filename,
 			Size:      request.Size,
-			Frequency: fileStats.Frequency,
+			Frequency: fileStats.FrequencyInCache,
 			Recency:   fileStats.Recency,
 		})
 	}
