@@ -418,7 +418,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			// ###################################
 			if cache.qEvictionPrevAction != 0 && len(cache.qEvictionPrevState) != 0 {
 				reward := float64(request.Size)
-				if cache.dailyReadOnHit/cache.dailyReadOnMiss < 0.6 {
+				if cache.dailyReadOnHit/cache.dailyReadOnMiss < 0.5 {
 					reward = -reward
 				}
 				// Update table
@@ -604,7 +604,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 				if curState != "" { // Some action are not taken randomly
 					reward := float64(request.Size)
-					if cache.dailyReadOnHit/cache.dailyReadOnMiss < 0.6 {
+					if cache.dailyReadOnHit/cache.dailyReadOnMiss < 0.5 {
 						reward = -reward
 					}
 					// Update table
