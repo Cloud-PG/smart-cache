@@ -73,6 +73,7 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 	logger.Info("Feature maps", zap.String("addition map", additionFeatureMap), zap.String("eviction map", evictionFeatureMap))
 
 	if additionFeatureMap != "" {
+		logger.Info("Create addition map")
 		cache.additionFeatureMap = featuremap.Parse(additionFeatureMap)
 		for key := range cache.additionFeatureMap {
 			cache.additionFeatureMapOrder = append(cache.additionFeatureMapOrder, key)
@@ -92,8 +93,10 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 		sort.Strings(cache.evictionFeatureMapOrder)
 		var evictionTable qlearn.QTableRole
 		if cache.extendedEvictionTable {
+			logger.Info("Create extended eviction map")
 			evictionTable = qlearn.EvictionTableExtended
 		} else {
+			logger.Info("Create eviction map")
 			evictionTable = qlearn.EvictionTable
 		}
 		cache.evictionTable = makeQtable(cache.evictionFeatureMap, cache.evictionFeatureMapOrder, evictionTable, initEpsilon)
