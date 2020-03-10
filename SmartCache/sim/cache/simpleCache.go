@@ -64,9 +64,8 @@ func (cache *SimpleCache) ClearFiles() {
 // Clear the LRU struct
 func (cache *SimpleCache) Clear() {
 	cache.stats.Init()
-	cache.files.Init()
-
 	cache.ClearFiles()
+
 	cache.hit = 0.
 	cache.miss = 0.
 	cache.dataWritten = 0.
