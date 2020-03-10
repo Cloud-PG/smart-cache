@@ -119,10 +119,10 @@ func (statStruct *Stats) GetOrCreate(filename int64, vars ...interface{}) (*File
 // UpdateWeight update the weight of a file and also the sum of all weights
 func (statStruct *Stats) updateWeight(stats *FileStats, newFile bool, functionType FunctionType, alpha float64, beta float64, gamma float64) {
 	if newFile {
-		statStruct.weightSum += stats.getWeight(functionType, alpha, beta, gamma)
+		statStruct.weightSum += stats.updateWeight(functionType, alpha, beta, gamma)
 	} else {
 		statStruct.weightSum -= stats.Weight
-		statStruct.weightSum += stats.getWeight(functionType, alpha, beta, gamma)
+		statStruct.weightSum += stats.updateWeight(functionType, alpha, beta, gamma)
 	}
 }
 
@@ -276,7 +276,7 @@ func (stats *FileStats) updateFilePoints(curTime *time.Time) float64 {
 	return points
 }
 
-func (stats *FileStats) getWeight(functionType FunctionType, alpha float64, beta float64, gamma float64) float64 {
+func (stats *FileStats) updateWeight(functionType FunctionType, alpha float64, beta float64, gamma float64) float64 {
 	switch functionType {
 	case FuncAdditive:
 		stats.Weight = fileAdditiveWeightFunction(

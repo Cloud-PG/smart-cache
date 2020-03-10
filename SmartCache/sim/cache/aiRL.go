@@ -35,6 +35,7 @@ type AIRL struct {
 	qAdditionPrevAction     map[int64]qlearn.ActionType
 	qEvictionPrevState      string
 	qEvictionPrevAction     qlearn.ActionType
+	extendedEvictionTable   bool
 	dailyReadOnHit          float64
 	dailyReadOnMiss         float64
 	points                  float64
@@ -42,6 +43,10 @@ type AIRL struct {
 	bufferCategory          []bool
 	bufferInputVector       []string
 	chanCategory            chan bool
+	weightFunction          FunctionType
+	weightAlpha             float64
+	weightBeta              float64
+	weightGamma             float64
 }
 
 // Init the AIRL struct
@@ -56,6 +61,14 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 	additionFeatureMap := args[0].(string)
 	evictionFeatureMap := args[1].(string)
 	initEpsilon := args[2].(float64)
+	cache.extendedEvictionTable = args[3].(bool)
+
+	if cache.extendedEvictionTable {
+		cache.weightFunction = args[4].(FunctionType)
+		cache.weightAlpha = args[5].(float64)
+		cache.weightBeta = args[6].(float64)
+		cache.weightGamma = args[7].(float64)
+	}
 
 	logger.Info("Feature maps", zap.String("addition map", additionFeatureMap), zap.String("eviction map", evictionFeatureMap))
 
@@ -77,7 +90,13 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 			cache.evictionFeatureMapOrder = append(cache.evictionFeatureMapOrder, key)
 		}
 		sort.Strings(cache.evictionFeatureMapOrder)
-		cache.evictionTable = makeQtable(cache.evictionFeatureMap, cache.evictionFeatureMapOrder, qlearn.EvictionTable, initEpsilon)
+		var evictionTable qlearn.QTableRole
+		if cache.extendedEvictionTable {
+			evictionTable = qlearn.EvictionTableExtended
+		} else {
+			evictionTable = qlearn.EvictionTable
+		}
+		cache.evictionTable = makeQtable(cache.evictionFeatureMap, cache.evictionFeatureMapOrder, evictionTable, initEpsilon)
 		cache.evictionTableOK = true
 	} else {
 		cache.evictionTableOK = false
@@ -221,90 +240,6 @@ func (cache *AIRL) Loads(inputString [][]byte, vars ...interface{}) {
 
 }
 
-// func (cache *AIRL) getCategory(featureMap map[string]featuremap.Obj, catKey string, value interface{}) chan bool {
-// 	var (
-// 		inputValueI int64
-// 		inputValueF float64
-// 		inputValueS string
-// 		resPrepared bool = false
-// 	)
-// 	cache.chanCategory = make(chan bool)
-
-// 	curCategory := featureMap[catKey]
-
-// 	cache.bufferCategory = cache.bufferCategory[:0]
-
-// 	if curCategory.UnknownValues == true || curCategory.BucketOpenRight == true {
-// 		cache.bufferCategory = append(cache.bufferCategory, make([]bool, curCategory.GetLenKeys()+1)...)
-// 	} else {
-// 		cache.bufferCategory = append(cache.bufferCategory, make([]bool, curCategory.GetLenKeys())...)
-// 	}
-
-// 	if curCategory.Buckets == false {
-// 		if curCategory.UnknownValues {
-// 			oneHot, inMap := curCategory.Values[value.(string)]
-// 			if inMap {
-// 				cache.bufferCategory[oneHot] = true
-// 			} else {
-// 				cache.bufferCategory[0] = true
-// 			}
-// 		} else {
-// 			cache.bufferCategory[curCategory.Values[string(value.(int64))]] = true
-// 		}
-// 		resPrepared = true
-// 	}
-
-// 	if !resPrepared {
-// 		switch curCategory.Type {
-// 		case featuremap.TypeInt:
-// 			inputValueI = int64(value.(float64))
-// 		case featuremap.TypeFloat:
-// 			inputValueF = value.(float64)
-// 		case featuremap.TypeString:
-// 			inputValueS = value.(string)
-// 		}
-
-// 		for curKey := range curCategory.GetKeys() {
-// 			switch curCategory.Type {
-// 			case featuremap.TypeInt:
-// 				if inputValueI <= curKey.(int64) {
-// 					cache.bufferCategory[curCategory.Values[fmt.Sprintf("%d", curKey.(int64))]] = true
-// 					resPrepared = true
-// 				}
-// 			case featuremap.TypeFloat:
-// 				if inputValueF <= curKey.(float64) {
-// 					cache.bufferCategory[curCategory.Values[fmt.Sprintf("%0.2f", curKey.(float64))]] = true
-// 					resPrepared = true
-// 				}
-// 			case featuremap.TypeString:
-// 				if inputValueS <= curKey.(string) {
-// 					cache.bufferCategory[curCategory.Values[fmt.Sprintf("%s", curKey.(string))]] = true
-// 					resPrepared = true
-// 				}
-// 			}
-// 			if resPrepared {
-// 				break
-// 			}
-// 		}
-// 		if !resPrepared {
-// 			if curCategory.BucketOpenRight == true {
-// 				cache.bufferCategory[curCategory.Values["max"]] = true
-// 			} else {
-// 				panic(fmt.Sprintf("Cannot convert a value '%v' of category %s", value, catKey))
-// 			}
-// 		}
-// 	}
-
-// 	go func() {
-// 		defer close(cache.chanCategory)
-// 		for _, value := range cache.bufferCategory {
-// 			cache.chanCategory <- value
-// 		}
-// 	}()
-
-// 	return cache.chanCategory
-// }
-
 func (cache *AIRL) getState(request *Request, fileStats *FileStats, featureOrder []string, featureMap map[string]featuremap.Obj) string {
 	var (
 		size     float64
@@ -391,6 +326,9 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) *FileStats {
 	// }
 
 	fileStats.updateStats(hit, request.Size, request.UserID, request.SiteName, request.DayTime)
+	if cache.extendedEvictionTable {
+		fileStats.updateWeight(cache.weightFunction, cache.weightAlpha, cache.weightBeta, cache.weightGamma)
+	}
 
 	return fileStats
 }
@@ -471,6 +409,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 						Size:      request.Size,
 						Frequency: fileStats.Frequency,
 						Recency:   fileStats.Recency,
+						Weight:    fileStats.Weight,
 					})
 
 					cache.size += requestedFileSize
@@ -489,6 +428,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					Size:      request.Size,
 					Frequency: fileStats.Frequency,
 					Recency:   fileStats.Recency,
+					Weight:    fileStats.Weight,
 				})
 			}
 		} else {
@@ -549,6 +489,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 						Size:      request.Size,
 						Frequency: fileStats.Frequency,
 						Recency:   fileStats.Recency,
+						Weight:    fileStats.Weight,
 					})
 
 					cache.size += requestedFileSize
@@ -593,6 +534,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					Size:      request.Size,
 					Frequency: fileStats.Frequency,
 					Recency:   fileStats.Recency,
+					Weight:    fileStats.Weight,
 				})
 
 				// -------------------------------------------------------------
@@ -637,6 +579,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					Size:      request.Size,
 					Frequency: fileStats.Frequency,
 					Recency:   fileStats.Recency,
+					Weight:    fileStats.Weight,
 				})
 
 				cache.size += requestedFileSize
@@ -655,6 +598,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				Size:      request.Size,
 				Frequency: fileStats.Frequency,
 				Recency:   fileStats.Recency,
+				Weight:    fileStats.Weight,
 			})
 		}
 	}
@@ -729,6 +673,8 @@ func (cache *AIRL) Free(amount float64, percentage bool) float64 {
 			curPolicy = SizeBigQueue
 		case qlearn.ActionRemoveWithSizeSmall:
 			curPolicy = SizeSmallQueue
+		case qlearn.ActionRemoveWithWeight:
+			curPolicy = WeightQueue
 		}
 
 		deletedFiles := make([]int64, 0)

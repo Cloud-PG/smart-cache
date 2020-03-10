@@ -55,7 +55,7 @@ def prepare_process_call(args, simulator_exe, cache_type, working_dir: str,
     if cold_start_no_stats:
         exe_args.append("--simColdStartNoStats=true")
 
-    if cache_type == "weightFunLRU":
+    if cache_type == "weightFunLRU" or args.ai_rl_eviction_extended:
         exe_args.append(f"--weightFunc={wf_parameters['function']}")
         exe_args.append(f"--weightAlpha={wf_parameters['alpha']}")
         exe_args.append(f"--weightBeta={wf_parameters['beta']}")
@@ -86,6 +86,9 @@ def prepare_process_call(args, simulator_exe, cache_type, working_dir: str,
                     f"--aiRLEvictionFeatureMap={path.abspath(args.ai_rl_eviction_feature_map)}")
             exe_args.append(
                 f"--simEpsilonStart={args.init_epsilon}")
+            exe_args.append(
+                f"--aiRLExtTable={args.ai_rl_eviction_extended}"
+            )
 
     elif cache_type == 'lruDatasetVerifier':
         dataset_file = path.abspath(
@@ -229,6 +232,9 @@ def main():
     parser.add_argument('--ai-rl-eviction-feature-map', type=str,
                         default="",
                         help='Ai feature map file for the eviction table in Q-Learning [DEFAULT: ""]')
+    parser.add_argument('--ai-rl-eviction-extended', type='bool',
+                        default=False,
+                        help='Use eviction extended feature map [DEFAULT: False]')
     parser.add_argument('--init-epsilon', type=float,
                         default=1.0,
                         help="The initial value of Epsilon in the RL approach [DEFAULT: 1.0]")

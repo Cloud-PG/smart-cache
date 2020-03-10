@@ -37,6 +37,7 @@ var (
 	aiPort                 string
 	aiRLAdditionFeatureMap string
 	aiRLEvictionFeatureMap string
+	aiRLExtTable           bool
 	buildstamp             string
 	cacheSize              float64
 	cpuprofile             string
@@ -115,7 +116,7 @@ func main() {
 		"[Simulation] time delay for cmd output",
 	)
 	rootCmd.PersistentFlags().StringVar(
-		&weightFunc, "weightFunc", "FuncWeightedRequests",
+		&weightFunc, "weightFunc", "FuncAdditiveExp",
 		"[WeightFunLRU] function to use with weight cache",
 	)
 	rootCmd.PersistentFlags().Float64Var(
@@ -326,7 +327,32 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 					if aiRLEvictionFeatureMap == "" {
 						logger.Info("No eviction feature map indicated...")
 					}
-					curCacheInstance.Init(aiRLAdditionFeatureMap, aiRLEvictionFeatureMap, simEpsilonStart)
+
+					var selFunctionType cache.FunctionType
+					switch weightFunc {
+					case "FuncAdditive":
+						selFunctionType = cache.FuncAdditive
+					case "FuncAdditiveExp":
+						selFunctionType = cache.FuncAdditiveExp
+					case "FuncMultiplicative":
+						selFunctionType = cache.FuncMultiplicative
+					case "FuncWeightedRequests":
+						selFunctionType = cache.FuncWeightedRequests
+					default:
+						fmt.Println("ERR: You need to specify a correct weight function.")
+						os.Exit(-1)
+					}
+
+					curCacheInstance.Init(
+						aiRLAdditionFeatureMap,
+						aiRLEvictionFeatureMap,
+						simEpsilonStart,
+						aiRLExtTable,
+						selFunctionType,
+						weightAlpha,
+						weightBeta,
+						weightGamma,
+					)
 				}
 			case testDatasetCmd:
 				curCacheInstance.Init(dataset2TestPath)
@@ -638,6 +664,10 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			&aiFeatureMap, "aiFeatureMap", "",
 			"the feature map file for data conversions",
 		)
+		cmd.PersistentFlags().BoolVar(
+			&aiRLExtTable, "aiRLExtTable", false,
+			"use the extended eviction table",
+		)
 		cmd.PersistentFlags().StringVar(
 			&aiRLAdditionFeatureMap, "aiRLAdditionFeatureMap", "",
 			"the RL addition feature map file for data conversions",
@@ -762,7 +792,7 @@ func genCache(cacheType string) cache.Cache {
 		case "FuncWeightedRequests":
 			selFunctionType = cache.FuncWeightedRequests
 		default:
-			fmt.Println("ERR: You need to specify a weight function.")
+			fmt.Println("ERR: You need to specify a correct weight function.")
 			os.Exit(-1)
 		}
 
