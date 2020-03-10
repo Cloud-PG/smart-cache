@@ -409,6 +409,8 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 		requestedFileSize = request.Size
 	)
 
+	fmt.Println(cache.dailyReadOnHit / cache.dailyReadOnMiss)
+
 	if cache.evictionTableOK {
 
 		logger.Debug("EVICTION TABLE OK")
@@ -506,25 +508,6 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				// ##### MISS branch  #####
 				// ########################
 
-				// -----------------------------------------------------------------
-				// QLearn - miss reward on best action
-				curState = cache.qAdditionPrevState[request.Filename]
-				curAction = cache.qAdditionPrevAction[request.Filename]
-
-				logger.Debug("Learning MISS branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
-
-				if curState != "" { // Some action are not taken randomly
-					reward := float64(request.Size)
-					if cache.dailyReadOnHit/cache.dailyReadOnMiss <= 1.0 {
-						reward = -reward
-					}
-					// Update table
-					cache.additionTable.Update(curState, curAction, reward)
-					// Update epsilon
-					cache.additionTable.UpdateEpsilon()
-				}
-				// -----------------------------------------------------------------
-
 				curState = cache.getState(request, fileStats, cache.additionFeatureMapOrder, cache.additionFeatureMap)
 
 				// ----- Random choice -----
@@ -536,8 +519,9 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 				logger.Debug("Learning MISS branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
 
-				// ----------------------------------
-				// QLearn - Take the action NOT STORE
+				// -------------------------------------------------------------
+				//             QLearn - Take the action NOT STORE
+				// -------------------------------------------------------------
 				if curAction == qlearn.ActionNotStore {
 					// newScore := cache.points
 					// diff := newScore - cache.prevPoints
@@ -547,6 +531,14 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					// } else {
 					// 	reward -= 1.
 					// }
+					reward := float64(request.Size)
+					if cache.dailyReadOnHit < cache.dailyReadOnMiss {
+						reward = -reward
+					}
+					// Update table
+					cache.additionTable.Update(curState, curAction, reward)
+					// Update epsilon
+					cache.additionTable.UpdateEpsilon()
 
 					cache.qAdditionPrevState[request.Filename] = curState
 					cache.qAdditionPrevAction[request.Filename] = curAction
@@ -574,8 +566,9 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					// cache.points += fileStats.Points
 				}
 
-				// ------------------------------
-				// QLearn - Take the action STORE
+				// -------------------------------------------------------------
+				//               QLearn - Take the action STORE
+				// -------------------------------------------------------------
 				if curAction == qlearn.ActionStore {
 					// newScore := cache.points
 					// diff := newScore - cache.prevPoints
@@ -585,6 +578,14 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					// } else {
 					// 	reward -= 1.
 					// }
+					reward := float64(request.Size)
+					if cache.dailyReadOnHit >= cache.dailyReadOnMiss {
+						reward = -reward
+					}
+					// Update table
+					cache.additionTable.Update(curState, curAction, reward)
+					// Update epsilon
+					cache.additionTable.UpdateEpsilon()
 
 					cache.qAdditionPrevState[request.Filename] = curState
 					cache.qAdditionPrevAction[request.Filename] = curAction
@@ -601,7 +602,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					Recency:   fileStats.Recency,
 				})
 
-				// -----------------------------------------------------------------
+				// -------------------------------------------------------------
 				// QLearn - hit reward on best action
 				curState = cache.qAdditionPrevState[request.Filename]
 				curAction = cache.qAdditionPrevAction[request.Filename]
@@ -610,7 +611,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 				if curState != "" { // Some action are not taken randomly
 					reward := float64(request.Size)
-					if cache.dailyReadOnHit/cache.dailyReadOnMiss <= 1.0 {
+					if cache.dailyReadOnHit/cache.dailyReadOnMiss < 0.75 {
 						reward = -reward
 					}
 					// Update table
@@ -618,13 +619,13 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					// Update epsilon
 					cache.additionTable.UpdateEpsilon()
 				}
-				// -----------------------------------------------------------------
+				// -------------------------------------------------------------
 			}
 		}
 	} else {
-		// #####################
-		// # NO ADDITION TABLE #
-		// #####################
+		// #####################################################################
+		// #                      NO ADDITION TABLE                            #
+		// #####################################################################
 
 		if !hit {
 			// ########################
