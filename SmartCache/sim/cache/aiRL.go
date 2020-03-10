@@ -105,11 +105,6 @@ func makeQtable(featureMap map[string]featuremap.Obj, featureOrder []string, rol
 	return curTable
 }
 
-// Clear the AIRL struct
-func (cache *AIRL) Clear() {
-	cache.SimpleCache.Clear()
-}
-
 // Dumps the AIRL cache
 func (cache *AIRL) Dumps() [][]byte {
 	logger.Info("Dump cache into byte string")
