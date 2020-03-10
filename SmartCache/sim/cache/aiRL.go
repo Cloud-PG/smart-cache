@@ -417,11 +417,9 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			// ##### Eviction Learning phase #####
 			// ###################################
 			if cache.qEvictionPrevAction != 0 && len(cache.qEvictionPrevState) != 0 {
-				reward := 0.
-				if hit {
-					reward += request.Size
-				} else {
-					reward -= request.Size
+				reward := float64(request.Size)
+				if cache.dailyReadOnHit/cache.dailyReadOnMiss < 0.6 {
+					reward = -reward
 				}
 				// Update table
 				cache.evictionTable.Update(cache.qEvictionPrevState, cache.qEvictionPrevAction, reward)
