@@ -78,10 +78,12 @@ def prepare_process_call(args, simulator_exe, cache_type, working_dir: str,
             exe_args.append(f"--aiPort=4242")
             exe_args.append(f"--aiModel={model_weights_file}")
         elif cache_type == "aiRL":
-            exe_args.append(
-                f"--aiRLAdditionFeatureMap={path.abspath(args.ai_rl_addition_feature_map)}")
-            exe_args.append(
-                f"--aiRLEvictionFeatureMap={path.abspath(args.ai_rl_eviction_feature_map)}")
+            if args.ai_rl_addition_feature_map != "":
+                exe_args.append(
+                    f"--aiRLAdditionFeatureMap={path.abspath(args.ai_rl_addition_feature_map)}")
+            if args.ai_rl_eviction_feature_map != "":
+                exe_args.append(
+                    f"--aiRLEvictionFeatureMap={path.abspath(args.ai_rl_eviction_feature_map)}")
             exe_args.append(
                 f"--simEpsilonStart={args.init_epsilon}")
 
