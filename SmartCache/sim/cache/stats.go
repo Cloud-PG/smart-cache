@@ -21,14 +21,14 @@ type Stats struct {
 	weightSum       float64
 	firstUpdateTime time.Time
 	lastUpdateTime  time.Time
-	numRequests     int64
+	Tick            int64
 }
 
 // Init initialize Stats
 func (statStruct *Stats) Init() {
 	statStruct.fileStats = make(map[int64]*FileStats)
 	statStruct.weightSum = 0.0
-	statStruct.numRequests = 0
+	statStruct.Tick = 0
 }
 
 // Dirty indicates if the stats needs a purge
@@ -98,20 +98,21 @@ func (statStruct *Stats) GetOrCreate(filename int64, vars ...interface{}) (*File
 			Size:             size,
 			FirstTime:        reqTime,
 			DeltaLastRequest: 0,
-			Recency:          statStruct.numRequests,
+			Recency:          statStruct.Tick,
 		}
 		statStruct.fileStats[filename] = curStats
 	} else {
 		curStats.Size = size
 		// Reset recency when file stats are loaded
-		if curStats.Recency >= statStruct.numRequests {
-			curStats.Recency = statStruct.numRequests
+		if curStats.Recency >= statStruct.Tick {
+			println("RESET RECENCY")
+			curStats.Recency = statStruct.Tick
 		}
-		curStats.DeltaLastRequest = statStruct.numRequests - curStats.Recency
-		curStats.Recency = statStruct.numRequests
+		curStats.DeltaLastRequest = statStruct.Tick - curStats.Recency
+		curStats.Recency = statStruct.Tick
 	}
 
-	statStruct.numRequests++
+	statStruct.Tick++
 
 	return curStats, !inStats
 }

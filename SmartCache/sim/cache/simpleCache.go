@@ -502,7 +502,7 @@ func (cache *SimpleCache) CPUEffLowerBound() float64 {
 func (cache *SimpleCache) MeanSize() float64 {
 	// return cache.DataWritten() / float64(len(cache.files))
 	totSize := 0.0
-	for file := range cache.files.Get(LRUQueue) {
+	for file := range cache.files.Get(NoQueue) {
 		totSize += file.Size
 	}
 	return totSize / float64(cache.files.Len())
@@ -512,7 +512,7 @@ func (cache *SimpleCache) MeanSize() float64 {
 func (cache *SimpleCache) MeanFrequency() float64 {
 	// return cache.DataWritten() / (cache.hit + cache.miss)
 	totRequests := 0.0
-	for file := range cache.files.Get(LRUQueue) {
+	for file := range cache.files.Get(NoQueue) {
 		totRequests += float64(file.Frequency)
 	}
 	return totRequests / float64(cache.files.Len())
@@ -521,8 +521,9 @@ func (cache *SimpleCache) MeanFrequency() float64 {
 // MeanRecency returns the average recency of the files in cache
 func (cache *SimpleCache) MeanRecency() float64 {
 	totRecency := 0.0
-	for file := range cache.files.Get(LRUQueue) {
-		totRecency += float64(file.Recency)
+	curTick := float64(cache.stats.Tick)
+	for file := range cache.files.Get(NoQueue) {
+		totRecency += (curTick - float64(file.Recency))
 	}
 	return totRecency / float64(cache.files.Len())
 }

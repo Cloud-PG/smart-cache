@@ -74,7 +74,7 @@ type queueType int
 
 const (
 	// LRUQueue is the LRU queue type
-	LRUQueue queueType = iota - 4
+	LRUQueue queueType = iota - 5
 	// LFUQueue is the LFU queue type
 	LFUQueue
 	// SizeBigQueue is the SizeBig queue type
@@ -83,6 +83,8 @@ const (
 	SizeSmallQueue
 	// WeightQueue is the SizeSmall queue type
 	WeightQueue
+	// NoQueue to return only the files
+	NoQueue
 )
 
 // Manager manages the files in cache
@@ -159,6 +161,11 @@ func (man Manager) Get(queue queueType) chan *FileSupportData {
 			}
 			sort.Sort(curQueue)
 			for _, file := range curQueue {
+				ch <- file
+			}
+		default:
+			logger.Debug("No queue requested, only files...")
+			for _, file := range man.files {
 				ch <- file
 			}
 		}
