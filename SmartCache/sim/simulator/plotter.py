@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from bokeh.io import export_png
 from bokeh.layouts import column, row
-from bokeh.models import (BasicTickFormatter, BoxZoomTool, LassoSelectTool,
+from bokeh.models import (BasicTickFormatter,SingleIntervalTicker, BoxZoomTool, LassoSelectTool,
                           Legend, PanTool, Range1d, ResetTool, SaveTool, Span)
 from bokeh.palettes import Category20
 from bokeh.plotting import Figure, figure, output_file, save
@@ -343,9 +343,9 @@ def plot_column(tools: list,
     cur_fig.add_layout(legend, 'right')
     cur_fig.yaxis.formatter = BasicTickFormatter(use_scientific=False)
     cur_fig.xaxis.major_label_orientation = np.pi / 4.
+    cur_fig.xaxis.formatter = SingleIntervalTicker(num_minor_ticks=7)
     cur_fig.add_tools(SaveTool())
     add_window_lines(cur_fig, dates, window_size)
-    cur_fig.xaxis.ticker.desired_num_ticks = 7
 
     return cur_fig
 
@@ -608,10 +608,10 @@ def plot_measure(tools: list,
     cur_fig.add_layout(legend, 'right')
     cur_fig.yaxis.formatter = BasicTickFormatter(
         use_scientific=False)
+    cur_fig.xaxis.formatter = SingleIntervalTicker(num_minor_ticks=7)
     cur_fig.xaxis.major_label_orientation = np.pi / 4.
     cur_fig.add_tools(SaveTool())
     add_window_lines(cur_fig, dates, window_size)
-    cur_fig.xaxis.ticker.desired_num_ticks = 7
 
     return cur_fig
 
