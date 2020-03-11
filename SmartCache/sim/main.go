@@ -377,7 +377,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				loadedDump := curCacheInstance.Load(simLoadDumpFileName)
 
 				if cacheType == "aiRL" {
-					curCacheInstance.Loads(loadedDump, aiRLEpsilonStart)
+					curCacheInstance.Loads(loadedDump, aiRLEpsilonStart, aiRLEpsilonDecay)
 				} else {
 					curCacheInstance.Loads(loadedDump)
 				}
