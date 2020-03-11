@@ -345,7 +345,21 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 		requestedFileSize = request.Size
 	)
 
-	// fmt.Println(cache.dailyReadOnHit / cache.dailyReadOnMiss)
+	// fmt.Println(
+	// 	fileStats.InCache,
+	// 	"\t",
+	// 	fileStats.Frequency,
+	// 	"\t",
+	// 	fileStats.FrequencyInCache,
+	// 	"\t",
+	// 	fileStats.Recency,
+	// 	"\t",
+	// 	fileStats.Weight,
+	// 	"\t",
+	// 	request.Filename,
+	// 	"\t",
+	// 	request.Size,
+	// )
 
 	if cache.evictionTableOK {
 
@@ -379,9 +393,10 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 		if expAdditionTradeoff > cache.additionTable.Epsilon {
 			//if cache.additionTable.Epsilon <= cache.additionTable.MinEpsilon { // Force learning until epsilon is > min epsilon
-			// ########################
-			// ##### Normal phase #####
-			// ########################
+
+			// #################################################################
+			// #                  ADDITION NORMAL PHASE                        #
+			// #################################################################
 
 			if !hit {
 				// ########################
@@ -435,9 +450,9 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				})
 			}
 		} else {
-			// ###################################
-			// ##### Addition Learning phase #####
-			// ###################################
+			// #################################################################
+			// #                  ADDITION LEARNING PHASE                      #
+			// #################################################################
 
 			if !hit {
 				// ########################
