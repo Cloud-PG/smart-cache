@@ -85,7 +85,9 @@ def prepare_process_call(args, simulator_exe, cache_type, working_dir: str,
                 exe_args.append(
                     f"--aiRLEvictionFeatureMap={path.abspath(args.ai_rl_eviction_feature_map)}")
             exe_args.append(
-                f"--simEpsilonStart={args.init_epsilon}")
+                f"--aiRLEpsilonStart={args.init_epsilon}")
+            exe_args.append(
+                f"--aiRLEpsilonDecay={args.decay_rate_epsilon}")
             exe_args.append(
                 f"--aiRLExtTable={args.ai_rl_eviction_extended}"
             )
@@ -238,6 +240,9 @@ def main():
     parser.add_argument('--init-epsilon', type=float,
                         default=1.0,
                         help="The initial value of Epsilon in the RL approach [DEFAULT: 1.0]")
+    parser.add_argument('--decay-rate-epsilon', type=float,
+                        default=0.0000002,
+                        help="The decay rate of Epsilon in the RL approach [DEFAULT: 0.0000002]")
 
     args, _ = parser.parse_known_args()
 

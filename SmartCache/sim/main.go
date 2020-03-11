@@ -38,6 +38,8 @@ var (
 	aiRLAdditionFeatureMap string
 	aiRLEvictionFeatureMap string
 	aiRLExtTable           bool
+	aiRLEpsilonStart       float64
+	aiRLEpsilonDecay       float64
 	buildstamp             string
 	cacheSize              float64
 	cpuprofile             string
@@ -53,7 +55,6 @@ var (
 	simColdStartNoStats    bool
 	simDump                bool
 	simDumpFileName        string
-	simEpsilonStart        float64
 	simFileType            string
 	simLoadDump            bool
 	simLoadDumpFileName    string
@@ -225,8 +226,12 @@ func addSimFlags(cmd *cobra.Command) {
 		"indicates if the cache have to be empty and without any stats after a dump load",
 	)
 	cmd.PersistentFlags().Float64Var(
-		&simEpsilonStart, "simEpsilonStart", 1.0,
+		&aiRLEpsilonStart, "aiRLEpsilonStart", 1.0,
 		"indicates the initial value of Epsilon in the RL method",
+	)
+	cmd.PersistentFlags().Float64Var(
+		&aiRLEpsilonDecay, "aiRLEpsilonDecay", 0.0000002,
+		"indicates the decay rate value of Epsilon in the RL method",
 	)
 }
 
@@ -346,7 +351,8 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 					curCacheInstance.Init(
 						aiRLAdditionFeatureMap,
 						aiRLEvictionFeatureMap,
-						simEpsilonStart,
+						aiRLEpsilonStart,
+						aiRLEpsilonDecay,
 						aiRLExtTable,
 						selFunctionType,
 						weightAlpha,
@@ -371,7 +377,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				loadedDump := curCacheInstance.Load(simLoadDumpFileName)
 
 				if cacheType == "aiRL" {
-					curCacheInstance.Loads(loadedDump, simEpsilonStart)
+					curCacheInstance.Loads(loadedDump, aiRLEpsilonStart)
 				} else {
 					curCacheInstance.Loads(loadedDump)
 				}

@@ -18,7 +18,7 @@ func TestQTable(t *testing.T) {
 	}
 
 	qTable := QTable{}
-	qTable.Init(sizes, AdditionTable, 1.0)
+	qTable.Init(sizes, AdditionTable, 1.0, 0.000001)
 	coverP := qTable.GetActionCoverage()
 
 	if len(qTable.States) != numStates {

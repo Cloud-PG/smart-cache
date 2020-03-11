@@ -61,13 +61,14 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 	additionFeatureMap := args[0].(string)
 	evictionFeatureMap := args[1].(string)
 	initEpsilon := args[2].(float64)
-	cache.extendedEvictionTable = args[3].(bool)
+	decayRateEpsilon := args[3].(float64)
+	cache.extendedEvictionTable = args[4].(bool)
 
 	if cache.extendedEvictionTable {
-		cache.weightFunction = args[4].(FunctionType)
-		cache.weightAlpha = args[5].(float64)
-		cache.weightBeta = args[6].(float64)
-		cache.weightGamma = args[7].(float64)
+		cache.weightFunction = args[5].(FunctionType)
+		cache.weightAlpha = args[6].(float64)
+		cache.weightBeta = args[7].(float64)
+		cache.weightGamma = args[8].(float64)
 	}
 
 	logger.Info("Feature maps", zap.String("addition map", additionFeatureMap), zap.String("eviction map", evictionFeatureMap))
@@ -79,7 +80,7 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 			cache.additionFeatureMapOrder = append(cache.additionFeatureMapOrder, key)
 		}
 		sort.Strings(cache.additionFeatureMapOrder)
-		cache.additionTable = makeQtable(cache.additionFeatureMap, cache.additionFeatureMapOrder, qlearn.AdditionTable, initEpsilon)
+		cache.additionTable = makeQtable(cache.additionFeatureMap, cache.additionFeatureMapOrder, qlearn.AdditionTable, initEpsilon, decayRateEpsilon)
 		cache.additionTableOK = true
 	} else {
 		cache.additionTableOK = false
@@ -99,7 +100,7 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 			logger.Info("Create eviction map")
 			evictionTable = qlearn.EvictionTable
 		}
-		cache.evictionTable = makeQtable(cache.evictionFeatureMap, cache.evictionFeatureMapOrder, evictionTable, initEpsilon)
+		cache.evictionTable = makeQtable(cache.evictionFeatureMap, cache.evictionFeatureMapOrder, evictionTable, initEpsilon, decayRateEpsilon)
 		cache.evictionTableOK = true
 	} else {
 		cache.evictionTableOK = false
@@ -110,7 +111,7 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 	return nil
 }
 
-func makeQtable(featureMap map[string]featuremap.Obj, featureOrder []string, role qlearn.QTableRole, initEpsilon float64) qlearn.QTable {
+func makeQtable(featureMap map[string]featuremap.Obj, featureOrder []string, role qlearn.QTableRole, initEpsilon float64, decayRateEpsilon float64) qlearn.QTable {
 	curTable := qlearn.QTable{}
 	inputLengths := []int{}
 	for _, featureName := range featureOrder {
@@ -122,7 +123,7 @@ func makeQtable(featureMap map[string]featuremap.Obj, featureOrder []string, rol
 		inputLengths = append(inputLengths, curLen)
 	}
 	logger.Info("[Generate QTable]")
-	curTable.Init(inputLengths, role, initEpsilon)
+	curTable.Init(inputLengths, role, initEpsilon, decayRateEpsilon)
 	logger.Info("[Done]")
 	return curTable
 }
@@ -202,6 +203,7 @@ func (cache *AIRL) Dump(filename string) {
 func (cache *AIRL) Loads(inputString [][]byte, vars ...interface{}) {
 	logger.Info("Loads cache dump string")
 	initEpsilon := vars[0].(float64)
+	decayRateEpsilon := vars[1].(float64)
 	var (
 		curRecord     DumpRecord
 		curRecordInfo DumpInfo
@@ -229,11 +231,11 @@ func (cache *AIRL) Loads(inputString [][]byte, vars ...interface{}) {
 			cache.stats.fileStats[curRecord.Filename] = &curFileStats
 		case "ADDQTABLE":
 			unmarshalErr = json.Unmarshal([]byte(curRecord.Data), &cache.additionTable)
-			cache.additionTable.ResetParams(initEpsilon)
+			cache.additionTable.ResetParams(initEpsilon, decayRateEpsilon)
 			cache.additionTableOK = true
 		case "EVCQTABLE":
 			unmarshalErr = json.Unmarshal([]byte(curRecord.Data), &cache.evictionTable)
-			cache.evictionTable.ResetParams(initEpsilon)
+			cache.evictionTable.ResetParams(initEpsilon, decayRateEpsilon)
 			cache.evictionTableOK = true
 		}
 		if unmarshalErr != nil {

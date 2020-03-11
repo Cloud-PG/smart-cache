@@ -71,12 +71,12 @@ type QTable struct {
 }
 
 // Init initilizes the QTable struct
-func (table *QTable) Init(featureLenghts []int, role QTableRole, initEpsilon float64) {
+func (table *QTable) Init(featureLenghts []int, role QTableRole, initEpsilon float64, decayRateEpsilon float64) {
 	logger = zap.L()
 
 	table.LearningRate = 0.9 // also named Alpha
 	table.DiscountFactor = 0.5
-	table.DecayRateEpsilon = 0.0000042
+	table.DecayRateEpsilon = decayRateEpsilon
 	table.Epsilon = initEpsilon
 	table.MaxEpsilon = 1.0
 	table.MinEpsilon = 0.1
@@ -151,12 +151,12 @@ func (table *QTable) Init(featureLenghts []int, role QTableRole, initEpsilon flo
 }
 
 // ResetParams resets the learning parameters
-func (table *QTable) ResetParams(initEpsilon float64) {
+func (table *QTable) ResetParams(initEpsilon float64, decayRateEpsilon float64) {
 	logger = zap.L()
 
 	table.LearningRate = 0.9 // also named Alpha
 	table.DiscountFactor = 0.5
-	table.DecayRateEpsilon = 0.000042
+	table.DecayRateEpsilon = decayRateEpsilon
 	table.Epsilon = initEpsilon
 	table.MaxEpsilon = 1.0
 	table.MinEpsilon = 0.1
