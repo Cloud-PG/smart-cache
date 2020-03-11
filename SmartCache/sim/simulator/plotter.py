@@ -345,6 +345,7 @@ def plot_column(tools: list,
     cur_fig.xaxis.major_label_orientation = np.pi / 4.
     cur_fig.add_tools(SaveTool())
     add_window_lines(cur_fig, dates, window_size)
+    cur_fig.xaxis.ticker.desired_num_ticks = 7
 
     return cur_fig
 
@@ -610,6 +611,7 @@ def plot_measure(tools: list,
     cur_fig.xaxis.major_label_orientation = np.pi / 4.
     cur_fig.add_tools(SaveTool())
     add_window_lines(cur_fig, dates, window_size)
+    cur_fig.xaxis.ticker.desired_num_ticks = 7
 
     return cur_fig
 
