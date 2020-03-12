@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 	"net"
 	"os"
 	"runtime/pprof"
@@ -543,12 +544,21 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 					// TODO: make size measure a parameter: [K, M, G, P]
 					sizeInMbytes := record.Size / (1024 * 1024)
 
+					cpuEff := (record.CPUTime / (record.CPUTime + record.IOTime)) * 100.
+					if cpuEff < 0. {
+						cpuEff = 0.
+					} else if math.IsInf(cpuEff, 0) {
+						cpuEff = 0.
+					} else if math.IsNaN(cpuEff) {
+						cpuEff = 0.
+					}
+
 					cache.GetFile(
 						curCacheInstance,
 						record.Filename,
 						sizeInMbytes,
 						record.Protocol,
-						(record.CPUTime/(record.CPUTime+record.IOTime))*100., // CPU efficiency
+						cpuEff, // CPU efficiency
 						record.Day,
 						record.SiteName,
 						record.UserID,
