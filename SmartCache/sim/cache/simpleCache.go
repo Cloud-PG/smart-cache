@@ -358,9 +358,7 @@ func (cache *SimpleCache) AfterRequest(request *Request, hit bool, added bool) {
 		cache.numDailyHit++
 		cache.hit += 1.
 		cache.dataReadOnHit += request.Size
-		if currentCPUEff != 0. {
-			cache.hitCPUEff += currentCPUEff
-		}
+		cache.hitCPUEff += currentCPUEff
 	} else {
 		cache.numDailyMiss++
 		cache.miss += 1.
