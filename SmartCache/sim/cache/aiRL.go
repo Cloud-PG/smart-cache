@@ -316,6 +316,8 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) *FileStats {
 		cache.missCPUEff = 0.
 		cache.upperCPUEff = 0.
 		cache.lowerCPUEff = 0.
+		cache.numLocal = 0
+		cache.numRemote = 0
 	}
 
 	// if !cache.curTime.Equal(cache.prevTime) {

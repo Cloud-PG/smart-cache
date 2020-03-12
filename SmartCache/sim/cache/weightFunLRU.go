@@ -89,6 +89,8 @@ func (cache *WeightFunLRU) BeforeRequest(request *Request, hit bool) *FileStats 
 		cache.missCPUEff = 0.
 		cache.upperCPUEff = 0.
 		cache.lowerCPUEff = 0.
+		cache.numLocal = 0
+		cache.numRemote = 0
 	}
 
 	curStats, newFile := cache.stats.GetOrCreate(request.Filename, request.Size, request.DayTime)

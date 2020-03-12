@@ -24,6 +24,7 @@ type SimpleCache struct {
 	hit, miss, size, MaxSize           float64
 	hitCPUEff, missCPUEff              float64
 	upperCPUEff, lowerCPUEff           float64
+	numLocal, numRemote                int64
 	dataWritten, dataRead, dataDeleted float64
 	dataReadOnHit, dataReadOnMiss      float64
 	HighWaterMark                      float64
@@ -81,6 +82,8 @@ func (cache *SimpleCache) Clear() {
 	cache.missCPUEff = 0.
 	cache.upperCPUEff = 0.
 	cache.lowerCPUEff = 0.
+	cache.numLocal = 0
+	cache.numRemote = 0
 }
 
 // ClearHitMissStats the cache stats
@@ -96,6 +99,8 @@ func (cache *SimpleCache) ClearHitMissStats() {
 	cache.missCPUEff = 0.
 	cache.upperCPUEff = 0.
 	cache.lowerCPUEff = 0.
+	cache.numLocal = 0
+	cache.numRemote = 0
 }
 
 // Dumps the SimpleCache cache
@@ -282,6 +287,8 @@ func (cache *SimpleCache) BeforeRequest(request *Request, hit bool) *FileStats {
 		cache.missCPUEff = 0.
 		cache.upperCPUEff = 0.
 		cache.lowerCPUEff = 0.
+		cache.numLocal = 0
+		cache.numRemote = 0
 	}
 
 	curStats, _ := cache.stats.GetOrCreate(request.Filename, request.Size, request.DayTime)
@@ -332,15 +339,15 @@ func (cache *SimpleCache) AfterRequest(request *Request, hit bool, added bool) {
 
 		if request.Protocol == 1 {
 			// Local
+			cache.upperCPUEff += currentCPUEff
+			cache.numLocal++
 			currentCPUEff = request.CPUEff
 		} else {
 			// Remote - Add 15% to reach the ideal CPUEff
+			cache.lowerCPUEff += request.CPUEff
+			cache.numRemote++
 			currentCPUEff = request.CPUEff + 15.
 		}
-
-		cache.upperCPUEff += currentCPUEff
-		cache.lowerCPUEff += currentCPUEff - 15.
-
 	}
 
 	if hit {
@@ -518,12 +525,12 @@ func (cache *SimpleCache) CPUMissEff() float64 {
 
 // CPUEffUpperBound returns the ideal CPU efficiency upper bound
 func (cache *SimpleCache) CPUEffUpperBound() float64 {
-	return cache.upperCPUEff / float64(cache.numDailyHit+cache.numDailyMiss)
+	return cache.upperCPUEff / float64(cache.numLocal)
 }
 
 // CPUEffLowerBound returns the ideal CPU efficiency lower bound
 func (cache *SimpleCache) CPUEffLowerBound() float64 {
-	return cache.lowerCPUEff / float64(cache.numDailyHit+cache.numDailyMiss)
+	return cache.lowerCPUEff / float64(cache.numRemote)
 }
 
 // MeanSize returns the average size of the files in cache
