@@ -241,7 +241,7 @@ def main():
                         default=1.0,
                         help="The initial value of Epsilon in the RL approach [DEFAULT: 1.0]")
     parser.add_argument('--decay-rate-epsilon', type=float,
-                        default=0.0000002,
+                        default=0.0000042,
                         help="The decay rate of Epsilon in the RL approach [DEFAULT: 0.0000002]")
 
     args, _ = parser.parse_known_args()

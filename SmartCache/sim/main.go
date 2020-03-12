@@ -231,7 +231,7 @@ func addSimFlags(cmd *cobra.Command) {
 		"indicates the initial value of Epsilon in the RL method",
 	)
 	cmd.PersistentFlags().Float64Var(
-		&aiRLEpsilonDecay, "aiRLEpsilonDecay", 0.0000002,
+		&aiRLEpsilonDecay, "aiRLEpsilonDecay", 0.0000042,
 		"indicates the decay rate value of Epsilon in the RL method",
 	)
 }
