@@ -350,7 +350,7 @@ func (cache *SimpleCache) AfterRequest(request *Request, hit bool, added bool) {
 			// Remote - Add % to reach the ideal CPUEff
 			cache.lowerCPUEff += request.CPUEff
 			cache.numRemote++
-			currentCPUEff = request.CPUEff + percDiff.
+			currentCPUEff = request.CPUEff + percDiff
 		}
 	}
 
@@ -366,7 +366,7 @@ func (cache *SimpleCache) AfterRequest(request *Request, hit bool, added bool) {
 		cache.miss += 1.
 		cache.dataReadOnMiss += request.Size
 		if currentCPUEff != 0. {
-			cache.missCPUEff += currentCPUEff - percDiff.
+			cache.missCPUEff += currentCPUEff - percDiff
 		}
 	}
 
