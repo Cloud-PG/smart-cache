@@ -319,8 +319,10 @@ func (table *QTable) Update(state string, action ActionType, reward float64) {
 
 // UpdateEpsilon upgrades the epsilon variable
 func (table *QTable) UpdateEpsilon() {
-	table.StepNum++
-	table.Epsilon = table.MinEpsilon + (table.MaxEpsilon-table.MinEpsilon)*math.Exp(-table.DecayRateEpsilon*float64(table.StepNum))
+	if table.Epsilon > table.MinEpsilon {
+		table.StepNum++
+		table.Epsilon = table.MinEpsilon + (table.MaxEpsilon-table.MinEpsilon)*math.Exp(-table.DecayRateEpsilon*float64(table.StepNum))
+	}
 }
 
 // TODO: sistemare gli stati per avere current state e next state
