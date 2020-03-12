@@ -456,25 +456,6 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				// ##### MISS branch  #####
 				// ########################
 
-				// -------------------------------------------------------------
-				// QLearn - miss reward on best action
-				curState = cache.qAdditionPrevState[request.Filename]
-				curAction = cache.qAdditionPrevAction[request.Filename]
-
-				logger.Debug("Learning MISS branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
-
-				if curState != "" { // Check if first miss
-					reward := request.Size
-					if cache.dailyReadOnHit < (cache.dailyReadOnMiss*0.5) || cache.dailyReadOnMiss < (bandwidthLimit*0.75) {
-						reward = -reward
-					}
-					// Update table
-					cache.additionTable.Update(curState, curAction, reward)
-					// Update epsilon
-					cache.additionTable.UpdateEpsilon()
-				}
-				// -------------------------------------------------------------
-
 				curState = cache.getState(request, fileStats, cache.additionFeatureMapOrder, cache.additionFeatureMap)
 
 				// ----- Random choice -----
@@ -499,7 +480,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					// 	reward -= 1.
 					// }
 					reward := request.Size
-					if cache.dailyReadOnHit < (cache.dailyReadOnMiss*0.5) || cache.dailyReadOnMiss < (bandwidthLimit*0.75) {
+					if cache.dataReadOnHit < cache.dataReadOnMiss || cache.dailyReadOnHit < cache.dailyReadOnMiss || cache.dailyReadOnMiss >= bandwidthLimit {
 						reward = -reward
 					}
 					// Update table
@@ -507,8 +488,8 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					// Update epsilon
 					cache.additionTable.UpdateEpsilon()
 
-					cache.qAdditionPrevState[request.Filename] = curState
-					cache.qAdditionPrevAction[request.Filename] = curAction
+					// cache.qAdditionPrevState[request.Filename] = curState
+					// cache.qAdditionPrevAction[request.Filename] = curAction
 
 					return added
 				}
@@ -547,7 +528,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					// 	reward -= 1.
 					// }
 					reward := request.Size
-					if cache.dailyReadOnHit >= (cache.dailyReadOnMiss*0.5) && cache.dailyReadOnMiss >= (bandwidthLimit*0.75) {
+					if cache.dailyReadOnMiss >= bandwidthLimit {
 						reward = -reward
 					}
 					// Update table
@@ -580,7 +561,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 				if curState != "" { // Some action are not taken randomly
 					reward := request.Size
-					if cache.dailyReadOnHit <= (cache.dailyReadOnMiss * 0.5) {
+					if cache.dataReadOnHit < cache.dataReadOnMiss || cache.dailyReadOnHit < cache.dailyReadOnMiss {
 						reward = -reward
 					}
 					// Update table
