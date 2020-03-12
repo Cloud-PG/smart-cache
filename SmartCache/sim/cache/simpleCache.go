@@ -327,27 +327,36 @@ func (cache *SimpleCache) UpdatePolicy(request *Request, fileStats *FileStats, h
 func (cache *SimpleCache) AfterRequest(request *Request, hit bool, added bool) {
 
 	var currentCPUEff float64
-	if request.Protocol == 1 {
-		// Local
-		currentCPUEff = request.CPUEff
-	} else {
-		// Remote - Add 15% to reach the ideal CPUEff
-		currentCPUEff = request.CPUEff + 15.
-	}
 
-	cache.upperCPUEff += currentCPUEff
-	cache.lowerCPUEff += currentCPUEff - 15.
+	if request.CPUEff != 0. {
+
+		if request.Protocol == 1 {
+			// Local
+			currentCPUEff = request.CPUEff
+		} else {
+			// Remote - Add 15% to reach the ideal CPUEff
+			currentCPUEff = request.CPUEff + 15.
+		}
+
+		cache.upperCPUEff += currentCPUEff
+		cache.lowerCPUEff += currentCPUEff - 15.
+
+	}
 
 	if hit {
 		cache.numDailyHit++
 		cache.hit += 1.
 		cache.dataReadOnHit += request.Size
-		cache.hitCPUEff += currentCPUEff
+		if currentCPUEff != 0. {
+			cache.hitCPUEff += currentCPUEff
+		}
 	} else {
 		cache.numDailyMiss++
 		cache.miss += 1.
 		cache.dataReadOnMiss += request.Size
-		cache.missCPUEff += currentCPUEff - 15.
+		if currentCPUEff != 0. {
+			cache.missCPUEff += currentCPUEff - 15.
+		}
 	}
 
 	// Always true because of LRU policy
