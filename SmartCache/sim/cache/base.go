@@ -31,8 +31,7 @@ type FileDump struct {
 type Request struct {
 	Filename int64
 	Size     float64
-	WTime    float64
-	CPUTime  float64
+	CPUEff   float64
 	Day      int64
 	DayTime  time.Time
 	SiteName int64
@@ -126,21 +125,18 @@ func GetFile(cache Cache, vars ...interface{}) bool {
 	}
 
 	switch {
-	case len(vars) > 7:
-		cacheRequest.UserID = vars[7].(int64)
-		fallthrough
 	case len(vars) > 6:
-		cacheRequest.SiteName = vars[6].(int64)
+		cacheRequest.UserID = vars[6].(int64)
 		fallthrough
 	case len(vars) > 5:
-		cacheRequest.Day = vars[5].(int64)
-		cacheRequest.DayTime = time.Unix(cacheRequest.Day, 0)
+		cacheRequest.SiteName = vars[5].(int64)
 		fallthrough
 	case len(vars) > 4:
-		cacheRequest.CPUTime = vars[4].(float64)
+		cacheRequest.Day = vars[4].(int64)
+		cacheRequest.DayTime = time.Unix(cacheRequest.Day, 0)
 		fallthrough
 	case len(vars) > 3:
-		cacheRequest.WTime = vars[3].(float64)
+		cacheRequest.CPUEff = vars[3].(float64)
 		fallthrough
 	case len(vars) > 2:
 		cacheRequest.Protocol = vars[2].(int64)

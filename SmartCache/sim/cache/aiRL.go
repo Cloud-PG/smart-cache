@@ -9,7 +9,6 @@ import (
 	qlearn "simulator/v2/cache/qLearn"
 	"sort"
 	"strings"
-	"time"
 
 	"go.uber.org/zap"
 )
@@ -21,8 +20,6 @@ const (
 // AIRL cache
 type AIRL struct {
 	SimpleCache
-	prevTime                time.Time
-	curTime                 time.Time
 	additionTableOK         bool
 	evictionTableOK         bool
 	additionFeatureMap      map[string]featuremap.Obj
@@ -312,6 +309,13 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) *FileStats {
 	if !cache.curTime.Equal(cache.prevTime) {
 		cache.dailyReadOnHit = 0.0
 		cache.dailyReadOnMiss = 0.0
+
+		cache.numDailyHit = 0
+		cache.numDailyMiss = 0
+		cache.hitCPUEff = 0.
+		cache.missCPUEff = 0.
+		cache.upperCPUEff = 0.
+		cache.lowerCPUEff = 0.
 	}
 
 	// if !cache.curTime.Equal(cache.prevTime) {

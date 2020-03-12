@@ -548,8 +548,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 						record.Filename,
 						sizeInMbytes,
 						record.Protocol,
-						record.CPUTime+record.IOTime, // WTime
-						record.CPUTime,
+						(record.CPUTime/(record.CPUTime+record.IOTime))*100., // CPU efficiency
 						record.Day,
 						record.SiteName,
 						record.UserID,

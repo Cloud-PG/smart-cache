@@ -265,9 +265,6 @@ func (cache *AINN) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 		requestedFileSize = request.Size
 	)
 
-	cache.prevTime = cache.curTime
-	cache.curTime = request.DayTime
-
 	if !hit {
 		siteName := request.SiteName
 		userID := request.UserID

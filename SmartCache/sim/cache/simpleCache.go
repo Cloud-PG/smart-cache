@@ -8,6 +8,7 @@ import (
 	"io"
 	"math"
 	"os"
+	"time"
 
 	pb "simulator/v2/cache/simService"
 
@@ -21,13 +22,16 @@ type SimpleCache struct {
 	files                              Manager
 	ordType                            queueType
 	hit, miss, size, MaxSize           float64
-	hitCPUTime, missCPUTime            float64
-	hitWTime, missWTime                float64
-	idealCPUTime, idealWTime           float64
+	hitCPUEff, missCPUEff              float64
+	upperCPUEff, lowerCPUEff           float64
 	dataWritten, dataRead, dataDeleted float64
 	dataReadOnHit, dataReadOnMiss      float64
 	HighWaterMark                      float64
 	LowWaterMark                       float64
+	numDailyHit                        int64
+	numDailyMiss                       int64
+	prevTime                           time.Time
+	curTime                            time.Time
 }
 
 // Init the LRU struct
@@ -73,12 +77,10 @@ func (cache *SimpleCache) Clear() {
 	cache.dataReadOnHit = 0.
 	cache.dataReadOnMiss = 0.
 	cache.dataDeleted = 0.
-	cache.hitCPUTime = 0.
-	cache.missCPUTime = 0.
-	cache.hitWTime = 0.
-	cache.missWTime = 0.
-	cache.idealWTime = 0.
-	cache.idealCPUTime = 0.
+	cache.hitCPUEff = 0.
+	cache.missCPUEff = 0.
+	cache.upperCPUEff = 0.
+	cache.lowerCPUEff = 0.
 }
 
 // ClearHitMissStats the cache stats
@@ -90,12 +92,10 @@ func (cache *SimpleCache) ClearHitMissStats() {
 	cache.dataReadOnHit = 0.
 	cache.dataReadOnMiss = 0.
 	cache.dataDeleted = 0.
-	cache.hitCPUTime = 0.
-	cache.missCPUTime = 0.
-	cache.hitWTime = 0.
-	cache.missWTime = 0.
-	cache.idealWTime = 0.
-	cache.idealCPUTime = 0.
+	cache.hitCPUEff = 0.
+	cache.missCPUEff = 0.
+	cache.upperCPUEff = 0.
+	cache.lowerCPUEff = 0.
 }
 
 // Dumps the SimpleCache cache
@@ -272,6 +272,18 @@ func (cache *SimpleCache) SimLoads(stream pb.SimService_SimLoadsServer) error {
 
 // BeforeRequest of LRU cache
 func (cache *SimpleCache) BeforeRequest(request *Request, hit bool) *FileStats {
+	cache.prevTime = cache.curTime
+	cache.curTime = request.DayTime
+
+	if !cache.curTime.Equal(cache.prevTime) {
+		cache.numDailyHit = 0
+		cache.numDailyMiss = 0
+		cache.hitCPUEff = 0.
+		cache.missCPUEff = 0.
+		cache.upperCPUEff = 0.
+		cache.lowerCPUEff = 0.
+	}
+
 	curStats, _ := cache.stats.GetOrCreate(request.Filename, request.Size, request.DayTime)
 	curStats.updateStats(hit, request.Size, request.UserID, request.SiteName, request.DayTime)
 	return curStats
@@ -314,28 +326,28 @@ func (cache *SimpleCache) UpdatePolicy(request *Request, fileStats *FileStats, h
 // AfterRequest of LRU cache
 func (cache *SimpleCache) AfterRequest(request *Request, hit bool, added bool) {
 
-	var currentWtime float64
+	var currentCPUEff float64
 	if request.Protocol == 1 {
 		// Local
-		currentWtime = request.WTime
+		currentCPUEff = request.CPUEff
 	} else {
-		// Remote - Remove 15% of wasted time
-		currentWtime = (request.WTime * 0.85)
+		// Remote - Add 15% to reach the ideal CPUEff
+		currentCPUEff = request.CPUEff + 15.
 	}
 
-	cache.idealCPUTime += request.CPUTime
-	cache.idealWTime += currentWtime
+	cache.upperCPUEff += currentCPUEff
+	cache.lowerCPUEff += currentCPUEff - 15.
 
 	if hit {
+		cache.numDailyHit++
 		cache.hit += 1.
 		cache.dataReadOnHit += request.Size
-		cache.hitCPUTime += request.CPUTime
-		cache.hitWTime += currentWtime
+		cache.hitCPUEff += currentCPUEff
 	} else {
+		cache.numDailyMiss++
 		cache.miss += 1.
 		cache.dataReadOnMiss += request.Size
-		cache.missCPUTime += request.CPUTime
-		cache.missWTime += currentWtime
+		cache.missCPUEff += currentCPUEff - 15.
 	}
 
 	// Always true because of LRU policy
@@ -482,30 +494,27 @@ func (cache *SimpleCache) ExtraOutput(info string) string {
 
 // CPUEff returns the CPU efficiency
 func (cache *SimpleCache) CPUEff() float64 {
-	totCPUTime := cache.hitCPUTime + cache.missCPUTime
-	totWtime := cache.hitWTime + (cache.missWTime * 1.15)
-	return (totCPUTime / totWtime) * 100.
+	return (cache.hitCPUEff + cache.missCPUEff) / float64(cache.numDailyHit+cache.numDailyMiss)
 }
 
 // CPUHitEff returns the CPU efficiency for hit data
 func (cache *SimpleCache) CPUHitEff() float64 {
-	return (cache.hitCPUTime / cache.hitWTime) * 100.
+	return cache.hitCPUEff / float64(cache.numDailyHit)
 }
 
 // CPUMissEff returns the CPU efficiency for miss data
 func (cache *SimpleCache) CPUMissEff() float64 {
-	// Add the 15% to wall time -> estimated loss time to retrieve the files
-	return (cache.missCPUTime / (cache.missWTime * 1.15)) * 100.
+	return cache.missCPUEff / float64(cache.numDailyMiss)
 }
 
 // CPUEffUpperBound returns the ideal CPU efficiency upper bound
 func (cache *SimpleCache) CPUEffUpperBound() float64 {
-	return (cache.idealCPUTime / cache.idealWTime) * 100.
+	return cache.upperCPUEff / float64(cache.numDailyHit+cache.numDailyMiss)
 }
 
 // CPUEffLowerBound returns the ideal CPU efficiency lower bound
 func (cache *SimpleCache) CPUEffLowerBound() float64 {
-	return (cache.idealCPUTime / (cache.idealWTime * 1.15)) * 100.
+	return cache.lowerCPUEff / float64(cache.numDailyHit+cache.numDailyMiss)
 }
 
 // MeanSize returns the average size of the files in cache
