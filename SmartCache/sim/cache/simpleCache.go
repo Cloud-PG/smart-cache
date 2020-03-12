@@ -339,7 +339,7 @@ func (cache *SimpleCache) AfterRequest(request *Request, hit bool, added bool) {
 
 		if request.Protocol == 1 {
 			// Local
-			cache.upperCPUEff += currentCPUEff
+			cache.upperCPUEff += request.CPUEff
 			cache.numLocal++
 			currentCPUEff = request.CPUEff
 		} else {
