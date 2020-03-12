@@ -551,6 +551,8 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 						cpuEff = 0.
 					} else if math.IsNaN(cpuEff) {
 						cpuEff = 0.
+					} else if cpuEff > 100. {
+						cpuEff = 0.
 					}
 
 					cache.GetFile(

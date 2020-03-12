@@ -16,6 +16,10 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	percDiff = 19. // Extracted from 2018 stats (upper bound - lower bound)
+)
+
 // SimpleCache cache
 type SimpleCache struct {
 	stats                              Stats
@@ -343,10 +347,10 @@ func (cache *SimpleCache) AfterRequest(request *Request, hit bool, added bool) {
 			cache.numLocal++
 			currentCPUEff = request.CPUEff
 		} else {
-			// Remote - Add 15% to reach the ideal CPUEff
+			// Remote - Add % to reach the ideal CPUEff
 			cache.lowerCPUEff += request.CPUEff
 			cache.numRemote++
-			currentCPUEff = request.CPUEff + 15.
+			currentCPUEff = request.CPUEff + percDiff.
 		}
 	}
 
@@ -362,7 +366,7 @@ func (cache *SimpleCache) AfterRequest(request *Request, hit bool, added bool) {
 		cache.miss += 1.
 		cache.dataReadOnMiss += request.Size
 		if currentCPUEff != 0. {
-			cache.missCPUEff += currentCPUEff - 15.
+			cache.missCPUEff += currentCPUEff - percDiff.
 		}
 	}
 
