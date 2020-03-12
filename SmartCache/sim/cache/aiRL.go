@@ -369,7 +369,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			// ##### Eviction Learning phase #####
 			// ###################################
 			if cache.qEvictionPrevAction != 0 && len(cache.qEvictionPrevState) != 0 {
-				reward := float64(request.Size)
+				reward := request.Size
 				if !hit {
 					reward = -reward
 				}
@@ -463,8 +463,8 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 				logger.Debug("Learning MISS branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
 
-				if curState != "" { // Some action are not taken randomly
-					reward := float64(request.Size)
+				if curState != "" { // Check if first miss
+					reward := request.Size
 					if cache.dailyReadOnHit < (cache.dailyReadOnMiss*0.5) || cache.dailyReadOnMiss < (bandwidthLimit*0.75) {
 						reward = -reward
 					}
@@ -498,7 +498,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					// } else {
 					// 	reward -= 1.
 					// }
-					reward := float64(request.Size)
+					reward := request.Size
 					if cache.dailyReadOnHit < (cache.dailyReadOnMiss*0.5) || cache.dailyReadOnMiss < (bandwidthLimit*0.75) {
 						reward = -reward
 					}
@@ -546,7 +546,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					// } else {
 					// 	reward -= 1.
 					// }
-					reward := float64(request.Size)
+					reward := request.Size
 					if cache.dailyReadOnHit >= (cache.dailyReadOnMiss*0.5) && cache.dailyReadOnMiss >= (bandwidthLimit*0.75) {
 						reward = -reward
 					}
@@ -579,8 +579,8 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				logger.Debug("Learning HIT branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
 
 				if curState != "" { // Some action are not taken randomly
-					reward := float64(request.Size)
-					if cache.dailyReadOnHit >= (cache.dailyReadOnMiss*0.5) && cache.dailyReadOnMiss >= (bandwidthLimit*0.75) {
+					reward := request.Size
+					if cache.dailyReadOnHit <= (cache.dailyReadOnMiss * 0.5) {
 						reward = -reward
 					}
 					// Update table
@@ -690,14 +690,15 @@ func (cache *AIRL) Free(amount float64, percentage bool) float64 {
 				randomActionIdx := int(cache.evictionTable.GetRandomFloat() * float64(len(cache.evictionFeatureMap)))
 				curAction = cache.evictionTable.Actions[randomActionIdx]
 			}
+
+			cache.qEvictionPrevState = curState
+			cache.qEvictionPrevAction = curAction
+
 		} else {
 			curAction = qlearn.ActionRemoveWithLRU
 		}
 
-		cache.qEvictionPrevState = curState
-		cache.qEvictionPrevAction = curAction
 		var curPolicy queueType
-
 		switch curAction {
 		case qlearn.ActionRemoveWithLRU:
 			curPolicy = LRUQueue
