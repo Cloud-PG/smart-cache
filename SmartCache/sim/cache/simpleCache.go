@@ -313,19 +313,29 @@ func (cache *SimpleCache) UpdatePolicy(request *Request, fileStats *FileStats, h
 
 // AfterRequest of LRU cache
 func (cache *SimpleCache) AfterRequest(request *Request, hit bool, added bool) {
+
+	var currentWtime float64
+	if request.Protocol == 1 {
+		// Local
+		currentWtime = request.WTime
+	} else {
+		// Remote - Remove 15% of wasted time
+		currentWtime = (request.WTime * 0.85)
+	}
+
 	cache.idealCPUTime += request.CPUTime
-	cache.idealWTime += request.WTime
+	cache.idealWTime += currentWtime
 
 	if hit {
 		cache.hit += 1.
 		cache.dataReadOnHit += request.Size
 		cache.hitCPUTime += request.CPUTime
-		cache.hitWTime += request.WTime
+		cache.hitWTime += currentWtime
 	} else {
 		cache.miss += 1.
 		cache.dataReadOnMiss += request.Size
 		cache.missCPUTime += request.CPUTime
-		cache.missWTime += request.WTime
+		cache.missWTime += currentWtime
 	}
 
 	// Always true because of LRU policy

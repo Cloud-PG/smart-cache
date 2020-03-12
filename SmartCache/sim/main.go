@@ -547,6 +547,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 						curCacheInstance,
 						record.Filename,
 						sizeInMbytes,
+						record.Protocol,
 						record.CPUTime+record.IOTime, // WTime
 						record.CPUTime,
 						record.Day,

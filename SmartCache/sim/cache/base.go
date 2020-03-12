@@ -39,6 +39,7 @@ type Request struct {
 	UserID   int64
 	DataType int64
 	Filetype int64
+	Protocol int64
 }
 
 // Cache is the base interface for the cache object
@@ -125,21 +126,24 @@ func GetFile(cache Cache, vars ...interface{}) bool {
 	}
 
 	switch {
+	case len(vars) > 7:
+		cacheRequest.UserID = vars[7].(int64)
+		fallthrough
 	case len(vars) > 6:
-		cacheRequest.UserID = vars[6].(int64)
+		cacheRequest.SiteName = vars[6].(int64)
 		fallthrough
 	case len(vars) > 5:
-		cacheRequest.SiteName = vars[5].(int64)
-		fallthrough
-	case len(vars) > 4:
-		cacheRequest.Day = vars[4].(int64)
+		cacheRequest.Day = vars[5].(int64)
 		cacheRequest.DayTime = time.Unix(cacheRequest.Day, 0)
 		fallthrough
+	case len(vars) > 4:
+		cacheRequest.CPUTime = vars[4].(float64)
+		fallthrough
 	case len(vars) > 3:
-		cacheRequest.CPUTime = vars[3].(float64)
+		cacheRequest.WTime = vars[3].(float64)
 		fallthrough
 	case len(vars) > 2:
-		cacheRequest.WTime = vars[2].(float64)
+		cacheRequest.Protocol = vars[2].(int64)
 		fallthrough
 	case len(vars) > 1:
 		cacheRequest.Size = vars[1].(float64)
