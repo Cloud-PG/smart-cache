@@ -25,14 +25,14 @@
     "keys": [
       1,
       2,
-      8,
-      32
+      16,
+      64
     ],
     "values": {
       "1": 0,
       "2": 1,
-      "8": 2,
-      "32": 3,
+      "16": 2,
+      "64": 3,
       "max": 4
     },
     "unknown_values": false,
@@ -43,17 +43,19 @@
     "feature": "deltaLastRequest",
     "type": "int",
     "keys": [
+      10000,
+      25000,
       50000,
       100000,
-      200000,
-      400000
+      150000
     ],
     "values": {
-      "50000": 0,
-      "100000": 1,
-      "200000": 2,
-      "400000": 3,
-      "max": 4
+      "10000": 0,
+      "25000": 1,
+      "50000": 2,
+      "100000": 3,
+      "150000": 4,
+      "max": 5
     },
     "unknown_values": false,
     "buckets": true,
@@ -73,25 +75,5 @@
     "unknown_values": false,
     "buckets": false,
     "bucket_open_right": false
-  },
-  "deltaHighWatermark": {
-    "feature": "deltaHighWatermark",
-    "type": "float",
-    "keys": [
-      1.0,
-      5.0,
-      10.0,
-      20.0
-    ],
-    "values": {
-      "1.0": 0,
-      "5.0": 1,
-      "10.0": 2,
-      "20.0": 3,
-      "max": 4
-    },
-    "unknown_values": false,
-    "buckets": true,
-    "bucket_open_right": true
   }
 }

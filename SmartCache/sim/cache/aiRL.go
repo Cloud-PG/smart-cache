@@ -243,19 +243,6 @@ func (cache *AIRL) Loads(inputString [][]byte, vars ...interface{}) {
 }
 
 func (cache *AIRL) getState(request *Request, fileStats *FileStats, featureOrder []string, featureMap map[string]featuremap.Obj) string {
-	var (
-		size     float64
-		numReq   float64
-		dataType int64
-	)
-
-	if fileStats != nil {
-		numReq, _, _ = fileStats.getStats()
-	}
-	if request != nil {
-		size = request.Size
-		dataType = request.DataType
-	}
 
 	cacheCapacity := float64(cache.Capacity())
 	deltaHighWatermark := float64(cache.HighWaterMark) - cacheCapacity
@@ -266,13 +253,13 @@ func (cache *AIRL) getState(request *Request, fileStats *FileStats, featureOrder
 		curObj, _ := featureMap[featureName]
 		switch featureName {
 		case "size":
-			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(size))
+			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(request.Size))
 		case "numReq":
-			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(numReq))
+			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(float64(fileStats.Frequency)))
 		case "cacheUsage":
 			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(cacheCapacity))
 		case "dataType":
-			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(dataType))
+			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(request.DataType))
 		case "deltaLastRequest":
 			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(float64(fileStats.DeltaLastRequest)))
 		case "deltaHighWatermark":
@@ -355,17 +342,19 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 	// fmt.Println(
 	// 	fileStats.InCache,
-	// 	"\t",
+	// 	"\tFreq: ",
 	// 	fileStats.Frequency,
-	// 	"\t",
+	// 	"\tFreq in cache:",
 	// 	fileStats.FrequencyInCache,
-	// 	"\t",
+	// 	"\tRec:",
 	// 	fileStats.Recency,
-	// 	"\t",
+	// 	"\tDelta Rec:",
+	// 	fileStats.DeltaLastRequest,
+	// 	"\tweight:",
 	// 	fileStats.Weight,
-	// 	"\t",
+	// 	"\tname:",
 	// 	request.Filename,
-	// 	"\t",
+	// 	"\tsize:",
 	// 	request.Size,
 	// )
 
