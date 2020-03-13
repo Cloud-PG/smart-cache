@@ -86,7 +86,9 @@ def get_result_section(cur_path: str, source_folder: str):
     return section
 
 
-def load_results(folder: str, top: int = 0, top_table_output: bool = False, group_by: str = "family") -> dict:
+def load_results(folder: str, top: int = 0, top_table_output: bool = False,
+                 group_by: str = "family", table_type: str = "leaderboard"
+                 ) -> dict:
     results = {}
     res_len = -1
     for root, _, files in tqdm(walk(folder), desc="Search and open files"):
@@ -114,7 +116,7 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False, grou
     if top != 0:
         if 'run_full_normal' in results:
             leaderboard = []
-            for cache_name, df in tqdm(results['run_full_normal'].items(), desc="Create stats for top 10"):
+            for cache_name, df in tqdm(results['run_full_normal'].items(), desc="Create stats for top results"):
                 cost = df['written data'] + \
                     df['deleted data'] + df['read on miss data']
                 throughput = df['read on hit data'] / df['written data']
@@ -125,38 +127,61 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False, grou
                     int(df['read on hit data'].mean()),
                 ]
 
-                if cache_name.find("weigh") != -1 and cache_name.index("weigh") == 0:
-                    cache_type, size, region, family, alpha, beta, gamma = cache_name.split(
-                        "_")
-                    values.insert(1, gamma)
-                    values.insert(1, beta)
-                    values.insert(1, alpha)
-                    values.insert(1, family)
-                else:
-                    for _ in range(3):
-                        values.insert(1, 0)
-                    values.insert(1, "")
+                if table_type == "leaderboard":
+                    values.insert(
+                        1, ((df['read on miss data'] / ((10000. / 8.) * 60. * 60. * 24.)) * 100.).mean())
+                    values.insert(1, df['hit rate'].mean())
+                    values.insert(1, df['CPU efficiency'].mean())
+                    leaderboard.append(values)
+                elif table_type == "weight":
+                    if cache_name.find("weigh") != -1 and cache_name.index("weigh") == 0:
+                        cache_type, size, region, family, alpha, beta, gamma = cache_name.split(
+                            "_")
+                        values.insert(1, gamma)
+                        values.insert(1, beta)
+                        values.insert(1, alpha)
+                        values.insert(1, family)
+                    else:
+                        for _ in range(3):
+                            values.insert(1, 0)
+                        values.insert(1, "")
 
-                leaderboard.append(values)
-            top_df = pd.DataFrame(
-                leaderboard,
-                columns=[
-                    "cacheName", "family", "alpha", "beta", "gamma",
-                    "throughput", "cost", "readOnHit"
-                ]
-            )
-            top_df = top_df.sort_values(
-                by=["throughput", "cost", "readOnHit"],
-                ascending=[False, True, False]
-            )
+                    leaderboard.append(values)
+
+            if table_type == "leaderboard":
+                top_df = pd.DataFrame(
+                    leaderboard,
+                    columns=[
+                        "cacheName", "cpuEff", "hitRate", "network",
+                        "throughput", "cost", "readOnHit"
+                    ]
+                )
+                top_df = top_df.sort_values(
+                    by=["cpuEff", "throughput", "cost", "readOnHit"],
+                    ascending=[False, False, True, False]
+                )
+            elif table_type == "weight":
+                top_df = pd.DataFrame(
+                    leaderboard,
+                    columns=[
+                        "cacheName", "family", "alpha", "beta", "gamma",
+                        "throughput", "cost", "readOnHit"
+                    ]
+                )
+                top_df = top_df.sort_values(
+                    by=["throughput", "cost", "readOnHit"],
+                    ascending=[False, True, False]
+                )
+
             topResults = top_df.cacheName.head(top).values.tolist()
-            to_delete = []
-            for cache_name, _ in tqdm(results['run_full_normal'].items(), desc="Filter top 10 results"):
-                if cache_name.lower().find("lru_") == -1 or cache_name.lower().index("lru_") != 0:
-                    if cache_name not in topResults:
-                        to_delete.append(cache_name)
-            for cache_name in tqdm(to_delete, desc="Remove lower results"):
-                del results['run_full_normal'][cache_name]
+            if len(topResults) > len(top_df.index):
+                to_delete = []
+                for cache_name, _ in tqdm(results['run_full_normal'].items(), desc="Filter top 10 results"):
+                    if cache_name.lower().find("lru_") == -1 or cache_name.lower().index("lru_") != 0:
+                        if cache_name not in topResults:
+                            to_delete.append(cache_name)
+                for cache_name in tqdm(to_delete, desc="Remove lower results"):
+                    del results['run_full_normal'][cache_name]
 
             if top_table_output:
                 if group_by == "family":
@@ -165,6 +190,9 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False, grou
                         ascending=[True, False, True, False]
                     ).to_csv(f"top_{top}_results.csv", index=False)
                 else:
-                    raise Exception(f"Group by '{group_by}' not available...")
+                    top_df.head(top).sort_values(
+                        by=["cpuEff", "throughput", "cost", "readOnHit"],
+                    ascending=[False, False, True, False]
+                    ).to_csv(f"top_{top}_results.csv", index=False)
 
     return results

@@ -162,9 +162,12 @@ def main():
     parser.add_argument('--export-table', type='bool',
                         default=False,
                         help='Export top results as a csv table [DEFAULT: False]')
-    parser.add_argument('--group-by', type=str,
-                        default="family",
-                        help='Group table results by constraint [DEFAULT: family]')
+    parser.add_argument('--table-type', choices=['leaderboard', 'weight'],
+                        default='leaderboard',
+                        help='Export top results as a csv table [DEFAULT: leaderboard]')
+    parser.add_argument('--group-by', type=str, choices=['family', 'None'],
+                        default="None",
+                        help='Group table results by constraint [DEFAULT: None]')
     parser.add_argument('--cache-size', type=int,
                         default=104857600,
                         help='Size of the cache to simulate in Mega Bytes [DEFAULT: 104857600]')
@@ -484,7 +487,8 @@ def main():
             args.source,
             args.top,
             args.export_table,
-            args.group_by
+            args.group_by,
+            args.table_type
         )
         plot_width, plot_height = [
             int(elm) for elm in args.plot_resolution.split(",")
