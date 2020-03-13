@@ -560,10 +560,11 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 						record.Filename,
 						sizeInMbytes,
 						record.Protocol,
-						cpuEff, // CPU efficiency
+						cpuEff,
 						record.Day,
 						record.SiteName,
 						record.UserID,
+						record.FileType,
 					)
 
 					numIterations++

@@ -260,6 +260,8 @@ func (cache *AIRL) getState(request *Request, fileStats *FileStats, featureOrder
 			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(cacheCapacity))
 		case "dataType":
 			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(request.DataType))
+		case "fileType":
+			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(request.FileType))
 		case "deltaLastRequest":
 			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(float64(fileStats.DeltaLastRequest)))
 		case "deltaHighWatermark":

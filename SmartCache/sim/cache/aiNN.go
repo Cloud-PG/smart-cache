@@ -271,7 +271,7 @@ func (cache *AINN) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 		dataType := request.DataType
 		campain := 0
 		process := 0
-		fileType := request.Filetype
+		fileType := request.FileType
 
 		featureVector := cache.composeFeatures(
 			siteName,

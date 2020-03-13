@@ -37,7 +37,7 @@ type Request struct {
 	SiteName int64
 	UserID   int64
 	DataType int64
-	Filetype int64
+	FileType int64
 	Protocol int64
 }
 
@@ -118,6 +118,7 @@ func GetFile(cache Cache, vars ...interface{}) bool {
 	[4] -> day      int64
 	[5] -> siteName int64
 	[6] -> userID   int64
+	[7] -> fileType   int64
 	*/
 
 	cacheRequest := Request{
@@ -125,6 +126,9 @@ func GetFile(cache Cache, vars ...interface{}) bool {
 	}
 
 	switch {
+	case len(vars) > 7:
+		cacheRequest.FileType = vars[7].(int64)
+		fallthrough
 	case len(vars) > 6:
 		cacheRequest.UserID = vars[6].(int64)
 		fallthrough
