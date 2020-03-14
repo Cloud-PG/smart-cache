@@ -19,9 +19,6 @@ bandwidthLimit = (1000000. / 8.) * 60. * 60. * 24
 time_span = 30000
 purge_delta = 210000
 
-
-
-
 class FileStats(object):
 
     __slots__ = ["_size", "_hit", "_miss", "_last_request", "_recency", "_datatype"]
@@ -485,6 +482,27 @@ class env:
     
     def get_next_request_values(self):
         filestats = self.get_next_request_stats()[3]
+        l = []
+        l.append(filestats._size)
+        l.append(filestats.tot_requests)
+        l.append(self.curRequest - filestats._last_request)
+        datatype = filestats._datatype
+        if datatype == 0:
+            l.append(0.)
+        else:
+            l.append(1.)
+        l.append(self._cache._get_mean_recency(self.curRequest,self.curDay))
+        l.append(self._cache._get_mean_frequency(self.curRequest,self.curDay))
+        l.append(self._cache._get_mean_size(self.curRequest,self.curDay))
+
+        self.curValues = np.asarray(l)
+
+        return self.curValues
+    
+    def get_this_file_in_cache_values(self):
+        filename = self._cache._filesLRUkeys[self._filesLRU_index]
+        #filestats = self._cache._filesLRU[filename]
+        filestats = self._cache._stats._files[filename]
         l = []
         l.append(filestats._size)
         l.append(filestats.tot_requests)

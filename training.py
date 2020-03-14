@@ -287,9 +287,6 @@ while end == False:
                 #GET TARGET
                 target = model_evict.predict_on_batch(train_cur_vals)
                 predictions = model_evict_target.predict_on_batch(train_next_vals)
-                print(target)
-                print(predictions)
-                #print(target.shape)
                 for i in range(0,len(state_action_vector)):  
                     target[i,train_actions[i]] = train_rewards[i] + gamma * max(predictions[i])   
                 print(target)
@@ -301,9 +298,9 @@ while end == False:
         if adding_or_evicting == 0 and environment._cache.capacity > environment._cache._h_watermark:
             adding_or_evicting = 1 
             #environment.update_time_span_filenames_list()
-            #environment._filesLRUkeys = list(environment._cache._filesLRU.keys())
-            #environment._filesLRU_index = -1
-            #next_file_values = environment.get_next_file_in_cache_values()
+            environment._filesLRUkeys = list(environment._cache._filesLRU.keys())
+            environment._filesLRU_index = -1
+            cur_values = environment.get_next_file_in_cache_values()
             addition_counter += 1
             with open('results/results_ok_stats_{}/addition_choices_{}.csv'.format(str(environment.time_span), addition_counter), 'w') as file:
                 writer = csv.writer(file)
