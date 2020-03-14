@@ -241,3 +241,7 @@ scripts/DataAnalysis/datasets/
 
 # Minio certs
 minio/CAs
+results/results_ok_stats_30000/addition_choices_0.csv
+results/results_ok_stats_30000/dQlONLYeviction_100T_it_shuffle_startmonth1_endmonth2.csv
+results/results_ok_stats_30000/eviction_choices_0.csv
+dql_stats-Copy1.ipynb
