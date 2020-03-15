@@ -30,11 +30,11 @@ def _load_csv_file(input_path: str, region_filter: str = None,
             with gzip.GzipFile(input_path, "rb") as data_file:
                 df = pd.read_csv(data_file, index_col=False)
         else:
-            raise Exception(f"File type '{tail}' is not supported...")
+            raise Exception(f"Input {input_path} with file type '{tail}' is not supported...")
     elif tail == '.csv':
         df = pd.read_csv(input_path, index_col=False)
     else:
-        raise Exception(f"File type '{tail}' is not supported...")
+        raise Exception(f"Input {input_path} with file type '{tail}' is not supported...")
 
     if region_filter and region_filter != "all":
         df = df[df.SiteName.str.contains(f"_{region_filter}_", case=False)]
