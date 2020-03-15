@@ -61,10 +61,12 @@ def sort_from_avro(df: 'pd.DataFrame', cur_filename: str, order_folder: str) -> 
         total=ord_df.shape[0],
     ):
         if row.FileName not in indexes:
-            indexes[row.FileName] = df[df.Filename == row.FileName].index.to_list()
+            indexes[row.FileName] = df[df.Filename ==
+                                       row.FileName].index.to_list()
         new_indexes.append(indexes[row.FileName].pop(0))
 
-    print(f"{STATUS_ARROW}[File:{STATUS_WARNING(cur_filename)}][Order dataframe with avro indexes]")
+    print(
+        f"{STATUS_ARROW}[File:{STATUS_WARNING(cur_filename)}][Order dataframe with avro indexes]")
     df = df.reindex(new_indexes)
 
     for idx, row in tqdm(
@@ -94,6 +96,10 @@ class CategoryContainer:
         self._data = data['data']
         self.__sequences = data['sequences']
 
+    def __add_category(self, category: str):
+        self._data[category] = {}
+        self.__sequences[category] = 0
+
     def update(self, categories, source_filepath: str):
         for category, values in tqdm(
             categories.items(),
@@ -101,8 +107,7 @@ class CategoryContainer:
             position=1,
         ):
             if category not in self._data:
-                self._data[category] = {}
-                self.__sequences[category] = 0
+                self.__add_category(category)
 
             cur_category = self._data[category]
             for value in tqdm(
@@ -114,8 +119,11 @@ class CategoryContainer:
                     cur_category[value] = self.__sequences[category]
                     self.__sequences[category] += 1
 
-    def get(self, category, value):
-        return self._data[category][value]
+    def get(self, category, value=None):
+        if value:
+            return self._data[category][value]
+        else:
+            return self._data[category]
 
 
 def convert_categories(source_filepath: str,
@@ -137,25 +145,13 @@ def convert_categories(source_filepath: str,
     :rtype: pandas.DataFrame
     """
 
-    total_rows = df.shape[0]
     for category in tqdm(
         categories,
         desc=f"{STATUS_ARROW}[File:{STATUS_WARNING(source_filepath)}] Convert categories",
     ):
-        raplace_cache = {}
-        for row in tqdm(
-            df.itertuples(),
-            desc=f"{STATUS_ARROW}[File:{STATUS_WARNING(source_filepath)}] Convert rows of {category} category",
-            total=total_rows,
-        ):
-            cur_cat_value = getattr(row, category)
-            if not isinstance(cur_cat_value, int) and cur_cat_value not in raplace_cache:
-                cat_id = container.get(category, cur_cat_value)
-                raplace_cache[cur_cat_value] = cat_id
-                df[category].replace(
-                    cur_cat_value, raplace_cache[cur_cat_value], inplace=True)
-        else:
-            df[category].astype(int)
+        cur_category = container.get(category)
+        df[category].replace(cur_category, inplace=True)
+        df[category] = df[category].astype(int)
 
     return df
 
