@@ -72,6 +72,8 @@ def sort_from_avro(df: 'pd.DataFrame', cur_filename: str, order_folder: str) -> 
     # Remove duplicate counters
     df.Filename = df.Filename.apply(lambda elm: elm.rsplit("_#", 1)[
                                     0] if elm.find("_#") else elm)
+    ord_df.Filename = ord_df.Filename.apply(lambda elm: elm.rsplit("_#", 1)[
+                                    0] if elm.find("_#") else elm)
 
     for idx, row in tqdm(
         enumerate(ord_df.itertuples()),
