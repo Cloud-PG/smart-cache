@@ -174,7 +174,7 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False,
                 )
 
             topResults = top_df.cacheName.head(top).values.tolist()
-            if len(topResults) > len(top_df.index):
+            if len(topResults) < len(top_df.index):
                 to_delete = []
                 for cache_name, _ in tqdm(results['run_full_normal'].items(), desc="Filter top 10 results"):
                     if cache_name.lower().find("lru_") == -1 or cache_name.lower().index("lru_") != 0:
