@@ -65,8 +65,8 @@ def sort_from_avro(df: 'pd.DataFrame', cur_filename: str, order_folder: str) -> 
     df = df.set_index("Filename")
     ord_df = ord_df.set_index("Filename")
     # Reindex
-    new_index = df.reindex_like(ord_df.index, method=None).dropna()
-    df.set_index(new_index, inplace=True)
+    new_index = df.reindex_like(ord_df, method=None).dropna()
+    df.set_index(new_index.index, inplace=True)
     df.reset_index(inplace=True)
     # Remove duplicate counters
     df.Filename = df.Filename.apply(lambda elm: elm.rsplit("_#", 1)[
