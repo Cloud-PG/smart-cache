@@ -132,7 +132,7 @@ class CategoryContainer:
 
 def category_replace(items: tuple):
     values, category = items
-    return [category[value] for value in values]
+    return pd.Series([category[value] for value in values])
 
 
 def convert_categories(source_filepath: str,
