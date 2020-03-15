@@ -221,10 +221,10 @@ while end == False:
             for i in randomlist:
                 state_action_vector.append(evict_memory_vector[i])
 
-                train_cur_vals.append(add_memory_vector[i][0])
-                train_actions.append(add_memory_vector[i][1])
-                train_rewards.append(add_memory_vector[i][2])
-                train_next_vals.append(add_memory_vector[i][3])
+                train_cur_vals.append(evict_memory_vector[i][0])
+                train_actions.append(evict_memory_vector[i][1])
+                train_rewards.append(evict_memory_vector[i][2])
+                train_next_vals.append(evict_memory_vector[i][3])
             
             train_cur_vals = np.array(train_cur_vals)
             train_actions = np.array(train_actions)
