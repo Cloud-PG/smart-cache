@@ -73,15 +73,11 @@ def sort_from_avro(df: 'pd.DataFrame', cur_filename: str, order_folder: str) -> 
     df.Filename = df.Filename.apply(lambda elm: elm.rsplit("_#", 1)[
                                     0] if elm.find("_#") else elm)
     ord_df.Filename = ord_df.Filename.apply(lambda elm: elm.rsplit("_#", 1)[
-                                    0] if elm.find("_#") else elm)
+        0] if elm.find("_#") else elm)
 
-    for idx, row in tqdm(
-        enumerate(ord_df.itertuples()),
-        desc=f"{STATUS_ARROW}[File:{STATUS_WARNING(cur_filename)}] Check file order",
-        position=0,
-        total=ord_df.shape[0],
-    ):
-        assert row.Filename == df.iloc[idx].Filename, "File name not equal..."
+    if not all(ord_df.Filename.eq(df.Filename)):
+        print("File name not equal...")
+        exit(-1)
 
     return df
 
