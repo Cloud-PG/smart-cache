@@ -1,6 +1,8 @@
 import sqlite3
-from os import path, walk
+from multiprocessing import Pool
+from os import path, walk, cpu_count
 
+import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
@@ -128,6 +130,11 @@ class CategoryContainer:
             return self._data[category]
 
 
+def category_replace(items: tuple):
+    values, category = items
+    return [category[value] for value in values]
+
+
 def convert_categories(source_filepath: str,
                        df: 'pd.DataFrame',
                        categories: dict,
@@ -146,13 +153,19 @@ def convert_categories(source_filepath: str,
     :return: the dataframe with the id instead of the values
     :rtype: pandas.DataFrame
     """
-
+    num_corse = cpu_count()
     for category in tqdm(
         categories,
         desc=f"{STATUS_ARROW}[File:{STATUS_WARNING(source_filepath)}] Convert categories",
     ):
+        pool = Pool(num_corse)
         cur_category = container.get(category)
-        df[category].replace(cur_category, inplace=True)
+        cur_column = df[category].to_numpy()
+        column_split = np.array_split(cur_column, num_corse)
+        items = [(elm, cur_category) for elm in column_split]
+        df[category] = pd.concat(pool.map(category_replace, items))
+        pool.close()
+        pool.join()
         df[category] = df[category].astype(int)
 
     return df
