@@ -132,7 +132,7 @@ class CategoryContainer:
 
 def category_replace(items: tuple):
     values, category = items
-    return pd.Series([category[value] for value in values])
+    return [category[value] for value in values]
 
 
 def convert_categories(source_filepath: str,
@@ -163,7 +163,7 @@ def convert_categories(source_filepath: str,
         cur_column = df[category].to_numpy()
         column_split = np.array_split(cur_column, num_corse)
         items = [(elm, cur_category) for elm in column_split]
-        df[category] = pd.concat(pool.map(category_replace, items))
+        df[category] = pool.map(category_replace, items)
         pool.close()
         pool.join()
         df[category] = df[category].astype(int)
