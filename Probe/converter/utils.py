@@ -163,7 +163,7 @@ def convert_categories(source_filepath: str,
         cur_column = df[category].to_numpy()
         column_split = np.array_split(cur_column, num_corse)
         items = [(elm, cur_category) for elm in column_split]
-        df[category] = pool.map(category_replace, items)
+        df[category] = [elm for chunk in pool.map(category_replace, items) for elm in chunk]
         pool.close()
         pool.join()
         df[category] = df[category].astype(int)
