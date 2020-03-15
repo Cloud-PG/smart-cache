@@ -50,25 +50,24 @@ def sort_from_avro(df: 'pd.DataFrame', cur_filename: str, order_folder: str) -> 
         for file_ in files:
             if file_.find(real_filename) != -1:
                 ord_df = pd.read_csv(path.join(root, file_))
-                ord_df.rename(columns={'Filename': "FileName"}, inplace=True)
 
     print(
         f"{STATUS_ARROW}[File:{STATUS_WARNING(cur_filename)}][Order dataframe with avro indexes]")
-    df_mask = df.FileName.duplicated(keep=False)
-    ord_df_mask = ord_df.FileName.duplicated(keep=False)
+    df_mask = df.Filename.duplicated(keep=False)
+    ord_df_mask = ord_df.Filename.duplicated(keep=False)
     # Add counter number for unique indexes
-    df.loc[df_mask, 'FileName'] += "_#" + \
-        df.groupby('FileName').cumcount().add(1).astype(str)
-    ord_df.loc[ord_df_mask, 'FileName'] += "_#" + \
-        ord_df.groupby('FileName').cumcount().add(1).astype(str)
+    df.loc[df_mask, 'Filename'] += "_#" + \
+        df.groupby('Filename').cumcount().add(1).astype(str)
+    ord_df.loc[ord_df_mask, 'Filename'] += "_#" + \
+        ord_df.groupby('Filename').cumcount().add(1).astype(str)
     # Change indexes
-    df = df.set_index("FileName")
-    ord_df = ord_df.set_index("FileName")
+    df = df.set_index("Filename")
+    ord_df = ord_df.set_index("Filename")
     # Reindex
     new_df = df.reindex_like(ord_df, method=None).dropna()
     df = new_df.reset_index()
     # Remove duplicate counters
-    df.FileName = df.FileName.apply(lambda elm: elm.rsplit("_#", 1)[
+    df.Filename = df.Filename.apply(lambda elm: elm.rsplit("_#", 1)[
                                     0] if elm.find("_#") else elm)
 
     for idx, row in tqdm(
