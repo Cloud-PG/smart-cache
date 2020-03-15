@@ -77,7 +77,7 @@ def sort_from_avro(df: 'pd.DataFrame', cur_filename: str, order_folder: str) -> 
         position=0,
         total=ord_df.shape[0],
     ):
-        assert row.FileName == df.iloc[idx].Filename, "File name not equal..."
+        assert row.Filename == df.iloc[idx].Filename, "File name not equal..."
 
     return df
 
