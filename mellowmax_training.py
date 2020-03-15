@@ -23,8 +23,7 @@ eps_evict = 1.0
 eps_add_min = 0.1
 eps_evict_min = 0.1
 gamma = 0.99
-random.seed(2019)
-environment = cache_env.env(start_month = 1, end_month = 2)
+seed_ = 2019
 
 ####### EXTRA FUNCTION DEFINITIONS ##################################################################################################################
 def mellowmax(omega, x):
@@ -76,7 +75,8 @@ print(model_add.summary())
 model_add.compile(optimizer = 'adam', loss = huber_loss_mean)
 
 ###### START LOOPING ############################################################################################################################
-
+environment = cache_env.env(_startMonth, _endMonth)
+random.seed(seed_)
 adding_or_evicting = 0
 step_add = 0
 step_evict = 0
@@ -84,18 +84,19 @@ add_memory_vector = []
 evict_memory_vector = []
 step_add = 0
 step_evict = 0
-end = False
 addition_counter = 0
 eviction_counter = 0
-next_values = np.zeros(7)
+#next_values = np.zeros(7)
 
+end = False
 while end == False:
+    print()
     if (environment.curDay+1)%7 == 0:
         environment.purge()
 
-    print(len(environment._cache._filesLRU))
-    print(len(environment._cache._filesLRUkeys))
-    print(environment._filesLRU_index)
+    print('len _filesLRU = ' + str(len(environment._cache._filesLRU)))
+    print('len _filesLRUkeys = ' + str(len(environment._cache._filesLRUkeys)))
+    print('_filesLRU index = ' + str(environment._filesLRU_index))
 
 ############ ADDING ###########################################################################################################
     if adding_or_evicting == 0:
@@ -105,7 +106,7 @@ while end == False:
         if eps_add > eps_add_min:
             eps_add = math.exp(- decay_rate * step_add)
         cur_values = environment.curValues
-        print(eps_add)
+        print('epsilon = ' + str(eps_add))
 
 
         #GET ACTION
@@ -131,8 +132,9 @@ while end == False:
         reward = environment.get_reward(adding_or_evicting)
         if len(add_memory_vector) > memory:
             del add_memory_vector[0]
-        next_values = environment.get_next_request_values()
-        add_memory_vector.append(np.array([cur_values, action, reward, next_values]))
+        if environment._cache.capacity <= environment._cache._h_watermark:
+            next_values = environment.get_next_request_values()
+            add_memory_vector.append(np.array([cur_values, action, reward, next_values]))
 
         #TRAIN NETWORK
         if step_add > no_training_steps:
@@ -163,7 +165,7 @@ while end == False:
             #TRAIN
             model_add.train_on_batch(train_cur_vals, target)
 
-            next_values = cur_values
+            #next_values = cur_values
         
 ####### EVICTING #############################################################################################################
     elif adding_or_evicting == 1: 
@@ -173,7 +175,7 @@ while end == False:
         if eps_evict > eps_evict_min:
             eps_evict = math.exp(- decay_rate * step_evict)
         cur_values = environment.curValues
-        print(eps_evict)
+        print('epsilon = ' + str(eps_evict))
         
         #GET ACTION
         rnd_eps = random.random()
@@ -191,6 +193,7 @@ while end == False:
             writer.writerow([action])
         
         #UPDATE STUFF, GET REWARD AND NEXT STATE AND PUT INTO MEMORY
+        curFilename, curSize = environment.get_filename_and_size_of_current_cache_file()
         if action == 1:
             del environment._cache._filesLRU[curFilename]
             environment._cache._size -= curSize
@@ -203,8 +206,9 @@ while end == False:
         reward = environment.get_reward(adding_or_evicting)
         if len(evict_memory_vector) > memory:
             del evict_memory_vector[0]
-        next_values = environment.get_next_file_in_cache_values()
-        evict_memory_vector.append(np.array([cur_values, action, reward, next_values]))
+        if environment._filesLRU_index + 1 != len(environment._cache._filesLRU):
+            next_values = environment.get_next_file_in_cache_values()
+            evict_memory_vector.append(np.array([cur_values, action, reward, next_values]))
         
         #TRAIN NETWORK
         if step_evict > no_training_steps:
@@ -234,28 +238,26 @@ while end == False:
             predictions = model_evict.predict_on_batch(train_next_vals)
             for i in range(0,len(state_action_vector)):  
                 target[i,train_actions[i]] = train_rewards[i] + gamma * mellowmax(1, predictions[i])   
-            print(target)
+
             #TRAIN
             model_evict.train_on_batch(train_cur_vals, target)
 
-            cur_values = next_values
+            #cur_values = next_values
 
 ######## STOP ADDING ################################################################################################################################
-
     if adding_or_evicting == 0 and environment._cache.capacity > environment._cache._h_watermark:
         adding_or_evicting = 1 
         addition_counter += 1
-        environment._filesLRUkeys = list(environment._cache._filesLRU.keys())
+        environment._cache._filesLRUkeys = list(environment._cache._filesLRU.keys())
         environment._filesLRU_index = -1
-        cur_values = environment.get_this_file_in_cache_values()
+        cur_values = environment.get_next_file_in_cache_values()
         addition_counter += 1
         with open('results/results_ok_stats_{}/addition_choices_{}.csv'.format(str(environment.time_span), addition_counter), 'w') as file:
             writer = csv.writer(file)
             writer.writerow(['addition choice'])
         
 ####### STOP EVICTING ################################################################################################################################
-
-    if adding_or_evicting == 1 and environment._filesLRU_index + 1 == len(environment._cache._filesLRUkeys):
+    if adding_or_evicting == 1 and environment._filesLRU_index + 1 == len(environment._cache._filesLRU):
         with open('results/results_ok_stats_{}/occupancy.csv'.format(str(environment.time_span)), 'a') as file:
             writer = csv.writer(file)
             writer.writerow([environment._cache.capacity])
@@ -264,4 +266,4 @@ while end == False:
         with open('results/results_ok_stats_{}/eviction_choices_{}.csv'.format(str(environment.time_span), eviction_counter), 'w') as file:
             writer = csv.writer(file)
             writer.writerow(['eviction choice'])
-        cur_values = environment.get_this_request_values
+        cur_values = environment.get_this_request_values()
