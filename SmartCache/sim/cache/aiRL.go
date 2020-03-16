@@ -13,9 +13,9 @@ import (
 	"go.uber.org/zap"
 )
 
-const (
-	bandwidthLimit = (1000000. / 8.) * 60. * 60. * 24.
-)
+// const (
+// 	bandwidthLimit = (1000000. / 8.) * 60. * 60. * 24.
+// )
 
 // AIRL cache
 type AIRL struct {
@@ -484,7 +484,8 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					// 	reward -= 1.
 					// }
 					reward := request.Size
-					if cache.dataReadOnHit < cache.dataReadOnMiss || cache.dailyReadOnHit < cache.dailyReadOnMiss || cache.dailyReadOnMiss >= bandwidthLimit {
+					// if cache.dataReadOnHit < cache.dataReadOnMiss || cache.dailyReadOnHit < cache.dailyReadOnMiss || cache.dailyReadOnMiss >= bandwidthLimit {
+					if cache.dataReadOnHit < cache.dataReadOnMiss || cache.dailyReadOnHit < cache.dailyReadOnMiss {
 						reward = -reward
 					}
 					// Update table
@@ -532,7 +533,8 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					// 	reward -= 1.
 					// }
 					reward := request.Size
-					if cache.dailyReadOnMiss >= bandwidthLimit || cache.dailyWrittenData >= cache.dailyReadOnHit {
+					// if cache.dailyReadOnMiss >= bandwidthLimit || cache.dailyWrittenData >= cache.dailyReadOnHit {
+					if cache.dailyWrittenData >= cache.dailyReadOnHit {
 						reward = -reward
 					}
 					// Update table
