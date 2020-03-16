@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"go.uber.org/zap"
 )
@@ -250,13 +251,36 @@ func (curMap *Obj) GetValue(value interface{}) string {
 		} else {
 			switch curMap.Type {
 			case TypeBool:
-				result = curMap.OutputValues[curMap.Values[fmt.Sprintf("%t", value.(bool))]]
+				strVal := strconv.FormatBool(value.(bool))
+				pos, inMap := curMap.Values[strVal]
+				if inMap {
+					result = curMap.OutputValues[pos]
+				} else {
+					panic(fmt.Sprintf("Value '%s' not present in keys...", strVal))
+				}
 			case TypeInt:
-				result = curMap.OutputValues[curMap.Values[string(value.(int64))]]
+				strVal := strconv.FormatInt(value.(int64), 10)
+				pos, inMap := curMap.Values[strVal]
+				if inMap {
+					result = curMap.OutputValues[pos]
+				} else {
+					panic(fmt.Sprintf("Value '%s' not present in keys...", strVal))
+				}
 			case TypeFloat:
-				result = curMap.OutputValues[curMap.Values[fmt.Sprintf("%0.2f", value.(float64))]]
+				strVal := fmt.Sprintf("%0.2f", value.(float64))
+				pos, inMap := curMap.Values[strVal]
+				if inMap {
+					result = curMap.OutputValues[pos]
+				} else {
+					panic(fmt.Sprintf("Value '%s' not present in keys...", strVal))
+				}
 			case TypeString:
-				result = curMap.OutputValues[curMap.Values[value.(string)]]
+				pos, inMap := curMap.Values[value.(string)]
+				if inMap {
+					result = curMap.OutputValues[pos]
+				} else {
+					panic("Value not present...")
+				}
 			}
 		}
 	} else {
