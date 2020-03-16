@@ -346,8 +346,8 @@ func (cache *SimpleCache) AfterRequest(request *Request, hit bool, added bool) {
 			cache.upperCPUEff += request.CPUEff
 			cache.numLocal++
 			currentCPUEff = request.CPUEff
-		} else {
-			// Remote - Add % to reach the ideal CPUEff
+		} else if request.Protocol == 0 {
+			// Remote
 			cache.lowerCPUEff += request.CPUEff
 			cache.numRemote++
 			currentCPUEff = request.CPUEff + percDiff
