@@ -16,6 +16,10 @@ from .utils import ignored
 
 _LINE_WIDTH = 2.8
 
+_DAY_SECONDS = 60. * 60. * 24.
+_Band10Gbit = (10000. / 8.) * _DAY_SECONDS
+_Band100Gbit = (100000. / 8.) * _DAY_SECONDS
+_Band200Gbit = (100000. / 8.) * _DAY_SECONDS
 
 def update_colors(new_names: str, color_table: dict):
     names = [
@@ -417,11 +421,9 @@ def plot_measure(tools: list,
             elif target == "throughput":
                 points = values['read on hit data'] / values['written data']
             elif target == "network_in_saturation":
-                points = (values['read on miss data'] /
-                          ((10000. / 8.) * 60. * 60. * 24.)) * 100.  # 10Gbit x 1 day
+                points = (values['read on miss data'] / _Band10Gbit) * 100.
             elif target == "network_out_saturation":
-                points = (values['read data'] /
-                          ((10000. / 8.) * 60. * 60. * 24.)) * 100.  # 10Gbit x 1 day
+                points = (values['read data'] / _Band10Gbit) * 100.
             else:
                 raise Exception(f"Unknown target '{target}'")
             cur_line = cur_fig.line(
