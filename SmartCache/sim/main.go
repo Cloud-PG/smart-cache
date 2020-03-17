@@ -468,6 +468,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			)
 			// selectedRegion := fmt.Sprintf("_%s_", strings.ToLower(simRegion))
 			switch simRegion {
+			// TODO: add filter as a parameter
 			case "us":
 				recordFilter = cache.UsMINIAODandNOFNALLPCFilter{}
 			}
