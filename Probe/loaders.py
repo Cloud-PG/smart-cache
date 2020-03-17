@@ -70,7 +70,7 @@ def gen_csv_data(input_path: str, region_filter: str = None,
         files = [file_ for file_ in os.listdir(
             input_path) if file_.find("csv") != -1 and file_.find("numeric") == -1]
         yield len(files)
-        for filename in files:
+        for filename in sorted(files):
             if month_filter != -1:
                 if _get_month(filename) != month_filter:
                     continue

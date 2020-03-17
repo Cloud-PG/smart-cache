@@ -48,13 +48,13 @@ def sort_from_avro(df: 'pd.DataFrame', cur_filename: str, order_folder: str) -> 
 
     real_filename = cur_filename.split(".", 1)[0].replace("results_", "")
     ord_df = None
-    
+
     for root, _, files in walk(order_folder):
         for file_ in files:
             if file_.find(real_filename) != -1:
                 ord_df = pd.read_csv(path.join(root, file_))
                 ord_df.rename(columns={'FileName': "Filename"}, inplace=True)
-    
+
     if ord_df is None:
         return None
 
@@ -167,7 +167,8 @@ def convert_categories(source_filepath: str,
         cur_column = df[category].to_numpy()
         column_split = np.array_split(cur_column, num_corse)
         items = [(elm, cur_category) for elm in column_split]
-        df[category] = [elm for chunk in pool.map(category_replace, items) for elm in chunk]
+        df[category] = [elm for chunk in pool.map(
+            category_replace, items) for elm in chunk]
         pool.close()
         pool.join()
         df[category] = df[category].astype(int)
