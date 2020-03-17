@@ -47,12 +47,16 @@ def sort_from_avro(df: 'pd.DataFrame', cur_filename: str, order_folder: str) -> 
     """
 
     real_filename = cur_filename.split(".", 1)[0].replace("results_", "")
-
+    ord_df = None
+    
     for root, _, files in walk(order_folder):
         for file_ in files:
             if file_.find(real_filename) != -1:
                 ord_df = pd.read_csv(path.join(root, file_))
                 ord_df.rename(columns={'FileName': "Filename"}, inplace=True)
+    
+    if ord_df is None:
+        return None
 
     print(
         f"{STATUS_ARROW}[File:{STATUS_WARNING(cur_filename)}][Order dataframe with avro indexes]")

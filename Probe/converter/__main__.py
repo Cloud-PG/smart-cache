@@ -97,6 +97,9 @@ def main():
 
                 if args.order_folder:
                     df = sort_from_avro(df, cur_filename, args.order_folder)
+                    if df is None:
+                        print(f"{STATUS_ARROW}Jump file due to no avro order: {STATUS_WARNING(filepath)}")
+                        continue
 
                 columns = get_object_columns(df)
                 categories = dict(
