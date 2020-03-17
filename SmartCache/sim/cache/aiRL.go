@@ -373,8 +373,8 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			// ##### Eviction Learning phase #####
 			// ###################################
 			if cache.qEvictionPrevAction != 0 && len(cache.qEvictionPrevState) != 0 {
-				// reward := request.Size
-				reward := 1.
+				reward := request.Size
+				// reward := 1.
 				if !hit || cache.dailyWrittenData >= cache.dailyReadOnHit {
 					reward = -reward
 				}
@@ -484,8 +484,8 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					// } else {
 					// 	reward -= 1.
 					// }
-					// reward := request.Size
-					reward := 1.
+					reward := request.Size
+					// reward := 1.
 					// if cache.dataReadOnHit < cache.dataReadOnMiss || cache.dailyReadOnHit < cache.dailyReadOnMiss || cache.dailyReadOnMiss >= bandwidthLimit {
 					if cache.dataReadOnHit < cache.dataReadOnMiss || cache.dailyReadOnHit < cache.dailyReadOnMiss {
 						reward = -reward
@@ -534,8 +534,8 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					// } else {
 					// 	reward -= 1.
 					// }
-					// reward := request.Size
-					reward := 1.
+					reward := request.Size
+					// reward := 1.
 					// if cache.dailyReadOnMiss >= bandwidthLimit || cache.dailyWrittenData >= cache.dailyReadOnHit {
 					if cache.dailyWrittenData >= cache.dailyReadOnHit {
 						reward = -reward
@@ -569,8 +569,8 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				logger.Debug("Learning HIT branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
 
 				if curState != "" { // Some action are not taken randomly
-					// reward := request.Size
-					reward := 1.
+					reward := request.Size
+					// reward := 1.
 					if cache.dataReadOnHit < cache.dataReadOnMiss || cache.dailyReadOnHit < cache.dailyReadOnMiss {
 						reward = -reward
 					}
