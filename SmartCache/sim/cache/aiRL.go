@@ -487,7 +487,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					reward := request.Size
 					// reward := 1.
 					// if cache.dataReadOnHit < cache.dataReadOnMiss || cache.dailyReadOnHit < cache.dailyReadOnMiss || cache.dailyReadOnMiss >= bandwidthLimit {
-					if cache.dataReadOnHit < cache.dataReadOnMiss || cache.dailyReadOnHit < cache.dailyReadOnMiss {
+					if cache.dataReadOnHit < (cache.dataReadOnMiss*2.) || cache.dailyReadOnHit < (cache.dailyReadOnMiss*2.) {
 						reward = -reward
 					}
 					// Update table
@@ -537,7 +537,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					reward := request.Size
 					// reward := 1.
 					// if cache.dailyReadOnMiss >= bandwidthLimit || cache.dailyWrittenData >= cache.dailyReadOnHit {
-					if cache.dailyWrittenData >= cache.dailyReadOnHit {
+					if cache.dailyWrittenData >= (cache.dailyReadOnHit * 0.3) {
 						reward = -reward
 					}
 					// Update table
@@ -571,7 +571,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				if curState != "" { // Some action are not taken randomly
 					reward := request.Size
 					// reward := 1.
-					if cache.dataReadOnHit < cache.dataReadOnMiss || cache.dailyReadOnHit < cache.dailyReadOnMiss {
+					if cache.dataReadOnHit < (cache.dataReadOnMiss*2.) || cache.dailyReadOnHit < (cache.dailyReadOnMiss*2.) {
 						reward = -reward
 					}
 					// Update table
