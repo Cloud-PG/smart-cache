@@ -464,12 +464,12 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				numIterations     uint32
 				windowStepCounter uint32
 				windowCounter     uint32
-				recordFilter      *cache.Filter
+				recordFilter      cache.Filter
 			)
 			// selectedRegion := fmt.Sprintf("_%s_", strings.ToLower(simRegion))
 			switch simRegion {
 			case "us":
-				recordFilter = &cache.UsFilter{}
+				recordFilter = cache.UsFilter{}
 			}
 
 			simBeginTime := time.Now()
@@ -491,8 +491,10 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 
 			for record := range iterator {
 
-				if recordFilter != nil ; checkRecord := recordFilter.Check(record); checkRecord == false {
-					continue
+				if recordFilter != nil {
+					if checkRecord := recordFilter.Check(record); checkRecord == false {
+						continue
+					}
 				}
 
 				totNumRecords++
