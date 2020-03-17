@@ -279,3 +279,22 @@ func (output OutputCSV) Close() {
 	output.csvWriter.Flush()
 	output.file.Close()
 }
+
+// Filter interface
+type Filter interface {
+	Check(CSVRecord) bool
+}
+
+// UsFilter for USA records
+type UsFilter struct {
+}
+
+// Check if the record have to be sent to the cache
+func (filter UsFilter) Check(record CSVRecord) bool {
+	// Check if file type == MINIAOD, MINIAODSIM
+	// Check if site != T1_US_FNAL, T3_US_FNALLPC
+	if (record.FileType == 2 || record.FileType == 9) && record.SiteName != 9 && record.SiteName != 16 {
+		return true
+	}
+	return false
+}
