@@ -419,7 +419,7 @@ def plot_measure(tools: list,
             elif target == "miss":
                 points = values['read on miss data'] - values['written data']
             elif target == "throughput":
-                points = values['read on hit data'] / values['written data']
+                points = values['read on hit data'] / values['written data'] * 100.
             elif target == "network_in_saturation":
                 points = (values['read on miss data'] / _Band10Gbit) * 100.
             elif target == "network_out_saturation":
@@ -790,7 +790,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             plot_height=plot_height,
             read_on_hit=True,
             target="throughput",
-            y_axis_label="ratio",
+            y_axis_label="%",
         )
         run_full_normal_hit_rate_figs.append(cost_fig)
     pbar.update(1)
