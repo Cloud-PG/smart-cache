@@ -401,7 +401,7 @@ def plot_measure(tools: list,
             line_color="black", line_width=_LINE_WIDTH,
         )
         cur_fig.renderers.extend([hline_1])
-    elif target is not None and (target.find("network_") != -1 or target.find("const") != -1):
+    elif target is not None and (target.find("network_") != -1 or target.find("cost") != -1):
         hline_1 = Span(
             location=100.0, dimension='width', line_dash="dashed",
             line_color="black", line_width=_LINE_WIDTH,
