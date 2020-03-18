@@ -429,7 +429,7 @@ def plot_measure(tools: list,
                     values['written data'] +
                     values['deleted data'] +
                     values['read on miss data']
-                ) / cache_size
+                ) / cache_size * 100.
             elif target == "miss":
                 points = values['read on miss data'] - values['written data']
             elif target == "throughput":
