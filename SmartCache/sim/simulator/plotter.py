@@ -423,7 +423,7 @@ def plot_measure(tools: list,
     ):
         if run_type == "run_full_normal":
             if target == "cost":
-                cache_size = float(cache_name.split("T_")[0].rplit("_", 1)[-1])
+                cache_size = float(cache_name.split("T_")[0].rsplit("_", 1)[-1])
                 cache_size = cache_size * 1024**2
                 points = (
                     values['written data'] +
