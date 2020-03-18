@@ -31,6 +31,16 @@ func (statStruct *Stats) Init() {
 	statStruct.Tick = 0
 }
 
+// Clear Stats after load
+func (statStruct *Stats) Clear() {
+	for _, fileStats := range statStruct.fileStats {
+		fileStats.InCache = false
+		fileStats.Recency = 0
+	}
+	statStruct.weightSum = 0.0
+	statStruct.Tick = 0
+}
+
 // Dirty indicates if the stats needs a purge
 func (statStruct Stats) Dirty() bool {
 	numDays := statStruct.lastUpdateTime.Sub(statStruct.firstUpdateTime).Hours() / 24.
@@ -103,11 +113,6 @@ func (statStruct *Stats) GetOrCreate(filename int64, vars ...interface{}) (*File
 		statStruct.fileStats[filename] = curStats
 	} else {
 		curStats.Size = size
-		// Reset recency when file stats are loaded
-		if curStats.Recency >= statStruct.Tick {
-			println("RESET RECENCY")
-			curStats.Recency = statStruct.Tick
-		}
 		curStats.DeltaLastRequest = statStruct.Tick - curStats.Recency
 		curStats.Recency = statStruct.Tick
 	}

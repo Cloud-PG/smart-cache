@@ -67,6 +67,7 @@ func (cache *SimpleCache) Init(vars ...interface{}) interface{} {
 // ClearFiles remove the cache files
 func (cache *SimpleCache) ClearFiles() {
 	cache.files.Init()
+	cache.stats.Clear()
 	cache.size = 0.
 }
 
