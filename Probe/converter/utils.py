@@ -157,15 +157,15 @@ def convert_categories(source_filepath: str,
     :return: the dataframe with the id instead of the values
     :rtype: pandas.DataFrame
     """
-    num_corse = cpu_count()
+    num_cores = cpu_count()
     for category in tqdm(
         categories,
         desc=f"{STATUS_ARROW}[File:{STATUS_WARNING(source_filepath)}] Convert categories",
     ):
-        pool = Pool(num_corse)
+        pool = Pool(num_cores)
         cur_category = container.get(category)
         cur_column = df[category].to_numpy()
-        column_split = np.array_split(cur_column, num_corse)
+        column_split = np.array_split(cur_column, num_cores*4)
         items = [(elm, cur_category) for elm in column_split]
         df[category] = [elm for chunk in pool.map(
             category_replace, items) for elm in chunk]
