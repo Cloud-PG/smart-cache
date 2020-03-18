@@ -754,7 +754,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
     # Miss plot of full normal run
     ###########################################################################
     with ignored(Exception):
-        cost_fig = plot_measure(
+        miss_fig = plot_measure(
             tools,
             results,
             dates,
@@ -770,14 +770,14 @@ def plot_results(folder: str, results: dict, cache_size: float,
             target="miss",
             y_axis_label="MB",
         )
-        run_full_normal_hit_rate_figs.append(cost_fig)
+        run_full_normal_hit_rate_figs.append(miss_fig)
     pbar.update(1)
 
     ###########################################################################
     # Throughput plot of full normal run
     ###########################################################################
     with ignored(Exception):
-        cost_fig = plot_measure(
+        throughtput_fig = plot_measure(
             tools,
             results,
             dates,
@@ -792,7 +792,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             target="throughput",
             y_axis_label="%",
         )
-        run_full_normal_hit_rate_figs.append(cost_fig)
+        run_full_normal_hit_rate_figs.append(throughtput_fig)
     pbar.update(1)
 
     ###########################################################################
