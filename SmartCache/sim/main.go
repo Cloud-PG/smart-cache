@@ -470,7 +470,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			switch simRegion {
 			// TODO: add filter as a parameter
 			case "us":
-				recordFilter = cache.UsMINIAODandNOFNALLPCFilter{}
+				recordFilter = cache.UsMINIAODNOFNALLPCNOT1FNALLFilter{}
 			}
 
 			simBeginTime := time.Now()
