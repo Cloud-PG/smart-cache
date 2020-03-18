@@ -21,6 +21,7 @@ _Band10Gbit = (10000. / 8.) * _DAY_SECONDS
 _Band100Gbit = (100000. / 8.) * _DAY_SECONDS
 _Band200Gbit = (100000. / 8.) * _DAY_SECONDS
 
+
 def update_colors(new_names: str, color_table: dict):
     names = [
         name for name in list(color_table.keys())
@@ -381,7 +382,7 @@ def plot_measure(tools: list,
                  plot_width: int = 640,
                  plot_height: int = 480,
                  target: str = None,
-                 bandwidth: int=10,
+                 bandwidth: int = 10,
                  ) -> 'Figure':
     cur_fig = figure(
         tools=tools,
@@ -409,7 +410,7 @@ def plot_measure(tools: list,
 
     read_data_type = 'read on hit data' if read_on_hit else 'read data'
     legend_items = []
-    
+
     if bandwidth == 10:
         cur_band = _Band10Gbit
     elif bandwidth == 100:
@@ -422,12 +423,18 @@ def plot_measure(tools: list,
     ):
         if run_type == "run_full_normal":
             if target == "cost":
-                points = values['written data'] + \
-                    values['deleted data'] + values['read on miss data']
+                cache_size = float(cache_name.split("T_")[0].rplit("_", 1)[-1])
+                cache_size = cache_size * 1024**2
+                points = (
+                    values['written data'] +
+                    values['deleted data'] +
+                    values['read on miss data']
+                ) / cache_size
             elif target == "miss":
                 points = values['read on miss data'] - values['written data']
             elif target == "throughput":
-                points = values['read on hit data'] / values['written data'] * 100.
+                points = values['read on hit data'] / \
+                    values['written data'] * 100.
             elif target == "network_in_saturation":
                 points = (values['read on miss data'] / cur_band) * 100.
             elif target == "network_out_saturation":
@@ -754,7 +761,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             plot_height=plot_height,
             read_on_hit=True,
             target="cost",
-            y_axis_label="MB",
+            y_axis_label="%",
         )
         run_full_normal_hit_rate_figs.append(cost_fig)
     pbar.update(1)
