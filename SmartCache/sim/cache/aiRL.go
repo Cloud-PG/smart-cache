@@ -376,7 +376,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			if cache.qEvictionPrevAction != 0 && len(cache.qEvictionPrevState) != 0 {
 				reward := request.Size
 				// reward := 1.
-				if !hit || cache.dailyWrittenData >= cache.dailyReadOnHit || cache.prevHitRate > cache.HitRate() {
+				if !hit && (cache.dailyWrittenData >= cache.dailyReadOnHit || cache.prevHitRate > cache.HitRate()) {
 					reward = -reward
 				}
 				// Update table
@@ -488,7 +488,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					reward := request.Size
 					// reward := 1.
 					// if cache.dataReadOnHit < cache.dataReadOnMiss || cache.dailyReadOnHit < cache.dailyReadOnMiss || cache.dailyReadOnMiss >= bandwidthLimit {
-					if cache.dataReadOnHit < (cache.dataReadOnMiss*2.) || cache.dailyReadOnHit < (cache.dailyReadOnMiss*2.) || cache.prevHitRate < cache.HitRate() {
+					if cache.dailyReadOnHit < (cache.dailyReadOnMiss*2.) || cache.dataReadOnHit < (cache.dataReadOnMiss*2.) {
 						reward = -reward
 					}
 					// Update table
@@ -634,7 +634,6 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 // AfterRequest of cache
 func (cache *AIRL) AfterRequest(request *Request, hit bool, added bool) {
-	cache.SimpleCache.AfterRequest(request, hit, added)
 	cache.prevHitRate = cache.HitRate()
 	if hit {
 		cache.dailyReadOnHit += request.Size
@@ -644,6 +643,7 @@ func (cache *AIRL) AfterRequest(request *Request, hit bool, added bool) {
 	if added {
 		cache.dailyWrittenData += request.Size
 	}
+	cache.SimpleCache.AfterRequest(request, hit, added)
 }
 
 // Free removes files from the cache
