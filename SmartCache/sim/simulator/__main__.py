@@ -222,6 +222,9 @@ def main():
     parser.add_argument('--plot-resolution', type=str,
                         default="800,600",
                         help='A comma separate string representing the target resolution of each plot [DEFAULT: 640,480]')
+    parser.add_argument('--plot-bandwidth', type=int,
+                        default=10,
+                        help='Bandwidth size of plot in Gbit [DEFAULT: 1]')
     parser.add_argument('--ai-model-basename', type=str,
                         default="./models/donkey_model",
                         help='Ai Model basename and path [DEFAULT: "./models/donkey_model"]')
@@ -502,6 +505,7 @@ def main():
             png=args.out_png,
             plot_width=plot_width,
             plot_height=plot_height,
+            bandwidth=args.plot_bandwidth,
         )
 
     elif args.action == "train":

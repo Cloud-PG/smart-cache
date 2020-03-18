@@ -381,6 +381,7 @@ def plot_measure(tools: list,
                  plot_width: int = 640,
                  plot_height: int = 480,
                  target: str = None,
+                 bandwidth: int=10,
                  ) -> 'Figure':
     cur_fig = figure(
         tools=tools,
@@ -408,6 +409,13 @@ def plot_measure(tools: list,
 
     read_data_type = 'read on hit data' if read_on_hit else 'read data'
     legend_items = []
+    
+    if bandwidth == 10:
+        cur_band = _Band10Gbit
+    elif bandwidth == 100:
+        cur_band = _Band100Gbit
+    elif bandwidth == 200:
+        cur_band = _Band200Gbit
 
     for cache_name, values in filter_results(
         results, run_type, filters
@@ -421,9 +429,9 @@ def plot_measure(tools: list,
             elif target == "throughput":
                 points = values['read on hit data'] / values['written data'] * 100.
             elif target == "network_in_saturation":
-                points = (values['read on miss data'] / _Band10Gbit) * 100.
+                points = (values['read on miss data'] / cur_band) * 100.
             elif target == "network_out_saturation":
-                points = (values['read data'] / _Band10Gbit) * 100.
+                points = (values['read data'] / cur_band) * 100.
             else:
                 raise Exception(f"Unknown target '{target}'")
             cur_line = cur_fig.line(
@@ -632,6 +640,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
                  html: bool = True, png: bool = False,
                  plot_width: int = 640,
                  plot_height: int = 480,
+                 bandwidth: int = 10,
                  ):
     color_table = {}
     dates = []
@@ -808,11 +817,12 @@ def plot_results(folder: str, results: dict, cache_size: float,
             window_size,
             x_range=size_fig.x_range,
             y_axis_label="%",
-            title="Day network input saturation - 10Gbit/s",
+            title=f"Day network input saturation - {bandwidth}Gbit/s",
             plot_width=plot_width,
             plot_height=plot_height,
             read_on_hit=False,
             target="network_in_saturation",
+            bandwidth=bandwidth,
         )
         run_full_normal_net_figs.append(net_in)
     pbar.update(1)
@@ -830,11 +840,12 @@ def plot_results(folder: str, results: dict, cache_size: float,
             window_size,
             x_range=size_fig.x_range,
             y_axis_label="%",
-            title="Day network output saturation - 10Gbit/s",
+            title=f"Day network output saturation - {bandwidth}Gbit/s",
             plot_width=plot_width,
             plot_height=plot_height,
             read_on_hit=False,
             target="network_out_saturation",
+            bandwidth=bandwidth,
         )
         run_full_normal_net_figs.append(net_in)
     pbar.update(1)
