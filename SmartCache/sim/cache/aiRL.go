@@ -38,6 +38,7 @@ type AIRL struct {
 	dailyWrittenData        float64
 	points                  float64
 	prevPoints              float64
+	prevHitRate             float64
 	bufferCategory          []bool
 	bufferInputVector       []string
 	chanCategory            chan bool
@@ -375,7 +376,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			if cache.qEvictionPrevAction != 0 && len(cache.qEvictionPrevState) != 0 {
 				reward := request.Size
 				// reward := 1.
-				if !hit || cache.dailyWrittenData >= cache.dailyReadOnHit {
+				if !hit || cache.dailyWrittenData >= cache.dailyReadOnHit || cache.prevHitRate > cache.HitRate() {
 					reward = -reward
 				}
 				// Update table
@@ -487,7 +488,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					reward := request.Size
 					// reward := 1.
 					// if cache.dataReadOnHit < cache.dataReadOnMiss || cache.dailyReadOnHit < cache.dailyReadOnMiss || cache.dailyReadOnMiss >= bandwidthLimit {
-					if cache.dataReadOnHit < (cache.dataReadOnMiss*2.) || cache.dailyReadOnHit < (cache.dailyReadOnMiss*2.) {
+					if cache.dataReadOnHit < (cache.dataReadOnMiss*2.) || cache.dailyReadOnHit < (cache.dailyReadOnMiss*2.) || cache.prevHitRate < cache.HitRate() {
 						reward = -reward
 					}
 					// Update table
@@ -537,7 +538,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					reward := request.Size
 					// reward := 1.
 					// if cache.dailyReadOnMiss >= bandwidthLimit || cache.dailyWrittenData >= cache.dailyReadOnHit {
-					if cache.dailyWrittenData >= (cache.dailyReadOnHit * 0.3) {
+					if cache.dailyWrittenData >= (cache.dailyReadOnHit*0.3) && cache.prevHitRate > cache.HitRate() {
 						reward = -reward
 					}
 					// Update table
@@ -571,7 +572,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				if curState != "" { // Some action are not taken randomly
 					reward := request.Size
 					// reward := 1.
-					if cache.dataReadOnHit < (cache.dataReadOnMiss*2.) || cache.dailyReadOnHit < (cache.dailyReadOnMiss*2.) {
+					if cache.dataReadOnHit < (cache.dataReadOnMiss*2.) || cache.dailyReadOnHit < (cache.dailyReadOnMiss*2.) || cache.prevHitRate > cache.HitRate() {
 						reward = -reward
 					}
 					// Update table
@@ -634,6 +635,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 // AfterRequest of cache
 func (cache *AIRL) AfterRequest(request *Request, hit bool, added bool) {
 	cache.SimpleCache.AfterRequest(request, hit, added)
+	cache.prevHitRate = cache.HitRate()
 	if hit {
 		cache.dailyReadOnHit += request.Size
 	} else {
