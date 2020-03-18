@@ -75,5 +75,25 @@
     "unknown_values": false,
     "buckets": false,
     "bucket_open_right": false
+  },
+  "deltaHighWatermark": {
+    "feature": "deltaHighWatermark",
+    "type": "float",
+    "keys": [
+      1.0,
+      5.0,
+      10.0,
+      20.0
+    ],
+    "values": {
+      "1.0": 0,
+      "5.0": 1,
+      "10.0": 2,
+      "20.0": 3,
+      "max": 4
+    },
+    "unknown_values": false,
+    "buckets": true,
+    "bucket_open_right": true
   }
 }
