@@ -56,7 +56,8 @@ model_evict.add(Activation('sigmoid'))
 model_evict.add(Dense(32))
 model_evict.add(Activation('sigmoid'))
 model_evict.add(Dense(nb_actions))
-model_evict.add(Activation('linear'))
+#model_evict.add(Activation('linear'))
+model_evict.add(Activation('sigmoid'))
 print(model_evict.summary())
 model_evict.compile(optimizer = 'adam', loss = huber_loss_mean)
         
@@ -70,12 +71,13 @@ model_add.add(Activation('sigmoid'))
 model_add.add(Dense(32))
 model_add.add(Activation('sigmoid'))
 model_add.add(Dense(nb_actions))
-model_add.add(Activation('linear'))
+#model_add.add(Activation('linear'))
+model_add.add(Activation('sigmoid'))
 print(model_add.summary())
 model_add.compile(optimizer = 'adam', loss = huber_loss_mean)
 
 ###### START LOOPING ############################################################################################################################
-environment = cache_env.env(_startMonth, _endMonth)
+environment = cache_env.env(_startMonth, _endMonth, directory = '/home/ubuntu/source2018_numeric_it_with_avro_order')
 random.seed(seed_)
 adding_or_evicting = 0
 step_add = 0
@@ -86,6 +88,11 @@ step_add = 0
 step_evict = 0
 addition_counter = 0
 eviction_counter = 0
+
+
+with open('results/results_ok_stats_{}/occupancy.csv'.format(str(environment.time_span)), 'w') as file:
+    writer = csv.writer(file)
+    writer.writerow(['occupancy'])
 #next_values = np.zeros(7)
 
 end = False
@@ -188,7 +195,7 @@ while end == False:
         else:
             cur_values_ = np.reshape(cur_values, (1,7))
             action = np.argmax(model_evict.predict(cur_values_))
-        with open('results/results_ok_stats_{}/eviction_choices_{}.csv'.format(str(environment.time_span), addition_counter), 'a') as file:
+        with open('results/results_ok_stats_{}/eviction_choices_{}.csv'.format(str(environment.time_span), eviction_counter), 'a') as file:
             writer = csv.writer(file)
             writer.writerow([action])
         
@@ -238,6 +245,7 @@ while end == False:
             predictions = model_evict.predict_on_batch(train_next_vals)
             for i in range(0,len(state_action_vector)):  
                 target[i,train_actions[i]] = train_rewards[i] + gamma * mellowmax(1, predictions[i])   
+                
 
             #TRAIN
             model_evict.train_on_batch(train_cur_vals, target)
@@ -251,7 +259,6 @@ while end == False:
         environment._cache._filesLRUkeys = list(environment._cache._filesLRU.keys())
         environment._filesLRU_index = -1
         cur_values = environment.get_next_file_in_cache_values()
-        addition_counter += 1
         with open('results/results_ok_stats_{}/addition_choices_{}.csv'.format(str(environment.time_span), addition_counter), 'w') as file:
             writer = csv.writer(file)
             writer.writerow(['addition choice'])
