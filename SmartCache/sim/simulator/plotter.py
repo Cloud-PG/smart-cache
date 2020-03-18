@@ -395,13 +395,13 @@ def plot_measure(tools: list,
         plot_height=plot_height,
     )
 
-    if target is not None and target not in ['cpu_eff', 'network_in_saturation', 'network_out_saturation']:
+    if target is not None and target not in ['cpu_eff', 'network_in_saturation', 'network_out_saturation', 'cost', 'miss']:
         hline_1 = Span(
             location=1.0, dimension='width', line_dash="dashed",
             line_color="black", line_width=_LINE_WIDTH,
         )
         cur_fig.renderers.extend([hline_1])
-    elif target is not None and (target.find("network_") != -1 or target.find("cost") != -1):
+    elif target is not None and (target.find("network_") != -1 or target.find("cost") != -1 or target.find("miss") != -1):
         hline_1 = Span(
             location=100.0, dimension='width', line_dash="dashed",
             line_color="black", line_width=_LINE_WIDTH,
@@ -423,7 +423,8 @@ def plot_measure(tools: list,
     ):
         if run_type == "run_full_normal":
             if target == "cost":
-                cache_size = float(cache_name.split("T_")[0].rsplit("_", 1)[-1])
+                cache_size = float(cache_name.split("T_")
+                                   [0].rsplit("_", 1)[-1])
                 cache_size = cache_size * 1024**2
                 points = (
                     values['written data'] +
@@ -431,7 +432,12 @@ def plot_measure(tools: list,
                     values['read on miss data']
                 ) / cache_size * 100.
             elif target == "miss":
-                points = values['read on miss data'] - values['written data']
+                cache_size = float(cache_name.split("T_")
+                                   [0].rsplit("_", 1)[-1])
+                cache_size = cache_size * 1024**2
+                points = (
+                    values['read on miss data'] - values['written data']
+                ) / cache_size*100
             elif target == "throughput":
                 points = values['read on hit data'] / \
                     values['written data'] * 100.
@@ -783,7 +789,6 @@ def plot_results(folder: str, results: dict, cache_size: float,
             plot_width=plot_width,
             plot_height=plot_height,
             read_on_hit=True,
-            target="miss",
             y_axis_label="MB",
         )
         run_full_normal_hit_rate_figs.append(miss_fig)
@@ -805,7 +810,6 @@ def plot_results(folder: str, results: dict, cache_size: float,
             plot_width=plot_width,
             plot_height=plot_height,
             read_on_hit=True,
-            target="throughput",
             y_axis_label="%",
         )
         run_full_normal_hit_rate_figs.append(throughtput_fig)
