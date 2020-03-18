@@ -446,7 +446,7 @@ def plot_measure(tools: list,
             elif target == "network_out_saturation":
                 points = (values['read data'] / cur_band) * 100.
             else:
-                raise Exception(f"Unknown target '{target}'")
+                raise Exception(f"Unknown target '{target}'...")
             cur_line = cur_fig.line(
                 dates,
                 points,
@@ -790,7 +790,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             plot_height=plot_height,
             read_on_hit=True,
             target="miss",
-            y_axis_label="MB",
+            y_axis_label="%",
         )
         run_full_normal_hit_rate_figs.append(miss_fig)
     pbar.update(1)
