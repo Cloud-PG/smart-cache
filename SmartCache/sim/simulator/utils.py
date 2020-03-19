@@ -39,7 +39,7 @@ def wait_jobs(processes):
     while job_run(processes):
         for _, process in processes:
             try:
-                process.wait(timeout=0.1)
+                process.wait(timeout=0.3)
             except subprocess.TimeoutExpired:
                 pass
 
@@ -57,7 +57,8 @@ def job_run(processes: list) -> bool:
     running_processes = []
     for task_name, process in processes:
         running = process.returncode is None or process.returncode != 0
-        running_processes.append(running)
+        if running:
+            running_processes.append(running)
         if running:
             print(
                 f"[{process.pid}][RUNNING][{task_name}]{read_output_last_line(process.stdout)}\x1b[0K", flush=True)
@@ -73,7 +74,7 @@ def job_run(processes: list) -> bool:
 
     print(f"\x1b[{len(processes)+1}F")
 
-    return any(running_processes)
+    return len(running_processes) > 0
 
 
 def get_result_section(cur_path: str, source_folder: str):
