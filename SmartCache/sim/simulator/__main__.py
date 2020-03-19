@@ -45,10 +45,10 @@ def prepare_process_call(args, simulator_exe, cache_type, working_dir: str,
 
     if dump:
         exe_args.append("--simDump=true")
+        exe_args.append(f"--simDumpFilesAndStats={'true' if dump_files_and_stats else 'false'}")
         exe_args.append("--simDumpFileName=dump.json.gz")
     if load:
         exe_args.append("--simLoadDump=true")
-        exe_args.append(f"--simDumpFilesAndStats={'true' if dump_files_and_stats else 'false'}")
         exe_args.append(
             f"--simLoadDumpFileName={path.join(dump_dir, 'dump.json.gz')}"
         )
