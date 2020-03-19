@@ -226,7 +226,7 @@ func (table QTable) ToString(featureMap map[string]featuremap.Obj, featureMapOrd
 		))
 		csvOutput = append(csvOutput, "\n")
 	}
-	counter := 0
+	// counter := 0
 	for state, actions := range table.States {
 		for idx, action := range actions {
 			csvOutput = append(csvOutput, fmt.Sprintf("%09.2f", action))
@@ -240,8 +240,8 @@ func (table QTable) ToString(featureMap map[string]featuremap.Obj, featureMapOrd
 			stateRepr := String2StateRepr(state, featureMap, featureMapOrder)
 			csvOutput = append(csvOutput, fmt.Sprintf(",%s", stateRepr))
 		}
-		counter++
-		fmt.Println(counter, len(table.States))
+		// counter++
+		// fmt.Println(counter, len(table.States))
 		csvOutput = append(csvOutput, "\n")
 	}
 	return strings.Join(csvOutput, "")
