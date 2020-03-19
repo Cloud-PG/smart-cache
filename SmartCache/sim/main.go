@@ -55,6 +55,7 @@ var (
 	simColdStart           bool
 	simColdStartNoStats    bool
 	simDump                bool
+	simDumpFilesAndStats   bool
 	simDumpFileName        string
 	simFileType            string
 	simLoadDump            bool
@@ -193,6 +194,10 @@ func addSimFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().BoolVar(
 		&simDump, "simDump", false,
 		"indicates if to dump the cache status after the simulation",
+	)
+	cmd.PersistentFlags().BoolVar(
+		&simDumpFilesAndStats, "simDumpFilesAndStats", true,
+		"indicates if to dump the cache files and stats after the simulation",
 	)
 	cmd.PersistentFlags().StringVar(
 		&simDumpFileName, "simDumpFileName", "",
@@ -454,7 +459,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			})
 
 			if simDump {
-				defer curCacheInstance.Dump(simDumpFileName)
+				defer curCacheInstance.Dump(simDumpFileName, simDumpFilesAndStats)
 			}
 
 			var (

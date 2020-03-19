@@ -110,27 +110,29 @@ func (cache *SimpleCache) ClearHitMissStats() {
 }
 
 // Dumps the SimpleCache cache
-func (cache *SimpleCache) Dumps() [][]byte {
+func (cache *SimpleCache) Dumps(fileAndStats bool) [][]byte {
 	logger.Info("Dump cache into byte string")
 	outData := make([][]byte, 0)
 	var newLine = []byte("\n")
 
 	// Files
-	for file := range cache.files.Get(LRUQueue) {
-		dumpInfo, _ := json.Marshal(DumpInfo{Type: "FILES"})
-		dumpFile, _ := json.Marshal(file)
-		record, _ := json.Marshal(DumpRecord{
-			Info: string(dumpInfo),
-			Data: string(dumpFile),
-		})
-		record = append(record, newLine...)
-		outData = append(outData, record)
+	if fileAndStats {
+		for file := range cache.files.Get(LRUQueue) {
+			dumpInfo, _ := json.Marshal(DumpInfo{Type: "FILES"})
+			dumpFile, _ := json.Marshal(file)
+			record, _ := json.Marshal(DumpRecord{
+				Info: string(dumpInfo),
+				Data: string(dumpFile),
+			})
+			record = append(record, newLine...)
+			outData = append(outData, record)
+		}
 	}
 	return outData
 }
 
 // Dump the SimpleCache cache
-func (cache *SimpleCache) Dump(filename string) {
+func (cache *SimpleCache) Dump(filename string, fileAndStats bool) {
 	logger.Info("Dump cache", zap.String("filename", filename))
 	outFile, osErr := os.Create(filename)
 	if osErr != nil {
@@ -138,7 +140,7 @@ func (cache *SimpleCache) Dump(filename string) {
 	}
 	gwriter := gzip.NewWriter(outFile)
 
-	for _, record := range cache.Dumps() {
+	for _, record := range cache.Dumps(fileAndStats) {
 		gwriter.Write(record)
 	}
 
@@ -249,7 +251,7 @@ func (cache *SimpleCache) SimGetInfoCacheStatus(ctx context.Context, _ *empty.Em
 
 // SimDumps returns the content of the cache
 func (cache *SimpleCache) SimDumps(_ *empty.Empty, stream pb.SimService_SimDumpsServer) error {
-	for _, record := range cache.Dumps() {
+	for _, record := range cache.Dumps(true) {
 		curRecord := &pb.SimDumpRecord{
 			Raw: record,
 		}

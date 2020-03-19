@@ -128,33 +128,35 @@ func makeQtable(featureMap map[string]featuremap.Obj, featureOrder []string, rol
 }
 
 // Dumps the AIRL cache
-func (cache *AIRL) Dumps() [][]byte {
+func (cache *AIRL) Dumps(fileAndStats bool) [][]byte {
 	logger.Info("Dump cache into byte string")
 	outData := make([][]byte, 0)
 	var newLine = []byte("\n")
 
-	// ----- Files -----
-	for file := range cache.files.Get(LRUQueue) {
-		dumpInfo, _ := json.Marshal(DumpInfo{Type: "FILES"})
-		dumpFile, _ := json.Marshal(file)
-		record, _ := json.Marshal(DumpRecord{
-			Info: string(dumpInfo),
-			Data: string(dumpFile),
-		})
-		record = append(record, newLine...)
-		outData = append(outData, record)
-	}
-	// ----- Stats -----
-	for filename, stats := range cache.stats.fileStats {
-		dumpInfo, _ := json.Marshal(DumpInfo{Type: "STATS"})
-		dumpStats, _ := json.Marshal(stats)
-		record, _ := json.Marshal(DumpRecord{
-			Info:     string(dumpInfo),
-			Data:     string(dumpStats),
-			Filename: filename,
-		})
-		record = append(record, newLine...)
-		outData = append(outData, record)
+	if fileAndStats {
+		// ----- Files -----
+		for file := range cache.files.Get(LRUQueue) {
+			dumpInfo, _ := json.Marshal(DumpInfo{Type: "FILES"})
+			dumpFile, _ := json.Marshal(file)
+			record, _ := json.Marshal(DumpRecord{
+				Info: string(dumpInfo),
+				Data: string(dumpFile),
+			})
+			record = append(record, newLine...)
+			outData = append(outData, record)
+		}
+		// ----- Stats -----
+		for filename, stats := range cache.stats.fileStats {
+			dumpInfo, _ := json.Marshal(DumpInfo{Type: "STATS"})
+			dumpStats, _ := json.Marshal(stats)
+			record, _ := json.Marshal(DumpRecord{
+				Info:     string(dumpInfo),
+				Data:     string(dumpStats),
+				Filename: filename,
+			})
+			record = append(record, newLine...)
+			outData = append(outData, record)
+		}
 	}
 	if cache.additionTableOK {
 		// ----- addition qtable -----
@@ -178,12 +180,11 @@ func (cache *AIRL) Dumps() [][]byte {
 		record = append(record, newLine...)
 		outData = append(outData, record)
 	}
-
 	return outData
 }
 
 // Dump the AIRL cache
-func (cache *AIRL) Dump(filename string) {
+func (cache *AIRL) Dump(filename string, fileAndStats bool) {
 	logger.Info("Dump cache", zap.String("filename", filename))
 	outFile, osErr := os.Create(filename)
 	if osErr != nil {
@@ -191,7 +192,7 @@ func (cache *AIRL) Dump(filename string) {
 	}
 	gwriter := gzip.NewWriter(outFile)
 
-	for _, record := range cache.Dumps() {
+	for _, record := range cache.Dumps(fileAndStats) {
 		gwriter.Write(record)
 	}
 

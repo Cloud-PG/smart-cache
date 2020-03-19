@@ -24,7 +24,8 @@ from .utils import get_logger, load_results, str2bool, wait_jobs
 def prepare_process_call(args, simulator_exe, cache_type, working_dir: str,
                          start_window: int, stop_window: int, window_idx: int = 0,
                          wf_parameters: dict = None,
-                         dump: bool = False, load: bool = False, dump_dir: str = "",
+                         dump: bool = False, dump_files_and_stats: bool=True,
+                         load: bool = False, dump_dir: str = "",
                          cold_start: bool = False, cold_start_no_stats: bool = False
                          ) -> str:
     os.makedirs(working_dir, exist_ok=True)
@@ -47,6 +48,7 @@ def prepare_process_call(args, simulator_exe, cache_type, working_dir: str,
         exe_args.append("--simDumpFileName=dump.json.gz")
     if load:
         exe_args.append("--simLoadDump=true")
+        exe_args.append(f"--simDumpFilesAndStats={'true' if dump_files_and_stats else 'false'}")
         exe_args.append(
             f"--simLoadDumpFileName={path.join(dump_dir, 'dump.json.gz')}"
         )
@@ -249,8 +251,11 @@ def main():
     parser.add_argument('--decay-rate-epsilon', type=float,
                         default=0.0000042,
                         help="The decay rate of Epsilon in the RL approach [DEFAULT: 0.0000002]")
+    parser.add_argument('--dump-files-and-stats', type='bool',
+                        default=True,
+                        help='Indicates if dump cache files and stats [DEFAULT: True]')
 
-    args, _ = parser.parse_known_args()
+    args = parser.parse_args()
 
     if args.only_CPU:
         os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
@@ -313,7 +318,8 @@ def main():
                         window_idx+1,
                         window_idx,
                         wf_parameters=weight_function_parameters,
-                        dump=True
+                        dump=True,
+                        dump_files_and_stats=args.dump_files_and_stats,
                     )
                     logger.info(f"[EXEC]->[{exe_cmd}]")
                     # Create the task

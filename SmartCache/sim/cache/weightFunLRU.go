@@ -25,32 +25,34 @@ func (cache *WeightFunLRU) Init(_ ...interface{}) interface{} {
 }
 
 // Dumps the WeightFunLRU cache
-func (cache *WeightFunLRU) Dumps() [][]byte {
+func (cache *WeightFunLRU) Dumps(fileAndStats bool) [][]byte {
 	logger.Info("Dump cache into byte string")
 	outData := make([][]byte, 0)
 	var newLine = []byte("\n")
 
-	// ----- Files -----
-	for file := range cache.files.Get(LRUQueue) {
-		dumpInfo, _ := json.Marshal(DumpInfo{Type: "FILES"})
-		dumpFile, _ := json.Marshal(file)
-		record, _ := json.Marshal(DumpRecord{
-			Info: string(dumpInfo),
-			Data: string(dumpFile),
-		})
-		record = append(record, newLine...)
-		outData = append(outData, record)
-	}
-	// ----- Stats -----
-	for _, stats := range cache.stats.fileStats {
-		dumpInfo, _ := json.Marshal(DumpInfo{Type: "STATS"})
-		dumpStats, _ := json.Marshal(stats)
-		record, _ := json.Marshal(DumpRecord{
-			Info: string(dumpInfo),
-			Data: string(dumpStats),
-		})
-		record = append(record, newLine...)
-		outData = append(outData, record)
+	if fileAndStats {
+		// ----- Files -----
+		for file := range cache.files.Get(LRUQueue) {
+			dumpInfo, _ := json.Marshal(DumpInfo{Type: "FILES"})
+			dumpFile, _ := json.Marshal(file)
+			record, _ := json.Marshal(DumpRecord{
+				Info: string(dumpInfo),
+				Data: string(dumpFile),
+			})
+			record = append(record, newLine...)
+			outData = append(outData, record)
+		}
+		// ----- Stats -----
+		for _, stats := range cache.stats.fileStats {
+			dumpInfo, _ := json.Marshal(DumpInfo{Type: "STATS"})
+			dumpStats, _ := json.Marshal(stats)
+			record, _ := json.Marshal(DumpRecord{
+				Info: string(dumpInfo),
+				Data: string(dumpStats),
+			})
+			record = append(record, newLine...)
+			outData = append(outData, record)
+		}
 	}
 	return outData
 }

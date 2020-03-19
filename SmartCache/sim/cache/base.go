@@ -45,8 +45,8 @@ type Request struct {
 type Cache interface {
 	Init(...interface{}) interface{}
 
-	Dumps() [][]byte
-	Dump(filename string)
+	Dumps(fileAndStats bool) [][]byte
+	Dump(filename string, fileAndStats bool)
 	Loads([][]byte, ...interface{})
 	Load(filename string) [][]byte
 
