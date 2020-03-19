@@ -672,16 +672,19 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				TotNumRecords: totNumRecords,
 				AvgSpeed:      fmt.Sprintf("Num.Records/s = %0.2f", avgSpeed),
 			})
-			if cacheType == "aiRL" {
-				// Save tables
-				writeQTable(resultAdditionQTableName, curCacheInstance.ExtraOutput("additionQtable"))
-				writeQTable(resultEvictionQTableName, curCacheInstance.ExtraOutput("evictionQtable"))
-			}
-
 			if errMarshal != nil {
 				panic(errMarshal)
 			}
 			statFile.Write(jsonBytes)
+
+			if cacheType == "aiRL" {
+				// Save tables
+				logger.Info("Save addition table...")
+				writeQTable(resultAdditionQTableName, curCacheInstance.ExtraOutput("additionQtable"))
+				logger.Info("Save eviction table...")
+				writeQTable(resultEvictionQTableName, curCacheInstance.ExtraOutput("evictionQtable"))
+			}
+
 			logger.Info("Simulation DONE!")
 			logger.Sync()
 		},
