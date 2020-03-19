@@ -215,33 +215,36 @@ func (table QTable) GetRandomFloat() float64 {
 
 // ToString outputs the state values in a csv format string
 func (table QTable) ToString(featureMap map[string]featuremap.Obj, featureMapOrder []string) string {
-	csvOutput := ""
+	var csvOutput []string
 	if featureMap != nil && featureMapOrder != nil {
-		csvOutput += strings.Join(
+		csvOutput = append(csvOutput, strings.Join(
 			[]string{
 				strings.Join(table.ActionStrings, ","),
 				strings.Join(featureMapOrder, ","),
 			},
 			",",
-		)
-		csvOutput += "\n"
+		))
+		csvOutput = append(csvOutput, "\n")
 	}
+	counter := 0
 	for state, actions := range table.States {
 		for idx, action := range actions {
-			csvOutput += fmt.Sprintf("%09.2f", action)
+			csvOutput = append(csvOutput, fmt.Sprintf("%09.2f", action))
 			if idx != len(actions)-1 {
-				csvOutput += fmt.Sprint(",")
+				csvOutput = append(csvOutput, fmt.Sprint(","))
 			}
 		}
 		if featureMap == nil && featureMapOrder == nil {
 			fmt.Printf(",%s", state)
 		} else {
 			stateRepr := String2StateRepr(state, featureMap, featureMapOrder)
-			csvOutput += fmt.Sprintf(",%s", stateRepr)
+			csvOutput = append(csvOutput, fmt.Sprintf(",%s", stateRepr))
 		}
-		csvOutput += "\n"
+		counter++
+		fmt.Println(counter, len(table.States))
+		csvOutput = append(csvOutput, "\n")
 	}
-	return csvOutput
+	return strings.Join(csvOutput, "")
 }
 
 // GetActionCoverage returns the exploration result of the QTable Actions
