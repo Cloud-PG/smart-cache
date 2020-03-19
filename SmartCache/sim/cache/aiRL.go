@@ -135,6 +135,7 @@ func (cache *AIRL) Dumps(fileAndStats bool) [][]byte {
 
 	if fileAndStats {
 		// ----- Files -----
+		logger.Info("Dump cache files")
 		for file := range cache.files.Get(LRUQueue) {
 			dumpInfo, _ := json.Marshal(DumpInfo{Type: "FILES"})
 			dumpFile, _ := json.Marshal(file)
@@ -146,6 +147,7 @@ func (cache *AIRL) Dumps(fileAndStats bool) [][]byte {
 			outData = append(outData, record)
 		}
 		// ----- Stats -----
+		logger.Info("Dump cache stats")
 		for filename, stats := range cache.stats.fileStats {
 			dumpInfo, _ := json.Marshal(DumpInfo{Type: "STATS"})
 			dumpStats, _ := json.Marshal(stats)
@@ -160,6 +162,7 @@ func (cache *AIRL) Dumps(fileAndStats bool) [][]byte {
 	}
 	if cache.additionTableOK {
 		// ----- addition qtable -----
+		logger.Info("Dump cache addition table")
 		dumpInfo, _ := json.Marshal(DumpInfo{Type: "ADDQTABLE"})
 		dumpStats, _ := json.Marshal(cache.additionTable)
 		record, _ := json.Marshal(DumpRecord{
@@ -171,6 +174,7 @@ func (cache *AIRL) Dumps(fileAndStats bool) [][]byte {
 	}
 	if cache.evictionTableOK {
 		// ----- eviction qtable -----
+		logger.Info("Dump cache eviction table")
 		dumpInfo, _ := json.Marshal(DumpInfo{Type: "EVCQTABLE"})
 		dumpStats, _ := json.Marshal(cache.evictionTable)
 		record, _ := json.Marshal(DumpRecord{

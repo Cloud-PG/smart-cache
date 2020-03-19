@@ -680,6 +680,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				panic(errMarshal)
 			}
 			statFile.Write(jsonBytes)
+			logger.Sync()
 		},
 		Use:   useDesc,
 		Short: shortDesc,

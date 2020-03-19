@@ -115,8 +115,9 @@ func (cache *SimpleCache) Dumps(fileAndStats bool) [][]byte {
 	outData := make([][]byte, 0)
 	var newLine = []byte("\n")
 
-	// Files
 	if fileAndStats {
+		// ----- Files -----
+		logger.Info("Dump cache files")
 		for file := range cache.files.Get(LRUQueue) {
 			dumpInfo, _ := json.Marshal(DumpInfo{Type: "FILES"})
 			dumpFile, _ := json.Marshal(file)

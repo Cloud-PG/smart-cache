@@ -56,7 +56,7 @@ def read_output_last_line(output):
 def job_run(processes: list) -> bool:
     running_processes = []
     for task_name, process in processes:
-        running = process.returncode is None
+        running = process.returncode is None or process.returncode != 0
         running_processes.append(running)
         if running:
             print(
