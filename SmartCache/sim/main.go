@@ -261,7 +261,9 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Run: func(cmd *cobra.Command, args []string) {
+			// Get logger
 			logger := zap.L()
+
 			if len(args) != 2 {
 				fmt.Println("ERR: You need to specify the cache type and a file or a folder")
 				os.Exit(-1)
