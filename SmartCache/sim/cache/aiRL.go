@@ -734,7 +734,7 @@ func (cache *AIRL) Free(amount float64, percentage bool) float64 {
 }
 
 // CheckWatermark checks the watermark levels and resolve the situation
-func (cache AIRL) CheckWatermark() bool {
+func (cache *AIRL) CheckWatermark() bool {
 	ok := true
 	if cache.Capacity() >= cache.HighWaterMark {
 		ok = false
@@ -747,7 +747,7 @@ func (cache AIRL) CheckWatermark() bool {
 }
 
 // ExtraStats for output
-func (cache AIRL) ExtraStats() string {
+func (cache *AIRL) ExtraStats() string {
 	return fmt.Sprintf(
 		"SCov:%0.2f%%|ACov:%0.2f%%||Eps:%0.5f|SCov:%0.2f%%|ACov:%0.2f%%|Eps:%0.5f",
 		cache.additionTable.GetStateCoverage(), cache.additionTable.GetActionCoverage(), cache.additionTable.Epsilon,
@@ -756,7 +756,7 @@ func (cache AIRL) ExtraStats() string {
 }
 
 // ExtraOutput for output specific information
-func (cache AIRL) ExtraOutput(info string) string {
+func (cache *AIRL) ExtraOutput(info string) string {
 	result := ""
 	switch info {
 	case "additionQtable":

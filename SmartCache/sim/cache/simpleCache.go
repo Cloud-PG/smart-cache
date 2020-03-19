@@ -428,7 +428,7 @@ func (cache *SimpleCache) Free(amount float64, percentage bool) float64 {
 }
 
 // CheckWatermark checks the watermark levels and resolve the situation
-func (cache SimpleCache) CheckWatermark() bool {
+func (cache *SimpleCache) CheckWatermark() bool {
 	ok := true
 	if cache.Capacity() >= cache.HighWaterMark {
 		ok = false
@@ -441,7 +441,7 @@ func (cache SimpleCache) CheckWatermark() bool {
 }
 
 // HitRate of the cache
-func (cache SimpleCache) HitRate() float64 {
+func (cache *SimpleCache) HitRate() float64 {
 	perc := (cache.hit / (cache.hit + cache.miss)) * 100.
 	if math.IsNaN(float64(perc)) {
 		return 0.0
@@ -450,7 +450,7 @@ func (cache SimpleCache) HitRate() float64 {
 }
 
 // HitOverMiss of the cache
-func (cache SimpleCache) HitOverMiss() float64 {
+func (cache *SimpleCache) HitOverMiss() float64 {
 	if cache.hit == 0. || cache.miss == 0. {
 		return 0.
 	}
@@ -458,22 +458,22 @@ func (cache SimpleCache) HitOverMiss() float64 {
 }
 
 // WeightedHitRate of the cache
-func (cache SimpleCache) WeightedHitRate() float64 {
+func (cache *SimpleCache) WeightedHitRate() float64 {
 	return cache.HitRate() * cache.dataReadOnHit
 }
 
 // Size of the cache
-func (cache SimpleCache) Size() float64 {
+func (cache *SimpleCache) Size() float64 {
 	return cache.size
 }
 
 // Capacity of the cache
-func (cache SimpleCache) Capacity() float64 {
+func (cache *SimpleCache) Capacity() float64 {
 	return (cache.Size() / cache.MaxSize) * 100.
 }
 
 // DataWritten of the cache
-func (cache SimpleCache) DataWritten() float64 {
+func (cache *SimpleCache) DataWritten() float64 {
 	return cache.dataWritten
 }
 
@@ -513,37 +513,37 @@ func (cache *SimpleCache) ExtraOutput(info string) string {
 }
 
 // CPUEff returns the CPU efficiency
-func (cache SimpleCache) CPUEff() float64 {
+func (cache *SimpleCache) CPUEff() float64 {
 	return (cache.hitCPUEff + cache.missCPUEff) / float64(cache.numDailyHit+cache.numDailyMiss)
 }
 
 // CPUHitEff returns the CPU efficiency for hit data
-func (cache SimpleCache) CPUHitEff() float64 {
+func (cache *SimpleCache) CPUHitEff() float64 {
 	return cache.hitCPUEff / float64(cache.numDailyHit)
 }
 
 // CPUMissEff returns the CPU efficiency for miss data
-func (cache SimpleCache) CPUMissEff() float64 {
+func (cache *SimpleCache) CPUMissEff() float64 {
 	return cache.missCPUEff / float64(cache.numDailyMiss)
 }
 
 // CPUEffUpperBound returns the ideal CPU efficiency upper bound
-func (cache SimpleCache) CPUEffUpperBound() float64 {
+func (cache *SimpleCache) CPUEffUpperBound() float64 {
 	return cache.upperCPUEff / float64(cache.numLocal)
 }
 
 // CPUEffLowerBound returns the ideal CPU efficiency lower bound
-func (cache SimpleCache) CPUEffLowerBound() float64 {
+func (cache *SimpleCache) CPUEffLowerBound() float64 {
 	return cache.lowerCPUEff / float64(cache.numRemote)
 }
 
 // CPUEffBoundDiff returns the ideal CPU efficiency bound difference
-func (cache SimpleCache) CPUEffBoundDiff() float64 {
+func (cache *SimpleCache) CPUEffBoundDiff() float64 {
 	return cache.CPUEffUpperBound() - cache.CPUEffLowerBound()
 }
 
 // MeanSize returns the average size of the files in cache
-func (cache SimpleCache) MeanSize() float64 {
+func (cache *SimpleCache) MeanSize() float64 {
 	// return cache.DataWritten() / float64(len(cache.files))
 	totSize := 0.0
 	for file := range cache.files.Get(NoQueue) {
@@ -553,7 +553,7 @@ func (cache SimpleCache) MeanSize() float64 {
 }
 
 // MeanFrequency returns the average frequency of the files in cache
-func (cache SimpleCache) MeanFrequency() float64 {
+func (cache *SimpleCache) MeanFrequency() float64 {
 	// return cache.DataWritten() / (cache.hit + cache.miss)
 	totRequests := 0.0
 	for file := range cache.files.Get(NoQueue) {
@@ -563,7 +563,7 @@ func (cache SimpleCache) MeanFrequency() float64 {
 }
 
 // MeanRecency returns the average recency of the files in cache
-func (cache SimpleCache) MeanRecency() float64 {
+func (cache *SimpleCache) MeanRecency() float64 {
 	totRecency := 0.0
 	curTick := float64(cache.stats.Tick)
 	for file := range cache.files.Get(NoQueue) {
