@@ -765,9 +765,9 @@ func (cache *AIRL) ExtraOutput(info string) string {
 	result := ""
 	switch info {
 	case "additionQtable":
-		result = cache.additionTable.ToString(&cache.additionFeatureMap, &cache.additionFeatureMapOrder)
+		result = cache.additionTable.ToString(cache.additionFeatureMap, cache.additionFeatureMapOrder)
 	case "evictionQtable":
-		result = cache.evictionTable.ToString(&cache.evictionFeatureMap, &cache.evictionFeatureMapOrder)
+		result = cache.evictionTable.ToString(cache.evictionFeatureMap, cache.evictionFeatureMapOrder)
 	default:
 		result = "NONE"
 	}

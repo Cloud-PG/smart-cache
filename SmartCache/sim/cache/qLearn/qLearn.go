@@ -214,13 +214,13 @@ func (table QTable) GetRandomFloat() float64 {
 }
 
 // ToString outputs the state values in a csv format string
-func (table QTable) ToString(featureMap *map[string]featuremap.Obj, featureMapOrder *[]string) string {
+func (table QTable) ToString(featureMap map[string]featuremap.Obj, featureMapOrder []string) string {
 	csvOutput := ""
 	if featureMap != nil && featureMapOrder != nil {
 		csvOutput += strings.Join(
 			[]string{
 				strings.Join(table.ActionStrings, ","),
-				strings.Join(*featureMapOrder, ","),
+				strings.Join(featureMapOrder, ","),
 			},
 			",",
 		)
@@ -236,7 +236,7 @@ func (table QTable) ToString(featureMap *map[string]featuremap.Obj, featureMapOr
 		if featureMap == nil && featureMapOrder == nil {
 			fmt.Printf(",%s", state)
 		} else {
-			stateRepr := String2StateRepr(state, *featureMap, *featureMapOrder)
+			stateRepr := String2StateRepr(state, featureMap, featureMapOrder)
 			csvOutput += fmt.Sprintf(",%s", stateRepr)
 		}
 		csvOutput += "\n"
