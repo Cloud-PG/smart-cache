@@ -319,7 +319,6 @@ def main():
                         window_idx,
                         wf_parameters=weight_function_parameters,
                         dump=True,
-                        dump_files_and_stats=args.dump_files_and_stats,
                     )
                     logger.info(f"[EXEC]->[{exe_cmd}]")
                     # Create the task
@@ -373,7 +372,8 @@ def main():
                         args.window_start,
                         args.window_stop,
                         wf_parameters=weight_function_parameters,
-                        dump=True
+                        dump=True,
+                        dump_files_and_stats=args.dump_files_and_stats,
                     )
                 logger.info(f"[EXEC]->[{exe_cmd}]")
                 cur_process = subprocess.Popen(
