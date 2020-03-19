@@ -653,7 +653,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			elTM := int(elapsedTime.Minutes()) % 60
 			elTS := int(elapsedTime.Seconds()) % 60
 			avgSpeed := float64(totIterations) / elapsedTime.Seconds()
-			logger.Info("Simulation END!",
+			logger.Info("Simulation end...",
 				zap.String("elapsedTime", fmt.Sprintf("%02d:%02d:%02d", elTH, elTM, elTS)),
 				zap.Float64("avg it/s", avgSpeed),
 				zap.Int64("totRecords", numRecords),
@@ -680,6 +680,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				panic(errMarshal)
 			}
 			statFile.Write(jsonBytes)
+			logger.Info("Simulation DONE!")
 			logger.Sync()
 		},
 		Use:   useDesc,
