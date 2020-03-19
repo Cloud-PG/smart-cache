@@ -47,7 +47,7 @@ def wait_jobs(processes):
 
 def read_output_last_line(output):
     buffer = ""
-    read_list, _, _ = select.select([output], [], [], 300.0)
+    read_list, _, _ = select.select([output], [], [], 60.0)
     if output in read_list:
         cur_char = output.read(1).decode("ascii")
         while cur_char not in ["\r", "\n", '']:
