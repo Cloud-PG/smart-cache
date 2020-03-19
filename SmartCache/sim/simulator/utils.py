@@ -1,4 +1,5 @@
 import logging
+import select
 import subprocess
 from contextlib import contextmanager
 from os import path, walk
@@ -39,29 +40,38 @@ def wait_jobs(processes):
     while job_run(processes):
         for _, process in processes:
             try:
-                process.wait(timeout=0.3)
+                process.wait(timeout=0.1)
             except subprocess.TimeoutExpired:
                 pass
 
 
 def read_output_last_line(output):
     buffer = ""
-    cur_char = output.read(1).decode("ascii")
-    while cur_char not in ["\r", "\n", '']:
-        buffer += cur_char
+    read_list, _, _ = select.select([output], [], [], 10.0)
+    if output in read_list:
         cur_char = output.read(1).decode("ascii")
+        while cur_char not in ["\r", "\n", '']:
+            buffer += cur_char
+            cur_char = output.read(1).decode("ascii")
     return buffer
 
 
 def job_run(processes: list) -> bool:
     running_processes = []
     for task_name, process in processes:
-        running = process.returncode is None or process.returncode != 0
+        try:
+            process.wait(timeout=0.1)
+        except subprocess.TimeoutExpired:
+            pass
+        running = process.poll() is None
         if running:
-            running_processes.append(running)
-        if running:
-            print(
-                f"[{process.pid}][RUNNING][{task_name}]{read_output_last_line(process.stdout)}\x1b[0K", flush=True)
+            current_output = read_output_last_line(process.stdout)
+            if current_output:
+                print(
+                    f"[{process.pid}][RUNNING][{task_name}]{current_output}\x1b[0K",
+                    flush=True
+                )
+                running_processes.append(running)
         else:
             print(
                 f"[{process.pid}][DONE][{task_name}][Return code -> {process.returncode}]\x1b[0K", flush=True)
@@ -193,7 +203,7 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False,
                 else:
                     top_df.head(top).sort_values(
                         by=["cpuEff", "throughput", "cost", "readOnHit"],
-                    ascending=[False, False, True, False]
+                        ascending=[False, False, True, False]
                     ).to_csv(f"top_{top}_results.csv", index=False)
 
     return results
