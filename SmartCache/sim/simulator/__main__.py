@@ -385,9 +385,6 @@ def main():
                     stderr=subprocess.STDOUT,
                 )
                 processes.append(("Full Run", cur_process))
-                # Add custom cache parameters
-                if cache_type == 'aiLRU':
-                    wait_jobs(processes)
 
             wait_jobs(processes)
 
