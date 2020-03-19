@@ -379,8 +379,8 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			// ##### Eviction Learning phase #####
 			// ###################################
 			if cache.qEvictionPrevAction != 0 && len(cache.qEvictionPrevState) != 0 {
-				// reward := request.Size
-				reward := 1.
+				reward := request.Size
+				// reward := 1.
 				if !hit && (cache.dailyWrittenData >= cache.dailyReadOnHit || cache.prevHitRate > cache.HitRate()) {
 					reward = -reward
 				}
@@ -490,8 +490,8 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					// } else {
 					// 	reward -= 1.
 					// }
-					// reward := request.Size
-					reward := 1.
+					reward := request.Size
+					// reward := 1.
 					// if cache.dataReadOnHit < cache.dataReadOnMiss || cache.dailyReadOnHit < cache.dailyReadOnMiss || cache.dailyReadOnMiss >= bandwidthLimit {
 					if cache.dailyReadOnHit < (cache.dailyReadOnMiss*2.) || cache.dataReadOnHit < (cache.dataReadOnMiss*2.) {
 						reward = -reward
@@ -540,8 +540,8 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					// } else {
 					// 	reward -= 1.
 					// }
-					// reward := request.Size
-					reward := 1.
+					reward := request.Size
+					// reward := 1.
 					// if cache.dailyReadOnMiss >= bandwidthLimit || cache.dailyWrittenData >= cache.dailyReadOnHit {
 					if cache.dailyWrittenData >= (cache.dailyReadOnHit*0.3) || cache.prevHitRate > cache.HitRate() {
 						reward = -reward
@@ -575,8 +575,8 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				logger.Debug("Learning HIT branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
 
 				if curState != "" { // Some action are not taken randomly
-					// reward := request.Size
-					reward := 1.
+					reward := request.Size
+					// reward := 1.
 					if cache.dataReadOnHit < (cache.dataReadOnMiss*2.) || cache.dailyReadOnHit < (cache.dailyReadOnMiss*2.) || cache.prevHitRate > cache.HitRate() {
 						reward = -reward
 					}
