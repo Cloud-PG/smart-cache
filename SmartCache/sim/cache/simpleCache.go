@@ -539,7 +539,11 @@ func (cache *SimpleCache) CPUEffLowerBound() float64 {
 
 // CPUEffBoundDiff returns the ideal CPU efficiency bound difference
 func (cache *SimpleCache) CPUEffBoundDiff() float64 {
-	return cache.CPUEffUpperBound() - cache.CPUEffLowerBound()
+	diff := cache.CPUEffUpperBound() - cache.CPUEffLowerBound()
+	if !math.IsNaN(diff) && diff > 0. {
+		return diff
+	}
+	return 0.
 }
 
 // MeanSize returns the average size of the files in cache
