@@ -508,6 +508,18 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 					}
 				}
 
+				cpuEff := (record.CPUTime / (record.CPUTime + record.IOTime)) * 100.
+				// Filter records with invalid CPU efficiency
+				if cpuEff < 0. {
+					continue
+				} else if math.IsInf(cpuEff, 0) {
+					continue
+				} else if math.IsNaN(cpuEff) {
+					continue
+				} else if cpuEff > 100. {
+					continue
+				}
+
 				totNumRecords++
 
 				// if strings.Compare(simRegion, "all") != 0 {
@@ -566,17 +578,6 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				} else if windowCounter >= simStartFromWindow {
 					// TODO: make size measure a parameter: [K, M, G, P]
 					sizeInMbytes := record.Size / (1024 * 1024)
-
-					cpuEff := (record.CPUTime / (record.CPUTime + record.IOTime)) * 100.
-					if cpuEff < 0. {
-						cpuEff = 0.
-					} else if math.IsInf(cpuEff, 0) {
-						cpuEff = 0.
-					} else if math.IsNaN(cpuEff) {
-						cpuEff = 0.
-					} else if cpuEff > 100. {
-						cpuEff = 0.
-					}
 
 					cache.GetFile(
 						curCacheInstance,
