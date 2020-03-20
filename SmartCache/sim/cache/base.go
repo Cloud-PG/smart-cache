@@ -44,6 +44,7 @@ type Request struct {
 // Cache is the base interface for the cache object
 type Cache interface {
 	Init(...interface{}) interface{}
+	SetRegion(string)
 
 	Dumps(fileAndStats bool) [][]byte
 	Dump(filename string, fileAndStats bool)

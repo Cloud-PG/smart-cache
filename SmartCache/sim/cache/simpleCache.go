@@ -16,10 +16,14 @@ import (
 	"go.uber.org/zap"
 )
 
-// const (
-// 	percDiffIT = 19. // Extracted from 2018 stats (upper bound - lower bound)
-// 	percDiffUS = 10. // Extracted from 2018 stats (upper bound - lower bound)
-// )
+const (
+	// MeanCPUDiffIT is the mean difference value of CPU efficiency in IT region
+	// Extracted from 2018 stats (upper bound - lower bound)
+	MeanCPUDiffIT = 19.
+	// MeanCPUDiffUS is the mean difference value of CPU efficiency in US region
+	// Extracted from 2018 stats (upper bound - lower bound)
+	MeanCPUDiffUS = 10.
+)
 
 // SimpleCache cache
 type SimpleCache struct {
@@ -38,6 +42,7 @@ type SimpleCache struct {
 	numDailyMiss                       int64
 	prevTime                           time.Time
 	curTime                            time.Time
+	region                             string
 }
 
 // Init the LRU struct
@@ -63,6 +68,11 @@ func (cache *SimpleCache) Init(vars ...interface{}) interface{} {
 	}
 
 	return cache
+}
+
+// SetRegion initialize the region field
+func (cache *SimpleCache) SetRegion(region string) {
+	cache.region = region
 }
 
 // ClearFiles remove the cache files
@@ -542,11 +552,21 @@ func (cache *SimpleCache) CPUEffLowerBound() float64 {
 
 // CPUEffBoundDiff returns the ideal CPU efficiency bound difference
 func (cache *SimpleCache) CPUEffBoundDiff() float64 {
-	diff := cache.CPUEffUpperBound() - cache.CPUEffLowerBound()
-	if !math.IsNaN(diff) && diff > 0. {
-		return diff
+	diffValue := 0.
+	if len(cache.region) == 0 {
+		diff := cache.CPUEffUpperBound() - cache.CPUEffLowerBound()
+		if !math.IsNaN(diff) && diff > 0. {
+			diffValue = diff
+		}
+	} else {
+		switch cache.region {
+		case "it":
+			diffValue = MeanCPUDiffIT
+		case "us":
+			diffValue = MeanCPUDiffUS
+		}
 	}
-	return 0.
+	return diffValue
 }
 
 // MeanSize returns the average size of the files in cache
