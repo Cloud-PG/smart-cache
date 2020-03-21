@@ -17,9 +17,7 @@ from .utils import ignored
 _LINE_WIDTH = 2.8
 
 _DAY_SECONDS = 60. * 60. * 24.
-_Band10Gbit = (10000. / 8.) * _DAY_SECONDS
-_Band100Gbit = (100000. / 8.) * _DAY_SECONDS
-_Band200Gbit = (100000. / 8.) * _DAY_SECONDS
+_Band1Gbit = (1000. / 8.) * _DAY_SECONDS
 
 
 def update_colors(new_names: str, color_table: dict):
@@ -411,12 +409,7 @@ def plot_measure(tools: list,
     read_data_type = 'read on hit data' if read_on_hit else 'read data'
     legend_items = []
 
-    if bandwidth == 10:
-        cur_band = _Band10Gbit
-    elif bandwidth == 100:
-        cur_band = _Band100Gbit
-    elif bandwidth == 200:
-        cur_band = _Band200Gbit
+    cur_band = _Band1Gbit * bandwidth
 
     for cache_name, values in filter_results(
         results, run_type, filters
