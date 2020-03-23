@@ -13,10 +13,6 @@ import (
 	"go.uber.org/zap"
 )
 
-// const (
-// 	bandwidthLimit = (1000000. / 8.) * 60. * 60. * 24.
-// )
-
 // AIRL cache
 type AIRL struct {
 	SimpleCache
@@ -38,7 +34,6 @@ type AIRL struct {
 	dailyWrittenData        float64
 	points                  float64
 	prevPoints              float64
-	prevHitRate             float64
 	bufferCategory          []bool
 	bufferInputVector       []string
 	chanCategory            chan bool
@@ -381,7 +376,13 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			if cache.qEvictionPrevAction != 0 && len(cache.qEvictionPrevState) != 0 {
 				reward := request.Size
 				// reward := 1.
-				if !hit && (cache.dailyWrittenData >= cache.dailyReadOnHit || cache.prevHitRate > cache.HitRate()) {
+
+				// OLD POLICY
+				// if !hit && (cache.dailyWrittenData >= cache.dailyReadOnHit) {
+				// 	reward = -reward
+				// }
+
+				if cache.dailyReadOnMiss >= cache.bandwidth || cache.dailyReadOnMiss >= cache.dailyReadOnHit {
 					reward = -reward
 				}
 				// Update table
@@ -467,6 +468,28 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				// ##### MISS branch  #####
 				// ########################
 
+				// -------------------------------------------------------------
+				// QLearn - miss reward on best action
+				curState = cache.qAdditionPrevState[request.Filename]
+				curAction = cache.qAdditionPrevAction[request.Filename]
+
+				logger.Debug("Learning MISS branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
+
+				if curState != "" { // Some action are not taken randomly
+					reward := request.Size
+					// reward := 1.
+
+					if cache.dailyReadOnHit <= cache.dailyReadOnMiss || cache.dataReadOnHit <= cache.dataReadOnMiss {
+						reward = -reward
+					}
+
+					// Update table
+					cache.additionTable.Update(curState, curAction, reward)
+					// Update epsilon
+					cache.additionTable.UpdateEpsilon()
+				}
+				// -------------------------------------------------------------
+
 				curState = cache.getState(request, fileStats, cache.additionFeatureMapOrder, cache.additionFeatureMap)
 
 				// ----- Random choice -----
@@ -492,17 +515,22 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					// }
 					reward := request.Size
 					// reward := 1.
-					// if cache.dataReadOnHit < cache.dataReadOnMiss || cache.dailyReadOnHit < cache.dailyReadOnMiss || cache.dailyReadOnMiss >= bandwidthLimit {
-					if cache.dailyReadOnHit < (cache.dailyReadOnMiss*2.) || cache.dataReadOnHit < (cache.dataReadOnMiss*2.) {
+
+					// OLD POLICY
+					// if cache.dailyReadOnHit < (cache.dailyReadOnMiss*2.) || cache.dataReadOnHit < (cache.dataReadOnMiss*2.) {
+					// 	reward = -reward
+					// }
+					if cache.dailyReadOnHit <= cache.dailyReadOnMiss || cache.dataReadOnHit <= cache.dataReadOnMiss {
 						reward = -reward
 					}
+
 					// Update table
 					cache.additionTable.Update(curState, curAction, reward)
 					// Update epsilon
 					cache.additionTable.UpdateEpsilon()
 
-					// cache.qAdditionPrevState[request.Filename] = curState
-					// cache.qAdditionPrevAction[request.Filename] = curAction
+					cache.qAdditionPrevState[request.Filename] = curState
+					cache.qAdditionPrevAction[request.Filename] = curAction
 
 					return added
 				}
@@ -542,8 +570,12 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					// }
 					reward := request.Size
 					// reward := 1.
-					// if cache.dailyReadOnMiss >= bandwidthLimit || cache.dailyWrittenData >= cache.dailyReadOnHit {
-					if cache.dailyWrittenData >= (cache.dailyReadOnHit*0.3) || cache.prevHitRate > cache.HitRate() {
+
+					// OLD POLICY
+					// if cache.dataReadOnHit < (cache.dataReadOnMiss*2.) || cache.dailyReadOnHit < (cache.dailyReadOnMiss*2.) {
+					// 	reward = -reward
+					// }
+					if cache.dailyWrittenData >= cache.dailyReadOnHit || cache.dailyReadOnMiss >= cache.bandwidth {
 						reward = -reward
 					}
 					// Update table
@@ -577,9 +609,15 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				if curState != "" { // Some action are not taken randomly
 					reward := request.Size
 					// reward := 1.
-					if cache.dataReadOnHit < (cache.dataReadOnMiss*2.) || cache.dailyReadOnHit < (cache.dailyReadOnMiss*2.) || cache.prevHitRate > cache.HitRate() {
+
+					// OLD POLICY
+					// if cache.dataReadOnHit < (cache.dataReadOnMiss*2.) || cache.dailyReadOnHit < (cache.dailyReadOnMiss*2.) {
+					// 	reward = -reward
+					// }
+					if cache.dataReadOnHit <= cache.dataReadOnMiss || cache.dailyReadOnHit <= cache.dailyReadOnMiss || cache.dailyReadOnMiss >= cache.bandwidth {
 						reward = -reward
 					}
+
 					// Update table
 					cache.additionTable.Update(curState, curAction, reward)
 					// Update epsilon
@@ -639,7 +677,6 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 // AfterRequest of cache
 func (cache *AIRL) AfterRequest(request *Request, hit bool, added bool) {
-	cache.prevHitRate = cache.HitRate()
 	if hit {
 		cache.dailyReadOnHit += request.Size
 	} else {
