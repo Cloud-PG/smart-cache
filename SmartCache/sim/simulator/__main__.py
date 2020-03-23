@@ -110,9 +110,9 @@ def prepare_process_call(args, simulator_exe, cache_type, working_dir: str,
 
 def cache_name(cache_type: str, args) -> str:
     if cache_type == "weightFunLRU":
-        cache_name = f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}_{args.weight_function}_{args.wf_param_alpha:0.2f}_{args.wf_param_beta:0.2f}_{args.wf_param_gamma:0.2f}"
+        cache_name = f"{cache_type}_{int(args.cache_size)}{args.cache_size_unit}_{args.region}_{args.weight_function}_{args.wf_param_alpha:0.2f}_{args.wf_param_beta:0.2f}_{args.wf_param_gamma:0.2f}"
     else:
-        cache_name = f"{cache_type}_{int(args.cache_size/1024**2)}T_{args.region}"
+        cache_name = f"{cache_type}_{int(args.cache_size)}{args.cache_size_unit}_{args.region}"
     return cache_name
 
 
