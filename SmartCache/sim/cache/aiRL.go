@@ -479,7 +479,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					reward := request.Size
 					// reward := 1.
 
-					if cache.dailyReadOnHit <= cache.dailyReadOnMiss || cache.dataReadOnHit <= cache.dataReadOnMiss {
+					if cache.dailyReadOnHit <= cache.dailyReadOnMiss || cache.dataReadOnHit <= cache.dataReadOnMiss || cache.dailyReadOnMiss >= cache.bandwidth {
 						reward = -reward
 					}
 
