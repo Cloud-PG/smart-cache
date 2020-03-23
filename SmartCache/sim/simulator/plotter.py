@@ -438,9 +438,14 @@ def plot_measure(tools: list,
                 points = (
                     values['read on miss data'] - values['written data']
                 ) / cache_size*100
-            elif target == "throughput":
+            elif target == "partialThroughput":
                 points = values['read on hit data'] / \
                     values['written data'] * 100.
+            elif target == "partialThroughput":
+                points = (
+                    values['read on hit data'] -
+                    values['read on miss data']
+                ) / values['written data']
             elif target == "network_in_saturation":
                 points = (values['read on miss data'] / cur_band) * 100.
             elif target == "network_out_saturation":
@@ -700,6 +705,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
 
     figs = []
     run_full_normal_hit_rate_figs = []
+    run_full_normal_throughput_figs = []
     run_full_normal_cost_figs = []
     run_full_normal_net_figs = []
     run_full_normal_data_rw_figs = []
@@ -708,7 +714,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
     run_single_window_figs = []
     run_next_period_figs = []
 
-    pbar = tqdm(total=20, desc="Plot results", ascii=True)
+    pbar = tqdm(total=22, desc="Plot results", ascii=True)
 
     ###########################################################################
     # Size plot of full normal run
@@ -797,6 +803,50 @@ def plot_results(folder: str, results: dict, cache_size: float,
     pbar.update(1)
 
     ###########################################################################
+    # Throughput plot of full normal run
+    ###########################################################################
+    with ignored(Exception):
+        throughtput_fig = plot_measure(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            x_range=size_fig.x_range,
+            title="Partial Throughput",
+            plot_width=plot_width,
+            plot_height=plot_height,
+            target="partialThroughput",
+            read_on_hit=True,
+            y_axis_label="%",
+        )
+        run_full_normal_throughput_figs.append(throughtput_fig)
+    pbar.update(1)
+
+    ###########################################################################
+    # Throughput plot of full normal run
+    ###########################################################################
+    with ignored(Exception):
+        throughtput_fig = plot_measure(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            x_range=size_fig.x_range,
+            title="Full Throughput",
+            plot_width=plot_width,
+            plot_height=plot_height,
+            target="FullThroughput",
+            read_on_hit=True,
+            y_axis_label="%",
+        )
+        run_full_normal_throughput_figs.append(throughtput_fig)
+    pbar.update(1)
+
+    ###########################################################################
     # Miss plot of full normal run
     ###########################################################################
     with ignored(Exception):
@@ -816,29 +866,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             target="miss",
             y_axis_label="%",
         )
-        run_full_normal_hit_rate_figs.append(miss_fig)
-    pbar.update(1)
-
-    ###########################################################################
-    # Throughput plot of full normal run
-    ###########################################################################
-    with ignored(Exception):
-        throughtput_fig = plot_measure(
-            tools,
-            results,
-            dates,
-            filters,
-            color_table,
-            window_size,
-            x_range=size_fig.x_range,
-            title="Throughput",
-            plot_width=plot_width,
-            plot_height=plot_height,
-            target="throughput",
-            read_on_hit=True,
-            y_axis_label="%",
-        )
-        run_full_normal_hit_rate_figs.append(throughtput_fig)
+        run_full_normal_throughput_figs.append(miss_fig)
     pbar.update(1)
 
     ###########################################################################
@@ -1202,6 +1230,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
 
     figs.append(column(
         row(*run_full_normal_hit_rate_figs),
+        row(*run_full_normal_throughput_figs),
         row(*run_full_normal_cost_figs),
         row(*run_full_normal_net_figs),
         row(*run_full_normal_data_rw_figs),
