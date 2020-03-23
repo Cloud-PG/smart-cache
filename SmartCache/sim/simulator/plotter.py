@@ -940,27 +940,6 @@ def plot_results(folder: str, results: dict, cache_size: float,
     pbar.update(1)
 
     ###########################################################################
-    # Read data plot of full normal run
-    ###########################################################################
-    with ignored(Exception):
-        read_data_fig = plot_column(
-            tools,
-            results,
-            dates,
-            filters,
-            color_table,
-            window_size,
-            x_range=size_fig.x_range,
-            column="read data",
-            title="Read data - Full Normal Run",
-            y_axis_label="Read data (MB)",
-            plot_width=plot_width,
-            plot_height=plot_height,
-        )
-        run_full_normal_data_rw_figs.append(read_data_fig)
-    pbar.update(1)
-
-    ###########################################################################
     # Deleted data plot of full normal run
     ###########################################################################
     with ignored(Exception):
@@ -982,6 +961,27 @@ def plot_results(folder: str, results: dict, cache_size: float,
             plot_height=plot_height,
         )
         run_full_normal_data_rw_figs.append(deleted_data_fig)
+    pbar.update(1)
+
+    ###########################################################################
+    # Read data plot of full normal run
+    ###########################################################################
+    with ignored(Exception):
+        read_data_fig = plot_column(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            x_range=size_fig.x_range,
+            column="read data",
+            title="Read data - Full Normal Run",
+            y_axis_label="Read data (MB)",
+            plot_width=plot_width,
+            plot_height=plot_height,
+        )
+        run_full_normal_data_rw_figs.append(read_data_fig)
     pbar.update(1)
 
     ###########################################################################
