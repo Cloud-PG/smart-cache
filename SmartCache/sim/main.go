@@ -246,13 +246,16 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			args = args[:len(args)-1]
 
 			var (
-				numRecords        int64
-				totNumRecords     int64
-				totIterations     uint32
-				numIterations     uint32
-				windowStepCounter uint32
-				windowCounter     uint32
-				recordFilter      cache.Filter
+				numDailyRecords    int64
+				numInvalidRecords  int64
+				numJumpedRecords   int64
+				numFilteredRecords int64
+				totNumRecords      int64
+				totIterations      uint32
+				numIterations      uint32
+				windowStepCounter  uint32
+				windowCounter      uint32
+				recordFilter       cache.Filter
 			)
 
 			baseName := strings.Join([]string{
@@ -454,8 +457,11 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 
 			for record := range iterator {
 
+				numIterations++
+
 				if recordFilter != nil {
 					if checkRecord := recordFilter.Check(record); checkRecord == false {
+						numFilteredRecords++
 						continue
 					}
 				}
@@ -463,12 +469,16 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				cpuEff := (record.CPUTime / (record.CPUTime + record.IOTime)) * 100.
 				// Filter records with invalid CPU efficiency
 				if cpuEff < 0. {
+					numInvalidRecords++
 					continue
 				} else if math.IsInf(cpuEff, 0) {
+					numInvalidRecords++
 					continue
 				} else if math.IsNaN(cpuEff) {
+					numInvalidRecords++
 					continue
 				} else if cpuEff > 100. {
+					numInvalidRecords++
 					continue
 				}
 
@@ -493,8 +503,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				// 	}
 				// }
 
-				numRecords++
-
+				// --------------------- Make daily output ---------------------
 				if latestTime.IsZero() {
 					latestTime = time.Unix(record.Day, 0.)
 				} else {
@@ -543,7 +552,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 						record.FileType,
 					)
 
-					numIterations++
+					numDailyRecords++
 
 					if time.Now().Sub(start).Seconds() >= outputUpdateDelay {
 						elapsedTime := time.Now().Sub(simBeginTime)
@@ -557,7 +566,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 							zap.Uint32("window", windowCounter),
 							zap.Uint32("step", windowStepCounter),
 							zap.Uint32("windowSize", simWindowSize),
-							zap.Int64("numRecords", numRecords),
+							zap.Int64("numDailyRecords", numDailyRecords),
 							zap.Float64("hitRate", curCacheInstance.HitRate()),
 							zap.Float64("capacity", curCacheInstance.Capacity()),
 							zap.String("extra", curCacheInstance.ExtraStats()),
@@ -574,20 +583,27 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 					}
 				} else if windowStepCounter == simWindowSize {
 					logger.Info("Jump records",
-						zap.Int64("numRecords", numRecords),
+						zap.Int64("numDailyRecords", numDailyRecords),
+						zap.Int64("numJumpedRecords", numJumpedRecords),
+						zap.Int64("numFilteredRecords", numFilteredRecords),
+						zap.Int64("numInvalidRecords", numInvalidRecords),
 						zap.Uint32("window", windowCounter),
 					)
 					windowCounter++
 					windowStepCounter = 0
-					numRecords = 0
+					numDailyRecords = 0
 				} else {
 					if time.Now().Sub(start).Seconds() >= outputUpdateDelay {
 						logger.Info("Jump records",
-							zap.Int64("numRecords", numRecords),
+							zap.Int64("numDailyRecords", numDailyRecords),
+							zap.Int64("numJumpedRecords", numJumpedRecords),
+							zap.Int64("numFilteredRecords", numFilteredRecords),
+							zap.Int64("numInvalidRecords", numInvalidRecords),
 							zap.Uint32("window", windowCounter),
 						)
 						start = time.Now()
 					}
+					numJumpedRecords++
 				}
 			}
 
@@ -614,7 +630,10 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			logger.Info("Simulation end...",
 				zap.String("elapsedTime", fmt.Sprintf("%02d:%02d:%02d", elTH, elTM, elTS)),
 				zap.Float64("avg it/s", avgSpeed),
-				zap.Int64("totRecords", numRecords),
+				zap.Int64("totRecords", totNumRecords),
+				zap.Int64("numJumpedRecords", numJumpedRecords),
+				zap.Int64("numFilteredRecords", numFilteredRecords),
+				zap.Int64("numInvalidRecords", numInvalidRecords),
 			)
 			// Save run statistics
 			statFile, errCreateStat := os.Create(resultRunStatsName)
