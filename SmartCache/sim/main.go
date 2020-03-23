@@ -650,10 +650,13 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				panic(errCreateStat)
 			}
 			jsonBytes, errMarshal := json.Marshal(cache.SimulationStats{
-				TimeElapsed:   fmt.Sprintf("%02d:%02d:%02d", elTH, elTM, elTS),
-				Extra:         curCacheInstance.ExtraStats(),
-				TotNumRecords: totNumRecords,
-				AvgSpeed:      fmt.Sprintf("Num.Records/s = %0.2f", avgSpeed),
+				TimeElapsed:        fmt.Sprintf("%02d:%02d:%02d", elTH, elTM, elTS),
+				Extra:              curCacheInstance.ExtraStats(),
+				TotNumRecords:      totNumRecords,
+				TotFilteredRecords: numFilteredRecords,
+				TotJumpedRecords:   numJumpedRecords,
+				TotInvalidRecords:  numInvalidRecords,
+				AvgSpeed:           fmt.Sprintf("Num.Records/s = %0.2f", avgSpeed),
 			})
 			if errMarshal != nil {
 				panic(errMarshal)
