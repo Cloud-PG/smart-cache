@@ -13,6 +13,12 @@ import (
 	"go.uber.org/zap"
 )
 
+type prevChoice struct {
+	State   string
+	Action  qlearn.ActionType
+	HitRate float64
+}
+
 // AIRL cache
 type AIRL struct {
 	SimpleCache
@@ -24,10 +30,8 @@ type AIRL struct {
 	evictionFeatureMapOrder []string
 	additionTable           qlearn.QTable
 	evictionTable           qlearn.QTable
-	qAdditionPrevState      map[int64]string
-	qAdditionPrevAction     map[int64]qlearn.ActionType
-	qEvictionPrevState      string
-	qEvictionPrevAction     qlearn.ActionType
+	qAdditionPrevStates     map[int64]prevChoice
+	qEvictionPrevState      prevChoice
 	extendedEvictionTable   bool
 	dailyReadOnHit          float64
 	dailyReadOnMiss         float64
@@ -49,8 +53,7 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 
 	cache.SimpleCache.Init()
 
-	cache.qAdditionPrevState = make(map[int64]string, 0)
-	cache.qAdditionPrevAction = make(map[int64]qlearn.ActionType, 0)
+	cache.qAdditionPrevStates = make(map[int64]prevChoice, 0)
 
 	additionFeatureMap := args[0].(string)
 	evictionFeatureMap := args[1].(string)
@@ -373,7 +376,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			// ###################################
 			// ##### Eviction Learning phase #####
 			// ###################################
-			if cache.qEvictionPrevAction != 0 && len(cache.qEvictionPrevState) != 0 {
+			if cache.qEvictionPrevState.Action == 0 && len(cache.qEvictionPrevState.State) != 0 {
 				reward := request.Size
 				// reward := 1.
 
@@ -382,11 +385,11 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				// 	reward = -reward
 				// }
 
-				if cache.dailyReadOnMiss >= cache.bandwidth || cache.dailyReadOnMiss >= cache.dailyReadOnHit {
+				if cache.qEvictionPrevState.HitRate > cache.HitRate() || cache.dailyReadOnMiss >= cache.bandwidth || cache.dailyReadOnMiss >= cache.dailyReadOnHit {
 					reward = -reward
 				}
 				// Update table
-				cache.evictionTable.Update(cache.qEvictionPrevState, cache.qEvictionPrevAction, reward)
+				cache.evictionTable.Update(cache.qEvictionPrevState.State, cache.qEvictionPrevState.Action, reward)
 				// Update epsilon
 				cache.evictionTable.UpdateEpsilon()
 			}
@@ -470,21 +473,20 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 				// -------------------------------------------------------------
 				// QLearn - miss reward on best action
-				curState = cache.qAdditionPrevState[request.Filename]
-				curAction = cache.qAdditionPrevAction[request.Filename]
+				curPrevChoice, inPrevStates := cache.qAdditionPrevStates[request.Filename]
 
-				logger.Debug("Learning MISS branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
+				logger.Debug("Learning MISS branch", zap.String("curState", curPrevChoice.State), zap.Int("curAction", int(curPrevChoice.Action)))
 
-				if curState != "" { // Some action are not taken randomly
+				if inPrevStates { // Some action are not taken randomly
 					reward := request.Size
 					// reward := 1.
 
-					if cache.dailyReadOnHit <= cache.dailyReadOnMiss || cache.dataReadOnHit <= cache.dataReadOnMiss || cache.dailyReadOnMiss >= cache.bandwidth {
+					if curPrevChoice.HitRate > cache.HitRate() || cache.dailyReadOnHit <= cache.dailyReadOnMiss || cache.dataReadOnHit <= cache.dataReadOnMiss || cache.dailyReadOnMiss >= cache.bandwidth {
 						reward = -reward
 					}
 
 					// Update table
-					cache.additionTable.Update(curState, curAction, reward)
+					cache.additionTable.Update(curPrevChoice.State, curPrevChoice.Action, reward)
 					// Update epsilon
 					cache.additionTable.UpdateEpsilon()
 				}
@@ -529,8 +531,11 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					// Update epsilon
 					cache.additionTable.UpdateEpsilon()
 
-					cache.qAdditionPrevState[request.Filename] = curState
-					cache.qAdditionPrevAction[request.Filename] = curAction
+					cache.qAdditionPrevStates[request.Filename] = prevChoice{
+						State:   curState,
+						Action:  curAction,
+						HitRate: cache.HitRate(),
+					}
 
 					return added
 				}
@@ -583,8 +588,11 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					// Update epsilon
 					cache.additionTable.UpdateEpsilon()
 
-					cache.qAdditionPrevState[request.Filename] = curState
-					cache.qAdditionPrevAction[request.Filename] = curAction
+					cache.qAdditionPrevStates[request.Filename] = prevChoice{
+						State:   curState,
+						Action:  curAction,
+						HitRate: cache.HitRate(),
+					}
 				}
 
 			} else {
@@ -601,12 +609,11 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 				// -------------------------------------------------------------
 				// QLearn - hit reward on best action
-				curState = cache.qAdditionPrevState[request.Filename]
-				curAction = cache.qAdditionPrevAction[request.Filename]
+				curPrevChoice, inPrevStates := cache.qAdditionPrevStates[request.Filename]
 
 				logger.Debug("Learning HIT branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
 
-				if curState != "" { // Some action are not taken randomly
+				if inPrevStates { // Some action are not taken randomly
 					reward := request.Size
 					// reward := 1.
 
@@ -614,12 +621,12 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					// if cache.dataReadOnHit < (cache.dataReadOnMiss*2.) || cache.dailyReadOnHit < (cache.dailyReadOnMiss*2.) {
 					// 	reward = -reward
 					// }
-					if cache.dataReadOnHit <= cache.dataReadOnMiss || cache.dailyReadOnHit <= cache.dailyReadOnMiss || cache.dailyReadOnMiss >= cache.bandwidth {
+					if curPrevChoice.HitRate > cache.HitRate() || cache.dataReadOnHit <= cache.dataReadOnMiss || cache.dailyReadOnHit <= cache.dailyReadOnMiss || cache.dailyReadOnMiss >= cache.bandwidth {
 						reward = -reward
 					}
 
 					// Update table
-					cache.additionTable.Update(curState, curAction, reward)
+					cache.additionTable.Update(curPrevChoice.State, curPrevChoice.Action, reward)
 					// Update epsilon
 					cache.additionTable.UpdateEpsilon()
 				}
@@ -729,8 +736,11 @@ func (cache *AIRL) Free(amount float64, percentage bool) float64 {
 				curAction = cache.evictionTable.Actions[randomActionIdx]
 			}
 
-			cache.qEvictionPrevState = curState
-			cache.qEvictionPrevAction = curAction
+			cache.qEvictionPrevState = prevChoice{
+				State:   curState,
+				Action:  curAction,
+				HitRate: cache.HitRate(),
+			}
 
 		} else {
 			curAction = qlearn.ActionRemoveWithLRU
@@ -764,12 +774,16 @@ func (cache *AIRL) Free(amount float64, percentage bool) float64 {
 
 			deletedFiles = append(deletedFiles, curFile.Filename)
 
+			_, inPrevStates := cache.qAdditionPrevStates[curFile.Filename]
+			if inPrevStates {
+				delete(cache.qAdditionPrevStates, curFile.Filename)
+			}
+
 			if totalDeleted >= sizeToDelete {
 				break
 			}
 		}
 		cache.files.Remove(deletedFiles)
-
 	}
 
 	return totalDeleted
