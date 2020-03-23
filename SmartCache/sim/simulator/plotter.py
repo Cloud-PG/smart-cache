@@ -415,7 +415,7 @@ def plot_measure(tools: list,
         results, run_type, filters
     ):
         if run_type == "run_full_normal":
-            if target == "cost":
+            if target == "globalCost":
                 cache_size = float(cache_name.split("T_")
                                    [0].rsplit("_", 1)[-1])
                 cache_size = cache_size * 1024**2
@@ -423,6 +423,13 @@ def plot_measure(tools: list,
                     values['written data'] +
                     values['deleted data'] +
                     values['read on miss data']
+                ) / cache_size * 100.
+            elif target == "cacheCost":
+                cache_size = float(cache_name.split("T_")
+                                   [0].rsplit("_", 1)[-1])
+                cache_size = cache_size * 1024**2
+                points = (
+                    values['written data'] + values['deleted data']
                 ) / cache_size * 100.
             elif target == "miss":
                 cache_size = float(cache_name.split("T_")
@@ -693,6 +700,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
 
     figs = []
     run_full_normal_hit_rate_figs = []
+    run_full_normal_cost_figs = []
     run_full_normal_net_figs = []
     run_full_normal_data_rw_figs = []
     run_full_normal_data_read_stats_figs = []
@@ -743,10 +751,10 @@ def plot_results(folder: str, results: dict, cache_size: float,
     pbar.update(1)
 
     ###########################################################################
-    # Cost plot of full normal run
+    # Global Cost plot of full normal run
     ###########################################################################
     with ignored(Exception):
-        cost_fig = plot_measure(
+        global_cost_fig = plot_measure(
             tools,
             results,
             dates,
@@ -755,14 +763,37 @@ def plot_results(folder: str, results: dict, cache_size: float,
             window_size,
             x_range=size_fig.x_range,
             y_axis_type="log",
-            title="Cost",
+            title="Global cost",
             plot_width=plot_width,
             plot_height=plot_height,
             read_on_hit=True,
-            target="cost",
+            target="globalCost",
             y_axis_label="%",
         )
-        run_full_normal_hit_rate_figs.append(cost_fig)
+        run_full_normal_cost_figs.append(global_cost_fig)
+    pbar.update(1)
+
+    ###########################################################################
+    # Cache Cost plot of full normal run
+    ###########################################################################
+    with ignored(Exception):
+        cache_cost_fig = plot_measure(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            x_range=size_fig.x_range,
+            y_axis_type="log",
+            title="Cache cost",
+            plot_width=plot_width,
+            plot_height=plot_height,
+            read_on_hit=True,
+            target="cacheCost",
+            y_axis_label="%",
+        )
+        run_full_normal_cost_figs.append(cache_cost_fig)
     pbar.update(1)
 
     ###########################################################################
@@ -1171,6 +1202,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
 
     figs.append(column(
         row(*run_full_normal_hit_rate_figs),
+        row(*run_full_normal_cost_figs),
         row(*run_full_normal_net_figs),
         row(*run_full_normal_data_rw_figs),
         row(*run_full_normal_data_read_stats_figs),
