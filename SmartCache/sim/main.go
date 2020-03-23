@@ -96,7 +96,7 @@ func main() {
 		"[Profiling] Profile the Memory during the simulation. If a file is specified the Memory will be profiled on that file. Note that memprofile will stop the simulation after 1 iteration.",
 	)
 	rootCmd.PersistentFlags().Float64Var(
-		&cacheSize, "size", 10., // 10TB
+		&cacheSize, "size", 100., // 100TB
 		"[Simulation] cache size",
 	)
 	rootCmd.PersistentFlags().StringVar(

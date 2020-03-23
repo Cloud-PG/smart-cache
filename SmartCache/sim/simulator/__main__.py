@@ -24,7 +24,7 @@ from .utils import get_logger, load_results, str2bool, wait_jobs
 def prepare_process_call(args, simulator_exe, cache_type, working_dir: str,
                          start_window: int, stop_window: int, window_idx: int = 0,
                          wf_parameters: dict = None,
-                         dump: bool = False, dump_files_and_stats: bool=True,
+                         dump: bool = False, dump_files_and_stats: bool = True,
                          load: bool = False, dump_dir: str = "",
                          cold_start: bool = False, cold_start_no_stats: bool = False
                          ) -> str:
@@ -36,6 +36,7 @@ def prepare_process_call(args, simulator_exe, cache_type, working_dir: str,
         cache_type,
         path.abspath(args.source),
         f"--size={args.cache_size}",
+        f"--sizeUnit={args.cache_size_unit}",
         f"--simRegion={args.region}",
         f"--simFileType={args.file_type}",
         f"--simWindowSize={args.window_size}",
@@ -45,7 +46,8 @@ def prepare_process_call(args, simulator_exe, cache_type, working_dir: str,
 
     if dump:
         exe_args.append("--simDump=true")
-        exe_args.append(f"--simDumpFilesAndStats={'true' if dump_files_and_stats else 'false'}")
+        exe_args.append(
+            f"--simDumpFilesAndStats={'true' if dump_files_and_stats else 'false'}")
         exe_args.append("--simDumpFileName=dump.json.gz")
     if load:
         exe_args.append("--simLoadDump=true")
@@ -170,9 +172,12 @@ def main():
     parser.add_argument('--group-by', type=str, choices=['family', 'None'],
                         default="None",
                         help='Group table results by constraint [DEFAULT: None]')
-    parser.add_argument('--cache-size', type=int,
-                        default=104857600,
-                        help='Size of the cache to simulate in Mega Bytes [DEFAULT: 104857600]')
+    parser.add_argument('--cache-size', type=float,
+                        default=100.,
+                        help='Size of the cache to simulate [DEFAULT: 100]')
+    parser.add_argument('--cache-size-unit', choices=['M', 'G', 'T'],
+                        default='T',
+                        help='Unit of cache size [DEFAULT: T]')
     parser.add_argument('-R', '--region', type=str,
                         default="all",
                         help='Region of the data to simulate [DEFAULT: "all"]')
