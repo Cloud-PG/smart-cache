@@ -37,6 +37,7 @@ var (
 	aiRLEpsilonDecay       float64
 	buildstamp             string
 	cacheSize              float64
+	cacheSizeUnit          string
 	cpuprofile             string
 	dataset2TestPath       string
 	githash                string
@@ -95,8 +96,12 @@ func main() {
 		"[Profiling] Profile the Memory during the simulation. If a file is specified the Memory will be profiled on that file. Note that memprofile will stop the simulation after 1 iteration.",
 	)
 	rootCmd.PersistentFlags().Float64Var(
-		&cacheSize, "size", 10485760., // 10TB
+		&cacheSize, "size", 10., // 10TB
 		"[Simulation] cache size",
+	)
+	rootCmd.PersistentFlags().StringVar(
+		&cacheSizeUnit, "sizeUnit", "T", // Terabytes
+		"[Simulation] cache size unit",
 	)
 	rootCmd.PersistentFlags().Float64Var(
 		&outputUpdateDelay, "outputUpdateDelay", 2.4,
@@ -256,11 +261,14 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				windowStepCounter  uint32
 				windowCounter      uint32
 				recordFilter       cache.Filter
+				cacheSizeString    string
 			)
+
+			cacheSizeString = fmt.Sprintf("%0.0f%s", cacheSize, strings.ToUpper(cacheSizeUnit))
 
 			baseName := strings.Join([]string{
 				cacheType,
-				fmt.Sprintf("%0.0fT", cacheSize/(1024.*1024.)),
+				cacheSizeString,
 				simRegion,
 			}, "_")
 
@@ -537,8 +545,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				if windowCounter == simStopWindow {
 					break
 				} else if windowCounter >= simStartFromWindow {
-					// TODO: make size measure a parameter: [K, M, G, P]
-					sizeInMbytes := record.Size / (1024 * 1024)
+					sizeInMbytes := record.SizeM // Size in Megabytes
 
 					cache.GetFile(
 						curCacheInstance,
@@ -724,69 +731,70 @@ func testDataset() *cobra.Command {
 func genCache(cacheType string) cache.Cache {
 	logger := zap.L()
 	var cacheInstance cache.Cache
+	cacheSizeMegabytes := cache.GetCacheSize(cacheSize, cacheSizeUnit)
 	switch cacheType {
 	case "lru":
 		logger.Info("Create LRU Cache",
-			zap.Float64("cacheSize", cacheSize),
+			zap.Float64("cacheSize", cacheSizeMegabytes),
 		)
 		cacheInstance = &cache.SimpleCache{
-			MaxSize: cacheSize,
+			MaxSize: cacheSizeMegabytes,
 		}
 		cacheInstance.Init()
 	case "lfu":
 		logger.Info("Create LFU Cache",
-			zap.Float64("cacheSize", cacheSize),
+			zap.Float64("cacheSize", cacheSizeMegabytes),
 		)
 		cacheInstance = &cache.SimpleCache{
-			MaxSize: cacheSize,
+			MaxSize: cacheSizeMegabytes,
 		}
 		cacheInstance.Init(cache.LFUQueue)
 	case "sizeBig":
 		logger.Info("Create Size Big Cache",
-			zap.Float64("cacheSize", cacheSize),
+			zap.Float64("cacheSize", cacheSizeMegabytes),
 		)
 		cacheInstance = &cache.SimpleCache{
-			MaxSize: cacheSize,
+			MaxSize: cacheSizeMegabytes,
 		}
 		cacheInstance.Init(cache.SizeBigQueue)
 	case "sizeSmall":
 		logger.Info("Create Size Small Cache",
-			zap.Float64("cacheSize", cacheSize),
+			zap.Float64("cacheSize", cacheSizeMegabytes),
 		)
 		cacheInstance = &cache.SimpleCache{
-			MaxSize: cacheSize,
+			MaxSize: cacheSizeMegabytes,
 		}
 		cacheInstance.Init(cache.SizeSmallQueue)
 	case "lruDatasetVerifier":
 		logger.Info("Create lruDatasetVerifier Cache",
-			zap.Float64("cacheSize", cacheSize),
+			zap.Float64("cacheSize", cacheSizeMegabytes),
 		)
 		cacheInstance = &cache.LRUDatasetVerifier{
 			SimpleCache: cache.SimpleCache{
-				MaxSize: cacheSize,
+				MaxSize: cacheSizeMegabytes,
 			},
 		}
 	case "aiNN":
 		logger.Info("Create aiNN Cache",
-			zap.Float64("cacheSize", cacheSize),
+			zap.Float64("cacheSize", cacheSizeMegabytes),
 		)
 		cacheInstance = &cache.AINN{
 			SimpleCache: cache.SimpleCache{
-				MaxSize: cacheSize,
+				MaxSize: cacheSizeMegabytes,
 			},
 		}
 	case "aiRL":
 		logger.Info("Create aiRL Cache",
-			zap.Float64("cacheSize", cacheSize),
+			zap.Float64("cacheSize", cacheSizeMegabytes),
 		)
 		cacheInstance = &cache.AIRL{
 			SimpleCache: cache.SimpleCache{
-				MaxSize: cacheSize,
+				MaxSize: cacheSizeMegabytes,
 			},
 		}
 	case "weightFunLRU":
 		logger.Info("Create Weight Function Cache",
-			zap.Float64("cacheSize", cacheSize),
+			zap.Float64("cacheSize", cacheSizeMegabytes),
 		)
 
 		var (
@@ -809,7 +817,7 @@ func genCache(cacheType string) cache.Cache {
 
 		cacheInstance = &cache.WeightFunLRU{
 			SimpleCache: cache.SimpleCache{
-				MaxSize: cacheSize,
+				MaxSize: cacheSizeMegabytes,
 			},
 			Parameters: cache.WeightFunctionParameters{
 				Alpha: weightAlpha,

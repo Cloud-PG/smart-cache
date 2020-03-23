@@ -85,6 +85,7 @@ type CSVRecord struct {
 	CPUTime         float64 `json:"CPUTime"`
 	IOTime          float64 `json:"IOTime"`
 	Size            float64 `json:"size"`
+	SizeM           float64 `json:"sizeM"`
 }
 
 func recordGenerator(csvReader *csv.Reader, curFile *os.File, headerMap []int) chan CSVRecord {
@@ -123,6 +124,8 @@ func recordGenerator(csvReader *csv.Reader, curFile *os.File, headerMap []int) c
 			campain, _ := strconv.ParseInt(record[headerMap[23]], 10, 64)
 			process, _ := strconv.ParseInt(record[headerMap[24]], 10, 64)
 
+			sizeInMegabytes := size / (1024. * 1024.)
+
 			curRecord := CSVRecord{
 				Day:           int64(day),
 				Region:        region,
@@ -141,6 +144,7 @@ func recordGenerator(csvReader *csv.Reader, curFile *os.File, headerMap []int) c
 				CPUTime:       cputime,
 				IOTime:        iotime,
 				Size:          size,
+				SizeM:         sizeInMegabytes,
 				Campain:       campain,
 				Process:       process,
 			}
@@ -311,4 +315,18 @@ func (filter UsMINIAODandNOFNALLPCFilter) Check(record CSVRecord) bool {
 		return true
 	}
 	return false
+}
+
+// GetCacheSize returns the cache size in megabytes
+func GetCacheSize(cacheSize float64, cacheSizeUnit string) float64 {
+	res := -1.
+	switch cacheSizeUnit {
+	case "M", "m":
+		res = cacheSize
+	case "G", "g":
+		res = cacheSize * 1024.
+	case "T", "t":
+		res = cacheSize * 1024. * 1024.
+	}
+	return res
 }
