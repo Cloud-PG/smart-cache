@@ -510,29 +510,6 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 
 				totNumRecords++
 
-				if recordFilter != nil {
-					if checkRecord := recordFilter.Check(record); checkRecord == false {
-						numFilteredRecords++
-						continue
-					}
-				}
-
-				cpuEff := (record.CPUTime / (record.CPUTime + record.IOTime)) * 100.
-				// Filter records with invalid CPU efficiency
-				if cpuEff < 0. {
-					numInvalidRecords++
-					continue
-				} else if math.IsInf(cpuEff, 0) {
-					numInvalidRecords++
-					continue
-				} else if math.IsNaN(cpuEff) {
-					numInvalidRecords++
-					continue
-				} else if cpuEff > 100. {
-					numInvalidRecords++
-					continue
-				}
-
 				// if strings.Compare(simRegion, "all") != 0 {
 				// 	if strings.Index(strings.ToLower(record.SiteName), selectedRegion) == -1 {
 				// 		// TODO: fix jump output
@@ -553,6 +530,29 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				// }
 
 				if windowCounter >= simStartFromWindow {
+					if recordFilter != nil {
+						if checkRecord := recordFilter.Check(record); checkRecord == false {
+							numFilteredRecords++
+							continue
+						}
+					}
+
+					cpuEff := (record.CPUTime / (record.CPUTime + record.IOTime)) * 100.
+					// Filter records with invalid CPU efficiency
+					if cpuEff < 0. {
+						numInvalidRecords++
+						continue
+					} else if math.IsInf(cpuEff, 0) {
+						numInvalidRecords++
+						continue
+					} else if math.IsNaN(cpuEff) {
+						numInvalidRecords++
+						continue
+					} else if cpuEff > 100. {
+						numInvalidRecords++
+						continue
+					}
+
 					sizeInMbytes := record.SizeM // Size in Megabytes
 
 					cache.GetFile(
