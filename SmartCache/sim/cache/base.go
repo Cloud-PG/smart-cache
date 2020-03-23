@@ -45,6 +45,7 @@ type Request struct {
 type Cache interface {
 	Init(...interface{}) interface{}
 	SetRegion(string)
+	SetBandwidth(float64)
 
 	Dumps(fileAndStats bool) [][]byte
 	Dump(filename string, fileAndStats bool)

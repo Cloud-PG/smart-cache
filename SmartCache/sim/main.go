@@ -65,6 +65,7 @@ var (
 	simStartFromWindow     uint32
 	simStopWindow          uint32
 	simWindowSize          uint32
+	simBandwidth           float64
 	weightAlpha            float64
 	weightBeta             float64
 	weightFunc             string
@@ -239,6 +240,11 @@ func addSimFlags(cmd *cobra.Command) {
 		&aiRLEpsilonDecay, "aiRLEpsilonDecay", 0.0000042,
 		"indicates the decay rate value of Epsilon in the RL method",
 	)
+	cmd.PersistentFlags().Float64Var(
+		&simBandwidth, "simBandwidth", 10.0,
+		"indicates the network bandwidth available in Gbit",
+	)
+
 }
 
 func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
@@ -290,6 +296,16 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			copy(args, args[2:])
 			args = args[:len(args)-1]
 
+			var (
+				numRecords        int64
+				totNumRecords     int64
+				totIterations     uint32
+				numIterations     uint32
+				windowStepCounter uint32
+				windowCounter     uint32
+				recordFilter      cache.Filter
+			)
+
 			baseName := strings.Join([]string{
 				cacheType,
 				fmt.Sprintf("%0.0fT", cacheSize/(1024.*1024.)),
@@ -317,9 +333,19 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			resultAdditionQTableName := baseName + "_additionQtable.csv"
 			resultEvictionQTableName := baseName + "_evictionQtable.csv"
 
-			// Create cache
+			// ------------------------- Create cache --------------------------
 			var grpcConn interface{} = nil
 			curCacheInstance := genCache(cacheType)
+			curCacheInstance.SetBandwidth(simBandwidth)
+			// selectedRegion := fmt.Sprintf("_%s_", strings.ToLower(simRegion))
+			switch simRegion {
+			// TODO: add filter as a parameter
+			case "us":
+				recordFilter = cache.UsMINIAODNOFNALLPCNOT1FNALLFilter{}
+				curCacheInstance.SetRegion("us")
+			case "it":
+				curCacheInstance.SetRegion("it")
+			}
 
 			switch typeCmd {
 			case aiSimCmd:
@@ -462,25 +488,6 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 
 			if simDump {
 				defer curCacheInstance.Dump(simDumpFileName, simDumpFilesAndStats)
-			}
-
-			var (
-				numRecords        int64
-				totNumRecords     int64
-				totIterations     uint32
-				numIterations     uint32
-				windowStepCounter uint32
-				windowCounter     uint32
-				recordFilter      cache.Filter
-			)
-			// selectedRegion := fmt.Sprintf("_%s_", strings.ToLower(simRegion))
-			switch simRegion {
-			// TODO: add filter as a parameter
-			case "us":
-				recordFilter = cache.UsMINIAODNOFNALLPCNOT1FNALLFilter{}
-				curCacheInstance.SetRegion("us")
-			case "it":
-				curCacheInstance.SetRegion("it")
 			}
 
 			simBeginTime := time.Now()

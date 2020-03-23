@@ -23,6 +23,8 @@ const (
 	// MeanCPUDiffUS is the mean difference value of CPU efficiency in US region
 	// Extracted from 2018 stats (upper bound - lower bound)
 	MeanCPUDiffUS = 10.
+	// DailyBandwidth1Gbit is 1Gibt day bandwidth available
+	DailyBandwidth1Gbit = (1000. / 8.) * 60. * 60. * 24.
 )
 
 // SimpleCache cache
@@ -43,6 +45,7 @@ type SimpleCache struct {
 	prevTime                           time.Time
 	curTime                            time.Time
 	region                             string
+	bandwidth                          float64
 }
 
 // Init the LRU struct
@@ -73,6 +76,11 @@ func (cache *SimpleCache) Init(vars ...interface{}) interface{} {
 // SetRegion initialize the region field
 func (cache *SimpleCache) SetRegion(region string) {
 	cache.region = region
+}
+
+// SetBandwidth initialize the bandwidth field
+func (cache *SimpleCache) SetBandwidth(bandwidth float64) {
+	cache.bandwidth = bandwidth * DailyBandwidth1Gbit
 }
 
 // ClearFiles remove the cache files
