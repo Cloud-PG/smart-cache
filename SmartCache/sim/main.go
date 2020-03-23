@@ -468,6 +468,48 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 
 				numIterations++
 
+				// --------------------- Make daily output ---------------------
+				if latestTime.IsZero() {
+					latestTime = time.Unix(record.Day, 0.)
+				}
+
+				curTime := time.Unix(record.Day, 0.)
+
+				if curTime.Sub(latestTime).Hours() >= 24. {
+					csvSimOutput.Write([]string{
+						fmt.Sprintf("%s", latestTime),
+						fmt.Sprintf("%f", curCacheInstance.Size()),
+						fmt.Sprintf("%0.2f", curCacheInstance.HitRate()),
+						fmt.Sprintf("%0.2f", curCacheInstance.HitOverMiss()),
+						fmt.Sprintf("%0.2f", curCacheInstance.WeightedHitRate()),
+						fmt.Sprintf("%f", curCacheInstance.DataWritten()),
+						fmt.Sprintf("%f", curCacheInstance.DataRead()),
+						fmt.Sprintf("%f", curCacheInstance.DataReadOnHit()),
+						fmt.Sprintf("%f", curCacheInstance.DataReadOnMiss()),
+						fmt.Sprintf("%f", curCacheInstance.DataDeleted()),
+						fmt.Sprintf("%f", curCacheInstance.CPUEff()),
+						fmt.Sprintf("%f", curCacheInstance.CPUHitEff()),
+						fmt.Sprintf("%f", curCacheInstance.CPUMissEff()),
+						fmt.Sprintf("%f", curCacheInstance.CPUEffUpperBound()),
+						fmt.Sprintf("%f", curCacheInstance.CPUEffLowerBound()),
+					})
+					curCacheInstance.ClearHitMissStats()
+					// Update time window
+					latestTime = curTime
+					windowStepCounter++
+				}
+
+				if windowStepCounter == simWindowSize {
+					windowCounter++
+					windowStepCounter = 0
+					numDailyRecords = 1
+				}
+				if windowCounter == simStopWindow {
+					break
+				}
+
+				totNumRecords++
+
 				if recordFilter != nil {
 					if checkRecord := recordFilter.Check(record); checkRecord == false {
 						numFilteredRecords++
@@ -491,8 +533,6 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 					continue
 				}
 
-				totNumRecords++
-
 				// if strings.Compare(simRegion, "all") != 0 {
 				// 	if strings.Index(strings.ToLower(record.SiteName), selectedRegion) == -1 {
 				// 		// TODO: fix jump output
@@ -512,40 +552,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				// 	}
 				// }
 
-				// --------------------- Make daily output ---------------------
-				if latestTime.IsZero() {
-					latestTime = time.Unix(record.Day, 0.)
-				} else {
-					curTime := time.Unix(record.Day, 0.)
-					if curTime.Sub(latestTime).Hours() >= 24. {
-						if windowCounter >= simStartFromWindow {
-							csvSimOutput.Write([]string{
-								fmt.Sprintf("%s", latestTime),
-								fmt.Sprintf("%f", curCacheInstance.Size()),
-								fmt.Sprintf("%0.2f", curCacheInstance.HitRate()),
-								fmt.Sprintf("%0.2f", curCacheInstance.HitOverMiss()),
-								fmt.Sprintf("%0.2f", curCacheInstance.WeightedHitRate()),
-								fmt.Sprintf("%f", curCacheInstance.DataWritten()),
-								fmt.Sprintf("%f", curCacheInstance.DataRead()),
-								fmt.Sprintf("%f", curCacheInstance.DataReadOnHit()),
-								fmt.Sprintf("%f", curCacheInstance.DataReadOnMiss()),
-								fmt.Sprintf("%f", curCacheInstance.DataDeleted()),
-								fmt.Sprintf("%f", curCacheInstance.CPUEff()),
-								fmt.Sprintf("%f", curCacheInstance.CPUHitEff()),
-								fmt.Sprintf("%f", curCacheInstance.CPUMissEff()),
-								fmt.Sprintf("%f", curCacheInstance.CPUEffUpperBound()),
-								fmt.Sprintf("%f", curCacheInstance.CPUEffLowerBound()),
-							})
-							curCacheInstance.ClearHitMissStats()
-						}
-						latestTime = time.Unix(record.Day, 0.)
-						windowStepCounter++
-					}
-				}
-
-				if windowCounter == simStopWindow {
-					break
-				} else if windowCounter >= simStartFromWindow {
+				if windowCounter >= simStartFromWindow {
 					sizeInMbytes := record.SizeM // Size in Megabytes
 
 					cache.GetFile(
@@ -585,22 +592,8 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 						start = time.Now()
 					}
 
-					if windowStepCounter == simWindowSize {
-						windowCounter++
-						windowStepCounter = 0
-					}
-				} else if windowStepCounter == simWindowSize {
-					logger.Info("Jump records",
-						zap.Int64("numDailyRecords", numDailyRecords),
-						zap.Int64("numJumpedRecords", numJumpedRecords),
-						zap.Int64("numFilteredRecords", numFilteredRecords),
-						zap.Int64("numInvalidRecords", numInvalidRecords),
-						zap.Uint32("window", windowCounter),
-					)
-					windowCounter++
-					windowStepCounter = 0
-					numDailyRecords = 0
 				} else {
+					numJumpedRecords++
 					if time.Now().Sub(start).Seconds() >= outputUpdateDelay {
 						logger.Info("Jump records",
 							zap.Int64("numDailyRecords", numDailyRecords),
@@ -611,7 +604,6 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 						)
 						start = time.Now()
 					}
-					numJumpedRecords++
 				}
 			}
 
