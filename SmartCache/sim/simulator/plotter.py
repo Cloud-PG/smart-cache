@@ -441,7 +441,7 @@ def plot_measure(tools: list,
             elif target == "partialThroughput":
                 points = values['read on hit data'] / \
                     values['written data'] * 100.
-            elif target == "partialThroughput":
+            elif target == "fullThroughput":
                 points = (
                     values['read on hit data'] -
                     values['read on miss data']
