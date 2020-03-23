@@ -179,15 +179,15 @@ class cache(object):
             return np.array(list_).mean()
 
 class env:
-    def __init__(self, start_month: int = 1, end_month: int = 2, directory: str = "/home/ubuntu/source2018_numeric_it_shuffle_42"):
+    def __init__(self, start_month, end_month, directory, out_directory, out_name):
         
         self.time_span = time_span
         self.curRequest = 0
         self._startMonth = start_month
         self._endMonth = end_month
         self._directory = directory
-
-
+        self._out_directory = out_directory
+        self._out_name = out_name
 
         start = datetime(2018, 1, 1)
         delta = timedelta(days=1)
@@ -267,19 +267,19 @@ class env:
         self.eviction_counter = 0
         self.addiction_counter = 0
 
-        with open('results/results_ok_stats_{}/addition_choices_{}.csv'.format(str(time_span), self.addiction_counter), 'w') as file:
-            writer = csv.writer(file)
-            writer.writerow(['addition choice'])
+        #with open(self._out_directory + '/addition_choices_{}.csv'.format(self.addiction_counter), 'w') as file:
+        #    writer = csv.writer(file)
+        #    writer.writerow(['addition choice'])
     
-        with open('results/results_ok_stats_{}/eviction_choices_{}.csv'.format(str(time_span), self.eviction_counter), 'w') as file:
-            writer = csv.writer(file)
-            writer.writerow(['eviction choice'])
+        #with open(self._out_directory + '/eviction_choices_{}.csv'.format(self.eviction_counter), 'w') as file:
+        #    writer = csv.writer(file)
+        #    writer.writerow(['eviction choice'])
 
         print('Environment initialized')
 
     def write_stats(self):
         if self.curDay == self._idx_start:
-            with open('results/results_ok_stats_{}/dQlONLYeviction_100T_it_shuffle_startmonth{}_endmonth{}.csv'.format(str(time_span),self._startMonth,self._endMonth), 'w', newline='') as file:
+            with open(self._out_directory  + '/' + self._out_name, 'w', newline='') as file:
                 writer = csv.writer(file)
                 writer.writerow(
                     ['date',
@@ -297,10 +297,10 @@ class env:
                      'CPU miss efficiency',
                      'cost'])
 
-        with open('results/results_ok_stats_{}/dQlONLYeviction_100T_it_shuffle_startmonth{}_endmonth{}.csv'.format(str(time_span),self._startMonth,self._endMonth), 'a', newline='') as file:
+        with open(self._out_directory + '/' + self._out_name, 'a', newline='') as file:
             writer = csv.writer(file)
             writer.writerow(
-                [str(datetime.fromtimestamp(self.df.loc[0, 'reqDay']) + timedelta(days=1) ) + ' +0200 UTC',
+                [str(datetime.fromtimestamp(self.df.loc[0, 'reqDay']) ) + ' +0000 UTC',
                  self._cache._size,
                  self._cache.hit_rate() * 100.0,
                  self._cache._hit/self._cache._miss * 100.0,
@@ -344,6 +344,7 @@ class env:
             df_['Size'] = df_['Size']/1.049e+6
             self.df = df_
             self.df_length = len(self.df)
+        print()
         print(file_)
 
     def last_filename_action(self, filename, add_or_evict):
@@ -358,7 +359,7 @@ class env:
                 if self._eviction_window_filenames[N-1-i] == filename:
                     return self._eviction_window_actions[N-1-i]
 
-    def update_windows_getting_eventual_rewards(self, curFilename, curValues, nextValues, action, add_memory_vector, evict_memory_vector, end_of_adding):
+    def update_windows_getting_eventual_rewards(self, adding_or_evicting, curFilename, curValues, nextValues, action, add_memory_vector, evict_memory_vector):
         if adding_or_evicting == 0:
             for key in self._request_window_counters:                                                #increment counters
                 self._request_window_counters[key] +=  1
@@ -376,15 +377,20 @@ class env:
                         self._request_window_rewards[curFilename] = + 1
                     else:
                         self._request_window_rewards[curFilename] = - 1
-                add_memory_vector.append(np.array([self._request_window_cur_values[curFilename], self._request_window_actions[curFilename], self._request_window_rewards[curFilename],  self._request_window_cur_values[curFilename])
-                del self._request_window_cur_values[curFilename], self._request_window_actions[curFilename], self._request_window_rewards[curFilename],  self._request_window_cur_values[curFilename]
+                add_memory_vector.append(np.array([self._request_window_cur_values[curFilename], self._request_window_actions[curFilename], self._request_window_rewards[curFilename],  self._request_window_cur_values[curFilename]]))
+                
+                del self._request_window_counters[curFilename]             
+                del self._request_window_cur_values[curFilename]
+                del self._request_window_actions[curFilename] 
+                del self._request_window_rewards[curFilename]
+                del self._request_window_next_values[curFilename]
 
             else:                                                           #if isnt in queue
-                _request_window_counters[curFilename] = 1
-                _request_window_actions[curFilename] = action
-                _request_window_rewards[curFilename] = 0
-                _request_window_cur_values[curFilename] = curValues
-                _request_window_next_values[curFilename] = nextValues 
+                self._request_window_counters[curFilename] = 1
+                self._request_window_actions[curFilename] = action
+                self._request_window_rewards[curFilename] = 0
+                self._request_window_cur_values[curFilename] = curValues
+                self._request_window_next_values[curFilename] = nextValues 
             
         else:
             if curFilename in self._eviction_window_cur_values.keys():            #if is in queue
@@ -394,36 +400,51 @@ class env:
                     else:
                         self._eviction_window_rewards[curFilename] = + 1
                 else:                                                                           #is not invalidated yet
-                    if self._eviction_window_actions[curFilename] == 1:
+                    if self._eviction_window_actions[curFilename] == 0:
                         self._eviction_window_rewards[curFilename] = + 1
                     else:
                         self._eviction_window_rewards[curFilename] = - 1
-                evict_memory_vector.append(np.array([self._eviction_window_cur_values[curFilename], self._eviction_window_actions[curFilename], self._eviction_window_rewards[curFilename],  self._eviction_window_cur_values[curFilename])
-                del self._eviction_window_cur_values[curFilename], self._eviction_window_actions[curFilename], self._eviction_window_rewards[curFilename],  self._eviction_window_cur_values[curFilename]
+                evict_memory_vector.append(np.array([self._eviction_window_cur_values[curFilename], self._eviction_window_actions[curFilename], self._eviction_window_rewards[curFilename],  self._eviction_window_cur_values[curFilename]]))
+                
+                del self._eviction_window_counters[curFilename]
+                del self._eviction_window_cur_values[curFilename]
+                del self._eviction_window_actions[curFilename] 
+                del self._eviction_window_rewards[curFilename]
+                del self._eviction_window_next_values[curFilename]   
 
             else:                                                           #if isnt in queue
-                _eviction_window_counters[curFilename] = 1
-                _eviction_window_actions[curFilename] = action
-                _eviction_window_rewards[curFilename] = 0
-                _eviction_window_cur_values[curFilename] = curValues
-                _eviction_window_next_values[curFilename] = nextValues 
+                self._eviction_window_counters[curFilename] = 1
+                self._eviction_window_actions[curFilename] = action
+                self._eviction_window_rewards[curFilename] = 0
+                self._eviction_window_cur_values[curFilename] = curValues
+                self._eviction_window_next_values[curFilename] = nextValues 
 
-    def clear_window(self):
+    def clear_window(self,add_memory_vector,evict_memory_vector):
         for curFilename in self._request_window_counters.keys():
             if self._request_window_actions[curFilename] == 0:
                 self._request_window_rewards[curFilename] = - 1
             else:
                 self._request_window_rewards[curFilename] = + 1
-            add_memory_vector.append(np.array([self._request_window_cur_values[curFilename], self._request_window_actions[curFilename], self._request_window_rewards[curFilename],  self._request_window_cur_values[curFilename])
-            del self._request_window_cur_values[curFilename], self._request_window_actions[curFilename], self._request_window_rewards[curFilename],  self._request_window_cur_values[curFilename]
+            add_memory_vector.append(np.array([self._request_window_cur_values[curFilename], self._request_window_actions[curFilename], self._request_window_rewards[curFilename],  self._request_window_cur_values[curFilename]]))
+            
+        self._request_window_counters.clear()  
+        self._request_window_cur_values.clear()
+        self._request_window_actions.clear()
+        self._request_window_rewards.clear()
+        self._request_window_next_values.clear()
 
         for curFilename in self._eviction_window_counters.keys():                                             
             if self._eviction_window_actions[curFilename] == 0:
                 self._eviction_window_rewards[curFilename] = - 1
             else:
                 self._eviction_window_rewards[curFilename] = + 1
-            evict_memory_vector.append(np.array([self._eviction_window_cur_values[curFilename], self._eviction_window_actions[curFilename], self._eviction_window_rewards[curFilename],  self._eviction_window_cur_values[curFilename])
-            del self._eviction_window_cur_values[curFilename], self._eviction_window_actions[curFilename], self._eviction_window_rewards[curFilename],  self._eviction_window_cur_values[curFilename]
+            evict_memory_vector.append(np.array([self._eviction_window_cur_values[curFilename], self._eviction_window_actions[curFilename], self._eviction_window_rewards[curFilename],  self._eviction_window_cur_values[curFilename]]))
+            
+        self._eviction_window_counters.clear()     
+        self._eviction_window_cur_values.clear()
+        self._eviction_window_actions.clear()
+        self._eviction_window_rewards.clear() 
+        self._eviction_window_cur_values.clear()
 
 
     def get_this_request_stats(self):
@@ -557,7 +578,6 @@ class env:
         self._cache.update_recency()
         added = self._cache.update_policy(filename, filestats, hit, action)
         self._cache.after_request(filestats, hit, added)
-        print('Request: ' + str(self.curRequest) + ' / ' + str(self.df_length) + '  -  Occupancy: ' + str(round(self._cache.capacity,2)) + '%  -  ' + 'Hit rate: ' + str(round(self._cache._hit/(self._cache._hit + self._cache._miss)*100,2)) +'%' + ' ACTION: ' +  str(action) + ' ' + str(self._cache._get_mean_size(self.curRequest,self.curDay) * len(self._cache._filesLRU) / self._cache._max_size))
 
     def purge(self):
         for key, value in self._cache._stats._files.items():
