@@ -67,21 +67,20 @@ def job_run(processes: list) -> bool:
         if running:
             current_output = read_output_last_line(process.stdout)
             if current_output:
+                cur_output_string = f"[{process.pid}][RUNNING][{task_name}]{current_output}"
                 print(
-                    f"[{process.pid}][RUNNING][{task_name}]{current_output}\x1b[0K",
+                    cur_output_string,
                     flush=True
                 )
                 running_processes.append(running)
         else:
             print(
-                f"[{process.pid}][DONE][{task_name}][Return code -> {process.returncode}]\x1b[0K", flush=True)
+                f"[{process.pid}][DONE][{task_name}][Return code -> {process.returncode}]", flush=True)
             if process.returncode != 0:
                 print(
                     f"[{process.pid}][DONE][{task_name}][Return code -> {process.returncode}]", flush=True)
                 print(f"{process.stdout.read().decode('ascii')}", flush=True)
                 exit(process.returncode)
-
-    print(f"\x1b[{len(processes)+1}F")
 
     return len(running_processes) > 0
 
