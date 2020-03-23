@@ -247,3 +247,6 @@ results/results_ok_stats_30000/eviction_choices_0.csv
 dql_stats-Copy1.ipynb
 
 results/*
+profile_test
+profile_mellowmax.py
+training.py
