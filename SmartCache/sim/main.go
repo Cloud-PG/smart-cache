@@ -510,25 +510,6 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 
 				totNumRecords++
 
-				// if strings.Compare(simRegion, "all") != 0 {
-				// 	if strings.Index(strings.ToLower(record.SiteName), selectedRegion) == -1 {
-				// 		// TODO: fix jump output
-				// 		// fmt.Printf("[Jump region %s]\r",
-				// 		// 	record.SiteName,
-				// 		// )
-				// 		continue
-				// 	}
-				// }
-				// if strings.Compare(simFileType, "all") != 0 {
-				// 	if strings.Index(strings.ToLower(record.FileType), strings.ToLower(simFileType)) == -1 {
-				// 		// TODO: fix jump output
-				// 		// fmt.Printf("[Jump file type %s]\r",
-				// 		// 	record.FileType,
-				// 		// )
-				// 		continue
-				// 	}
-				// }
-
 				if windowCounter >= simStartFromWindow {
 					if recordFilter != nil {
 						if checkRecord := recordFilter.Check(record); checkRecord == false {
