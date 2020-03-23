@@ -38,10 +38,8 @@ type AINN struct {
 func (cache *AINN) Init(args ...interface{}) interface{} {
 	cache.SimpleCache.Init()
 
-	cache.aiClientHost = args[0].(string)
-	cache.aiClientPort = args[1].(string)
-	featureMapFilePath := args[2].(string)
-	modelFilePath := args[3].(string)
+	featureMapFilePath := args[0].(string)
+	modelFilePath := args[1].(string)
 
 	cache.aiFeatureOrder = []string{
 		"siteName",
@@ -69,24 +67,7 @@ func (cache *AINN) Init(args ...interface{}) interface{} {
 
 	cache.aiFeatureMap = featuremap.Parse(featureMapFilePath)
 
-	if modelFilePath == "" && cache.aiClientHost != "" && cache.aiClientPort != "" {
-		var opts []grpc.DialOption
-		opts = append(opts, grpc.WithInsecure())
-		opts = append(opts, grpc.WithBlock())
-
-		conn, err := grpc.Dial(fmt.Sprintf("%s:%s",
-			cache.aiClientHost, cache.aiClientPort,
-		), opts...)
-
-		cache.grpcConn = conn
-		if err != nil {
-			log.Fatalf("ERROR: Fail to dial wit AI Client: %v", err)
-		}
-
-		cache.aiClient = aiPb.NewAIServiceClient(cache.grpcConn)
-
-		return cache.grpcConn
-	} else if modelFilePath != "" {
+	if modelFilePath != "" {
 		cache.aiModel = neuralnet.LoadModel(modelFilePath)
 	}
 

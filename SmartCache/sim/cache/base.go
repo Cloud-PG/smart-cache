@@ -1,12 +1,9 @@
 package cache
 
 import (
-	"context"
 	"time"
 
 	pb "simulator/v2/cache/simService"
-
-	empty "github.com/golang/protobuf/ptypes/empty"
 )
 
 // DumpRecord represents a record in the dump file
@@ -84,14 +81,6 @@ type Cache interface {
 	BeforeRequest(request *Request, hit bool) *FileStats
 	UpdatePolicy(request *Request, fileStats *FileStats, hit bool) bool
 	AfterRequest(request *Request, hit bool, added bool)
-
-	SimGet(context.Context, *pb.SimCommonFile) (*pb.ActionResult, error)
-	SimClear(context.Context, *empty.Empty) (*pb.SimCacheStatus, error)
-	SimClearFiles(context.Context, *empty.Empty) (*pb.SimCacheStatus, error)
-	SimClearHitMissStats(context.Context, *empty.Empty) (*pb.SimCacheStatus, error)
-	SimGetInfoCacheStatus(context.Context, *empty.Empty) (*pb.SimCacheStatus, error)
-	SimDumps(*empty.Empty, pb.SimService_SimDumpsServer) error
-	SimLoads(pb.SimService_SimLoadsServer) error
 }
 
 // GetSimCacheStatus create a cache status message

@@ -5,20 +5,16 @@ import (
 	"fmt"
 	"log"
 	"math"
-	"net"
 	"os"
 	"runtime/pprof"
 	"strings"
 	"time"
 
 	"simulator/v2/cache"
-	pb "simulator/v2/cache/simService"
 
 	"github.com/fatih/color"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-
-	"google.golang.org/grpc"
 
 	"github.com/spf13/cobra"
 )
@@ -33,9 +29,7 @@ func initZapLog(level zapcore.Level) *zap.Logger {
 
 var (
 	aiFeatureMap           string
-	aiHost                 string
 	aiModel                string
-	aiPort                 string
 	aiRLAdditionFeatureMap string
 	aiRLEvictionFeatureMap string
 	aiRLExtTable           bool
@@ -50,8 +44,6 @@ var (
 	logLevel               string
 	memprofile             string
 	outputUpdateDelay      float64
-	serviceHost            string
-	servicePort            int32
 	simColdStart           bool
 	simColdStartNoStats    bool
 	simDump                bool
@@ -82,7 +74,6 @@ const (
 
 func main() {
 	rootCmd := &cobra.Command{}
-	rootCmd.AddCommand(commandServe())
 	rootCmd.AddCommand(commandSimulate())
 	rootCmd.AddCommand(commandSimulateAI())
 	rootCmd.AddCommand(testDataset())
@@ -106,14 +97,6 @@ func main() {
 	rootCmd.PersistentFlags().Float64Var(
 		&cacheSize, "size", 10485760., // 10TB
 		"[Simulation] cache size",
-	)
-	rootCmd.PersistentFlags().StringVar(
-		&serviceHost, "host", "localhost",
-		"[Simulation] Ip to listen to",
-	)
-	rootCmd.PersistentFlags().Int32Var(
-		&servicePort, "port", 5432,
-		"[Simulation] cache sim service port",
 	)
 	rootCmd.PersistentFlags().Float64Var(
 		&outputUpdateDelay, "outputUpdateDelay", 2.4,
@@ -143,40 +126,6 @@ func main() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err.Error())
 	}
-}
-
-func commandServe() *cobra.Command {
-	cmd := &cobra.Command{
-		Run: func(cmd *cobra.Command, args []string) {
-			// Get first element and reuse same memory space to allocate args
-			cacheType := args[0]
-			copy(args, args[1:])
-			args = args[:len(args)-1]
-
-			// Create cache
-			curCacheInstance := genCache(cacheType)
-
-			grpcServer := grpc.NewServer()
-			fmt.Printf("[Register '%s' Cache]\n", cacheType)
-			pb.RegisterSimServiceServer(grpcServer, curCacheInstance)
-
-			fmt.Printf("[Try to listen to %s:%d]\n", serviceHost, servicePort)
-			lis, err := net.Listen("tcp", fmt.Sprintf("%s:%d", serviceHost, servicePort))
-			if err != nil {
-				log.Fatalf("ERR: failed to listen on %s:%d -> %v", serviceHost, servicePort, err)
-			}
-			fmt.Printf("[Start server on %s:%d]\n", serviceHost, servicePort)
-
-			if err := grpcServer.Serve(lis); err != nil {
-				log.Fatalf("ERR: grpc serve error '%s'", err)
-			}
-		},
-		Use:   `serve cacheType`,
-		Short: "Simulator service",
-		Long:  "Run a cache simulator service",
-		Args:  cobra.MaximumNArgs(1),
-	}
-	return cmd
 }
 
 func addSimFlags(cmd *cobra.Command) {
@@ -334,7 +283,6 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			resultEvictionQTableName := baseName + "_evictionQtable.csv"
 
 			// ------------------------- Create cache --------------------------
-			var grpcConn interface{} = nil
 			curCacheInstance := genCache(cacheType)
 			curCacheInstance.SetBandwidth(simBandwidth)
 			// selectedRegion := fmt.Sprintf("_%s_", strings.ToLower(simRegion))
@@ -355,10 +303,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 						fmt.Println("ERR: No feature map indicated...")
 						os.Exit(-1)
 					}
-					grpcConn = curCacheInstance.Init(aiHost, aiPort, aiFeatureMap, aiModel)
-					if grpcConn != nil {
-						defer grpcConn.(*grpc.ClientConn).Close()
-					}
+					curCacheInstance.Init(aiFeatureMap, aiModel)
 				case "aiRL":
 					if aiRLAdditionFeatureMap == "" {
 						logger.Info("No addition feature map indicated...")
@@ -707,14 +652,6 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 	addSimFlags(cmd)
 	switch typeCmd {
 	case aiSimCmd:
-		cmd.PersistentFlags().StringVar(
-			&aiHost, "aiHost", "localhost",
-			"indicate the filter for record region",
-		)
-		cmd.PersistentFlags().StringVar(
-			&aiPort, "aiPort", "4242",
-			"indicate the filter for record region",
-		)
 		cmd.PersistentFlags().StringVar(
 			&aiFeatureMap, "aiFeatureMap", "",
 			"the feature map file for data conversions",

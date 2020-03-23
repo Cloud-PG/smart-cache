@@ -2,7 +2,6 @@ package cache
 
 import (
 	"compress/gzip"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,9 +9,6 @@ import (
 	"os"
 	"time"
 
-	pb "simulator/v2/cache/simService"
-
-	empty "github.com/golang/protobuf/ptypes/empty"
 	"go.uber.org/zap"
 )
 
@@ -230,76 +226,6 @@ func (cache *SimpleCache) Load(filename string) [][]byte {
 	greader.Close()
 
 	return records
-}
-
-// SimGet updates the cache from a protobuf message
-func (cache *SimpleCache) SimGet(ctx context.Context, commonFile *pb.SimCommonFile) (*pb.ActionResult, error) {
-	added := GetFile(cache, commonFile.Filename, commonFile.Size, 0.0, 0.0)
-	return &pb.ActionResult{
-		Filename: commonFile.Filename,
-		Added:    added,
-	}, nil
-}
-
-// SimClear deletes all cache content
-func (cache *SimpleCache) SimClear(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
-	cache.Clear()
-	curStatus := GetSimCacheStatus(cache)
-	return curStatus, nil
-}
-
-// SimClearFiles deletes all cache content
-func (cache *SimpleCache) SimClearFiles(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
-	cache.ClearFiles()
-	curStatus := GetSimCacheStatus(cache)
-	return curStatus, nil
-}
-
-// SimClearHitMissStats deletes all cache content
-func (cache *SimpleCache) SimClearHitMissStats(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
-	cache.ClearHitMissStats()
-	curStatus := GetSimCacheStatus(cache)
-	return curStatus, nil
-}
-
-// SimGetInfoCacheStatus returns the current simulation status
-func (cache *SimpleCache) SimGetInfoCacheStatus(ctx context.Context, _ *empty.Empty) (*pb.SimCacheStatus, error) {
-	curStatus := GetSimCacheStatus(cache)
-	return curStatus, nil
-}
-
-// SimDumps returns the content of the cache
-func (cache *SimpleCache) SimDumps(_ *empty.Empty, stream pb.SimService_SimDumpsServer) error {
-	for _, record := range cache.Dumps(true) {
-		curRecord := &pb.SimDumpRecord{
-			Raw: record,
-		}
-		if err := stream.Send(curRecord); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// SimLoads loads a cache state
-func (cache *SimpleCache) SimLoads(stream pb.SimService_SimLoadsServer) error {
-	var records [][]byte
-	records = make([][]byte, 0)
-
-	for {
-		record, err := stream.Recv()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return err
-		}
-		records = append(records, record.Raw)
-	}
-
-	cache.Loads(records)
-
-	return nil
 }
 
 // BeforeRequest of LRU cache
