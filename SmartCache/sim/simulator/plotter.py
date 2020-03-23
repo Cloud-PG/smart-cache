@@ -839,7 +839,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             title="Full Throughput",
             plot_width=plot_width,
             plot_height=plot_height,
-            target="FullThroughput",
+            target="fullThroughput",
             read_on_hit=True,
             y_axis_label="%",
         )
