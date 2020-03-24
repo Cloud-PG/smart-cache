@@ -293,6 +293,20 @@ type Filter interface {
 	Check(CSVRecord) bool
 }
 
+// UsMINIAODNOT1andT3 for USA MINIAOD records without fnalpc and T1
+type UsMINIAODNOT1andT3 struct {
+}
+
+// Check if the record have to be sent to the cache
+func (filter UsMINIAODNOT1andT3) Check(record CSVRecord) bool {
+	// Check if file type == MINIAOD, MINIAODSIM
+	// Check if site != T1_US_FNAL, T3_US_FNALLPC
+	if (record.FileType == 2 || record.FileType == 9) && record.SiteName < 9 {
+		return true
+	}
+	return false
+}
+
 // UsMINIAODNOFNALLPCNOT1FNALLFilter for USA MINIAOD records without fnalpc and T1
 type UsMINIAODNOFNALLPCNOT1FNALLFilter struct {
 }

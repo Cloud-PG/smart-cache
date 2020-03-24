@@ -301,7 +301,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			switch simRegion {
 			// TODO: add filter as a parameter
 			case "us":
-				recordFilter = cache.UsMINIAODNOFNALLPCNOT1FNALLFilter{}
+				recordFilter = cache.UsMINIAODNOT1andT3{}
 				curCacheInstance.SetRegion("us")
 			case "it":
 				curCacheInstance.SetRegion("it")
