@@ -87,6 +87,7 @@ def plot_column(tools: list,
                 plot_height: int = 480,
                 upper_bound: str = None,
                 lower_bound: str = None,
+                outer_legend: bool = False,
                 ) -> 'Figure':
     cur_fig = figure(
         tools=tools,
@@ -344,7 +345,7 @@ def plot_column(tools: list,
     legend = Legend(items=legend_items, location=(0, 0))
     legend.location = "top_right"
     legend.click_policy = "hide"
-    cur_fig.add_layout(legend, 'right')
+    cur_fig.add_layout(legend, 'right' if outer_legend else 'center')
     cur_fig.yaxis.formatter = BasicTickFormatter(use_scientific=False)
     cur_fig.xaxis.formatter = FuncTickFormatter(code="""
     var day = parseInt(tick.split("-")[2], 10)
@@ -381,6 +382,7 @@ def plot_measure(tools: list,
                  plot_height: int = 480,
                  target: str = None,
                  bandwidth: int = 10,
+                 outer_legend: bool = False,
                  ) -> 'Figure':
     cur_fig = figure(
         tools=tools,
@@ -638,7 +640,7 @@ def plot_measure(tools: list,
     legend = Legend(items=legend_items, location=(0, 0))
     legend.location = "top_right"
     legend.click_policy = "hide"
-    cur_fig.add_layout(legend, 'right')
+    cur_fig.add_layout(legend, 'right' if outer_legend else 'center')
     cur_fig.yaxis.formatter = BasicTickFormatter(
         use_scientific=False)
     cur_fig.xaxis.major_label_orientation = np.pi / 4.
@@ -659,6 +661,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
                  plot_width: int = 640,
                  plot_height: int = 480,
                  bandwidth: int = 10,
+                 outer_legend: bool = False,
                  ):
     color_table = {}
     dates = []
@@ -732,6 +735,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             plot_width=plot_width,
             plot_height=plot_height,
             y_axis_label="MB",
+            outer_legend=outer_legend,
         )
         run_full_normal_hit_rate_figs.append(size_fig)
     pbar.update(1)
@@ -752,6 +756,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             title="Hit Rate - Full Normal Run",
             plot_width=plot_width,
             plot_height=plot_height,
+            outer_legend=outer_legend,
         )
         run_full_normal_hit_rate_figs.append(hit_rate_fig)
     pbar.update(1)
@@ -775,6 +780,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             read_on_hit=True,
             target="costFunction",
             y_axis_label="%",
+            outer_legend=outer_legend,
         )
         run_full_normal_cost_figs.append(global_cost_fig)
     pbar.update(1)
@@ -798,6 +804,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             read_on_hit=True,
             target="cacheCost",
             y_axis_label="%",
+            outer_legend=outer_legend,
         )
         run_full_normal_cost_figs.append(cache_cost_fig)
     pbar.update(1)
@@ -820,6 +827,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             target="throughput",
             read_on_hit=True,
             y_axis_label="%",
+            outer_legend=outer_legend,
         )
         run_full_normal_throughput_figs.append(throughtput_fig)
     pbar.update(1)
@@ -842,6 +850,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             target="diffThroughput",
             read_on_hit=True,
             y_axis_label="%",
+            outer_legend=outer_legend,
         )
         run_full_normal_throughput_figs.append(throughtput_fig)
     pbar.update(1)
@@ -865,6 +874,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             read_on_hit=True,
             target="miss",
             y_axis_label="%",
+            outer_legend=outer_legend,
         )
         run_full_normal_throughput_figs.append(miss_fig)
     pbar.update(1)
@@ -888,6 +898,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             read_on_hit=False,
             target="network_in_saturation",
             bandwidth=bandwidth,
+            outer_legend=outer_legend,
         )
         run_full_normal_net_figs.append(net_in)
     pbar.update(1)
@@ -911,6 +922,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             read_on_hit=False,
             target="network_out_saturation",
             bandwidth=bandwidth,
+            outer_legend=outer_legend,
         )
         run_full_normal_net_figs.append(net_in)
     pbar.update(1)
@@ -935,6 +947,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             y_axis_label="Written data",
             plot_width=plot_width,
             plot_height=plot_height,
+            outer_legend=outer_legend,
         )
         run_full_normal_data_rw_figs.append(written_data_fig)
     pbar.update(1)
@@ -959,6 +972,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             y_axis_label="Deleted data",
             plot_width=plot_width,
             plot_height=plot_height,
+            outer_legend=outer_legend,
         )
         run_full_normal_data_rw_figs.append(deleted_data_fig)
     pbar.update(1)
@@ -980,6 +994,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             y_axis_label="Read data (MB)",
             plot_width=plot_width,
             plot_height=plot_height,
+            outer_legend=outer_legend,
         )
         run_full_normal_data_rw_figs.append(read_data_fig)
     pbar.update(1)
@@ -1005,6 +1020,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             plot_width=plot_width,
             plot_height=plot_height,
             upper_bound="read data",
+            outer_legend=outer_legend,
         )
         run_full_normal_data_read_stats_figs.append(read_data_fig)
     pbar.update(1)
@@ -1030,6 +1046,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             plot_width=plot_width,
             plot_height=plot_height,
             upper_bound="read data",
+            outer_legend=outer_legend,
         )
         run_full_normal_data_read_stats_figs.append(read_data_fig)
     pbar.update(1)
@@ -1053,6 +1070,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             plot_height=plot_height,
             upper_bound="CPU efficiency upper bound",
             lower_bound="CPU efficiency lower bound",
+            outer_legend=outer_legend,
         )
         run_full_normal_cpu_eff_figs.append(cpu_eff)
     pbar.update(1)
@@ -1074,6 +1092,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             y_axis_label="%",
             plot_width=plot_width,
             plot_height=plot_height,
+            outer_legend=outer_legend,
         )
         run_full_normal_cpu_eff_figs.append(read_on_hit_eff)
     pbar.update(1)
@@ -1095,6 +1114,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             y_axis_label="%",
             plot_width=plot_width,
             plot_height=plot_height,
+            outer_legend=outer_legend,
         )
         run_full_normal_cpu_eff_figs.append(read_on_miss_eff)
     pbar.update(1)
@@ -1116,6 +1136,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             run_type="run_single_window",
             plot_width=plot_width,
             plot_height=plot_height,
+            outer_legend=outer_legend,
         )
         run_single_window_figs.append(hit_rate_comp_snw_fig)
     pbar.update(1)
@@ -1137,6 +1158,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             plot_width=plot_width,
             plot_height=plot_height,
             read_on_hit=False,
+            outer_legend=outer_legend,
         )
         run_single_window_figs.append(ronwdata_comp_snw_fig)
     pbar.update(1)
@@ -1158,6 +1180,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             plot_width=plot_width,
             plot_height=plot_height,
             read_on_hit=True,
+            outer_legend=outer_legend,
         )
         run_single_window_figs.append(rhonwdata_comp_snw_fig)
     pbar.update(1)
@@ -1180,6 +1203,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             datetimes=datetimes,
             plot_width=plot_width,
             plot_height=plot_height,
+            outer_legend=outer_legend,
         )
         run_next_period_figs.append(hit_rate_comp_swnp_fig)
     pbar.update(1)
@@ -1202,6 +1226,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             plot_width=plot_width,
             plot_height=plot_height,
             read_on_hit=False,
+            outer_legend=outer_legend,
         )
         run_next_period_figs.append(ronwdata_comp_swnp_fig)
     pbar.update(1)
@@ -1224,6 +1249,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             plot_width=plot_width,
             plot_height=plot_height,
             read_on_hit=True,
+            outer_legend=outer_legend,
         )
         run_next_period_figs.append(rhonwdata_comp_swnp_fig)
     pbar.update(1)

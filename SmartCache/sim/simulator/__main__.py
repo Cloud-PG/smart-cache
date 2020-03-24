@@ -202,6 +202,9 @@ def main():
     parser.add_argument('--out-html', type='bool',
                         default=True,
                         help='Plot the output as a html [DEFAULT: True]')
+    parser.add_argument('--outer-legend', type='bool',
+                        default=False,
+                        help='Plot the legend outside the figure [DEFAULT: False]')
     parser.add_argument('--load-prev-normal-run', type='bool',
                         default=False,
                         help='Loads the previous normal run [DEFAULT: False]')
@@ -514,6 +517,7 @@ def main():
             plot_width=plot_width,
             plot_height=plot_height,
             bandwidth=args.plot_bandwidth,
+            outer_legend=args.outer_legend,
         )
 
     elif args.action == "train":
