@@ -385,7 +385,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				// 	reward = -reward
 				// }
 
-				if cache.qEvictionPrevState.HitRate > cache.HitRate() || cache.dailyReadOnMiss >= cache.bandwidth || cache.dailyReadOnMiss >= cache.dailyReadOnHit {
+				if cache.qEvictionPrevState.HitRate > cache.HitRate() && (cache.dailyReadOnMiss >= (cache.bandwidth*0.75) || cache.dailyReadOnHit <= (cache.dailyReadOnMiss*0.5)) {
 					reward = -reward
 				}
 				// Update table
@@ -481,7 +481,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					reward := request.Size
 					// reward := 1.
 
-					if curPrevChoice.HitRate > cache.HitRate() || cache.dailyReadOnHit <= cache.dailyReadOnMiss || cache.dataReadOnHit <= cache.dataReadOnMiss || cache.dailyReadOnMiss >= cache.bandwidth {
+					if curPrevChoice.HitRate > cache.HitRate() && (cache.dailyReadOnHit <= (cache.dailyReadOnMiss*0.5) || cache.dailyReadOnMiss >= (cache.bandwidth*0.75)) {
 						reward = -reward
 					}
 
@@ -522,7 +522,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					// if cache.dailyReadOnHit < (cache.dailyReadOnMiss*2.) || cache.dataReadOnHit < (cache.dataReadOnMiss*2.) {
 					// 	reward = -reward
 					// }
-					if cache.dailyReadOnHit <= cache.dailyReadOnMiss || cache.dataReadOnHit <= cache.dataReadOnMiss {
+					if cache.dailyReadOnHit <= (cache.dailyReadOnMiss * 0.5) {
 						reward = -reward
 					}
 
@@ -580,7 +580,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					// if cache.dataReadOnHit < (cache.dataReadOnMiss*2.) || cache.dailyReadOnHit < (cache.dailyReadOnMiss*2.) {
 					// 	reward = -reward
 					// }
-					if cache.dailyWrittenData >= cache.dailyReadOnHit || cache.dailyReadOnMiss >= cache.bandwidth {
+					if cache.dailyWrittenData >= (cache.dailyReadOnHit*0.3) || cache.dailyReadOnMiss >= (cache.bandwidth*0.75) {
 						reward = -reward
 					}
 					// Update table
@@ -621,7 +621,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					// if cache.dataReadOnHit < (cache.dataReadOnMiss*2.) || cache.dailyReadOnHit < (cache.dailyReadOnMiss*2.) {
 					// 	reward = -reward
 					// }
-					if curPrevChoice.HitRate > cache.HitRate() || cache.dataReadOnHit <= cache.dataReadOnMiss || cache.dailyReadOnHit <= cache.dailyReadOnMiss || cache.dailyReadOnMiss >= cache.bandwidth {
+					if curPrevChoice.HitRate > cache.HitRate() && (cache.dailyReadOnHit <= (cache.dailyReadOnMiss*0.5) || cache.dailyReadOnMiss >= (cache.bandwidth*0.75)) {
 						reward = -reward
 					}
 
