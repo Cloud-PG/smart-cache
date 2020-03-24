@@ -452,6 +452,10 @@ def plot_measure(tools: list,
                 points = (values['read on miss data'] / cur_band) * 100.
             elif target == "network_out_saturation":
                 points = (values['read data'] / cur_band) * 100.
+            elif target == "readOnHitRatio":
+                points = values['read on hit data'] / values['read data']
+            elif target == "readOnMissRatio":
+                points = values['read on miss data'] / values['read data']
             else:
                 raise Exception(f"Unknown target '{target}'...")
             cur_line = cur_fig.line(
@@ -717,7 +721,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
     run_single_window_figs = []
     run_next_period_figs = []
 
-    pbar = tqdm(total=22, desc="Plot results", ascii=True)
+    pbar = tqdm(total=24, desc="Plot results", ascii=True)
 
     ###########################################################################
     # Size plot of full normal run
@@ -997,6 +1001,52 @@ def plot_results(folder: str, results: dict, cache_size: float,
             outer_legend=outer_legend,
         )
         run_full_normal_data_rw_figs.append(read_data_fig)
+    pbar.update(1)
+    
+    ###########################################################################
+    # Read on hit ratio plot of full normal run
+    ###########################################################################
+    with ignored(Exception):
+        read_on_hit_ratio_fig = plot_measure(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            x_range=size_fig.x_range,
+            title="Read on hit ratio",
+            plot_width=plot_width,
+            plot_height=plot_height,
+            read_on_hit=True,
+            target="readOnHitRatio",
+            y_axis_label="ratio",
+            outer_legend=outer_legend,
+        )
+        run_full_normal_data_read_stats_figs.append(read_on_hit_ratio_fig)
+    pbar.update(1)
+    
+    ###########################################################################
+    # Read on miss ratio plot of full normal run
+    ###########################################################################
+    with ignored(Exception):
+        read_on_miss_ratio_fig = plot_measure(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            x_range=size_fig.x_range,
+            title="Read on miss ratio",
+            plot_width=plot_width,
+            plot_height=plot_height,
+            read_on_miss=True,
+            target="readOnMissRatio",
+            y_axis_label="ratio",
+            outer_legend=outer_legend,
+        )
+        run_full_normal_data_read_stats_figs.append(read_on_miss_ratio_fig)
     pbar.update(1)
 
     ###########################################################################
