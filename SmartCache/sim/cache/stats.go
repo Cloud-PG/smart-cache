@@ -65,7 +65,7 @@ func (statStruct *Stats) Purge() {
 			numDeletedFiles++
 		}
 	}
-	logger.Info("Stats purged", zap.Int("NumDeletedFiles", numDeletedFiles))
+	logger.Debug("Stats purged", zap.Int("NumDeletedFiles", numDeletedFiles))
 	statStruct.firstUpdateTime = statStruct.lastUpdateTime
 }
 
