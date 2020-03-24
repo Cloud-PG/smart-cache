@@ -403,7 +403,7 @@ class env:
                         self._eviction_window_rewards[curFilename] = - 1
 
                 to_add = np.array([self._eviction_window_cur_values[curFilename], self._eviction_window_actions[curFilename], self._eviction_window_rewards[curFilename],  self._eviction_window_next_values[curFilename]])
-                to_add = np.reshape(to_add, (1,4))
+                to_add = np.reshape(to_add, (1,16))
                 self.evict_memory_vector = np.vstack((self.evict_memory_vector, to_add))
                 
                 del self._eviction_window_counters[curFilename]
@@ -426,7 +426,7 @@ class env:
             else:
                 self._request_window_rewards[curFilename] = + 1
             to_add = np.array([self._request_window_cur_values[curFilename], self._request_window_actions[curFilename], self._request_window_rewards[curFilename],  self._request_window_next_values[curFilename]])
-            to_add = np.reshape(to_add, (1,4))
+            to_add = np.reshape(to_add, (1,16))
             self.add_memory_vector = np.vstack((self.add_memory_vector, to_add))            
         self._request_window_counters.clear()  
         self._request_window_cur_values.clear()
@@ -440,7 +440,7 @@ class env:
             else:
                 self._eviction_window_rewards[curFilename] = + 1
             to_add = np.array([self._eviction_window_cur_values[curFilename], self._eviction_window_actions[curFilename], self._eviction_window_rewards[curFilename],  self._eviction_window_next_values[curFilename]])
-            to_add = np.reshape(to_add, (1,4))
+            to_add = np.reshape(to_add, (1,16))
             self.evict_memory_vector = np.vstack((self.evict_memory_vector, to_add))            
         self._eviction_window_counters.clear()     
         self._eviction_window_cur_values.clear()
