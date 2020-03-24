@@ -453,9 +453,11 @@ def plot_measure(tools: list,
             elif target == "network_out_saturation":
                 points = (values['read data'] / cur_band) * 100.
             elif target == "readOnHitRatio":
-                points = values['read on hit data'] / values['read data']
+                points = (values['read on hit data'] /
+                          values['read data']) * 100.
             elif target == "readOnMissRatio":
-                points = values['read on miss data'] / values['read data']
+                points = (values['read on miss data'] /
+                          values['read data']) * 100.
             else:
                 raise Exception(f"Unknown target '{target}'...")
             cur_line = cur_fig.line(
@@ -995,7 +997,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
         )
         run_full_normal_data_rw_figs.append(read_data_fig)
     pbar.update(1)
-    
+
     ###########################################################################
     # Read on hit ratio plot of full normal run
     ###########################################################################
@@ -1012,12 +1014,12 @@ def plot_results(folder: str, results: dict, cache_size: float,
             plot_width=plot_width,
             plot_height=plot_height,
             target="readOnHitRatio",
-            y_axis_label="ratio",
+            y_axis_label="%",
             outer_legend=outer_legend,
         )
         run_full_normal_data_read_stats_figs.append(read_on_hit_ratio_fig)
     pbar.update(1)
-    
+
     ###########################################################################
     # Read on miss ratio plot of full normal run
     ###########################################################################
@@ -1034,7 +1036,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             plot_width=plot_width,
             plot_height=plot_height,
             target="readOnMissRatio",
-            y_axis_label="ratio",
+            y_axis_label="%",
             outer_legend=outer_legend,
         )
         run_full_normal_data_read_stats_figs.append(read_on_miss_ratio_fig)
