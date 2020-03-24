@@ -504,7 +504,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				if windowStepCounter == simWindowSize {
 					windowCounter++
 					windowStepCounter = 0
-					numDailyRecords = 1
+					numDailyRecords = 0
 				}
 				if windowCounter == simStopWindow {
 					break
