@@ -476,23 +476,25 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				curTime := time.Unix(record.Day, 0.)
 
 				if curTime.Sub(latestTime).Hours() >= 24. {
-					csvSimOutput.Write([]string{
-						fmt.Sprintf("%s", latestTime),
-						fmt.Sprintf("%f", curCacheInstance.Size()),
-						fmt.Sprintf("%0.2f", curCacheInstance.HitRate()),
-						fmt.Sprintf("%0.2f", curCacheInstance.HitOverMiss()),
-						fmt.Sprintf("%0.2f", curCacheInstance.WeightedHitRate()),
-						fmt.Sprintf("%f", curCacheInstance.DataWritten()),
-						fmt.Sprintf("%f", curCacheInstance.DataRead()),
-						fmt.Sprintf("%f", curCacheInstance.DataReadOnHit()),
-						fmt.Sprintf("%f", curCacheInstance.DataReadOnMiss()),
-						fmt.Sprintf("%f", curCacheInstance.DataDeleted()),
-						fmt.Sprintf("%f", curCacheInstance.CPUEff()),
-						fmt.Sprintf("%f", curCacheInstance.CPUHitEff()),
-						fmt.Sprintf("%f", curCacheInstance.CPUMissEff()),
-						fmt.Sprintf("%f", curCacheInstance.CPUEffUpperBound()),
-						fmt.Sprintf("%f", curCacheInstance.CPUEffLowerBound()),
-					})
+					if windowCounter >= simStartFromWindow {
+						csvSimOutput.Write([]string{
+							fmt.Sprintf("%s", latestTime),
+							fmt.Sprintf("%f", curCacheInstance.Size()),
+							fmt.Sprintf("%0.2f", curCacheInstance.HitRate()),
+							fmt.Sprintf("%0.2f", curCacheInstance.HitOverMiss()),
+							fmt.Sprintf("%0.2f", curCacheInstance.WeightedHitRate()),
+							fmt.Sprintf("%f", curCacheInstance.DataWritten()),
+							fmt.Sprintf("%f", curCacheInstance.DataRead()),
+							fmt.Sprintf("%f", curCacheInstance.DataReadOnHit()),
+							fmt.Sprintf("%f", curCacheInstance.DataReadOnMiss()),
+							fmt.Sprintf("%f", curCacheInstance.DataDeleted()),
+							fmt.Sprintf("%f", curCacheInstance.CPUEff()),
+							fmt.Sprintf("%f", curCacheInstance.CPUHitEff()),
+							fmt.Sprintf("%f", curCacheInstance.CPUMissEff()),
+							fmt.Sprintf("%f", curCacheInstance.CPUEffUpperBound()),
+							fmt.Sprintf("%f", curCacheInstance.CPUEffLowerBound()),
+						})
+					}
 					curCacheInstance.ClearHitMissStats()
 					// Update time window
 					latestTime = curTime
