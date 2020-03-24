@@ -167,7 +167,7 @@ func OpenSimFile(filePath string) chan CSVRecord {
 	fileExt := path.Ext(filePath)
 	var iterator chan CSVRecord
 
-	logger.Info("Open Data File", zap.String("filename", filePath))
+	logger.Debug("Open Data File", zap.String("filename", filePath))
 	curFile, errOpenFile := os.Open(filePath)
 	if errOpenFile != nil {
 		panic(errOpenFile)
