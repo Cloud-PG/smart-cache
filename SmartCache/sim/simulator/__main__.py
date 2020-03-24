@@ -37,6 +37,7 @@ def prepare_process_call(args, simulator_exe, cache_type, working_dir: str,
         path.abspath(args.source),
         f"--size={args.cache_size}",
         f"--sizeUnit={args.cache_size_unit}",
+        f"--simBandwidth={args.cache_bandwidth}",
         f"--simRegion={args.region}",
         f"--simFileType={args.file_type}",
         f"--simWindowSize={args.window_size}",
@@ -133,6 +134,9 @@ def main():
     parser.add_argument('--cache-types', type=str,
                         default="lru,weightFunLRU",
                         help='Comma separated list of cache to simulate [DEFAULT: "lru,weightFunLRU"]')
+    parser.add_argument('--cache-bandwidth', type=float,
+                        default=10.0,
+                        help='The cache bandwidth in Gbits [DEFAULT: 10.0]')
     parser.add_argument('--weight-function', type=str,
                         choices=[
                             "FuncAdditive",
