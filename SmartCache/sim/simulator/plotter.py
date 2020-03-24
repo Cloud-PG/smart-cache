@@ -415,7 +415,7 @@ def plot_measure(tools: list,
         results, run_type, filters
     ):
         if run_type == "run_full_normal":
-            if target == "globalCost":
+            if target == "costFunction":
                 cache_size = float(cache_name.split("T_")
                                    [0].rsplit("_", 1)[-1])
                 cache_size = cache_size * 1024**2
@@ -438,10 +438,10 @@ def plot_measure(tools: list,
                 points = (
                     values['read on miss data'] - values['written data']
                 ) / cache_size*100
-            elif target == "partialThroughput":
+            elif target == "throughput":
                 points = values['read on hit data'] / \
                     values['written data'] * 100.
-            elif target == "fullThroughput":
+            elif target == "diffThroughput":
                 points = (
                     values['read on hit data'] -
                     values['read on miss data']
@@ -769,11 +769,11 @@ def plot_results(folder: str, results: dict, cache_size: float,
             window_size,
             x_range=size_fig.x_range,
             y_axis_type="log",
-            title="Global cost",
+            title="Cost function",
             plot_width=plot_width,
             plot_height=plot_height,
             read_on_hit=True,
-            target="globalCost",
+            target="costFunction",
             y_axis_label="%",
         )
         run_full_normal_cost_figs.append(global_cost_fig)
@@ -792,7 +792,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             window_size,
             x_range=size_fig.x_range,
             y_axis_type="log",
-            title="Cache cost",
+            title="Cache write and delete cost",
             plot_width=plot_width,
             plot_height=plot_height,
             read_on_hit=True,
@@ -814,10 +814,10 @@ def plot_results(folder: str, results: dict, cache_size: float,
             color_table,
             window_size,
             x_range=size_fig.x_range,
-            title="Partial Throughput",
+            title="Throughput",
             plot_width=plot_width,
             plot_height=plot_height,
-            target="partialThroughput",
+            target="throughput",
             read_on_hit=True,
             y_axis_label="%",
         )
@@ -836,10 +836,10 @@ def plot_results(folder: str, results: dict, cache_size: float,
             color_table,
             window_size,
             x_range=size_fig.x_range,
-            title="Full Throughput",
+            title="Differential Throughput",
             plot_width=plot_width,
             plot_height=plot_height,
-            target="fullThroughput",
+            target="diffThroughput",
             read_on_hit=True,
             y_axis_label="%",
         )
