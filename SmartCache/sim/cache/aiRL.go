@@ -284,7 +284,7 @@ func (cache *AIRL) getState(request *Request, fileStats *FileStats, featureOrder
 		case "stdDevRec":
 			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(cache.StdDevRec()))
 		case "numFiles":
-			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(cache.NumFiles()))
+			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(float64(cache.NumFiles())))
 		default:
 			panic(fmt.Sprintf("Cannot prepare input %s", featureName))
 		}
