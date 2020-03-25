@@ -434,6 +434,9 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					cache.Free(requestedFileSize, false)
 				}
 				if cache.Size()+requestedFileSize <= cache.MaxSize {
+					cache.size += requestedFileSize
+					fileStats.addInCache(&request.DayTime)
+
 					cache.files.Insert(FileSupportData{
 						Filename:  request.Filename,
 						Size:      request.Size,
@@ -442,8 +445,6 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 						Weight:    fileStats.Weight,
 					})
 
-					cache.size += requestedFileSize
-					fileStats.addInCache(&request.DayTime)
 					added = true
 					// fileStats.updateFilePoints(&cache.curTime)
 					// cache.points += fileStats.Points

@@ -246,6 +246,7 @@ func (cache *SimpleCache) BeforeRequest(request *Request, hit bool) *FileStats {
 
 	curStats, _ := cache.stats.GetOrCreate(request.Filename, request.Size, request.DayTime)
 	curStats.updateStats(hit, request.Size, request.UserID, request.SiteName, request.DayTime)
+
 	return curStats
 }
 
@@ -261,6 +262,9 @@ func (cache *SimpleCache) UpdatePolicy(request *Request, fileStats *FileStats, h
 			cache.Free(requestedFileSize, false)
 		}
 		if cache.Size()+requestedFileSize <= cache.MaxSize {
+			cache.size += requestedFileSize
+			fileStats.addInCache(nil)
+
 			cache.files.Insert(FileSupportData{
 				Filename:  request.Filename,
 				Size:      request.Size,
@@ -268,8 +272,6 @@ func (cache *SimpleCache) UpdatePolicy(request *Request, fileStats *FileStats, h
 				Recency:   fileStats.Recency,
 			})
 
-			cache.size += requestedFileSize
-			fileStats.addInCache(nil)
 			added = true
 		}
 	} else {
@@ -336,6 +338,9 @@ func (cache *SimpleCache) Free(amount float64, percentage bool) float64 {
 		zap.Float64("mean size", cache.MeanSize()),
 		zap.Float64("mean frequency", cache.MeanFrequency()),
 		zap.Float64("mean recency", cache.MeanRecency()),
+		zap.Int("num. files", cache.NumFiles()),
+		zap.Float64("std.dev. freq.", cache.StdDevFreq()),
+		zap.Float64("std.dev. size", cache.StdDevSize()),
 	)
 	var (
 		totalDeleted float64
@@ -352,6 +357,8 @@ func (cache *SimpleCache) Free(amount float64, percentage bool) float64 {
 			logger.Debug("delete",
 				zap.Int64("filename", curFile.Filename),
 				zap.Float64("fileSize", curFile.Size),
+				zap.Int64("frequency", curFile.Frequency),
+				zap.Int64("recency", curFile.Recency),
 				zap.Float64("cacheSize", cache.Size()),
 			)
 
@@ -531,4 +538,29 @@ func (cache *SimpleCache) MeanRecency() float64 {
 		totRecency += (curTick - float64(file.Recency))
 	}
 	return totRecency / float64(cache.files.Len())
+}
+
+// NumFiles returns the number of files in cache
+func (cache *SimpleCache) NumFiles() int {
+	return cache.files.Len()
+}
+
+// StdDevFreq returns the standard deviation of the frequency
+func (cache *SimpleCache) StdDevFreq() float64 {
+	mean := cache.MeanFrequency()
+	sum := 0.0
+	for file := range cache.files.Get(NoQueue) {
+		sum += math.Pow(float64(file.Frequency)-mean, 2)
+	}
+	return math.Sqrt(sum)
+}
+
+// StdDevSize returns the standard deviation of the size
+func (cache *SimpleCache) StdDevSize() float64 {
+	mean := cache.MeanSize()
+	sum := 0.0
+	for file := range cache.files.Get(NoQueue) {
+		sum += math.Pow(file.Size-mean, 2)
+	}
+	return math.Sqrt(sum)
 }
