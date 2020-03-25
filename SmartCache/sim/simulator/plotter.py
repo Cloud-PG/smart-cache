@@ -449,11 +449,8 @@ def plot_measure(tools: list,
                     values['read on miss data'] - values['written data']
                 ) / cache_size*100
             elif target == "throughput":
-                cache_size = float(cache_name.split("T_")
-                                   [0].rsplit("_", 1)[-1])
-                cache_size = cache_size * 1024**2
-                points = ((values['read on hit data'] /
-                          values['written data'] * 100.) / cache_size) * 100.
+                points = (values['read on hit data'] /
+                          values['written data']) * 100.
             elif target == "diffThroughput":
                 points = (
                     values['read on hit data'] -
