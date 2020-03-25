@@ -304,7 +304,7 @@ func (curMap *Obj) GetValue(value interface{}) string {
 			inputValueF = value.(float64)
 			for _, curKey := range curMap.KeysF {
 				if inputValueF <= curKey {
-					result = curMap.OutputValues[curMap.Values[fmt.Sprintf("%0.2f", curKey)]]
+					result = curMap.OutputValues[curMap.Values[fmt.Sprintf("%0.1f", curKey)]]
 					resPrepared = true
 					break
 				}
