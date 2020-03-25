@@ -277,6 +277,12 @@ func (cache *AIRL) getState(request *Request, fileStats *FileStats, featureOrder
 			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(cache.MeanFrequency()))
 		case "meanRecency":
 			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(cache.MeanRecency()))
+		case "stdDevSize":
+			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(cache.StdDevSize()))
+		case "stdDevFreq":
+			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(cache.StdDevFreq()))
+		case "stdDevRec":
+			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(cache.StdDevRec()))
 		default:
 			panic(fmt.Sprintf("Cannot prepare input %s", featureName))
 		}
