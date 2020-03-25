@@ -506,7 +506,8 @@ def main():
             args.top,
             args.export_table,
             args.group_by,
-            args.table_type
+            args.table_type,
+            args.cache_bandwidth,
         )
         plot_width, plot_height = [
             int(elm) for elm in args.plot_resolution.split(",")

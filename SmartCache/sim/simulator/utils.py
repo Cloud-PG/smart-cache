@@ -96,7 +96,8 @@ def get_result_section(cur_path: str, source_folder: str):
 
 
 def load_results(folder: str, top: int = 0, top_table_output: bool = False,
-                 group_by: str = "family", table_type: str = "leaderboard"
+                 group_by: str = "family", table_type: str = "leaderboard",
+                 bandwidth: float = 10.
                  ) -> dict:
     results = {}
     res_len = -1
@@ -128,7 +129,7 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False,
             for cache_name, df in tqdm(results['run_full_normal'].items(), desc="Create stats for top results"):
                 cache_size = float(cache_name.split("T_")
                                    [0].rsplit("_", 1)[-1])
-                cache_size = cache_size * 1024**2
+                cache_size = float(cache_size * 1024**2)
                 cost = ((df['written data'] + df['deleted data'] +
                         df['read on miss data']) / cache_size) * 100.
                 throughput = ((df['read on hit data'] /
@@ -142,7 +143,7 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False,
 
                 if table_type == "leaderboard":
                     values.insert(
-                        1, ((df['read on miss data'] / ((10000. / 8.) * 60. * 60. * 24.)) * 100.).mean())
+                        1, ((df['read on miss data'] / ((1000. / 8.) * 60. * 60. * 24. * bandwidth)) * 100.).mean())
                     values.insert(1, df['hit rate'].mean())
                     values.insert(1, df['CPU efficiency'].mean())
                     leaderboard.append(values)
