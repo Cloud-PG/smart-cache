@@ -193,16 +193,21 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False,
                     del results['run_full_normal'][cache_name]
 
             if top_table_output:
-                pd.options.display.float_format = '${:,.2f}'.format
                 if group_by == "family":
                     top_df.groupby("family").head(top).sort_values(
                         by=["family", "throughput", "cost", "readOnHit"],
                         ascending=[True, False, True, False]
-                    ).to_csv(f"top_{top}_results.csv", index=False)
+                    ).to_csv(
+                        f"top_{top}_results.csv", index=False,
+                        float_format='%.2f'
+                    )
                 else:
                     top_df.head(top).sort_values(
                         by=["cpuEff", "throughput", "cost", "readOnHit"],
                         ascending=[False, False, True, False]
-                    ).to_csv(f"top_{top}_results.csv", index=False)
+                    ).to_csv(
+                        f"top_{top}_results.csv", index=False,
+                        float_format='%.2f'
+                    )
 
     return results
