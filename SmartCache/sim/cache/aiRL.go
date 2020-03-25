@@ -504,11 +504,8 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				curState = cache.getState(request, fileStats, cache.additionFeatureMapOrder, cache.additionFeatureMap)
 
 				// ----- Random choice -----
-				if randomAction := cache.additionTable.GetRandomFloat(); randomAction > 0.5 {
-					curAction = qlearn.ActionStore
-				} else {
-					curAction = qlearn.ActionNotStore
-				}
+				randomActionIdx := int(cache.additionTable.GetRandomFloat() * float64(len(cache.additionTable.Actions)))
+				curAction = cache.additionTable.Actions[randomActionIdx]
 
 				logger.Debug("Learning MISS branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
 
@@ -745,7 +742,7 @@ func (cache *AIRL) Free(amount float64, percentage bool) float64 {
 				// ##########################
 
 				// ----- Random choice -----
-				randomActionIdx := int(cache.evictionTable.GetRandomFloat() * float64(len(cache.evictionFeatureMap)))
+				randomActionIdx := int(cache.evictionTable.GetRandomFloat() * float64(len(cache.evictionTable.Actions)))
 				curAction = cache.evictionTable.Actions[randomActionIdx]
 			}
 
