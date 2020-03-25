@@ -393,7 +393,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				// 	reward = -reward
 				// }
 
-				if !hit || (cache.qEvictionPrevState.HitRate > cache.HitRate() && cache.qEvictionPrevState.HitRate-cache.HitRate() >= 4.0) || cache.dailyReadOnHit <= (cache.dailyReadOnMiss*0.5) || cache.dailyReadOnMiss >= (cache.bandwidth*0.75) {
+				if !hit && (cache.qEvictionPrevState.HitRate > cache.HitRate() && cache.qEvictionPrevState.HitRate-cache.HitRate() >= 4.0) || cache.dailyReadOnHit <= cache.dailyReadOnMiss && cache.dailyReadOnMiss >= (cache.bandwidth*0.9) {
 					reward = -reward
 				}
 				// Update table
@@ -490,7 +490,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					reward := request.Size
 					// reward := 1.
 
-					if fileStats.Frequency > 1 || (cache.qEvictionPrevState.HitRate > cache.HitRate() && cache.qEvictionPrevState.HitRate-cache.HitRate() >= 4.0) || cache.dailyReadOnHit <= (cache.dailyReadOnMiss*0.5) {
+					if fileStats.Frequency > 1 && (cache.qEvictionPrevState.HitRate > cache.HitRate() && cache.qEvictionPrevState.HitRate-cache.HitRate() >= 4.0) && cache.dailyReadOnHit <= cache.dailyReadOnMiss {
 						reward = -reward
 					}
 
@@ -525,10 +525,10 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					// reward := 1.
 
 					// OLD POLICY
-					// if cache.dailyReadOnHit < (cache.dailyReadOnMiss*2.) || cache.dataReadOnHit < (cache.dataReadOnMiss*2.) {
+					// if cache.dailyReadOnHit < cache.dailyReadOnMisss*2.) || cache.dataReadOnHit < (cache.dataReadOnMiss*2.) {
 					// 	reward = -reward
 					// }
-					if fileStats.Frequency > 1 || cache.dailyReadOnHit <= (cache.dailyReadOnMiss*0.5) || cache.dailyReadOnMiss <= (cache.bandwidth*0.75) {
+					if fileStats.Frequency > 1 && cache.dailyReadOnHit <= cache.dailyReadOnMiss && cache.dailyReadOnMiss <= (cache.bandwidth*0.9) {
 						reward = -reward
 					}
 
@@ -583,10 +583,10 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					// reward := 1.
 
 					// OLD POLICY
-					// if cache.dataReadOnHit < (cache.dataReadOnMiss*2.) || cache.dailyReadOnHit < (cache.dailyReadOnMiss*2.) {
+					// if cache.dataReadOnHit < (cache.dataReadOnMiss*2.) || cache.dailyReadOnHit < cache.dailyReadOnMisss*2.) {
 					// 	reward = -reward
 					// }
-					if fileStats.Frequency == 1 || cache.dailyWrittenData >= (cache.dailyReadOnHit*0.3) || cache.dailyReadOnMiss >= (cache.bandwidth*0.75) {
+					if fileStats.Frequency == 1 && (cache.dailyWrittenData >= (cache.dailyReadOnHit*0.5) || cache.dailyReadOnMiss >= (cache.bandwidth*0.9)) {
 						reward = -reward
 					}
 					// Update table
@@ -624,10 +624,10 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					// reward := 1.
 
 					// OLD POLICY
-					// if cache.dataReadOnHit < (cache.dataReadOnMiss*2.) || cache.dailyReadOnHit < (cache.dailyReadOnMiss*2.) {
+					// if cache.dataReadOnHit < (cache.dataReadOnMiss*2.) || cache.dailyReadOnHit < cache.dailyReadOnMisss*2.) {
 					// 	reward = -reward
 					// }
-					if (cache.qEvictionPrevState.HitRate > cache.HitRate() && cache.qEvictionPrevState.HitRate-cache.HitRate() >= 4.0) || cache.dailyReadOnHit <= (cache.dailyReadOnMiss*0.5) || cache.dailyReadOnMiss >= (cache.bandwidth*0.75) {
+					if (cache.qEvictionPrevState.HitRate > cache.HitRate() && cache.qEvictionPrevState.HitRate-cache.HitRate() >= 4.0) && cache.dailyReadOnHit <= cache.dailyReadOnMiss && cache.dailyReadOnMiss >= (cache.bandwidth*0.9) {
 						reward = -reward
 					}
 
