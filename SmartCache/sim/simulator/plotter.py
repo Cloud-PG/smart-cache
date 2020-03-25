@@ -512,17 +512,18 @@ def plot_measure(tools: list,
             legend_items.append(
                 (get_cache_legend_name(cache_name), [cur_line]))
             mean_point = sum(points) / len(points)
-            cur_line = cur_fig.line(
-                dates,
-                [mean_point for _ in range(len(dates))],
-                line_color=color_table[cache_name],
-                line_dash="dashdot",
-                line_width=3.,
-            )
-            legend_items.append(
-                (f"Mean {get_cache_legend_name(cache_name)} -> {mean_point:0.2f}{'%' if target == 'gain' else ''}",
-                 [cur_line])
-            )
+            if mean_point != 1.0:
+                cur_line = cur_fig.line(
+                    dates,
+                    [mean_point for _ in range(len(dates))],
+                    line_color=color_table[cache_name],
+                    line_dash="dashdot",
+                    line_width=3.,
+                )
+                legend_items.append(
+                    (f"Mean {get_cache_legend_name(cache_name)} -> {mean_point:0.2f}{'%' if target == 'gain' else ''}",
+                    [cur_line])
+                )
         elif run_type == "run_single_window":
             points = results['run_full_normal'][cache_name][read_data_type] / \
                 results['run_full_normal'][cache_name]['written data']
