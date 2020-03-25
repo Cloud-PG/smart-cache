@@ -395,7 +395,7 @@ def plot_measure(tools: list,
         plot_height=plot_height,
     )
 
-    if target is not None and target not in ['cpu_eff', 'network_in_saturation', 'network_out_saturation', 'cost', 'miss']:
+    if target is not None and target.lower().find("vs") == -1 and target not in ['cpu_eff', 'network_in_saturation', 'network_out_saturation', 'cost', 'miss']:
         hline_1 = Span(
             location=1.0, dimension='width', line_dash="dashed",
             line_color="black", line_width=_LINE_WIDTH,
