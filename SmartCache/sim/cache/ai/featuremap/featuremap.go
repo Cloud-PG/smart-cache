@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"go.uber.org/zap"
 )
@@ -15,7 +16,7 @@ type mapType int
 
 const (
 	// TypeBool is the type bool for the feature map
-	TypeBool mapType = iota
+	TypeBool mapType = iota - 4
 	// TypeInt is the type int for the feature map
 	TypeInt
 	// TypeFloat is the type float for the feature map
@@ -155,6 +156,14 @@ func GetEntries(featureMapFilePath string) chan Entry {
 					curStruct.KeysS = append(curStruct.KeysS, elm.(string))
 				case TypeBool:
 					curStruct.KeysB = append(curStruct.KeysB, elm.(bool))
+				}
+			}
+			for key := range curStruct.Values {
+				if curStruct.Type == TypeFloat {
+					splitStr := strings.Split(key, ".")
+					if key != "max" && (len(splitStr) < 2 || len(splitStr[1]) != 1) {
+						panic(fmt.Sprintf("Key %s is a float without a single decimal number", key))
+					}
 				}
 			}
 
