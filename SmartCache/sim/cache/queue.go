@@ -49,7 +49,7 @@ type ByBigSize []*FileSupportData
 func (slice ByBigSize) Len() int { return len(slice) }
 
 // Order from the biggest size to the smallest
-func (slice ByBigSize) Less(i, j int) bool { return slice[i].Size < slice[j].Size }
+func (slice ByBigSize) Less(i, j int) bool { return slice[i].Size > slice[j].Size }
 func (slice ByBigSize) Swap(i, j int)      { slice[i], slice[j] = slice[j], slice[i] }
 
 // BySmallSize implements sort.Interface based on the size field.
@@ -58,7 +58,7 @@ type BySmallSize []*FileSupportData
 func (slice BySmallSize) Len() int { return len(slice) }
 
 // Order from the smallest size to the biggest
-func (slice BySmallSize) Less(i, j int) bool { return slice[i].Size > slice[j].Size }
+func (slice BySmallSize) Less(i, j int) bool { return slice[i].Size < slice[j].Size }
 func (slice BySmallSize) Swap(i, j int)      { slice[i], slice[j] = slice[j], slice[i] }
 
 // ByWeight implements sort.Interface based on the size field.
@@ -67,7 +67,7 @@ type ByWeight []*FileSupportData
 func (slice ByWeight) Len() int { return len(slice) }
 
 // Order from the heaviest to the lightest
-func (slice ByWeight) Less(i, j int) bool { return slice[i].Weight < slice[j].Weight }
+func (slice ByWeight) Less(i, j int) bool { return slice[i].Weight > slice[j].Weight }
 func (slice ByWeight) Swap(i, j int)      { slice[i], slice[j] = slice[j], slice[i] }
 
 type queueType int
