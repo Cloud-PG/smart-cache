@@ -129,13 +129,14 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False,
                 cache_size = float(cache_name.split("T_")
                                    [0].rsplit("_", 1)[-1])
                 cache_size = cache_size * 1024**2
-                cost = (df['written data'] + \
-                    df['deleted data'] + df['read on miss data']) / cache_size
-                throughput = (df['read on hit data'] / df['written data']) / cache_size
+                cost = ((df['written data'] + df['deleted data'] +
+                        df['read on miss data']) / cache_size) * 100.
+                throughput = ((df['read on hit data'] /
+                              df['written data']) / cache_size) * 100.
                 values = [
                     cache_name,
                     throughput.mean(),
-                    int(cost.mean()),
+                    cost.mean(),
                     int(df['read on hit data'].mean()),
                 ]
 
