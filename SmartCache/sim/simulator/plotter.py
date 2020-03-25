@@ -458,6 +458,12 @@ def plot_measure(tools: list,
             elif target == "readOnMissRatio":
                 points = (values['read on miss data'] /
                           values['read data']) * 100.
+            elif target == "writtenRatio":
+                points = (values['written data'] /
+                          values['read data']) * 100.
+            elif target == "deletedRatio":
+                points = (values['deleted data'] /
+                          values['read data']) * 100.
             else:
                 raise Exception(f"Unknown target '{target}'...")
             cur_line = cur_fig.line(
@@ -723,7 +729,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
     run_single_window_figs = []
     run_next_period_figs = []
 
-    pbar = tqdm(total=24, desc="Plot results", ascii=True)
+    pbar = tqdm(total=26, desc="Plot results", ascii=True)
 
     ###########################################################################
     # Size plot of full normal run
@@ -924,6 +930,50 @@ def plot_results(folder: str, results: dict, cache_size: float,
             outer_legend=outer_legend,
         )
         run_full_normal_net_figs.append(net_in)
+    pbar.update(1)
+    
+    ###########################################################################
+    # Written data ratio plot of full normal run
+    ###########################################################################
+    with ignored(Exception):
+        written_data_ratio_fig = plot_measure(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            x_range=size_fig.x_range,
+            title="Written data ratio",
+            plot_width=plot_width,
+            plot_height=plot_height,
+            target="writtenRatio",
+            y_axis_label="%",
+            outer_legend=outer_legend,
+        )
+        run_full_normal_data_rw_figs.append(written_data_ratio_fig)
+    pbar.update(1)
+    
+    ###########################################################################
+    # Deleted data ratio plot of full normal run
+    ###########################################################################
+    with ignored(Exception):
+        deleted_data_ratio_fig = plot_measure(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            x_range=size_fig.x_range,
+            title="Delted data ratio",
+            plot_width=plot_width,
+            plot_height=plot_height,
+            target="deletedRatio",
+            y_axis_label="%",
+            outer_legend=outer_legend,
+        )
+        run_full_normal_data_rw_figs.append(deleted_data_ratio_fig)
     pbar.update(1)
 
     ###########################################################################
