@@ -703,6 +703,10 @@ func (cache *AIRL) Free(amount float64, percentage bool) float64 {
 		zap.Float64("mean size", cache.MeanSize()),
 		zap.Float64("mean frequency", cache.MeanFrequency()),
 		zap.Float64("mean recency", cache.MeanRecency()),
+		zap.Int("num. files", cache.NumFiles()),
+		zap.Float64("std.dev. freq.", cache.StdDevFreq()),
+		zap.Float64("std.dev. rec.", cache.StdDevRec()),
+		zap.Float64("std.dev. size", cache.StdDevSize()),
 	)
 	var (
 		totalDeleted float64
@@ -763,7 +767,13 @@ func (cache *AIRL) Free(amount float64, percentage bool) float64 {
 
 		deletedFiles := make([]int64, 0)
 		for curFile := range cache.files.Get(curPolicy) {
-			logger.Debug("delete", zap.Int64("filename", curFile.Filename))
+			logger.Debug("delete",
+				zap.Int64("filename", curFile.Filename),
+				zap.Float64("fileSize", curFile.Size),
+				zap.Int64("frequency", curFile.Frequency),
+				zap.Int64("recency", curFile.Recency),
+				zap.Float64("cacheSize", cache.Size()),
+			)
 
 			curFileStats := cache.stats.Get(curFile.Filename)
 			curFileStats.removeFromCache()

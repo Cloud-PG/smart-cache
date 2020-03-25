@@ -340,6 +340,7 @@ func (cache *SimpleCache) Free(amount float64, percentage bool) float64 {
 		zap.Float64("mean recency", cache.MeanRecency()),
 		zap.Int("num. files", cache.NumFiles()),
 		zap.Float64("std.dev. freq.", cache.StdDevFreq()),
+		zap.Float64("std.dev. rec.", cache.StdDevRec()),
 		zap.Float64("std.dev. size", cache.StdDevSize()),
 	)
 	var (
@@ -551,6 +552,16 @@ func (cache *SimpleCache) StdDevFreq() float64 {
 	sum := 0.0
 	for file := range cache.files.Get(NoQueue) {
 		sum += math.Pow(float64(file.Frequency)-mean, 2)
+	}
+	return math.Sqrt(sum)
+}
+
+// StdDevRec returns the standard deviation of the recency
+func (cache *SimpleCache) StdDevRec() float64 {
+	mean := cache.MeanRecency()
+	sum := 0.0
+	for file := range cache.files.Get(NoQueue) {
+		sum += math.Pow(float64(file.Recency)-mean, 2)
 	}
 	return math.Sqrt(sum)
 }
