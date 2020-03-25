@@ -418,21 +418,33 @@ def plot_measure(tools: list,
     ):
         if run_type == "run_full_normal":
             if target == "costFunction":
-                cache_size = float(cache_name.split("T_")
-                                   [0].rsplit("_", 1)[-1])
-                cache_size = cache_size * 1024**2
-                points = (
-                    values['written data'] +
-                    values['deleted data'] +
+                points = values['written data'] + \
+                    values['deleted data'] + \
                     values['read on miss data']
-                ) / cache_size * 100.
             elif target == "cacheCost":
-                cache_size = float(cache_name.split("T_")
-                                   [0].rsplit("_", 1)[-1])
-                cache_size = cache_size * 1024**2
-                points = (
-                    values['written data'] + values['deleted data']
-                ) / cache_size * 100.
+                points = values['written data'] + values['deleted data']
+            elif target == "costFunctionVs":
+                for inner_cache_name, inner_values in filter_results(
+                    results, run_type, filters
+                ):
+                    if inner_cache_name.find("lru_") != -1 and inner_cache_name.index("lru_") == 0:
+                        lru_cost = inner_values['written data'] + \
+                            inner_values['deleted data'] + \
+                            inner_values['read on miss data']
+                        break
+                points = values['written data'] + \
+                    values['deleted data'] + values['read on miss data']
+                points /= lru_cost
+            elif target == "cacheCostVs":
+                for inner_cache_name, inner_values in filter_results(
+                    results, run_type, filters
+                ):
+                    if inner_cache_name.find("lru_") != -1 and inner_cache_name.index("lru_") == 0:
+                        lru_cost = inner_values['written data'] + \
+                            inner_values['deleted data']
+                        break
+                points = values['written data'] + values['deleted data']
+                points /= lru_cost
             elif target == "miss":
                 cache_size = float(cache_name.split("T_")
                                    [0].rsplit("_", 1)[-1])
@@ -448,6 +460,31 @@ def plot_measure(tools: list,
                     values['read on hit data'] -
                     values['read on miss data']
                 ) / values['written data']
+            elif target == "throughputVs":
+                for inner_cache_name, inner_values in filter_results(
+                    results, run_type, filters
+                ):
+                    if inner_cache_name.find("lru_") != -1 and inner_cache_name.index("lru_") == 0:
+                        lru_cost = inner_values['read on hit data'] / \
+                            inner_values['written data']
+                        break
+                points = values['read on hit data'] / values['written data']
+                points /= lru_cost
+            elif target == "diffThroughputVs":
+                for inner_cache_name, inner_values in filter_results(
+                    results, run_type, filters
+                ):
+                    if inner_cache_name.find("lru_") != -1 and inner_cache_name.index("lru_") == 0:
+                        lru_cost = (
+                            inner_values['read on hit data'] -
+                            inner_values['read on miss data']
+                        ) / inner_values['written data']
+                        break
+                points = (
+                    values['read on hit data'] -
+                    values['read on miss data']
+                ) / values['written data']
+                points /= lru_cost
             elif target == "network_in_saturation":
                 points = (values['read on miss data'] / cur_band) * 100.
             elif target == "network_out_saturation":
@@ -729,7 +766,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
     run_single_window_figs = []
     run_next_period_figs = []
 
-    pbar = tqdm(total=26, desc="Plot results", ascii=True)
+    pbar = tqdm(total=30, desc="Plot results", ascii=True)
 
     ###########################################################################
     # Size plot of full normal run
@@ -818,6 +855,51 @@ def plot_results(folder: str, results: dict, cache_size: float,
         )
         run_full_normal_cost_figs.append(cache_cost_fig)
     pbar.update(1)
+    ###########################################################################
+    # Global Cost vs lru plot of full normal run
+    ###########################################################################
+    with ignored(Exception):
+        global_cost_fig = plot_measure(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            x_range=size_fig.x_range,
+            y_axis_type="log",
+            title="Cost vs LRU",
+            plot_width=plot_width,
+            plot_height=plot_height,
+            target="costFunctionVs",
+            y_axis_label="ratio",
+            outer_legend=outer_legend,
+        )
+        run_full_normal_cost_figs.append(global_cost_fig)
+    pbar.update(1)
+
+    ###########################################################################
+    # Cache Cost vs lru plot of full normal run
+    ###########################################################################
+    with ignored(Exception):
+        cache_cost_fig = plot_measure(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            x_range=size_fig.x_range,
+            y_axis_type="log",
+            title="Cache write and delete cost vs LRU",
+            plot_width=plot_width,
+            plot_height=plot_height,
+            target="cacheCostVs",
+            y_axis_label="ratio",
+            outer_legend=outer_legend,
+        )
+        run_full_normal_cost_figs.append(cache_cost_fig)
+    pbar.update(1)
 
     ###########################################################################
     # Throughput plot of full normal run
@@ -858,6 +940,50 @@ def plot_results(folder: str, results: dict, cache_size: float,
             plot_height=plot_height,
             target="diffThroughput",
             y_axis_label="%",
+            outer_legend=outer_legend,
+        )
+        run_full_normal_throughput_figs.append(throughtput_fig)
+    pbar.update(1)
+    
+    ###########################################################################
+    # Throughput vs LRU plot of full normal run
+    ###########################################################################
+    with ignored(Exception):
+        throughtput_fig = plot_measure(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            x_range=size_fig.x_range,
+            title="Throughput vs LRU",
+            plot_width=plot_width,
+            plot_height=plot_height,
+            target="throughputVs",
+            y_axis_label="ratio",
+            outer_legend=outer_legend,
+        )
+        run_full_normal_throughput_figs.append(throughtput_fig)
+    pbar.update(1)
+
+    ###########################################################################
+    # Throughput vs LRU plot of full normal run
+    ###########################################################################
+    with ignored(Exception):
+        throughtput_fig = plot_measure(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            x_range=size_fig.x_range,
+            title="Differential Throughput vs LRU",
+            plot_width=plot_width,
+            plot_height=plot_height,
+            target="diffThroughputVs",
+            y_axis_label="ratio",
             outer_legend=outer_legend,
         )
         run_full_normal_throughput_figs.append(throughtput_fig)
@@ -931,7 +1057,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
         )
         run_full_normal_net_figs.append(net_in)
     pbar.update(1)
-    
+
     ###########################################################################
     # Written data ratio plot of full normal run
     ###########################################################################
@@ -953,7 +1079,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
         )
         run_full_normal_data_rw_figs.append(written_data_ratio_fig)
     pbar.update(1)
-    
+
     ###########################################################################
     # Deleted data ratio plot of full normal run
     ###########################################################################
