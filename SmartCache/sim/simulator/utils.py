@@ -193,6 +193,7 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False,
                     del results['run_full_normal'][cache_name]
 
             if top_table_output:
+                pd.options.display.float_format = '${:,.2f}'.format
                 if group_by == "family":
                     top_df.groupby("family").head(top).sort_values(
                         by=["family", "throughput", "cost", "readOnHit"],
