@@ -17,7 +17,7 @@ from SmartCache.sim import get_simulator_exe
 
 from .ga import compare_greedy_solution, get_best_configuration
 from .greedy import get2PTAS
-from .plotter import plot_results
+from .dashboard import plot_results
 from .utils import get_logger, load_results, str2bool, wait_jobs
 
 

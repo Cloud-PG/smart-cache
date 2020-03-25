@@ -126,9 +126,12 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False,
         if 'run_full_normal' in results:
             leaderboard = []
             for cache_name, df in tqdm(results['run_full_normal'].items(), desc="Create stats for top results"):
-                cost = df['written data'] + \
-                    df['deleted data'] + df['read on miss data']
-                throughput = df['read on hit data'] / df['written data']
+                cache_size = float(cache_name.split("T_")
+                                   [0].rsplit("_", 1)[-1])
+                cache_size = cache_size * 1024**2
+                cost = (df['written data'] + \
+                    df['deleted data'] + df['read on miss data']) / cache_size
+                throughput = (df['read on hit data'] / df['written data']) / cache_size
                 values = [
                     cache_name,
                     throughput.mean(),
