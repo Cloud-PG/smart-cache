@@ -78,7 +78,7 @@ type CSVRecord struct {
 	JobExecExitCode int64   `json:"jobExecExitCode"`
 	JobStart        int64   `json:"jobStart"`
 	JobEnd          int64   `json:"jobEnd"`
-	JobSuccess      int64   `json:"jobSuccess"`
+	JobSuccess      bool    `json:"jobSuccess"`
 	JobLengthH      float64 `json:"jobLengthH"`
 	JobLengthM      float64 `json:"jobLengthM"`
 	UserID          int64   `json:"user"`
@@ -119,7 +119,7 @@ func recordGenerator(csvReader *csv.Reader, curFile *os.File, headerMap []int) c
 			fileType, _ := strconv.ParseInt(record[headerMap[15]], 10, 64)
 			joblengthh, _ := strconv.ParseFloat(record[headerMap[16]], 64)
 			joblengthm, _ := strconv.ParseFloat(record[headerMap[17]], 64)
-			jobSuccess, _ := strconv.ParseInt(record[headerMap[18]], 10, 64)
+			jobSuccess, _ := strconv.ParseBool(record[headerMap[18]])
 			cputime, _ := strconv.ParseFloat(record[headerMap[19]], 64)
 			iotime, _ := strconv.ParseFloat(record[headerMap[20]], 64)
 			day, _ := strconv.ParseFloat(record[headerMap[21]], 64)
@@ -291,6 +291,44 @@ func (output OutputCSV) Close() {
 // Filter interface
 type Filter interface {
 	Check(CSVRecord) bool
+}
+
+// UsDataMcTypes for USA
+type UsDataMcTypes struct {
+}
+
+// Check if the record have to be sent to the cache
+func (filter UsDataMcTypes) Check(record CSVRecord) bool {
+	// Check if data type == data, mc
+	if record.DataType == 0 || record.DataType == 3 {
+		return true
+	}
+	return false
+}
+
+// ItDataMcTypes for IT
+type ItDataMcTypes struct {
+}
+
+// Check if the record have to be sent to the cache
+func (filter ItDataMcTypes) Check(record CSVRecord) bool {
+	// Check if data type == data, mc
+	if record.DataType == 0 || record.DataType == 1 {
+		return true
+	}
+	return false
+}
+
+// SuccessJob filter
+type SuccessJob struct {
+}
+
+// Check if the record is with a success or not
+func (filter SuccessJob) Check(record CSVRecord) bool {
+	if record.JobSuccess == true && record.JobExecExitCode == 0 {
+		return true
+	}
+	return false
 }
 
 // UsMINIAODNOT1andT3 for USA MINIAOD records without fnalpc and T1

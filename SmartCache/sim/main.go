@@ -262,6 +262,8 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				windowStepCounter  uint32
 				windowCounter      uint32
 				recordFilter       cache.Filter
+				dataTypeFilter     cache.Filter
+				succesJobFilter    = cache.SuccessJob{}
 				cacheSizeString    string
 			)
 
@@ -302,8 +304,10 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			// TODO: add filter as a parameter
 			case "us":
 				recordFilter = cache.UsMINIAODNOT1andT3{}
+				dataTypeFilter = cache.UsDataMcTypes{}
 				curCacheInstance.SetRegion("us")
 			case "it":
+				dataTypeFilter = cache.ItDataMcTypes{}
 				curCacheInstance.SetRegion("it")
 			}
 
@@ -513,8 +517,18 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				totNumRecords++
 
 				if windowCounter >= simStartFromWindow {
+					if succesJobFilter.Check(record) == false {
+						numFilteredRecords++
+						continue
+					}
+					if dataTypeFilter != nil {
+						if dataTypeFilter.Check(record) == false {
+							numFilteredRecords++
+							continue
+						}
+					}
 					if recordFilter != nil {
-						if checkRecord := recordFilter.Check(record); checkRecord == false {
+						if recordFilter.Check(record) == false {
 							numFilteredRecords++
 							continue
 						}
