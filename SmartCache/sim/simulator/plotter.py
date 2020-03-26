@@ -63,6 +63,19 @@ def get_lru(results: dict, key: str):
     raise Exception(f"Cannot find lru cache values for '{key}''")
 
 
+def collapse2numpoints(num_points, x=None, y=None):
+    if x is not None:
+        return np.array([
+            group[0]
+            for group in np.array_split(x, num_points)
+        ])
+    elif y is not None:
+        return np.array([
+            group.mean()
+            for group in np.array_split(y, num_points)
+        ])
+
+
 def plot_column(tools: list,
                 results: dict,
                 dates: list,
@@ -81,13 +94,15 @@ def plot_column(tools: list,
                 upper_bound: str = None,
                 lower_bound: str = None,
                 outer_legend: bool = False,
+                num_points: int = -1,
                 ) -> 'Figure':
     cur_fig = figure(
         tools=tools,
         title=title,
         x_axis_label="Day",
         y_axis_label=y_axis_label,
-        x_range=x_range if x_range else dates,
+        x_range=x_range if x_range else dates if num_points == -
+        1 else collapse2numpoints(num_points, x=dates),
         y_range=None,
         plot_width=plot_width,
         plot_height=plot_height,
@@ -111,8 +126,10 @@ def plot_column(tools: list,
             else:
                 points = values[column]
             cur_line = cur_fig.line(
-                dates,
-                points,
+                dates if num_points == -
+                1 else collapse2numpoints(num_points, x=dates),
+                points if num_points == -
+                1 else collapse2numpoints(num_points, y=points),
                 color=color_table[cache_name],
                 line_width=_LINE_WIDTH,
             )
@@ -120,8 +137,10 @@ def plot_column(tools: list,
                 (get_cache_legend_name(cache_name), [cur_line]))
             mean_point = sum(points) / len(points)
             cur_line = cur_fig.line(
-                dates,
-                [mean_point for _ in range(len(dates))],
+                dates if num_points == -
+                1 else collapse2numpoints(num_points, x=dates),
+                [mean_point for _ in range(
+                    len(dates) if num_points == -1 else num_points)],
                 line_color=color_table[cache_name],
                 line_dash="dashdot",
                 line_width=3.,
@@ -136,8 +155,10 @@ def plot_column(tools: list,
             if upper_bound is not None and upper_bound_points is None and not np.array_equal(upper_bound_points, values[upper_bound].to_numpy()):
                 points = upper_bound_points = values[upper_bound].to_numpy()
                 cur_line = cur_fig.line(
-                    dates,
-                    points,
+                    dates if num_points == -
+                    1 else collapse2numpoints(num_points, x=dates),
+                    points if num_points == -
+                    1 else collapse2numpoints(num_points, y=points),
                     line_color="red",
                     line_dash="dotted",
                     line_width=2.4,
@@ -145,8 +166,10 @@ def plot_column(tools: list,
                 legend_items.append(("Upper Bound", [cur_line]))
                 mean_point = sum(points) / len(points)
                 cur_line = cur_fig.line(
-                    dates,
-                    [mean_point for _ in range(len(dates))],
+                    dates if num_points == -
+                    1 else collapse2numpoints(num_points, x=dates),
+                    [mean_point for _ in range(
+                        len(dates) if num_points == -1 else num_points)],
                     line_color="red",
                     line_dash="dotdash",
                     line_width=3.,
@@ -158,8 +181,10 @@ def plot_column(tools: list,
             if lower_bound is not None and lower_bound_points is None and not np.array_equal(lower_bound_points, values[lower_bound].to_numpy()):
                 points = lower_bound_points = values[lower_bound].to_numpy()
                 cur_line = cur_fig.line(
-                    dates,
-                    points,
+                    dates if num_points == -
+                    1 else collapse2numpoints(num_points, x=dates),
+                    points if num_points == -
+                    1 else collapse2numpoints(num_points, y=points),
                     line_color="red",
                     line_dash="dotted",
                     line_width=2.4,
@@ -167,8 +192,10 @@ def plot_column(tools: list,
                 legend_items.append(("Lower Bound", [cur_line]))
                 mean_point = sum(points) / len(points)
                 cur_line = cur_fig.line(
-                    dates,
-                    [mean_point for _ in range(len(dates))],
+                    dates if num_points == -
+                    1 else collapse2numpoints(num_points, x=dates),
+                    [mean_point for _ in range(
+                        len(dates) if num_points == -1 else num_points)],
                     line_color="red",
                     line_dash="dotdash",
                     line_width=3.,
@@ -340,11 +367,12 @@ def plot_column(tools: list,
     legend.click_policy = "hide"
     cur_fig.add_layout(legend, 'right' if outer_legend else 'center')
     cur_fig.yaxis.formatter = BasicTickFormatter(use_scientific=False)
-    cur_fig.xaxis.formatter = FuncTickFormatter(code="""
-    var day = parseInt(tick.split("-")[2], 10)
-    if ( day%7 == 0 ) { return tick }
-    else { return "" }
-""")
+    if num_points == -1:
+        cur_fig.xaxis.formatter = FuncTickFormatter(code="""
+        var day = parseInt(tick.split("-")[2], 10)
+        if ( day%7 == 0 ) { return tick }
+        else { return "" }
+    """)
     cur_fig.xaxis.major_label_orientation = np.pi / 4.
     cur_fig.add_tools(SaveTool())
     add_window_lines(cur_fig, dates, window_size)
@@ -376,6 +404,7 @@ def plot_measure(tools: list,
                  target: str = None,
                  bandwidth: int = 10,
                  outer_legend: bool = False,
+                 num_points: int = -1,
                  ) -> 'Figure':
     cur_fig = figure(
         tools=tools,
@@ -383,7 +412,8 @@ def plot_measure(tools: list,
         x_axis_label="Day",
         y_axis_label=y_axis_label,
         y_axis_type=y_axis_type,
-        x_range=x_range if x_range else dates,
+        x_range=x_range if x_range else dates if num_points == -
+        1 else collapse2numpoints(num_points, x=dates),
         plot_width=plot_width,
         plot_height=plot_height,
     )
@@ -415,8 +445,8 @@ def plot_measure(tools: list,
                                    [0].rsplit("_", 1)[-1])
                 cache_size = cache_size * 1024**2
                 points = ((values['written data'] +
-                          values['deleted data'] +
-                          values['read on miss data']) / cache_size) * 100.
+                           values['deleted data'] +
+                           values['read on miss data']) / cache_size) * 100.
             elif target == "cacheCost":
                 points = values['written data'] + values['deleted data']
             elif target == "costFunctionVs":
@@ -499,9 +529,12 @@ def plot_measure(tools: list,
                           values['read data']) * 100.
             else:
                 raise Exception(f"Unknown target '{target}'...")
+
             cur_line = cur_fig.line(
-                dates,
-                points,
+                dates if num_points == -
+                1 else collapse2numpoints(num_points, x=dates),
+                points if num_points == -
+                1 else collapse2numpoints(num_points, y=points),
                 color=color_table[cache_name],
                 line_width=_LINE_WIDTH,
             )
@@ -510,8 +543,10 @@ def plot_measure(tools: list,
             mean_point = sum(points) / len(points)
             if mean_point != 1.0:
                 cur_line = cur_fig.line(
-                    dates,
-                    [mean_point for _ in range(len(dates))],
+                    dates if num_points == -
+                    1 else collapse2numpoints(num_points, x=dates),
+                    [mean_point for _ in range(
+                        len(dates) if num_points == -1 else num_points)],
                     line_color=color_table[cache_name],
                     line_dash="dashdot",
                     line_width=3.,
@@ -690,11 +725,12 @@ def plot_measure(tools: list,
     cur_fig.yaxis.formatter = BasicTickFormatter(
         use_scientific=False)
     cur_fig.xaxis.major_label_orientation = np.pi / 4.
-    cur_fig.xaxis.formatter = FuncTickFormatter(code="""
-    var day = parseInt(tick.split("-")[2], 10)
-    if ( day%7 == 0 ) { return tick }
-    else { return "" }
-""")
+    if num_points == -1:
+        cur_fig.xaxis.formatter = FuncTickFormatter(code="""
+        var day = parseInt(tick.split("-")[2], 10)
+        if ( day%7 == 0 ) { return tick }
+        else { return "" }
+    """)
     cur_fig.add_tools(SaveTool())
     add_window_lines(cur_fig, dates, window_size)
 

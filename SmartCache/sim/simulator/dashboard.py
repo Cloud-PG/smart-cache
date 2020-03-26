@@ -17,6 +17,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
                  plot_height: int = 480,
                  bandwidth: int = 10,
                  outer_legend: bool = False,
+                 num_points: int=52,
                  ):
     color_table = {}
     dates = []
@@ -91,6 +92,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             plot_height=plot_height,
             y_axis_label="MB",
             outer_legend=outer_legend,
+            num_points=num_points,
         )
         run_full_normal_hit_rate_figs.append(size_fig)
     pbar.update(1)
@@ -112,6 +114,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             plot_width=plot_width,
             plot_height=plot_height,
             outer_legend=outer_legend,
+            num_points=num_points,
         )
         run_full_normal_hit_rate_figs.append(hit_rate_fig)
     pbar.update(1)
@@ -135,6 +138,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             target="costFunction",
             y_axis_label="%",
             outer_legend=outer_legend,
+            num_points=num_points,
         )
         run_full_normal_cost_figs.append(global_cost_fig)
     pbar.update(1)
@@ -158,6 +162,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             target="cacheCost",
             y_axis_label="%",
             outer_legend=outer_legend,
+            num_points=num_points,
         )
         run_full_normal_cost_figs.append(cache_cost_fig)
     pbar.update(1)
@@ -180,6 +185,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             target="costFunctionVs",
             y_axis_label="ratio",
             outer_legend=outer_legend,
+            num_points=num_points,
         )
         run_full_normal_cost_figs.append(global_cost_fig)
     pbar.update(1)
@@ -203,6 +209,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             target="cacheCostVs",
             y_axis_label="ratio",
             outer_legend=outer_legend,
+            num_points=num_points,
         )
         run_full_normal_cost_figs.append(cache_cost_fig)
     pbar.update(1)
@@ -225,6 +232,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             target="throughput",
             y_axis_label="%",
             outer_legend=outer_legend,
+            num_points=num_points,
         )
         run_full_normal_throughput_figs.append(throughtput_fig)
     pbar.update(1)
@@ -247,6 +255,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             target="diffThroughput",
             y_axis_label="%",
             outer_legend=outer_legend,
+            num_points=num_points,
         )
         run_full_normal_throughput_figs.append(throughtput_fig)
     pbar.update(1)
@@ -269,6 +278,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             target="throughputVs",
             y_axis_label="ratio",
             outer_legend=outer_legend,
+            num_points=num_points,
         )
         run_full_normal_throughput_figs.append(throughtput_fig)
     pbar.update(1)
@@ -291,6 +301,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             target="diffThroughputVs",
             y_axis_label="ratio",
             outer_legend=outer_legend,
+            num_points=num_points,
         )
         run_full_normal_throughput_figs.append(throughtput_fig)
     pbar.update(1)
@@ -314,6 +325,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             target="miss",
             y_axis_label="%",
             outer_legend=outer_legend,
+            num_points=num_points,
         )
         run_full_normal_throughput_figs.append(miss_fig)
     pbar.update(1)
@@ -337,6 +349,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             target="network_in_saturation",
             bandwidth=bandwidth,
             outer_legend=outer_legend,
+            num_points=num_points,
         )
         run_full_normal_net_figs.append(net_in)
     pbar.update(1)
@@ -360,6 +373,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             target="network_out_saturation",
             bandwidth=bandwidth,
             outer_legend=outer_legend,
+            num_points=num_points,
         )
         run_full_normal_net_figs.append(net_in)
     pbar.update(1)
@@ -382,6 +396,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             target="writtenRatio",
             y_axis_label="%",
             outer_legend=outer_legend,
+            num_points=num_points,
         )
         run_full_normal_data_rw_figs.append(written_data_ratio_fig)
     pbar.update(1)
@@ -404,6 +419,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             target="deletedRatio",
             y_axis_label="%",
             outer_legend=outer_legend,
+            num_points=num_points,
         )
         run_full_normal_data_rw_figs.append(deleted_data_ratio_fig)
     pbar.update(1)
@@ -429,6 +445,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             plot_width=plot_width,
             plot_height=plot_height,
             outer_legend=outer_legend,
+            num_points=num_points,
         )
         run_full_normal_data_rw_figs.append(written_data_fig)
     pbar.update(1)
@@ -454,6 +471,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             plot_width=plot_width,
             plot_height=plot_height,
             outer_legend=outer_legend,
+            num_points=num_points,
         )
         run_full_normal_data_rw_figs.append(deleted_data_fig)
     pbar.update(1)
@@ -476,6 +494,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             plot_width=plot_width,
             plot_height=plot_height,
             outer_legend=outer_legend,
+            num_points=num_points,
         )
         run_full_normal_data_rw_figs.append(read_data_fig)
     pbar.update(1)
@@ -498,6 +517,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             target="readOnHitRatio",
             y_axis_label="%",
             outer_legend=outer_legend,
+            num_points=num_points,
         )
         run_full_normal_data_read_stats_figs.append(read_on_hit_ratio_fig)
     pbar.update(1)
@@ -520,6 +540,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             target="readOnMissRatio",
             y_axis_label="%",
             outer_legend=outer_legend,
+            num_points=num_points,
         )
         run_full_normal_data_read_stats_figs.append(read_on_miss_ratio_fig)
     pbar.update(1)
@@ -546,6 +567,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             plot_height=plot_height,
             upper_bound="read data",
             outer_legend=outer_legend,
+            num_points=num_points,
         )
         run_full_normal_data_read_stats_figs.append(read_data_fig)
     pbar.update(1)
@@ -572,6 +594,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             plot_height=plot_height,
             upper_bound="read data",
             outer_legend=outer_legend,
+            num_points=num_points,
         )
         run_full_normal_data_read_stats_figs.append(read_data_fig)
     pbar.update(1)
@@ -596,6 +619,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             upper_bound="CPU efficiency upper bound",
             lower_bound="CPU efficiency lower bound",
             outer_legend=outer_legend,
+            num_points=num_points,
         )
         run_full_normal_cpu_eff_figs.append(cpu_eff)
     pbar.update(1)
@@ -618,6 +642,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             plot_width=plot_width,
             plot_height=plot_height,
             outer_legend=outer_legend,
+            num_points=num_points,
         )
         run_full_normal_cpu_eff_figs.append(read_on_hit_eff)
     pbar.update(1)
@@ -640,6 +665,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             plot_width=plot_width,
             plot_height=plot_height,
             outer_legend=outer_legend,
+            num_points=num_points,
         )
         run_full_normal_cpu_eff_figs.append(read_on_miss_eff)
     pbar.update(1)
@@ -662,6 +688,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             plot_width=plot_width,
             plot_height=plot_height,
             outer_legend=outer_legend,
+            num_points=num_points,
         )
         run_single_window_figs.append(hit_rate_comp_snw_fig)
     pbar.update(1)
@@ -684,6 +711,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             plot_height=plot_height,
             read_on_hit=False,
             outer_legend=outer_legend,
+            num_points=num_points,
         )
         run_single_window_figs.append(ronwdata_comp_snw_fig)
     pbar.update(1)
@@ -706,6 +734,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             plot_height=plot_height,
             read_on_hit=True,
             outer_legend=outer_legend,
+            num_points=num_points,
         )
         run_single_window_figs.append(rhonwdata_comp_snw_fig)
     pbar.update(1)
@@ -729,6 +758,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             plot_width=plot_width,
             plot_height=plot_height,
             outer_legend=outer_legend,
+            num_points=num_points,
         )
         run_next_period_figs.append(hit_rate_comp_swnp_fig)
     pbar.update(1)
@@ -752,6 +782,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             plot_height=plot_height,
             read_on_hit=False,
             outer_legend=outer_legend,
+            num_points=num_points,
         )
         run_next_period_figs.append(ronwdata_comp_swnp_fig)
     pbar.update(1)
@@ -775,6 +806,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             plot_height=plot_height,
             read_on_hit=True,
             outer_legend=outer_legend,
+            num_points=num_points,
         )
         run_next_period_figs.append(rhonwdata_comp_swnp_fig)
     pbar.update(1)

@@ -218,6 +218,9 @@ def main():
     parser.add_argument('--plot-filters', type=str,
                         default="",
                         help='A comma separate string to search as filters')
+    parser.add_argument('--plot-num-points', type=int,
+                        default=52,
+                        help='Number of maximum points for each plot')
     parser.add_argument('--only-CPU', type='bool',
                         default=True,
                         help='Force to use only CPU with TensorFlow [DEFAULT: True]')
@@ -523,6 +526,7 @@ def main():
             plot_height=plot_height,
             bandwidth=args.plot_bandwidth,
             outer_legend=args.outer_legend,
+            num_points=args.plot_num_points,
         )
 
     elif args.action == "train":
