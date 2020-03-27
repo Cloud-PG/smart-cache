@@ -353,15 +353,89 @@ class env:
                 if self._eviction_window_filenames[N-1-i] == filename:
                     return self._eviction_window_actions[N-1-i]
 
+    def add_to_evict_window(self,curFilename, curValues, nextValues, action):
+        self._eviction_window_counters[curFilename] = 1
+        self._eviction_window_actions[curFilename] = action
+        self._eviction_window_rewards[curFilename] = 0
+        self._eviction_window_cur_values[curFilename] = curValues
+        self._eviction_window_next_values[curFilename] = nextValues 
+    
+    def add_to_add_window_or_get_rewards(self, curFilename, curValues, nextValues, action):
+        for key in self._request_window_counters:                                                #increment counters
+            self._request_window_counters[key] +=  1
+        for key in self._eviction_window_counters:                                                #increment counters
+            self._eviction_window_counters[key] +=  1
+
+        if curFilename in self._request_window_cur_values.keys():            #if is in queue
+            if self._request_window_counters[curFilename] == time_span:                          #is invalidated
+                if self._request_window_actions[curFilename] == 0:
+                    self._request_window_rewards[curFilename] = - 1
+                else:
+                    self._request_window_rewards[curFilename] = + 1
+            else:                                                                           #is not invalidated yet
+                if self._request_window_actions[curFilename] == 0:
+                    self._request_window_rewards[curFilename] = + 1
+                else:
+                    self._request_window_rewards[curFilename] = - 1
+            
+            to_add = np.concatenate((self._request_window_cur_values[curFilename],[self._request_window_actions[curFilename]],[self._request_window_rewards[curFilename]],self._request_window_next_values[curFilename]))
+            to_add = np.reshape(to_add, (1,16))
+            self.add_memory_vector = np.vstack((self.add_memory_vector, to_add))
+            
+            del self._request_window_counters[curFilename]             
+            del self._request_window_cur_values[curFilename]
+            del self._request_window_actions[curFilename] 
+            del self._request_window_rewards[curFilename]
+            del self._request_window_next_values[curFilename]
+
+        else:                                                           #if isnt in queue
+            self._request_window_counters[curFilename] = 1
+            self._request_window_actions[curFilename] = action
+            self._request_window_rewards[curFilename] = 0
+            self._request_window_cur_values[curFilename] = curValues
+            self._request_window_next_values[curFilename] = nextValues 
+        
+        if curFilename in self._eviction_window_cur_values.keys():            #if is in queue
+            if self._eviction_window_counters[curFilename] == time_span:                          #is invalidated
+                if self._eviction_window_actions[curFilename] == 0:
+                    self._eviction_window_rewards[curFilename] = - 1
+                else:
+                    self._eviction_window_rewards[curFilename] = + 1
+            else:                                                                           #is not invalidated yet
+                if self._eviction_window_actions[curFilename] == 0:
+                    self._eviction_window_rewards[curFilename] = + 1
+                else:
+                    self._eviction_window_rewards[curFilename] = - 1
+
+            to_add = np.concatenate((self._eviction_window_cur_values[curFilename],[self._eviction_window_actions[curFilename]],[self._eviction_window_rewards[curFilename]],self._eviction_window_next_values[curFilename]))
+            to_add = np.reshape(to_add, (1,16))
+            self.evict_memory_vector = np.vstack((self.evict_memory_vector, to_add))
+        
+            del self._eviction_window_counters[curFilename]
+            del self._eviction_window_cur_values[curFilename]
+            del self._eviction_window_actions[curFilename] 
+            del self._eviction_window_rewards[curFilename]
+            del self._eviction_window_next_values[curFilename]   
+
     def update_windows_getting_eventual_rewards(self, adding_or_evicting, curFilename, curValues, nextValues, action):
+        '''
+            - if you are in adding mode, this function updates counters of adding and evicting windows, then
+        searches for this filename in both windows: if finds it, gives reward and removes it from window. 
+        Then adding window is updated with new curvalues, nextvalues, action and counter is restarted
+            - if you are in evicting mode, this function simply add this values to eviciton window which should be
+            empty when eviction starts
+        '''
+
         if adding_or_evicting == 0:
             for key in self._request_window_counters:                                                #increment counters
                 self._request_window_counters[key] +=  1
             for key in self._eviction_window_counters:                                                #increment counters
                 self._eviction_window_counters[key] +=  1
 
+
+            ############################ GIVING REWARD TO ADDITION IF IT IS IN WINDOW AND ADD TO WINDOW ########################################################################
             if curFilename in self._request_window_cur_values.keys():            #if is in queue
-                if self._request_window_counters[curFilename] == time_span:                          #is invalidated
+                if self._request_window_counters[curFilename] >= time_span:                          #is invalidated
                     if self._request_window_actions[curFilename] == 0:
                         self._request_window_rewards[curFilename] = - 1
                     else:
@@ -376,11 +450,17 @@ class env:
                 to_add = np.reshape(to_add, (1,16))
                 self.add_memory_vector = np.vstack((self.add_memory_vector, to_add))
                 
-                del self._request_window_counters[curFilename]             
-                del self._request_window_cur_values[curFilename]
-                del self._request_window_actions[curFilename] 
-                del self._request_window_rewards[curFilename]
-                del self._request_window_next_values[curFilename]
+                #del self._request_window_counters[curFilename]             
+                #del self._request_window_cur_values[curFilename]
+                #del self._request_window_actions[curFilename] 
+                #del self._request_window_rewards[curFilename]
+                #del self._request_window_next_values[curFilename]
+
+                self._request_window_counters[curFilename] = 1
+                self._request_window_actions[curFilename] = action
+                self._request_window_rewards[curFilename] = 0
+                self._request_window_cur_values[curFilename] = curValues
+                self._request_window_next_values[curFilename] = nextValues 
 
             else:                                                           #if isnt in queue
                 self._request_window_counters[curFilename] = 1
@@ -389,7 +469,7 @@ class env:
                 self._request_window_cur_values[curFilename] = curValues
                 self._request_window_next_values[curFilename] = nextValues 
             
-        else:
+            ######### GIVING REWARD TO EVICTION AND REMOVING FROM WINDOW ################################################################################################
             if curFilename in self._eviction_window_cur_values.keys():            #if is in queue
                 if self._eviction_window_counters[curFilename] == time_span:                          #is invalidated
                     if self._eviction_window_actions[curFilename] == 0:
@@ -412,27 +492,32 @@ class env:
                 del self._eviction_window_rewards[curFilename]
                 del self._eviction_window_next_values[curFilename]   
 
-            else:                                                           #if isnt in queue
-                self._eviction_window_counters[curFilename] = 1
-                self._eviction_window_actions[curFilename] = action
-                self._eviction_window_rewards[curFilename] = 0
-                self._eviction_window_cur_values[curFilename] = curValues
-                self._eviction_window_next_values[curFilename] = nextValues 
+        elif adding_or_evicting == 1:
+            #if curFilename in self._eviction_window_cur_values.keys() == False:             ##UNNECESSARY CONTROL
+            self._eviction_window_counters[curFilename] = 1
+            self._eviction_window_actions[curFilename] = action
+            self._eviction_window_rewards[curFilename] = 0
+            self._eviction_window_cur_values[curFilename] = curValues
+            self._eviction_window_next_values[curFilename] = nextValues 
 
-    def clear_window(self):
-        for curFilename in self._request_window_counters.keys():
-            if self._request_window_actions[curFilename] == 0:
-                self._request_window_rewards[curFilename] = - 1
-            else:
-                self._request_window_rewards[curFilename] = + 1
-            to_add = np.concatenate((self._request_window_cur_values[curFilename],[self._request_window_actions[curFilename]],[self._request_window_rewards[curFilename]],self._request_window_next_values[curFilename]))
-            to_add = np.reshape(to_add, (1,16))
-            self.add_memory_vector = np.vstack((self.add_memory_vector, to_add))         
-        self._request_window_counters.clear()  
-        self._request_window_cur_values.clear()
-        self._request_window_actions.clear()
-        self._request_window_rewards.clear()
-        self._request_window_next_values.clear()
+    def clear_remaining_evict_window(self):
+        '''gives reward to every action in evict window and delete it'''
+        
+        #for curFilename in self._request_window_counters.keys():
+        #    if self._request_window_actions[curFilename] == 0:
+        #        self._request_window_rewards[curFilename] = - 1
+        #    else:
+        #        self._request_window_rewards[curFilename] = + 1
+        #    to_add = np.concatenate((self._request_window_cur_values[curFilename],[self._request_window_actions[curFilename]],[self._request_window_rewards[curFilename]],self._request_window_next_values[curFilename]))
+        #    to_add = np.reshape(to_add, (1,16))
+        #    self.add_memory_vector = np.vstack((self.add_memory_vector, to_add))
+            #print('clearing window: ' + str(self.add_memory_vector.shape))         
+        
+        #self._request_window_counters.clear()  
+        #self._request_window_cur_values.clear()
+        #self._request_window_actions.clear()
+        #self._request_window_rewards.clear()
+        #self._request_window_next_values.clear()
 
         for curFilename in self._eviction_window_counters.keys():                                             
             if self._eviction_window_actions[curFilename] == 0:
@@ -442,12 +527,33 @@ class env:
             to_add = np.concatenate((self._eviction_window_cur_values[curFilename],[self._eviction_window_actions[curFilename]],[self._eviction_window_rewards[curFilename]],self._eviction_window_next_values[curFilename]))
             to_add = np.reshape(to_add, (1,16))
             self.evict_memory_vector = np.vstack((self.evict_memory_vector, to_add))
+        
         self._eviction_window_counters.clear()     
         self._eviction_window_cur_values.clear()
         self._eviction_window_actions.clear()
         self._eviction_window_rewards.clear() 
         self._eviction_window_next_values.clear()
 
+    def look_for_invalidated_add(self):
+        ''' looks for invalidated actions in add window, gives rewards and delete them'''
+        filenames = []
+        for curFilename in self._request_window_counters.keys():
+            if self._request_window_counters[curFilename] > time_span:
+                if self._request_window_actions[curFilename] == 0:
+                    self._request_window_rewards[curFilename] = - 1
+                else:
+                    self._request_window_rewards[curFilename] = + 1
+                to_add = np.concatenate((self._request_window_cur_values[curFilename],[self._request_window_actions[curFilename]],[self._request_window_rewards[curFilename]],self._request_window_next_values[curFilename]))
+                to_add = np.reshape(to_add, (1,16))
+                self.add_memory_vector = np.vstack((self.add_memory_vector, to_add))
+                filenames.append(curFilename)
+
+        for filename in filenames:
+                del self._request_window_counters[filename]             
+                del self._request_window_cur_values[filename]
+                del self._request_window_actions[filename] 
+                del self._request_window_rewards[filename]
+                del self._request_window_next_values[filename]                
 
     def get_this_request_stats(self):
         if (self.curRequest + 1) == self.df_length:
@@ -577,16 +683,17 @@ class env:
     
     def add_request(self, action):
         hit, filename, _, filestats, cputime, walltime, protocol = self.get_this_request_stats()
-        if hit == False:
-            if protocol == 1:               #LOCAL
-                self._cache._CPUeff += cputime/walltime * 100 - it_cpueff_diff
-            if protocol == 0:               #REMOTE
-                self._cache._CPUeff += cputime/walltime * 100 
-        if hit == True:
-            if protocol == 1:               #LOCAL
-                self._cache._CPUeff += cputime/walltime * 100 
-            if protocol == 0:               #REMOTE
-                self._cache._CPUeff += cputime/walltime * 100 + it_cpueff_diff
+        if walltime != 0:
+            if hit == False:
+                if protocol == 1:               #LOCAL
+                    self._cache._CPUeff += cputime/walltime * 100 - it_cpueff_diff
+                if protocol == 0:               #REMOTE
+                    self._cache._CPUeff += cputime/walltime * 100 
+            if hit == True:
+                if protocol == 1:               #LOCAL
+                    self._cache._CPUeff += cputime/walltime * 100 
+                if protocol == 0:               #REMOTE
+                    self._cache._CPUeff += cputime/walltime * 100 + it_cpueff_diff
         self._cache.update_recency()
         added = self._cache.update_policy(filename, filestats, hit, action)
         self._cache.after_request(filestats, hit, added)

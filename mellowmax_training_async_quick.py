@@ -135,6 +135,9 @@ with open(out_directory + '/occupancy.csv', 'w') as file:
 end = False
 
 while end == False:
+    #print(environment.add_memory_vector.shape)
+    #batch = environment.add_memory_vector[np.random.randint(0, environment.add_memory_vector.shape[0], BATCH_SIZE), :]
+    #print(batch.shape)
     if (step_add % 1000 == 0 or step_evict % 1000 == 0) and step_evict != 0:
         print()
     if (environment.curDay+1)%7 == 0:
@@ -162,8 +165,6 @@ while end == False:
                 action = 1
         else:
             cur_values_ = np.reshape(cur_values, (1,7))
-            #if cur_values[1] == 1:
-            #    print('recency = ' + str(cur_values[2]))
             action = np.argmax(model_add.predict(cur_values_))
         
         #UPDATE STUFF, GET REWARD AND NEXT STATE AND PUT INTO MEMORY
@@ -175,22 +176,29 @@ while end == False:
                 + '%  -  ' + 'Hit rate: ' + str(round(environment._cache._hit/(environment._cache._hit + environment._cache._miss)*100,2)) +'%' + ' ACTION: ' +  str(action))
         
         if environment._cache.capacity > environment._cache._h_watermark:
-            environment.clear_window()
+            print('before clearing')
+            print(environment.add_memory_vector.shape)
+            environment.clear_remaining_evict_window()
+            print('after clearing')
+            print(environment.add_memory_vector.shape)
         
         if environment._cache.capacity <= environment._cache._h_watermark:
             next_values = environment.get_next_request_values()
             environment.update_windows_getting_eventual_rewards(adding_or_evicting, curFilename, cur_values, next_values, action)
         
         #print(environment.add_memory_vector.shape, end = '\r')
-        #if step_add == 1:
-        #    add_memory_vector = np.delete(add_memory_vector, 0)
+        if step_add == 1000:
+            environment.add_memory_vector = np.delete(environment.add_memory_vector, 0, 0)
 
-        if environment.add_memory_vector.shape[0] > memory:
-            environment.add_memory_vector = np.delete(environment.add_memory_vector, 0)
+        if step_add%5000:
+            environment.look_for_invalidated_add()
+
+        while(environment.add_memory_vector.shape[0] > memory):
+            environment.add_memory_vector = np.delete(environment.add_memory_vector, 0, 0)
 
         #TRAIN NETWORK
         if step_add > no_training_steps:
-            
+            #print(environment.add_memory_vector.shape)
             batch = environment.add_memory_vector[np.random.randint(0, environment.add_memory_vector.shape[0], BATCH_SIZE), :]
             train_cur_vals ,train_actions, train_rewards, train_next_vals = np.split(batch, [7,8,9] , axis = 1)
             target = model_add.predict_on_batch(train_cur_vals)
@@ -198,7 +206,6 @@ while end == False:
 
             for i in range(0,BATCH_SIZE):
                 action_ = int(train_actions[i])
-                #print(action_)
                 target[i,action_] = train_rewards[i] + gamma * mellowmax(mm_omega, predictions[i])   
             #TRAIN
             model_add.train_on_batch(train_cur_vals, target)
@@ -234,32 +241,36 @@ while end == False:
             environment._cache._deleted_data += curSize
         
         if step_evict%1000 == 0:
+            print(environment.evict_memory_vector.shape)
             print('Freeing memory ' + str(environment._filesLRU_index) + '/' + str(len(environment._cache._filesLRUkeys)) + 
                                         '  -  Occupancy: ' + str(round(environment._cache.capacity,2)) + '%  - action: ' + str(action))
-                
-        if environment._filesLRU_index + 1 != len(environment._cache._filesLRU):
+            print('evict actions to be rewarded: ' + str(len(environment._eviction_window_counters)))
+        
+        if environment._filesLRU_index + 1 != len(environment._cache._filesLRUkeys):
             next_values = environment.get_next_file_in_cache_values()
             environment.update_windows_getting_eventual_rewards(adding_or_evicting, curFilename, cur_values, next_values, action)
         
-        #if step_add == 1:
-        #    evict_memory_vector = np.delete(evict_memory_vector, 0)
+        if step_evict == 1000:
+            environment.evict_memory_vector = np.delete(environment.evict_memory_vector, 0, 0)
 
-        if environment.evict_memory_vector.shape[0] > memory:
-            environment.evict_memory_vector = np.delete(environment.evict_memory_vector, 0)
+
+        while(environment.evict_memory_vector.shape[0] > memory):
+            environment.evict_memory_vector = np.delete(environment.evict_memory_vector, 0, 0)
 
         #TRAIN NETWORK
-        if step_evict > no_training_steps:
-            
+        if step_evict > no_training_steps + 5000:
+            #print(environment.evict_memory_vector.shape)
             batch = environment.evict_memory_vector[np.random.randint(0, environment.evict_memory_vector.shape[0], BATCH_SIZE), :]
             train_cur_vals ,train_actions, train_rewards, train_next_vals = np.split(batch, [7,8,9] , axis = 1)
-
+            #print('training batch is')
+            #print(batch)
             #GET TARGET
             target = model_evict.predict_on_batch(train_cur_vals)
             predictions = model_evict.predict_on_batch(train_next_vals)
             for i in range(0,BATCH_SIZE):  
                 action_ = int(train_actions[i])
                 #print(action_)
-                target[i,train_actions[i]] = train_rewards[i] + gamma * mellowmax(mm_omega, predictions[i])   
+                target[i,action_] = train_rewards[i] + gamma * mellowmax(mm_omega, predictions[i])   
                 
             #TRAIN
             model_evict.train_on_batch(train_cur_vals, target)
@@ -274,7 +285,7 @@ while end == False:
         cur_values = environment.get_next_file_in_cache_values()
         
     ### STOP EVICTING ################################################################################################################################
-    if adding_or_evicting == 1 and environment._filesLRU_index + 1 == len(environment._cache._filesLRU):
+    if adding_or_evicting == 1 and environment._filesLRU_index + 1 == len(environment._cache._filesLRUkeys):
         with open(out_directory + '/occupancy.csv', 'a') as file:
             writer = csv.writer(file)
             writer.writerow([environment._cache.capacity])
