@@ -33,9 +33,6 @@ type AIRL struct {
 	qAdditionPrevStates     map[int64]prevChoice
 	qEvictionPrevState      prevChoice
 	extendedEvictionTable   bool
-	dailyReadOnHit          float64
-	dailyReadOnMiss         float64
-	dailyWrittenData        float64
 	points                  float64
 	prevPoints              float64
 	bufferCategory          []bool
@@ -309,10 +306,6 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) *FileStats {
 	cache.curTime = request.DayTime
 
 	if !cache.curTime.Equal(cache.prevTime) {
-		cache.dailyReadOnHit = 0.0
-		cache.dailyReadOnMiss = 0.0
-		cache.dailyWrittenData = 0.0
-
 		cache.numDailyHit = 0
 		cache.numDailyMiss = 0
 		cache.hitCPUEff = 0.
@@ -393,7 +386,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				// 	reward = -reward
 				// }
 
-				if !hit && (cache.qEvictionPrevState.HitRate > cache.HitRate() && cache.qEvictionPrevState.HitRate-cache.HitRate() >= 4.0) || cache.dailyReadOnHit <= cache.dailyReadOnMiss || cache.dailyReadOnMiss >= (cache.bandwidth*0.9) {
+				if !hit || cache.dataReadOnHit <= cache.dataReadOnMiss || cache.dataReadOnMiss >= (cache.bandwidth*0.95) {
 					reward = -reward
 				}
 				// Update table
@@ -490,7 +483,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					reward := request.Size
 					// reward := 1.
 
-					if fileStats.Frequency > 1 && (cache.qEvictionPrevState.HitRate > cache.HitRate() && cache.qEvictionPrevState.HitRate-cache.HitRate() >= 4.0) && cache.dailyReadOnHit <= cache.dailyReadOnMiss {
+					if fileStats.Frequency > 1 && ((cache.qEvictionPrevState.HitRate > cache.HitRate() && cache.qEvictionPrevState.HitRate-cache.HitRate() >= 4.0) || cache.dataReadOnHit <= cache.dataReadOnMiss) {
 						reward = -reward
 					}
 
@@ -528,7 +521,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					// if cache.dailyReadOnHit < cache.dailyReadOnMisss*2.) || cache.dataReadOnHit < (cache.dataReadOnMiss*2.) {
 					// 	reward = -reward
 					// }
-					if fileStats.Frequency > 1 && cache.dailyReadOnHit <= cache.dailyReadOnMiss && cache.dailyReadOnMiss <= (cache.bandwidth*0.5) {
+					if fileStats.Frequency > 1 && (cache.dataReadOnHit <= cache.dataReadOnMiss || cache.dataReadOnMiss <= (cache.bandwidth*0.95)) {
 						reward = -reward
 					}
 
@@ -586,7 +579,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					// if cache.dataReadOnHit < (cache.dataReadOnMiss*2.) || cache.dailyReadOnHit < cache.dailyReadOnMisss*2.) {
 					// 	reward = -reward
 					// }
-					if fileStats.Frequency == 1 && (cache.dailyWrittenData >= (cache.dailyReadOnHit*0.5) || cache.dailyReadOnMiss >= (cache.bandwidth*0.9)) {
+					if fileStats.Frequency == 1 && (cache.dataWritten >= (cache.dataReadOnHit*0.3) || cache.dataReadOnMiss >= (cache.bandwidth*0.95)) {
 						reward = -reward
 					}
 					// Update table
@@ -627,7 +620,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					// if cache.dataReadOnHit < (cache.dataReadOnMiss*2.) || cache.dailyReadOnHit < cache.dailyReadOnMisss*2.) {
 					// 	reward = -reward
 					// }
-					if (cache.qEvictionPrevState.HitRate > cache.HitRate() && cache.qEvictionPrevState.HitRate-cache.HitRate() >= 4.0) && cache.dailyReadOnHit <= cache.dailyReadOnMiss && cache.dailyReadOnMiss >= (cache.bandwidth*0.9) {
+					if (cache.qEvictionPrevState.HitRate > cache.HitRate() && cache.qEvictionPrevState.HitRate-cache.HitRate() >= 4.0) || cache.dataReadOnHit <= cache.dataReadOnMiss || cache.dataReadOnMiss >= (cache.bandwidth*0.95) {
 						reward = -reward
 					}
 
@@ -686,19 +679,6 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 	}
 
 	return added
-}
-
-// AfterRequest of cache
-func (cache *AIRL) AfterRequest(request *Request, hit bool, added bool) {
-	if hit {
-		cache.dailyReadOnHit += request.Size
-	} else {
-		cache.dailyReadOnMiss += request.Size
-	}
-	if added {
-		cache.dailyWrittenData += request.Size
-	}
-	cache.SimpleCache.AfterRequest(request, hit, added)
 }
 
 // Free removes files from the cache
