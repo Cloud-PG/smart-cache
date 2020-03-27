@@ -75,6 +75,7 @@ type Cache interface {
 	MeanSize() float64
 	MeanFrequency() float64
 	MeanRecency() float64
+	BandwidthUsage() float64
 
 	Check(int64) bool
 	CheckWatermark() bool

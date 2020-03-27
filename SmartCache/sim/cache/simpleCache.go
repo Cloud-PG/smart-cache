@@ -427,6 +427,11 @@ func (cache *SimpleCache) Capacity() float64 {
 	return (cache.Size() / cache.MaxSize) * 100.
 }
 
+// BandwidthUsage of the cache
+func (cache *SimpleCache) BandwidthUsage() float64 {
+	return (cache.dataReadOnMiss / cache.bandwidth) * 100.
+}
+
 // DataWritten of the cache
 func (cache *SimpleCache) DataWritten() float64 {
 	return cache.dataWritten
