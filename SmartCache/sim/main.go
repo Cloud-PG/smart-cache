@@ -59,6 +59,7 @@ var (
 	simStopWindow          uint32
 	simWindowSize          uint32
 	simBandwidth           float64
+	simBandwidthManager    bool
 	weightAlpha            float64
 	weightBeta             float64
 	weightFunc             string
@@ -199,6 +200,10 @@ func addSimFlags(cmd *cobra.Command) {
 		&simBandwidth, "simBandwidth", 10.0,
 		"indicates the network bandwidth available in Gbit",
 	)
+	cmd.PersistentFlags().BoolVar(
+		&simBandwidthManager, "simBandwidthManager", false,
+		"enable the file redirection to another cache when bandwidth is over 95%",
+	)
 
 }
 
@@ -265,6 +270,8 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				dataTypeFilter     cache.Filter
 				succesJobFilter    = cache.SuccessJob{}
 				cacheSizeString    string
+				redirectedData     float64
+				numRedirected      int64
 			)
 
 			cacheSizeString = fmt.Sprintf("%0.0f%s", cacheSize, strings.ToUpper(cacheSizeUnit))
@@ -534,6 +541,14 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 						}
 					}
 
+					sizeInMbytes := record.SizeM // Size in Megabytes
+
+					if simBandwidthManager && curCacheInstance.BandwidthUsage() >= 95.0 {
+						redirectedData += sizeInMbytes
+						numRedirected++
+						continue
+					}
+
 					cpuEff := (record.CPUTime / (record.CPUTime + record.IOTime)) * 100.
 					// Filter records with invalid CPU efficiency
 					if cpuEff < 0. {
@@ -549,8 +564,6 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 						numInvalidRecords++
 						continue
 					}
-
-					sizeInMbytes := record.SizeM // Size in Megabytes
 
 					cache.GetFile(
 						curCacheInstance,
@@ -639,13 +652,15 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				panic(errCreateStat)
 			}
 			jsonBytes, errMarshal := json.Marshal(cache.SimulationStats{
-				TimeElapsed:        fmt.Sprintf("%02d:%02d:%02d", elTH, elTM, elTS),
-				Extra:              curCacheInstance.ExtraStats(),
-				TotNumRecords:      totNumRecords,
-				TotFilteredRecords: numFilteredRecords,
-				TotJumpedRecords:   numJumpedRecords,
-				TotInvalidRecords:  numInvalidRecords,
-				AvgSpeed:           fmt.Sprintf("Num.Records/s = %0.2f", avgSpeed),
+				TimeElapsed:           fmt.Sprintf("%02d:%02d:%02d", elTH, elTM, elTS),
+				Extra:                 curCacheInstance.ExtraStats(),
+				TotNumRecords:         totNumRecords,
+				TotFilteredRecords:    numFilteredRecords,
+				TotJumpedRecords:      numJumpedRecords,
+				TotInvalidRecords:     numInvalidRecords,
+				AvgSpeed:              fmt.Sprintf("Num.Records/s = %0.2f", avgSpeed),
+				TotRedirectedRecords:  numRedirected,
+				SizeRedirectedRecords: redirectedData,
 			})
 			if errMarshal != nil {
 				panic(errMarshal)

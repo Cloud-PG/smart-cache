@@ -52,13 +52,15 @@ var (
 
 // SimulationStats is used to output the simulation statistics
 type SimulationStats struct {
-	TimeElapsed        string `json:"timeElapsed"`
-	Extra              string `json:"extra"`
-	TotNumRecords      int64  `json:"totNumRecords"`
-	TotJumpedRecords   int64  `json:"totJumpedRecords"`
-	TotInvalidRecords  int64  `json:"totInvalidRecords"`
-	TotFilteredRecords int64  `json:"totFilteredRecords"`
-	AvgSpeed           string `json:"avgSpeed"`
+	TimeElapsed           string  `json:"timeElapsed"`
+	Extra                 string  `json:"extra"`
+	TotNumRecords         int64   `json:"totNumRecords"`
+	TotJumpedRecords      int64   `json:"totJumpedRecords"`
+	TotInvalidRecords     int64   `json:"totInvalidRecords"`
+	TotFilteredRecords    int64   `json:"totFilteredRecords"`
+	TotRedirectedRecords  int64   `json:"totRedirectedRecords"`
+	SizeRedirectedRecords float64 `json:"sizeRedirectedRecords"`
+	AvgSpeed              string  `json:"avgSpeed"`
 }
 
 // CSVRecord is the base record composition readed from the logs

@@ -38,6 +38,7 @@ def prepare_process_call(args, simulator_exe, cache_type, working_dir: str,
         f"--size={args.cache_size}",
         f"--sizeUnit={args.cache_size_unit}",
         f"--simBandwidth={args.cache_bandwidth}",
+        f"--simBandwidthManager={args.cache_bandwidth_redirect}",
         f"--simRegion={args.region}",
         f"--simFileType={args.file_type}",
         f"--simWindowSize={args.window_size}",
@@ -137,6 +138,9 @@ def main():
     parser.add_argument('--cache-bandwidth', type=float,
                         default=10.0,
                         help='The cache bandwidth in Gbits [DEFAULT: 10.0]')
+    parser.add_argument('--cache-bandwidth-redirect', type='bool',
+                        default=False,
+                        help='Redirect files when cache bandwidth is over 95% [DEFAULT: False]')
     parser.add_argument('--weight-function', type=str,
                         choices=[
                             "FuncAdditive",
@@ -239,9 +243,6 @@ def main():
     parser.add_argument('--plot-resolution', type=str,
                         default="800,600",
                         help='A comma separate string representing the target resolution of each plot [DEFAULT: 640,480]')
-    parser.add_argument('--plot-bandwidth', type=int,
-                        default=10,
-                        help='Bandwidth size of plot in Gbit [DEFAULT: 1]')
     parser.add_argument('--ai-model-basename', type=str,
                         default="./models/donkey_model",
                         help='Ai Model basename and path [DEFAULT: "./models/donkey_model"]')
@@ -524,7 +525,7 @@ def main():
             png=args.out_png,
             plot_width=plot_width,
             plot_height=plot_height,
-            bandwidth=args.plot_bandwidth,
+            bandwidth=args.cache_bandwidth,
             outer_legend=args.outer_legend,
             num_points=args.plot_num_points,
         )
