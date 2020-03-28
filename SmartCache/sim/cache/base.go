@@ -101,7 +101,7 @@ func GetSimCacheStatus(cache Cache) *pb.SimCacheStatus {
 }
 
 // GetFile requests a file to the cache
-func GetFile(cache Cache, vars ...interface{}) bool {
+func GetFile(bandwidthManager bool, cache Cache, vars ...interface{}) (bool, bool) {
 	/* vars:
 	[0] -> filename int64
 	[1] -> size     float64
@@ -142,9 +142,12 @@ func GetFile(cache Cache, vars ...interface{}) bool {
 	}
 
 	hit := cache.Check(cacheRequest.Filename)
+	if bandwidthManager && !hit && cache.BandwidthUsage() >= 95.0 {
+		return false, true
+	}
 	fileStats := cache.BeforeRequest(&cacheRequest, hit)
 	added := cache.UpdatePolicy(&cacheRequest, fileStats, hit)
 	cache.AfterRequest(&cacheRequest, hit, added)
 	cache.CheckWatermark()
-	return added
+	return added, false
 }

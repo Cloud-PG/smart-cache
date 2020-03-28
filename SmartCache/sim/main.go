@@ -543,12 +543,6 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 
 					sizeInMbytes := record.SizeM // Size in Megabytes
 
-					if simBandwidthManager && curCacheInstance.BandwidthUsage() >= 95.0 {
-						redirectedData += sizeInMbytes
-						numRedirected++
-						continue
-					}
-
 					cpuEff := (record.CPUTime / (record.CPUTime + record.IOTime)) * 100.
 					// Filter records with invalid CPU efficiency
 					if cpuEff < 0. {
@@ -565,7 +559,8 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 						continue
 					}
 
-					cache.GetFile(
+					_, redirected := cache.GetFile(
+						simBandwidthManager,
 						curCacheInstance,
 						record.Filename,
 						sizeInMbytes,
@@ -576,6 +571,12 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 						record.UserID,
 						record.FileType,
 					)
+
+					if redirected {
+						redirectedData += sizeInMbytes
+						numRedirected++
+						continue
+					}
 
 					numDailyRecords++
 
