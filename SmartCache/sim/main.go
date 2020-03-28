@@ -595,6 +595,8 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 							zap.Int64("numDailyRecords", numDailyRecords),
 							zap.Float64("hitRate", curCacheInstance.HitRate()),
 							zap.Float64("capacity", curCacheInstance.Capacity()),
+							zap.Float64("redirectedData", redirectedData),
+							zap.Int64("numRedirected", numRedirected),
 							zap.String("extra", curCacheInstance.ExtraStats()),
 							zap.Float64("it/s", float64(numIterations)/time.Now().Sub(start).Seconds()),
 						)
