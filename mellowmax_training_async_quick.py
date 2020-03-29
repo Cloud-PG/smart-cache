@@ -16,7 +16,7 @@ parser.add_argument('--data', type=str, default='/home/ubuntu/source2018_numeric
 parser.add_argument('--start_month', type=int, default=1)
 parser.add_argument('--end_month', type=int, default=2)
 parser.add_argument('--batch_size', type=int, default=32)
-parser.add_argument('--out_dir', type=str, default='results/results_ok_stats_async_quick')
+parser.add_argument('--out_dir', type=str, default='results/results_ok_stats_async_quick_cleaned')
 parser.add_argument('--out_name', type=str, default='dQL_add_evic.csv')
 parser.add_argument('--lr', type=float, default=0.01, help='learning rate')
 parser.add_argument('--memory', type=int, default=30000)
@@ -198,7 +198,7 @@ while end == False:
 
         #TRAIN NETWORK
         if step_add > no_training_steps:
-            #print(environment.add_memory_vector.shape)
+            #print(environment.add_memory_vector.sh
             batch = environment.add_memory_vector[np.random.randint(0, environment.add_memory_vector.shape[0], BATCH_SIZE), :]
             train_cur_vals ,train_actions, train_rewards, train_next_vals = np.split(batch, [7,8,9] , axis = 1)
             target = model_add.predict_on_batch(train_cur_vals)
@@ -212,7 +212,8 @@ while end == False:
         
     ### EVICTING #############################################################################################################
     elif adding_or_evicting == 1: 
-        
+        print(environment.evict_memory_vector.shape)
+        print('evict actions to be rewarded: ' + str(len(environment._eviction_window_counters)))
         #UPDATE STUFF
         step_evict += 1
         if eps_evict > eps_evict_min:
@@ -241,10 +242,10 @@ while end == False:
             environment._cache._deleted_data += curSize
         
         if step_evict%1000 == 0:
-            print(environment.evict_memory_vector.shape)
+            #print(environment.evict_memory_vector.shape)
             print('Freeing memory ' + str(environment._filesLRU_index) + '/' + str(len(environment._cache._filesLRUkeys)) + 
                                         '  -  Occupancy: ' + str(round(environment._cache.capacity,2)) + '%  - action: ' + str(action))
-            print('evict actions to be rewarded: ' + str(len(environment._eviction_window_counters)))
+            #print('evict actions to be rewarded: ' + str(len(environment._eviction_window_counters)))
         
         if environment._filesLRU_index + 1 != len(environment._cache._filesLRUkeys):
             next_values = environment.get_next_file_in_cache_values()
