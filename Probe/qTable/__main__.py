@@ -58,7 +58,7 @@ def main():
     )
     print("-"*42)
     counter = Counter(action_counter)
-    tot = sum(counter.values)
+    tot = sum(counter.values())
     assert tot == len(df.index), "Error: counter actions..."
     for key in sorted(counter):
         print(f"- {key} => {(counter[key]/tot)*100.:0.2f}")
