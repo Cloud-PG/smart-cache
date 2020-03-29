@@ -36,7 +36,6 @@ def main():
     for idx, row in enumerate(df.itertuples()):
         action_values = [getattr(row, value) for value in actions]
         best_action = actions[action_values.index(max(action_values))]
-        action_counter.append(best_action)
         for idx, value in enumerate(action_values):
             if value != 0.:
                 action_counters[idx] += 1
@@ -47,6 +46,7 @@ def main():
             print(f"{Style.DIM}{Fore.YELLOW}{state_values} {STATUS_ARROW} {Style.DIM}{Fore.YELLOW}{'NOT EXPLORED'}{Style.RESET_ALL}")
             state_not_explored += 1
         else:
+            action_counter.append(best_action)  # Count only explored actions
             state_values = " | ".join(
                 [str(getattr(row, value)) for value in sort_by])
             print(
@@ -59,7 +59,7 @@ def main():
     print("-"*42)
     counter = Counter(action_counter)
     tot = sum(counter.values())
-    assert tot == len(df.index), "Error: counter actions..."
+    assert tot == len(df.index) - state_not_explored, "Error: counter actions..."
     for key in sorted(counter):
         print(f"- {key} =>\t{(counter[key]/tot)*100.:0.2f}%")
     print("-"*42)
