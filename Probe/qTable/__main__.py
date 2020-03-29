@@ -21,7 +21,7 @@ def main():
     # print(df)
 
     sort_by = [column for column in df.columns if column.find("Action") == -1]
-    actions = list(set(df.columns) - set(sort_by))
+    actions = [column for column in df.columns if column.find("Action") != -1]
     action_counters = [0 for _ in range(len(actions))]
 
     df = df.sort_values(by=sort_by)
