@@ -1,4 +1,5 @@
 import argparse
+from collections import Counter
 
 import pandas as pd
 from colorama import Fore, Style
@@ -30,10 +31,12 @@ def main():
     print("-"*80)
 
     state_not_explored = 0
+    action_counter = []
 
     for idx, row in enumerate(df.itertuples()):
         action_values = [getattr(row, value) for value in actions]
         best_action = actions[action_values.index(max(action_values))]
+        action_counter.append(best_action)
         for idx, value in enumerate(action_values):
             if value != 0.:
                 action_counters[idx] += 1
@@ -46,12 +49,19 @@ def main():
         else:
             state_values = " | ".join(
                 [str(getattr(row, value)) for value in sort_by])
-            print(f"{Style.BRIGHT}{state_values} {STATUS_ARROW} {Style.BRIGHT}{best_action}{Style.RESET_ALL}")
+            print(
+                f"{Style.BRIGHT}{state_values} {STATUS_ARROW} {Style.BRIGHT}{best_action}{Style.RESET_ALL}")
 
     print("-"*42)
     print(
         f"Explored {((df.shape[0] - state_not_explored) / df.shape[0])*100.:0.2f}% states and {(sum(action_counters) / (df.shape[0] * 2))*100.:0.2f}% of actions"
     )
+    print("-"*42)
+    counter = Counter(action_counter)
+    tot = sum(counter.values)
+    assert tot == len(df.index), "Error: counter actions..."
+    for key in sorted(counter):
+        print(f"- {key} => {(counter[key]/tot)*100.:0.2f}")
     print("-"*42)
 
 
