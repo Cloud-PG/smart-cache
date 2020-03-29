@@ -386,7 +386,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				// 	reward = -reward
 				// }
 
-				if cache.qEvictionPrevState.HitRate > cache.HitRate() && cache.dataWritten >= cache.dataDeleted && cache.dataReadOnHit <= cache.dataReadOnMiss && cache.dataReadOnMiss >= (cache.bandwidth*0.75) {
+				if cache.qEvictionPrevState.HitRate > cache.HitRate() || cache.dataWritten >= cache.dataDeleted || cache.dataReadOnHit <= cache.dataReadOnMiss || cache.dataReadOnMiss >= (cache.bandwidth*0.75) {
 					reward = -reward
 				}
 				// Update table
