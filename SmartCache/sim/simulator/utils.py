@@ -168,8 +168,8 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False,
                 top_df = pd.DataFrame(
                     leaderboard,
                     columns=[
-                        "cacheName", "throughput", "cacheCost", 
-                        "readOnHitRatio", "cpuEff", "hitRate"
+                        "cacheName", "throughput", "cacheCost",
+                        "readOnHitRatio", "bandSaturation","cpuEff", "hitRate"
                     ]
                 )
                 top_df = top_df.sort_values(
@@ -180,8 +180,8 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False,
                 top_df = pd.DataFrame(
                     leaderboard,
                     columns=[
-                        "cacheName", "throughput", "cacheCost", 
-                        "readOnHitRatio", 
+                        "cacheName", "throughput", "cacheCost",
+                        "readOnHitRatio",
                         "family", "alpha", "beta", "gamma"
                     ]
                 )
