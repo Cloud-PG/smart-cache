@@ -130,35 +130,37 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False,
                 cache_size = float(cache_name.split("T_")
                                    [0].rsplit("_", 1)[-1])
                 cache_size = float(cache_size * 1024**2)
-                cost = ((df['written data'] + df['deleted data'] +
-                        df['read on miss data']) / cache_size) * 100.
+                cache_cost = (
+                    (df['written data'] + df['deleted data']) / cache_size) * 100.
                 throughput = (df['read on hit data'] /
                               df['written data']) * 100.
+                read_on_hit_ratio = (df['read on hit data'] /
+                                     df['read data']) * 100.
                 values = [
                     cache_name,
                     throughput.mean(),
-                    cost.mean(),
-                    int(df['read on hit data'].mean()),
+                    cache_cost.mean(),
+                    read_on_hit_ratio.mean(),
                 ]
 
                 if table_type == "leaderboard":
-                    values.insert(
-                        1, ((df['read on miss data'] / ((1000. / 8.) * 60. * 60. * 24. * bandwidth)) * 100.).mean())
-                    values.insert(1, df['hit rate'].mean())
-                    values.insert(1, df['CPU efficiency'].mean())
+                    values.append(
+                        ((df['read on miss data'] / ((1000. / 8.) * 60. * 60. * 24. * bandwidth)) * 100.).mean())
+                    values.append(df['CPU efficiency'].mean())
+                    values.append(df['hit rate'].mean())
                     leaderboard.append(values)
                 elif table_type == "weight":
                     if cache_name.find("weigh") != -1 and cache_name.index("weigh") == 0:
                         cache_type, size, region, family, alpha, beta, gamma = cache_name.split(
                             "_")
-                        values.insert(1, gamma)
-                        values.insert(1, beta)
-                        values.insert(1, alpha)
-                        values.insert(1, family)
+                        values.append(family)
+                        values.append(alpha)
+                        values.append(beta)
+                        values.append(gamma)
                     else:
                         for _ in range(3):
-                            values.insert(1, 0)
-                        values.insert(1, "")
+                            values.append(0)
+                        values.append("")
 
                     leaderboard.append(values)
 
@@ -166,24 +168,25 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False,
                 top_df = pd.DataFrame(
                     leaderboard,
                     columns=[
-                        "cacheName", "cpuEff", "hitRate", "network",
-                        "throughput", "cost", "readOnHit"
+                        "cacheName", "throughput", "cacheCost", 
+                        "readOnHitRatio", "cpuEff", "hitRate"
                     ]
                 )
                 top_df = top_df.sort_values(
-                    by=["cpuEff", "throughput", "cost", "readOnHit"],
+                    by=["throughput", "cacheCost", "readOnHitRatio", "cpuEff"],
                     ascending=[False, False, True, False]
                 )
             elif table_type == "weight":
                 top_df = pd.DataFrame(
                     leaderboard,
                     columns=[
-                        "cacheName", "family", "alpha", "beta", "gamma",
-                        "throughput", "cost", "readOnHit"
+                        "cacheName", "throughput", "cacheCost", 
+                        "readOnHitRatio", 
+                        "family", "alpha", "beta", "gamma"
                     ]
                 )
                 top_df = top_df.sort_values(
-                    by=["throughput", "cost", "readOnHit"],
+                    by=["throughput", "cacheCost", "readOnHitRatio"],
                     ascending=[False, True, False]
                 )
 
@@ -200,7 +203,7 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False,
             if top_table_output:
                 if group_by == "family":
                     top_df.groupby("family").head(top).sort_values(
-                        by=["family", "throughput", "cost", "readOnHit"],
+                        by=["family", "throughput", "cost", "readOnHitRatio"],
                         ascending=[True, False, True, False]
                     ).to_csv(
                         f"top_{top}_results.csv", index=False,
@@ -208,8 +211,8 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False,
                     )
                 else:
                     top_df.head(top).sort_values(
-                        by=["cpuEff", "throughput", "cost", "readOnHit"],
-                        ascending=[False, False, True, False]
+                        by=["throughput", "cost", "readOnHitRatio", "cpuEff"],
+                        ascending=[False, True, False, False]
                     ).to_csv(
                         f"top_{top}_results.csv", index=False,
                         float_format='%.2f'
