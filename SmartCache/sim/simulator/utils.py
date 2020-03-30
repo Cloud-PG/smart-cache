@@ -169,7 +169,7 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False,
                     leaderboard,
                     columns=[
                         "cacheName", "throughput", "cacheCost",
-                        "readOnHitRatio", "bandSaturation","cpuEff", "hitRate"
+                        "readOnHitRatio", "bandSaturation", "cpuEff", "hitRate"
                     ]
                 )
                 top_df = top_df.sort_values(
