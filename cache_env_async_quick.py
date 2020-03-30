@@ -210,7 +210,7 @@ class env:
     ''' object that emulates cache mechanism '''
 
     def __init__(self, start_month, end_month, directory, out_directory, out_name):
-        
+        #print('STO USANDO LA VERSIONE PIU AGGIORNATA')
         #set period
         self._startMonth = start_month
         self._endMonth = end_month
@@ -379,9 +379,9 @@ class env:
     def update_windows_getting_eventual_rewards(self, adding_or_evicting, curFilename, curValues, nextValues, action):
         '''
             - if you are in adding mode, this function updates counters of adding and evicting windows, then
-        searches for this filename in both windows: if finds it, gives reward and removes it from window. 
+        searches for this filename in both windows: if it finds it, gives reward and removes it from window. 
         Then adding window is updated with new curvalues, nextvalues, action and counter is restarted
-            - if you are in evicting mode, this function simply add this values to eviciton window which should be
+            - if you are in evicting mode, this function simply adds this values to eviciton window which should be
             empty when eviction starts
         '''
 
@@ -465,7 +465,7 @@ class env:
         self._eviction_window_next_values.clear()
 
     def look_for_invalidated_add(self):
-        ''' looks for invalidated actions in add window, gives rewards and delete them'''
+        ''' looks for invalidated actions in add window, gives rewards and deletes them'''
         filenames = []
         for curFilename in self._request_window_counters.keys():
             if self._request_window_counters[curFilename] > time_span:

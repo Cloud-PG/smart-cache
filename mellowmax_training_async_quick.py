@@ -16,7 +16,7 @@ parser.add_argument('--data', type=str, default='/home/ubuntu/source2018_numeric
 parser.add_argument('--start_month', type=int, default=1)
 parser.add_argument('--end_month', type=int, default=2)
 parser.add_argument('--batch_size', type=int, default=32)
-parser.add_argument('--out_dir', type=str, default='results/results_ok_stats_async_quick_cleaned')
+parser.add_argument('--out_dir', type=str, default='results/results_ok_stats_async_quick_cleaned_huberTF')
 parser.add_argument('--out_name', type=str, default='dQL_add_evic.csv')
 parser.add_argument('--lr', type=float, default=0.01, help='learning rate')
 parser.add_argument('--memory', type=int, default=30000)
@@ -82,6 +82,9 @@ def huber_loss_mean(y_true, y_pred, clip_delta=1.0):
   return tf.keras.backend.mean(huber_loss(y_true, y_pred, clip_delta))
 
 ############## DEFINE ADD AND EVICT MODELS #########################################################################################################
+
+print('USING HUBER LOSS FROM TENSORFLOW')
+
 model_evict = Sequential()
 model_evict.add(Dense(16, input_dim =7))
 model_evict.add(Activation('sigmoid'))
@@ -94,7 +97,8 @@ model_evict.add(Activation('sigmoid'))
 model_evict.add(Dense(nb_actions))
 model_evict.add(Activation('sigmoid'))
 print(model_evict.summary())
-model_evict.compile(optimizer = 'adam', loss = huber_loss_mean)
+#model_evict.compile(optimizer = 'adam', loss = huber_loss_mean)
+model_evict.compile(optimizer = 'adam', loss=tf.keras.losses.Huber())
 
 if args.load_evict_weights_from_file is None == False:
      model_evict.load_weights(args.load_evict_weights_from_file)
@@ -111,7 +115,8 @@ model_add.add(Activation('sigmoid'))
 model_add.add(Dense(nb_actions))
 model_add.add(Activation('sigmoid'))
 print(model_add.summary())
-model_add.compile(optimizer = 'adam', loss = huber_loss_mean)
+#model_add.compile(optimizer = 'adam', loss = huber_loss_mean)
+model_add.compile(optimizer = 'adam', loss=tf.keras.losses.Huber())
 
 if args.load_add_weights_from_file is None == False:
      model_add.load_weights(args.load_add_weights_from_file)
@@ -124,8 +129,8 @@ step_add = 0
 step_evict = 0
 step_add = 0
 step_evict = 0
-addition_counter = 0
-eviction_counter = 0
+#addition_counter = 0
+#eviction_counter = 0
 
 
 with open(out_directory + '/occupancy.csv', 'w') as file:
@@ -135,9 +140,7 @@ with open(out_directory + '/occupancy.csv', 'w') as file:
 end = False
 
 while end == False:
-    #print(environment.add_memory_vector.shape)
-    #batch = environment.add_memory_vector[np.random.randint(0, environment.add_memory_vector.shape[0], BATCH_SIZE), :]
-    #print(batch.shape)
+
     if (step_add % 1000 == 0 or step_evict % 1000 == 0) and step_evict != 0:
         print()
     if (environment.curDay+1)%7 == 0:
@@ -154,7 +157,6 @@ while end == False:
         if step_add%1000 == 0:
             print('epsilon = ' + str(eps_add))
 
-
         #GET ACTION
         rnd_eps = random.random()
         if rnd_eps < eps_add or step_add < BATCH_SIZE :
@@ -167,7 +169,7 @@ while end == False:
             cur_values_ = np.reshape(cur_values, (1,7))
             action = np.argmax(model_add.predict(cur_values_))
         
-        #UPDATE STUFF, GET REWARD AND NEXT STATE AND PUT INTO MEMORY
+        #GET THIS REQUEST
         environment.add_request(action)
         curFilename, curSize = environment.get_filename_and_size_of_current_request()
 
@@ -175,45 +177,41 @@ while end == False:
             print('Request: ' + str(environment.curRequest) + ' / ' + str(environment.df_length) + '  -  Occupancy: ' + str(round(environment._cache.capacity,2)) 
                 + '%  -  ' + 'Hit rate: ' + str(round(environment._cache._hit/(environment._cache._hit + environment._cache._miss)*100,2)) +'%' + ' ACTION: ' +  str(action))
         
+        #IF IT'S ADDING IS OVER, GIVE REWARD TO ALL EVICTION ACTIONS
         if environment._cache.capacity > environment._cache._h_watermark:
-            print('before clearing')
-            print(environment.add_memory_vector.shape)
             environment.clear_remaining_evict_window()
-            print('after clearing')
-            print(environment.add_memory_vector.shape)
         
+        #IF ADDING IS NOT OVER, GET NEXT VALUES AND PREPARE ACTION TO BE REWARDED, GIVING EVENTUAL REWARD
         if environment._cache.capacity <= environment._cache._h_watermark:
             next_values = environment.get_next_request_values()
             environment.update_windows_getting_eventual_rewards(adding_or_evicting, curFilename, cur_values, next_values, action)
         
-        #print(environment.add_memory_vector.shape, end = '\r')
+        #REMOVE THE FIRST DUMMY ELEMENT IN MEMORY
         if step_add == 1000:
             environment.add_memory_vector = np.delete(environment.add_memory_vector, 0, 0)
 
+        #LOOK PERIODICALLY FOR INVALIDATED PENDING ADDING ACTIONS
         if step_add%5000:
             environment.look_for_invalidated_add()
 
+        #KEEP MEMORY LENGTH LESS THAN LIMIT
         while(environment.add_memory_vector.shape[0] > memory):
             environment.add_memory_vector = np.delete(environment.add_memory_vector, 0, 0)
 
         #TRAIN NETWORK
         if step_add > no_training_steps:
-            #print(environment.add_memory_vector.sh
             batch = environment.add_memory_vector[np.random.randint(0, environment.add_memory_vector.shape[0], BATCH_SIZE), :]
             train_cur_vals ,train_actions, train_rewards, train_next_vals = np.split(batch, [7,8,9] , axis = 1)
             target = model_add.predict_on_batch(train_cur_vals)
             predictions = model_add.predict_on_batch(train_next_vals)
-
             for i in range(0,BATCH_SIZE):
                 action_ = int(train_actions[i])
                 target[i,action_] = train_rewards[i] + gamma * mellowmax(mm_omega, predictions[i])   
-            #TRAIN
             model_add.train_on_batch(train_cur_vals, target)
         
     ### EVICTING #############################################################################################################
     elif adding_or_evicting == 1: 
-        print(environment.evict_memory_vector.shape)
-        print('evict actions to be rewarded: ' + str(len(environment._eviction_window_counters)))
+        
         #UPDATE STUFF
         step_evict += 1
         if eps_evict > eps_evict_min:
@@ -234,7 +232,7 @@ while end == False:
             cur_values_ = np.reshape(cur_values, (1,7))
             action = np.argmax(model_evict.predict(cur_values_))
         
-        #UPDATE STUFF, GET REWARD AND NEXT STATE AND PUT INTO MEMORY
+        #IF ADDING IS NOT OVER, GET NEXT VALUES AND PREPARE ACTION TO BE REWARDED, GIVING EVENTUAL REWARD
         curFilename, curSize = environment.get_filename_and_size_of_current_cache_file()
         if action == 1:
             del environment._cache._filesLRU[curFilename]
@@ -242,45 +240,39 @@ while end == False:
             environment._cache._deleted_data += curSize
         
         if step_evict%1000 == 0:
-            #print(environment.evict_memory_vector.shape)
             print('Freeing memory ' + str(environment._filesLRU_index) + '/' + str(len(environment._cache._filesLRUkeys)) + 
-                                        '  -  Occupancy: ' + str(round(environment._cache.capacity,2)) + '%  - action: ' + str(action))
-            #print('evict actions to be rewarded: ' + str(len(environment._eviction_window_counters)))
+                    '  -  Occupancy: ' + str(round(environment._cache.capacity,2)) + '%  - action: ' + str(action))
         
+        #IF ADDING IS NOT OVER, GET NEXT VALUES AND PREPARE ACTION TO BE REWARDED, GIVING EVENTUAL REWARD
         if environment._filesLRU_index + 1 != len(environment._cache._filesLRUkeys):
             next_values = environment.get_next_file_in_cache_values()
             environment.update_windows_getting_eventual_rewards(adding_or_evicting, curFilename, cur_values, next_values, action)
         
+        #REMOVE THE FIRST DUMMY ELEMENT IN MEMORY
         if step_evict == 1000:
             environment.evict_memory_vector = np.delete(environment.evict_memory_vector, 0, 0)
 
-
+        #KEEP MEMORY LENGTH LESS THAN LIMIT
         while(environment.evict_memory_vector.shape[0] > memory):
             environment.evict_memory_vector = np.delete(environment.evict_memory_vector, 0, 0)
 
         #TRAIN NETWORK
         if step_evict > no_training_steps + 5000:
-            #print(environment.evict_memory_vector.shape)
             batch = environment.evict_memory_vector[np.random.randint(0, environment.evict_memory_vector.shape[0], BATCH_SIZE), :]
             train_cur_vals ,train_actions, train_rewards, train_next_vals = np.split(batch, [7,8,9] , axis = 1)
-            #print('training batch is')
-            #print(batch)
-            #GET TARGET
             target = model_evict.predict_on_batch(train_cur_vals)
             predictions = model_evict.predict_on_batch(train_next_vals)
             for i in range(0,BATCH_SIZE):  
                 action_ = int(train_actions[i])
-                #print(action_)
                 target[i,action_] = train_rewards[i] + gamma * mellowmax(mm_omega, predictions[i])   
-                
-            #TRAIN
             model_evict.train_on_batch(train_cur_vals, target)
 
     #### STOP ADDING ################################################################################################################################
     if adding_or_evicting == 0 and environment._cache.capacity > environment._cache._h_watermark:
         adding_or_evicting = 1 
-        addition_counter += 1
-        environment.start_of_a_new_evicting = True
+        #addition_counter += 1
+        #print('STOP ADDING')
+        #environment.start_of_a_new_evicting = True
         environment._cache._filesLRUkeys = list(environment._cache._filesLRU.keys())
         environment._filesLRU_index = -1
         cur_values = environment.get_next_file_in_cache_values()
@@ -291,7 +283,7 @@ while end == False:
             writer = csv.writer(file)
             writer.writerow([environment._cache.capacity])
         adding_or_evicting = 0
-        eviction_counter += 1
+        #eviction_counter += 1
         cur_values = environment.get_next_request_values()
 
     ### END ####################################################################################################################################
