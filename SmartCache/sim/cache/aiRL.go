@@ -483,7 +483,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					reward := request.Size
 					// reward := 1.
 
-					if cache.dataReadOnHit <= (cache.dataReadOnMiss * 0.5) {
+					if cache.qEvictionPrevState.HitRate > cache.HitRate() || cache.dataReadOnHit <= (cache.dataReadOnMiss*0.5) {
 						reward = -reward
 					}
 
@@ -620,7 +620,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					// if cache.dataReadOnHit < (cache.dataReadOnMiss*2.) || cache.dailyReadOnHit < cache.dailyReadOnMisss*2.) {
 					// 	reward = -reward
 					// }
-					if cache.dataReadOnHit <= (cache.dataReadOnMiss * 0.5) {
+					if cache.qEvictionPrevState.HitRate > cache.HitRate() || cache.dataReadOnHit <= (cache.dataReadOnMiss*0.5) {
 						reward = -reward
 					}
 
