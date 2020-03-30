@@ -448,7 +448,15 @@ def plot_measure(tools: list,
                            values['deleted data'] +
                            values['read on miss data']) / cache_size) * 100.
             elif target == "cacheCost":
+                for inner_cache_name, inner_values in filter_results(
+                    results, run_type, filters
+                ):
+                    if inner_cache_name.find("lru_") != -1 and inner_cache_name.index("lru_") == 0:
+                        lru_cost = inner_values['written data'] + \
+                            inner_values['deleted data']
+                        break
                 points = values['written data'] + values['deleted data']
+                points /= lru_cost
             elif target == "costFunctionVs":
                 for inner_cache_name, inner_values in filter_results(
                     results, run_type, filters
