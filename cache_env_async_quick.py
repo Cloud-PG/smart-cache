@@ -418,7 +418,7 @@ class env:
             
             ######### GIVING REWARD TO EVICTION AND REMOVING FROM WINDOW ################################################################################################
             if curFilename in self._eviction_window_cur_values.keys():            #if is in queue
-                if self._eviction_window_counters[curFilename] == time_span:                          #is invalidated
+                if self._eviction_window_counters[curFilename] >= time_span:                          #is invalidated
                     if self._eviction_window_actions[curFilename] == 0:
                         self._eviction_window_rewards[curFilename] = - 1
                     else:
