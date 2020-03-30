@@ -451,8 +451,8 @@ def plot_measure(tools: list,
                 cache_size = float(cache_name.split("T_")
                                    [0].rsplit("_", 1)[-1])
                 cache_size = cache_size * 1024**2
-                points = values['written data'] + values['deleted data']
-                points /= cache_size * 100.
+                points = ((values['written data'] +
+                           values['deleted data']) / cache_size) * 100.
             elif target == "costFunctionVs":
                 for inner_cache_name, inner_values in filter_results(
                     results, run_type, filters
