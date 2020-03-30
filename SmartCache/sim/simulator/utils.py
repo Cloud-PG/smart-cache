@@ -210,11 +210,16 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False,
                         float_format='%.2f'
                     )
                 else:
-                    top_df.head(top).sort_values(
+                    cur_output = top_df.head(top).sort_values(
                         by=["throughput", "cost", "readOnHitRatio", "cpuEff"],
                         ascending=[False, True, False, False]
-                    ).to_csv(
+                    )
+                    cur_output.to_csv(
                         f"top_{top}_results.csv", index=False,
+                        float_format='%.2f'
+                    )
+                    cur_output.to_latex(
+                        f"top_{top}_results.tex", index=False,
                         float_format='%.2f'
                     )
 
