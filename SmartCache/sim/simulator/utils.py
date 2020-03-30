@@ -203,7 +203,7 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False,
             if top_table_output:
                 if group_by == "family":
                     cur_output = top_df.groupby("family").head(top).sort_values(
-                        by=["family", "throughput", "cost", "readOnHitRatio"],
+                        by=["family", "throughput", "cacheCost", "readOnHitRatio"],
                         ascending=[True, False, True, False]
                     )
                     cur_output.to_csv(
@@ -216,7 +216,7 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False,
                     )
                 else:
                     cur_output = top_df.head(top).sort_values(
-                        by=["throughput", "cost", "readOnHitRatio", "cpuEff"],
+                        by=["throughput", "cacheCost", "readOnHitRatio", "cpuEff"],
                         ascending=[False, True, False, False]
                     )
                     cur_output.to_csv(
