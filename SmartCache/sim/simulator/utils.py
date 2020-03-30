@@ -202,11 +202,16 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False,
 
             if top_table_output:
                 if group_by == "family":
-                    top_df.groupby("family").head(top).sort_values(
+                    cur_output = top_df.groupby("family").head(top).sort_values(
                         by=["family", "throughput", "cost", "readOnHitRatio"],
                         ascending=[True, False, True, False]
-                    ).to_csv(
+                    )
+                    cur_output.to_csv(
                         f"top_{top}_results.csv", index=False,
+                        float_format='%.2f'
+                    )
+                    cur_output.to_latex(
+                        f"top_{top}_results.tex", index=False,
                         float_format='%.2f'
                     )
                 else:
