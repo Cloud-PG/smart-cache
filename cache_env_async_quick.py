@@ -10,7 +10,7 @@ import pandas as pd
 import math
 
 bandwidthLimit = (1000000. / 8.) * 60. * 60. * 24
-time_span = 30000
+time_span = 20000
 purge_delta = 210000
 it_cpueff_diff = 19
 us_cpueff_diff = 10
@@ -174,7 +174,7 @@ class cache(object):
     def _get_mean_recency(self, curRequest, curDay):
         ''' returns mean recency of files in cache '''
 
-        if curRequest == 0 and curDay == 0:
+        if len(self._filesLRU) == 0:
             return 0.
         else:
             list_=[]
@@ -186,7 +186,7 @@ class cache(object):
     def _get_mean_frequency(self, curRequest, curDay):
         ''' returns mean total number of requests of files in cache '''
 
-        if curRequest == 0 and curDay == 0:
+        if len(self._filesLRU) == 0:
             return 0.
         else:
             list_=[]
@@ -198,7 +198,7 @@ class cache(object):
     def _get_mean_size(self, curRequest, curDay):
         ''' returns mean size of files in cache '''
 
-        if curRequest == 0 and curDay == 0:
+        if len(self._filesLRU) == 0:
             return 0.
         else:
             list_=[]

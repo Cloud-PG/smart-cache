@@ -156,10 +156,10 @@ while end == False:
         cur_values = environment.curValues
         if step_add%1000 == 0:
             print('epsilon = ' + str(eps_add))
-
+        
         #GET ACTION
         rnd_eps = random.random()
-        if rnd_eps < eps_add or step_add < BATCH_SIZE :
+        if rnd_eps < eps_add or step_add < no_training_steps:
             rnd = random.random()
             if rnd < 0.5:
                 action = 0
@@ -169,6 +169,15 @@ while end == False:
             cur_values_ = np.reshape(cur_values, (1,7))
             action = np.argmax(model_add.predict(cur_values_))
         
+        #print('CURVALUES')
+        #cur_values_ = np.reshape(cur_values, (1,7))
+        #print(cur_values_)
+        #print()
+        #print('PREDICTION')
+        #print(model_add.predict(cur_values_))
+        #print()
+
+
         #GET THIS REQUEST
         environment.add_request(action)
         curFilename, curSize = environment.get_filename_and_size_of_current_request()
@@ -200,14 +209,31 @@ while end == False:
 
         #TRAIN NETWORK
         if step_add > no_training_steps:
+            print('ADDING-------------------------------------------------------------------------------------')
+            print('CURVALUES')
+            cur_values_ = np.reshape(cur_values, (1,7))
+            print(cur_values_)
+            print()
+            print('PREDICTION')
+            print(model_add.predict(cur_values_))
+            print()
             batch = environment.add_memory_vector[np.random.randint(0, environment.add_memory_vector.shape[0], BATCH_SIZE), :]
             train_cur_vals ,train_actions, train_rewards, train_next_vals = np.split(batch, [7,8,9] , axis = 1)
             target = model_add.predict_on_batch(train_cur_vals)
             predictions = model_add.predict_on_batch(train_next_vals)
+            print('BATCH')
+            print(batch)
+            print()
+            print('PREDICT ON BATCH')
+            print(target)
+            print()
             for i in range(0,BATCH_SIZE):
                 action_ = int(train_actions[i])
                 target[i,action_] = train_rewards[i] + gamma * mellowmax(mm_omega, predictions[i])   
             model_add.train_on_batch(train_cur_vals, target)
+            print('TARGET')
+            print(target)
+            print()
         
     ### EVICTING #############################################################################################################
     elif adding_or_evicting == 1: 
@@ -222,7 +248,7 @@ while end == False:
         
         #GET ACTION
         rnd_eps = random.random()
-        if rnd_eps < eps_add or step_evict < BATCH_SIZE :
+        if rnd_eps < eps_add or step_evict < no_training_steps:
             rnd = random.random()
             if rnd < 0.5:
                 action = 0
@@ -231,7 +257,7 @@ while end == False:
         else:
             cur_values_ = np.reshape(cur_values, (1,7))
             action = np.argmax(model_evict.predict(cur_values_))
-        
+
         #IF ADDING IS NOT OVER, GET NEXT VALUES AND PREPARE ACTION TO BE REWARDED, GIVING EVENTUAL REWARD
         curFilename, curSize = environment.get_filename_and_size_of_current_cache_file()
         if action == 1:
@@ -258,14 +284,32 @@ while end == False:
 
         #TRAIN NETWORK
         if step_evict > no_training_steps + 5000:
+            print('FREEING-------------------------------------------------------------------------------------')
+            print('CURVALUES')
+            cur_values_ = np.reshape(cur_values, (1,7))
+            print(cur_values_)
+            print()
+            print('PREDICTION')
+            print(model_evict.predict(cur_values_))
+            print()
             batch = environment.evict_memory_vector[np.random.randint(0, environment.evict_memory_vector.shape[0], BATCH_SIZE), :]
             train_cur_vals ,train_actions, train_rewards, train_next_vals = np.split(batch, [7,8,9] , axis = 1)
             target = model_evict.predict_on_batch(train_cur_vals)
             predictions = model_evict.predict_on_batch(train_next_vals)
+            print('BATCH')
+            print(batch)
+            print()
+            print('PREDICT ON BATCH')
+            print(target)
+            print()
             for i in range(0,BATCH_SIZE):  
                 action_ = int(train_actions[i])
                 target[i,action_] = train_rewards[i] + gamma * mellowmax(mm_omega, predictions[i])   
             model_evict.train_on_batch(train_cur_vals, target)
+            print('TARGET')
+            print(target)
+            print()
+
 
     #### STOP ADDING ################################################################################################################################
     if adding_or_evicting == 0 and environment._cache.capacity > environment._cache._h_watermark:
