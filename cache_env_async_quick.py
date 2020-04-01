@@ -15,6 +15,8 @@ purge_delta = 210000
 it_cpueff_diff = 19
 us_cpueff_diff = 10
 
+
+
 class FileStats(object):
     '''
     object that contains all information about a file: size, number of hits,
@@ -103,6 +105,8 @@ class cache(object):
 
         self._dailyReadOnHit: float = 0.0
         self._dailyReadOnMiss: float = 0.0
+
+        self.daily_anomalous_CPUeff_counter = 0
 
         self._CPUeff: float = 0.0
 
@@ -341,7 +345,7 @@ class env:
                  self._cache._dailyReadOnHit,
                  self._cache._dailyReadOnMiss,
                  self._cache._deleted_data,
-                 self._cache._CPUeff / self.df.shape[0],
+                 self._cache._CPUeff / (self.df.shape[0]-self._cache.daily_anomalous_CPUeff_counter),
                  self._cache._written_data + self._cache._read_data + self._cache._deleted_data,
                  (self._cache._dailyReadOnHit / self._cache._written_data) / self._cache._max_size,
                  self._cache._dailyReadOnHit / self._cache._read_data,
@@ -363,6 +367,8 @@ class env:
 
         self._cache._CPUeff: float = 0.0
 
+        self._cache.daily_anomalous_CPUeff_counter: int = 0
+
         return
 
     def get_dataframe(self, i):
@@ -370,7 +376,11 @@ class env:
         file_ = sorted(os.listdir(self._directory))[i]
         with gzip.open(self._directory + '/' + str(file_)) as f:
             df_ = pd.read_csv(f)
-            df_['Size'] = df_['Size']/1.049e+6
+            df_['Size'] = df_['Size']/1048576.
+            #df_['Size'] = df_['Size']/1.049e+6
+            df_ = df_[df_['JobSuccess'] == True]
+            df_ = df_[(df_['DataType'] == 0) | (df_['DataType'] == 1)]
+            df_ = df_.reset_index(drop = True)
             self.df = df_
             self.df_length = len(self.df)
         print()
@@ -599,6 +609,26 @@ class env:
                 keys_to_delete.append(key)
         for key_ in keys_to_delete:        
             del self._cache._stats._files[key_]
+    
+    def current_cpueff_is_anomalous(self):
+        '''checks if current request has non valid values'''
+        cputime = self.df.loc[self.curRequest, 'CPUTime']
+        walltime = self.df.loc[self.curRequest, 'WrapWC']        
+        cpueff = cputime/walltime * 100
+        if cpueff < 0.:
+            self._cache.daily_anomalous_CPUeff_counter += 1
+            return True
+        elif cpueff > 100.:
+            self._cache.daily_anomalous_CPUeff_counter += 1
+            return True
+        elif math.isnan(cpueff) == True:
+            self._cache.daily_anomalous_CPUeff_counter += 1
+            return True
+        elif math.isinf(cpueff) == True:
+            self._cache.daily_anomalous_CPUeff_counter += 1
+            return True
+        else:
+            return False
 
 
 
