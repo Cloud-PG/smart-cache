@@ -327,10 +327,14 @@ class env:
                      'read on miss data',
                      'deleted data',
                      'CPU efficiency',
-                     'cost',
-                     'throughput',
-                     'read on hit / read',
-                     'read on miss / read'
+                     'CPU hit efficiency',
+                     'CPU miss efficiency',
+                     'CPU efficiency upper bound',
+                     'CPU efficiency lower bound'
+                     #'cost',
+                     #'throughput',
+                     #'read on hit / read',
+                     #'read on miss / read'
                      ])
 
         with open(self._out_directory + '/' + self._out_name, 'a', newline='') as file:
@@ -347,10 +351,14 @@ class env:
                  self._cache._dailyReadOnMiss,
                  self._cache._deleted_data,
                  self._cache._CPUeff / (self.df.shape[0]-self._cache.daily_anomalous_CPUeff_counter),
-                 self._cache._written_data + self._cache._read_data + self._cache._deleted_data,
-                 (self._cache._dailyReadOnHit / self._cache._written_data) / self._cache._max_size,
-                 self._cache._dailyReadOnHit / self._cache._read_data,
-                 self._cache._dailyReadOnMiss / self._cache._read_data
+                 0,
+                 0,
+                 0,
+                 0
+                 #self._cache._written_data + self._cache._read_data + self._cache._deleted_data,
+                 #(self._cache._dailyReadOnHit / self._cache._written_data) / self._cache._max_size,
+                 #self._cache._dailyReadOnHit / self._cache._read_data,
+                 #self._cache._dailyReadOnMiss / self._cache._read_data
                   ])
 
         return

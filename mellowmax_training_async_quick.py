@@ -64,7 +64,7 @@ if not os.path.isdir(out_directory):
 nb_actions = 2
 observation_shape = (7,)
 seed_ = 2019
-DailyBandwidth1Gbit = 0.95 * 10. * (1000. / 8.) * 60. * 60. * 24.       #KB in a day with 10 Gbit/s
+DailyBandwidth1Gbit = 10. * (1000. / 8.) * 60. * 60. * 24.       #MB in a day with 10 Gbit/s
 
 ####### EXTRA FUNCTION DEFINITIONS ##################################################################################################################
 def mellowmax(omega, x):
