@@ -10,8 +10,8 @@ import pandas as pd
 import math
 
 bandwidthLimit = (1000000. / 8.) * 60. * 60. * 24
-time_span = 20000
-purge_delta = 210000
+#time_span = 20000
+purge_delta = 100000
 it_cpueff_diff = 19
 us_cpueff_diff = 10
 
@@ -213,7 +213,7 @@ class cache(object):
 class env:
     ''' object that emulates cache mechanism '''
 
-    def __init__(self, start_month, end_month, directory, out_directory, out_name):
+    def __init__(self, start_month, end_month, directory, out_directory, out_name, time_span):
         #print('STO USANDO LA VERSIONE PIU AGGIORNATA')
         #set period
         self._startMonth = start_month
@@ -221,6 +221,7 @@ class env:
         self._directory = directory
         self._out_directory = out_directory
         self._out_name = out_name
+        self._time_span = time_span 
 
         start = datetime(2018, 1, 1)
         delta = timedelta(days=1)
@@ -396,15 +397,19 @@ class env:
         '''
 
         if adding_or_evicting == 0:
-            for key in self._request_window_counters:                                                #increment counters
-                self._request_window_counters[key] +=  1
-            for key in self._eviction_window_counters:                                                #increment counters
-                self._eviction_window_counters[key] +=  1
-
 
             ############################ GIVING REWARD TO ADDITION IF IT IS IN WINDOW AND ADD TO WINDOW ########################################################################
             if curFilename in self._request_window_cur_values.keys():            #if is in queue
-                if self._request_window_counters[curFilename] >= time_span:                          #is invalidated
+                #print('#################################')
+                #print(curFilename)
+                #print(self._request_window_counters[curFilename])
+                #print(self._request_window_actions[curFilename])
+                #print(self._request_window_rewards[curFilename])
+                #print(self._request_window_cur_values[curFilename])
+                #print(self._request_window_next_values[curFilename])
+                #print()
+                
+                if self._request_window_counters[curFilename] >= self._time_span:                          #is invalidated
                     if self._request_window_actions[curFilename] == 0:
                         self._request_window_rewards[curFilename] = - 1
                     else:
@@ -419,6 +424,11 @@ class env:
                 to_add = np.reshape(to_add, (1,16))
                 self.add_memory_vector = np.vstack((self.add_memory_vector, to_add))
 
+            for key in self._request_window_counters:                                                #increment counters
+                self._request_window_counters[key] +=  1
+            for key in self._eviction_window_counters:                                                #increment counters
+                self._eviction_window_counters[key] +=  1
+
             self._request_window_counters[curFilename] = 1
             self._request_window_actions[curFilename] = action
             self._request_window_rewards[curFilename] = 0
@@ -427,8 +437,17 @@ class env:
 
             
             ######### GIVING REWARD TO EVICTION AND REMOVING FROM WINDOW ################################################################################################
-            if curFilename in self._eviction_window_cur_values.keys():            #if is in queue
-                if self._eviction_window_counters[curFilename] >= time_span:                          #is invalidated
+            if curFilename in self._eviction_window_cur_values.keys():          #if is in queue
+                #print('#################################')
+                #print(curFilename)
+                #print(self._eviction_window_counters[curFilename])
+                #print(self._eviction_window_actions[curFilename])
+                #print(self._eviction_window_rewards[curFilename])
+                #print(self._eviction_window_cur_values[curFilename])
+                #print(self._eviction_window_next_values[curFilename])
+                #print()
+                
+                if self._eviction_window_counters[curFilename] >= self._time_span:                          #is invalidated
                     if self._eviction_window_actions[curFilename] == 0:
                         self._eviction_window_rewards[curFilename] = - 1
                     else:
@@ -478,7 +497,7 @@ class env:
         ''' looks for invalidated actions in add window, gives rewards and deletes them'''
         filenames = []
         for curFilename in self._request_window_counters.keys():
-            if self._request_window_counters[curFilename] > time_span:
+            if self._request_window_counters[curFilename] > self._time_span:
                 if self._request_window_actions[curFilename] == 0:
                     self._request_window_rewards[curFilename] = - 1
                 else:
@@ -630,7 +649,8 @@ class env:
         else:
             return False
 
-
+    def check_if_current_is_hit(self):
+        return self._cache.check(self.df.loc[self.curRequest, 'Filename'])
 
     '''
     def get_this_request_stats(self):

@@ -34,6 +34,7 @@ parser.add_argument('--load_evict_weights_from_file', type = str, default = None
 parser.add_argument('--out_add_weights', type = str, default = 'weights_add.h5')
 parser.add_argument('--out_evict_weights', type = str, default = 'weights_evict.h5')
 parser.add_argument('--debug', type = str, default = 'no')
+parser.add_argument('--low_watermark', type = float, default = 0.)
 
 args = parser.parse_args()
 
@@ -52,6 +53,7 @@ gamma = args.gamma
 mm_omega = args.mm_omega
 time_span = args.time_span
 debug = args.debug
+low_watermark = args.low_watermark
 
 out_directory = args.out_dir
 out_name = args.out_name
@@ -182,12 +184,14 @@ while end == False:
             cur_values_ = np.reshape(cur_values, (1,7))
             action = np.argmax(model_add.predict(cur_values_))
 
+
         hit = environment.check_if_current_is_hit()
         anomalous = environment.current_cpueff_is_anomalous()
 
         #GET THIS REQUEST
         if anomalous == False:
             if environment._cache._dailyReadOnMiss / DailyBandwidth1Gbit * 100 < 95. or hit == True:
+        #if environment._cache._dailyReadOnMiss / DailyBandwidth1Gbit * 100 < 95.and environment.current_cpueff_is_anomalous() == False:
                 environment.add_request(action)
                 curFilename, curSize = environment.get_filename_and_size_of_current_request()
 
@@ -204,9 +208,9 @@ while end == False:
             next_values = environment.get_next_request_values()
             if anomalous == False:
                 if environment._cache._dailyReadOnMiss / DailyBandwidth1Gbit * 100 < 95. or hit == True:
-                    #print(environment.curRequest)
+            #if environment._cache._dailyReadOnMiss / DailyBandwidth1Gbit * 100 < 95. and environment.current_cpueff_is_anomalous() == False:
+                #print(environment.curRequest)
                     environment.update_windows_getting_eventual_rewards(adding_or_evicting, curFilename, cur_values, next_values, action)
-
         
         #REMOVE THE FIRST DUMMY ELEMENT IN MEMORY
         if step_add == 1000:
@@ -286,8 +290,8 @@ while end == False:
             print('Freeing memory ' + str(environment._filesLRU_index) + '/' + str(len(environment._cache._filesLRUkeys)) + 
                     '  -  Occupancy: ' + str(round(environment._cache.capacity,2)) + '%  - action: ' + str(action))
         
-        #IF ADDING IS NOT OVER, GET NEXT VALUES AND PREPARE ACTION TO BE REWARDED, GIVING EVENTUAL REWARD
-        if environment._filesLRU_index + 1 != len(environment._cache._filesLRUkeys):
+        #IF EVICTING IS NOT OVER, GET NEXT VALUES AND PREPARE ACTION TO BE REWARDED, GIVING EVENTUAL REWARD
+        if environment._filesLRU_index + 1 != len(environment._cache._filesLRUkeys) and environment._cache.capacity >= low_watermark:
             next_values = environment.get_next_file_in_cache_values()
             #print(environment.curRequest)
             environment.update_windows_getting_eventual_rewards(adding_or_evicting, curFilename, cur_values, next_values, action)
@@ -305,7 +309,7 @@ while end == False:
             if debug == 'yes':
                 print('FREEING-------------------------------------------------------------------------------------')
                 print('CURVALUES')
-                #cur_values_ = np.reshape(cur_values, (1,7))
+            #cur_values_ = np.reshape(cur_values, (1,7))
             if debug == 'yes':
                 print(cur_values_)
                 print()
@@ -344,7 +348,7 @@ while end == False:
         cur_values = environment.get_next_file_in_cache_values()
         
     ### STOP EVICTING ################################################################################################################################
-    if adding_or_evicting == 1 and environment._filesLRU_index + 1 == len(environment._cache._filesLRUkeys):
+    if adding_or_evicting == 1 and (environment._filesLRU_index + 1 == len(environment._cache._filesLRUkeys) or environment._cache.capacity < low_watermark):
         with open(out_directory + '/occupancy.csv', 'a') as file:
             writer = csv.writer(file)
             writer.writerow([environment._cache.capacity])
