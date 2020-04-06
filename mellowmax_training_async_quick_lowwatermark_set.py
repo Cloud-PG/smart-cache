@@ -153,26 +153,22 @@ step_evict = 0
 #addition_counter = 0
 #eviction_counter = 0
 
-with open(out_directory + '/stats.csv', 'w') as f:
-        writer = csv.writer(f)
-        writer.writerow(['time', 'stats_files', 'cache_files'])
+#with open(out_directory + '/stats.csv', 'w') as f:
+#        writer = csv.writer(f)
+#        writer.writerow(['time', 'stats_files', 'cache_files'])
 
 with open(out_directory + '/occupancy.csv', 'w') as file:
     writer = csv.writer(file)
     writer.writerow(['occupancy'])
 
 end = False
-now = time.time()
+#now = time.time()
 while end == False:
-    before = now
-    now = time.time()
-    #print("Time: {0} ".format(now - before))
-    #if (step_add % 1000 == 0 or step_evict % 1000 == 0) and step_evict != 0:
-    #    print()
-    #print('stats len is ' + str(len(environment._cache._stats._files)))
-    with open(out_directory + '/stats.csv', 'a') as f:
-        writer = csv.writer(f)
-        writer.writerow([now - before, len(environment._cache._stats._files), len(environment._cache._filesLRU)])
+    #before = now
+    #now = time.time()
+    #with open(out_directory + '/stats.csv', 'a') as f:
+    #    writer = csv.writer(f)
+    #    writer.writerow([now - before, len(environment._cache._stats._files), len(environment._cache._filesLRU)])
 
     if (environment.curDay+1)%purge_frequency == 0:
         environment.purge()
@@ -203,28 +199,15 @@ while end == False:
         hit = environment.check_if_current_is_hit()
         anomalous = environment.current_cpueff_is_anomalous()
 
-        if anomalous == True:
-            print('anomaloussssssss')
-            print()
-
-
         if debug == 'yes' and anomalous == False:
-            if cur_values[2] > -1:
-                if cur_values[2] > 0.:
-                    print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-                
-                print('ADDING-------------------------------------------------------------------------------------')
-                print('CURVALUES')
-                cur_values_ = np.reshape(cur_values, (1,7))
-                print(cur_values)
-                #print()
+            print('ADDING-------------------------------------------------------------------------------------')
+            print('CURVALUES')
+            cur_values_ = np.reshape(cur_values, (1,7))
+            print(cur_values)
 
         #GET THIS REQUEST
         if anomalous == False:
             if environment._cache._dailyReadOnMiss / DailyBandwidth1Gbit * 100 < 95. or hit == True:
-        #if environment._cache._dailyReadOnMiss / DailyBandwidth1Gbit * 100 < 95.and environment.current_cpueff_is_anomalous() == False:
-                print(environment.curRequest)
-                print() 
                 environment.add_request(action)
                 curFilename, curSize = environment.get_filename_and_size_of_current_request()
 
@@ -241,8 +224,6 @@ while end == False:
             next_values = environment.get_next_request_values()
             if anomalous == False:
                 if environment._cache._dailyReadOnMiss / DailyBandwidth1Gbit * 100 < 95. or hit == True:
-            #if environment._cache._dailyReadOnMiss / DailyBandwidth1Gbit * 100 < 95. and environment.current_cpueff_is_anomalous() == False:
-                #print(environment.curRequest)
                     environment.update_windows_getting_eventual_rewards(adding_or_evicting, curFilename, cur_values, next_values, action)
         
         #REMOVE THE FIRST DUMMY ELEMENT IN MEMORY
@@ -259,12 +240,6 @@ while end == False:
 
         #TRAIN NETWORK
         if step_add > no_training_steps:
-            #print('TRAINING_ADDING')
-            #if debug == 'yes':
-
-            #print('PREDICTION - ADDING')
-            #print(model_add.predict(cur_values_))
-            #print()
             batch = environment.add_memory_vector[np.random.randint(0, environment.add_memory_vector.shape[0], BATCH_SIZE), :]
             train_cur_vals ,train_actions, train_rewards, train_next_vals = np.split(batch, [7,8,9] , axis = 1)
             target = model_add.predict_on_batch(train_cur_vals)
@@ -330,7 +305,6 @@ while end == False:
         #IF EVICTING IS NOT OVER, GET NEXT VALUES AND PREPARE ACTION TO BE REWARDED, GIVING EVENTUAL REWARD
         if environment._filesLRU_index + 1 != len(environment._cache._filesLRUkeys) and environment._cache.capacity >= low_watermark:
             next_values = environment.get_next_file_in_cache_values()
-            #print(environment.curRequest)
             environment.update_windows_getting_eventual_rewards(adding_or_evicting, curFilename, cur_values, next_values, action)
         
         #REMOVE THE FIRST DUMMY ELEMENT IN MEMORY
@@ -374,7 +348,6 @@ while end == False:
         adding_or_evicting = 1 
         #addition_counter += 1
         #print('STOP ADDING')
-        #environment.start_of_a_new_evicting = True
         #environment._cache._filesLRUkeys = list(environment._cache._filesLRU.keys())
         environment._cache._filesLRUkeys = list(environment._cache._filesLRU)
         random.shuffle(environment._cache._filesLRUkeys)

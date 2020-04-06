@@ -29,7 +29,7 @@ class FileStats(object):
         self._size: float = size
         self._hit: int = 0
         self._miss: int = 0
-        self._last_request: int = 0
+        #self._last_request: int = 0
         self._recency: int = 0
         self._datatype: int = datatype
 
@@ -38,9 +38,10 @@ class FileStats(object):
     #    self._size = size
     #    self._recency = 0
 
-    def update(self, size: float, datatype: int, hit: bool = False, ):
-        '''updates size, sets recency to 0, add hit or miss, sets datatype'''
-        self._size = size
+    #def update(self, size: float, datatype: int, hit: bool = False, ):
+    def update(self, hit: bool = False):
+        '''sets recency to 1, add hit or miss '''
+        #self._size = size
         if hit:
             self._hit += 1
         else:
@@ -48,7 +49,7 @@ class FileStats(object):
 
         self._recency = 1
         #self._recency = 0
-        self._datatype = datatype
+        #self._datatype = datatype
 
     @property
     def tot_requests(self):
@@ -94,11 +95,11 @@ class Stats(object):
         stats = None
         if filename not in self._files:
             stats = FileStats(size, datatype)
-            stats._last_request = request
+            #stats._last_request = request
             self._files[filename] = stats
         else:
             stats = self._files[filename]
-            stats._last_request = request
+            #stats._last_request = request
         return stats
 
 class cache(object):
@@ -148,7 +149,8 @@ class cache(object):
     def before_request(self, filename, hit: bool, size, datatype, request: int) -> 'FileStats':
         ''' get stats for that file and update it '''
         stats = self._stats.get_or_set(filename, size, datatype, request)
-        stats.update(size, hit, datatype)
+        stats.update(hit)       
+        #stats.update(size, hit, datatype)
         return stats    
 
     #def before_request_retrieve(self, filename, hit: bool, size, request: int) -> 'FileStats':
@@ -341,7 +343,7 @@ class env:
         l.append(filestats.tot_requests)
         l.append(filestats._recency)
         #l.append(self.curRequest_from_start - filestats._last_request)
-        datatype = filestats._datatype
+        #datatype = filestats._datatype
         if datatype == 0:
             l.append(0.)
         else:
@@ -593,7 +595,7 @@ class env:
         l.append(filestats.tot_requests)
         l.append(filestats._recency)
         #l.append(self.curRequest_from_start - filestats._last_request)
-        datatype = filestats._datatype
+        #datatype = filestats._datatype
         if datatype == 0:
             l.append(0.)
         else:
@@ -707,87 +709,3 @@ class env:
 
     def check_if_current_is_hit(self):
         return self._cache.check(self.df.loc[self.curRequest, 'Filename'])
-
-    '''
-    def get_this_request_stats(self):
-        #if (self.curRequest + 1) == self.df_length:
-        #    self.write_stats()
-        #    self.reset_stats()
-        #    self.curDay += 1
-        #    self.curRequest = 0
-        #    self.get_dataframe(self.curDay)
-        
-        hit = self._cache.check(self.df.loc[self.curRequest, 'Filename'])
-        filename = self.df.loc[self.curRequest, 'Filename']
-        size = self.df.loc[self.curRequest, 'Size']
-        #datatype = self.df.loc[self.curRequest, 'DataType']    
-        filestats = self._cache.before_request_retrieve(filename, hit, size, self.curRequest)
-        cputime = self.df.loc[self.curRequest, 'CPUTime']
-        walltime = self.df.loc[self.curRequest, 'WrapWC']
-        protocol = self.df.loc[self.curRequest, 'Protocol']
-        
-        return hit, filename, size, filestats, cputime, walltime,protocol 
-    '''
-
-    '''
-    def get_next_request_stats(self):
-        self.curRequest += 1
-        self.curRequest_from_start += 1
-        if (self.curRequest + 1) == self.df_length:
-            self.write_stats()
-            self.reset_stats()
-            self.curDay += 1
-            self.curRequest = 0
-            self.get_dataframe(self.curDay)
-        hit = self._cache.check(self.df.loc[self.curRequest, 'Filename'])
-        filename = self.df.loc[self.curRequest, 'Filename']
-        size = self.df.loc[self.curRequest, 'Size']
-        datatype = self.df.loc[self.curRequest, 'DataType']
-        filestats = self._cache.before_request(filename, hit, size, datatype, self.curRequest_from_start)
-        cputime = self.df.loc[self.curRequest, 'CPUTime']
-        walltime = self.df.loc[self.curRequest, 'WrapWC']
-        protocol = self.df.loc[self.curRequest, 'Protocol']
-        return hit, filename, size, filestats, cputime, walltime, protocol
-    '''
-    
-    '''
-    def get_this_request_values(self):
-        filestats = self.get_this_request_stats()[3]
-        l = []
-        l.append(filestats._size)
-        l.append(filestats.tot_requests)
-        l.append(self.curRequest_from_start - filestats._last_request)
-        datatype = filestats._datatype
-        if datatype == 0:
-            l.append(0.)
-        else:
-            l.append(1.)
-        l.append(self._cache._get_mean_recency(self.curRequest_from_start,self.curDay))
-        l.append(self._cache._get_mean_frequency(self.curRequest_from_start,self.curDay))
-        l.append(self._cache._get_mean_size(self.curRequest_from_start,self.curDay))
-
-        return np.asarray(l)
-    '''
-
-    '''
-    def get_this_file_in_cache_values(self):
-        filename = self._cache._filesLRUkeys[self._filesLRU_index]
-        #filestats = self._cache._filesLRU[filename]
-        filestats = self._cache._stats._files[filename]
-        l = []
-        l.append(filestats._size)
-        l.append(filestats.tot_requests)
-        l.append(self.curRequest_from_start - filestats._last_request)
-        datatype = filestats._datatype
-        if datatype == 0:
-            l.append(0.)
-        else:
-            l.append(1.)
-        l.append(self._cache._get_mean_recency(self.curRequest_from_start,self.curDay))
-        l.append(self._cache._get_mean_frequency(self.curRequest_from_start,self.curDay))
-        l.append(self._cache._get_mean_size(self.curRequest_from_start,self.curDay))
-
-        self.curValues = np.asarray(l)
-
-        return self.curValues
-    '''
