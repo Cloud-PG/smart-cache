@@ -25,18 +25,18 @@ class FileStats(object):
 
     __slots__ = ["_size", "_hit", "_miss", "_last_request", "_recency", "_datatype"]
 
-    def __init__(self, size: float):
+    def __init__(self, size: float, datatype: int):
         self._size: float = size
         self._hit: int = 0
         self._miss: int = 0
         self._last_request: int = 0
         self._recency: int = 0
-        self._datatype: int = 0
+        self._datatype: int = datatype
 
-    def update_retrieve(self, size: float, hit: bool = False):
-        '''updates size and sets recency to 0'''
-        self._size = size
-        self._recency = 0
+    #def update_retrieve(self, size: float, hit: bool = False):
+    #    '''updates size and sets recency to 0'''
+    #    self._size = size
+    #    self._recency = 0
 
     def update(self, size: float, datatype: int, hit: bool = False, ):
         '''updates size, sets recency to 0, add hit or miss, sets datatype'''
@@ -46,7 +46,8 @@ class FileStats(object):
         else:
             self._miss += 1
 
-        self._recency = 0
+        self._recency = 1
+        #self._recency = 0
         self._datatype = datatype
 
     @property
@@ -73,12 +74,26 @@ class Stats(object):
     ''' object that contains a list of all filestats '''
     def __init__(self):
         self._files = {}
-
-    def get_or_set(self, filename: str, size: float, request: int) -> 'FileStats':
+    
+    def get_or_set_without_updating_stats_list(self, filename: str, size: float, datatype: int, request: int) -> 'FileStats':
         '''return filestat for that file: if no stat for that file is in list, creates a new stat and adds it to stats, otherwise it simply gets it '''
         stats = None
         if filename not in self._files:
-            stats = FileStats(size)
+            stats = FileStats(size,datatype)
+            #stats._datatype = datatype
+            #stats._last_request = request
+            #self._files[filename] = stats
+        else:
+            stats = self._files[filename]
+            #stats._datatype = datatype
+            #stats._last_request = request
+        return stats
+
+    def get_or_set(self, filename: str, size: float, datatype: int, request: int) -> 'FileStats':
+        '''return filestat for that file: if no stat for that file is in list, creates a new stat and adds it to stats, otherwise it simply gets it '''
+        stats = None
+        if filename not in self._files:
+            stats = FileStats(size, datatype)
             stats._last_request = request
             self._files[filename] = stats
         else:
@@ -93,7 +108,7 @@ class cache(object):
         self._max_size = size
 
         #self._filesLRU = OrderedDict()
-        self._filesLRU = {}
+        self._filesLRU = set()
         self._filesLRUkeys = []
 
         self._stats = Stats()
@@ -132,15 +147,15 @@ class cache(object):
 
     def before_request(self, filename, hit: bool, size, datatype, request: int) -> 'FileStats':
         ''' get stats for that file and update it '''
-        stats = self._stats.get_or_set(filename, size, request)
+        stats = self._stats.get_or_set(filename, size, datatype, request)
         stats.update(size, hit, datatype)
         return stats    
 
-    def before_request_retrieve(self, filename, hit: bool, size, request: int) -> 'FileStats':
-        ''' get stats for that file, whithout updating hit or miss file counters '''
-        stats = self._stats.get_or_set(filename, size, request)
-        stats.update_retrieve(size, hit)
-        return stats
+    #def before_request_retrieve(self, filename, hit: bool, size, request: int) -> 'FileStats':
+    #    ''' get stats for that file, whithout updating hit or miss file counters '''
+    #    stats = self._stats.get_or_set(filename, size, request)
+    #    stats.update_retrieve(size, hit)
+    #    return stats
 
     def update_policy(self, filename, file_stats, hit: bool, action: int) -> bool:
         ''' 
@@ -150,10 +165,12 @@ class cache(object):
         '''
         self._stats._files[filename] = file_stats
         if not hit and action == 0:
-            self._filesLRU[filename] = file_stats
+            self._filesLRU.add(filename)
+            #self._filesLRU[filename] = file_stats
             return True
         elif hit:
-            self._filesLRU[filename] = file_stats
+            self._filesLRU.add(filename)
+            #self._filesLRU[filename] = file_stats
             #self._filesLRU.move_to_end(filename)
             return False
 
@@ -174,8 +191,11 @@ class cache(object):
     
     def update_recency(self):
         ''' increases all files recency kept in stats by one '''
-        for _, value in self._stats._files.items():
-            value._recency += 1
+        for filename, value in self._stats._files.items():
+            #print(self._stats._files[_]._recency)
+            self._stats._files[filename]._recency += 1
+            #print(self._stats._files[_]._recency)
+            #value._recency += 1
 
     def _get_mean_recency(self, curRequest, curDay):
         ''' returns mean recency of files in cache '''
@@ -186,7 +206,8 @@ class cache(object):
             #list_=[]
             mean=0
             counter=0
-            for filename,_ in self._filesLRU.items():
+            #for filename,_ in self._filesLRU.items():
+            for filename in self._filesLRU:
                 mean += self._stats._files[filename]._recency
                 counter += 1
                 #list_.append(self._stats._files[filename]._recency)
@@ -203,7 +224,8 @@ class cache(object):
             mean = 0
             counter = 0
             #list_=[]
-            for filename,_ in self._filesLRU.items():
+            #for filename,_ in self._filesLRU.items():
+            for filename in self._filesLRU:
                 mean += self._stats._files[filename].tot_requests
                 counter += 1
                 #list_.append(self._stats._files[filename].tot_requests)
@@ -220,7 +242,8 @@ class cache(object):
             mean = 0
             counter = 0
             #list_=[]
-            for filename,_ in self._filesLRU.items():
+            for filename in self._filesLRU:
+            #for filename,_ in self._filesLRU.items():
                 mean += self._stats._files[filename]._size
                 counter += 1
                 #list_.append(self._stats._files[filename]._size)
@@ -309,7 +332,8 @@ class env:
         filename = self.df.loc[self.curRequest, 'Filename']
         size = self.df.loc[self.curRequest, 'Size']
         datatype = self.df.loc[self.curRequest, 'DataType']
-        filestats = self._cache.before_request(filename, hit, size, datatype, self.curRequest_from_start)
+        filestats = self._cache._stats.get_or_set_without_updating_stats_list(filename,size, datatype, self.curRequest_from_start)
+        #filestats = self._cache.before_request(filename, hit, size, datatype, self.curRequest_from_start)
         #nxt = self.get_next_request_stats()
         #filestats = nxt[3]
         l = []
@@ -561,7 +585,8 @@ class env:
         filename = self.df.loc[self.curRequest, 'Filename']
         size = self.df.loc[self.curRequest, 'Size']
         datatype = self.df.loc[self.curRequest, 'DataType']
-        filestats = self._cache.before_request(filename, hit, size, datatype, self.curRequest_from_start)
+        #filestats = self._cache.before_request(filename, hit, size, datatype, self.curRequest_from_start)
+        filestats = self._cache._stats.get_or_set_without_updating_stats_list(filename, size, datatype, self.curRequest_from_start)
         #filestats = self.get_next_request_stats()[3]
         l = []
         l.append(filestats._size)
@@ -628,8 +653,9 @@ class env:
         hit = self._cache.check(self.df.loc[self.curRequest, 'Filename'])
         filename = self.df.loc[self.curRequest, 'Filename']
         size = self.df.loc[self.curRequest, 'Size']
-        #datatype = self.df.loc[self.curRequest, 'DataType']    
-        filestats = self._cache.before_request_retrieve(filename, hit, size, self.curRequest)
+        datatype = self.df.loc[self.curRequest, 'DataType']    
+        #filestats = self._cache.before_request_retrieve(filename, hit, size, self.curRequest)
+        filestats = self._cache.before_request(filename, hit, size, datatype, self.curRequest_from_start)       #does get_or_set once again unnecessarily
         cputime = self.df.loc[self.curRequest, 'CPUTime']
         walltime = self.df.loc[self.curRequest, 'WrapWC']
         protocol = self.df.loc[self.curRequest, 'Protocol']
