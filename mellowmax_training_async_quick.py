@@ -34,6 +34,7 @@ parser.add_argument('--load_evict_weights_from_file', type = str, default = None
 parser.add_argument('--out_add_weights', type = str, default = 'weights_add.h5')
 parser.add_argument('--out_evict_weights', type = str, default = 'weights_evict.h5')
 parser.add_argument('--debug', type = str, default = 'no')
+parser.add_argument('--purge_delta', type = int, default = 30000)
 
 args = parser.parse_args()
 
@@ -52,6 +53,7 @@ gamma = args.gamma
 mm_omega = args.mm_omega
 time_span = args.time_span
 debug = args.debug
+purge_delta = args.purge_delta
 
 out_directory = args.out_dir
 out_name = args.out_name
@@ -135,7 +137,7 @@ if args.load_add_weights_from_file is None == False:
      model_add.load_weights(args.load_add_weights_from_file)
 
 ###### START LOOPING ############################################################################################################################
-environment = cache_env_async_quick.env(_startMonth, _endMonth, data_directory, out_directory, out_name, time_span)
+environment = cache_env_async_quick.env(_startMonth, _endMonth, data_directory, out_directory, out_name, time_span, purge_delta)
 random.seed(seed_)
 adding_or_evicting = 0
 step_add = 0

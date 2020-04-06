@@ -11,7 +11,7 @@ import math
 
 bandwidthLimit = (1000000. / 8.) * 60. * 60. * 24
 #time_span = 20000
-purge_delta = 100000
+#purge_delta = 20000
 it_cpueff_diff = 19
 us_cpueff_diff = 10
 
@@ -75,7 +75,7 @@ class Stats(object):
         self._files = {}
 
     def get_or_set(self, filename: str, size: float, request: int) -> 'FileStats':
-        '''return filestat for that file: if no stat for that file is in list, creates a new stat, otherwise it simply gets it '''
+        '''return filestat for that file: if no stat for that file is in list, creates a new stat and adds it to stats, otherwise it simply gets it '''
         stats = None
         if filename not in self._files:
             stats = FileStats(size)
@@ -213,7 +213,7 @@ class cache(object):
 class env:
     ''' object that emulates cache mechanism '''
 
-    def __init__(self, start_month, end_month, directory, out_directory, out_name, time_span):
+    def __init__(self, start_month, end_month, directory, out_directory, out_name, time_span, purge_delta):
         #print('STO USANDO LA VERSIONE PIU AGGIORNATA')
         #set period
         self._startMonth = start_month
@@ -222,6 +222,7 @@ class env:
         self._out_directory = out_directory
         self._out_name = out_name
         self._time_span = time_span 
+        self._purge_delta = purge_delta
 
         start = datetime(2018, 1, 1)
         delta = timedelta(days=1)
@@ -632,7 +633,7 @@ class env:
         ''' remove data (from stats) whose recency is more than purge_delta '''
         for key, value in self._cache._stats._files.items():
             keys_to_delete=[]
-            if value._recency > purge_delta:
+            if value._recency > self._purge_delta:
                 keys_to_delete.append(key)
         for key_ in keys_to_delete:        
             del self._cache._stats._files[key_]

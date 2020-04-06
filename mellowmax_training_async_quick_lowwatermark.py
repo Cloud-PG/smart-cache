@@ -10,6 +10,7 @@ import csv
 import array
 import os
 import argparse
+import time
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--data', type=str, default='/home/ubuntu/source2018_numeric_it_with_avro_order')
@@ -35,6 +36,8 @@ parser.add_argument('--out_add_weights', type = str, default = 'weights_add.h5')
 parser.add_argument('--out_evict_weights', type = str, default = 'weights_evict.h5')
 parser.add_argument('--debug', type = str, default = 'no')
 parser.add_argument('--low_watermark', type = float, default = 0.)
+parser.add_argument('--purge_delta', type = int, default = 50000)
+parser.add_argument('--purge_frequency', type = int, default = 2)
 
 args = parser.parse_args()
 
@@ -54,6 +57,9 @@ mm_omega = args.mm_omega
 time_span = args.time_span
 debug = args.debug
 low_watermark = args.low_watermark
+purge_delta = args.purge_delta
+purge_frequency = args.purge_frequency
+
 
 out_directory = args.out_dir
 out_name = args.out_name
@@ -137,7 +143,7 @@ if args.load_add_weights_from_file is None == False:
      model_add.load_weights(args.load_add_weights_from_file)
 
 ###### START LOOPING ############################################################################################################################
-environment = cache_env_async_quick.env(_startMonth, _endMonth, data_directory, out_directory, out_name, time_span)
+environment = cache_env_async_quick.env(_startMonth, _endMonth, data_directory, out_directory, out_name, time_span, purge_delta)
 random.seed(seed_)
 adding_or_evicting = 0
 step_add = 0
@@ -147,18 +153,28 @@ step_evict = 0
 #addition_counter = 0
 #eviction_counter = 0
 
+#with open(out_directory + '/stats.csv', 'w') as f:
+#        writer = csv.writer(f)
+#        writer.writerow(['time', 'stats_files'])
 
 with open(out_directory + '/occupancy.csv', 'w') as file:
     writer = csv.writer(file)
     writer.writerow(['occupancy'])
 
 end = False
-
+#now = time.time()
 while end == False:
+    #before = now
+    #now = time.time()
+    #print("Time: {0} ".format(now - before))
+    #if (step_add % 1000 == 0 or step_evict % 1000 == 0) and step_evict != 0:
+    #    print()
+    #print('stats len is ' + str(len(environment._cache._stats._files)))
+    #with open(out_directory + '/stats.csv', 'a') as f:
+    #    writer = csv.writer(f)
+    #    writer.writerow([now - before, len(environment._cache._stats._files)])
 
-    if (step_add % 1000 == 0 or step_evict % 1000 == 0) and step_evict != 0:
-        print()
-    if (environment.curDay+1)%7 == 0:
+    if (environment.curDay+1)%purge_frequency == 0:
         environment.purge()
 
     ######## ADDING ###########################################################################################################
@@ -226,6 +242,7 @@ while end == False:
 
         #TRAIN NETWORK
         if step_add > no_training_steps:
+            #print('TRAINING_ADDING')
             if debug == 'yes':
                 print('ADDING-------------------------------------------------------------------------------------')
                 print('CURVALUES')
@@ -306,6 +323,7 @@ while end == False:
 
         #TRAIN NETWORK
         if step_evict > no_training_steps + 5000:
+            #print('TRAINING_EVICTION')
             if debug == 'yes':
                 print('FREEING-------------------------------------------------------------------------------------')
                 print('CURVALUES')
@@ -359,8 +377,8 @@ while end == False:
     ### END ####################################################################################################################################
     if environment.curDay == environment._idx_end:
         end = True
-        model_add.save_weights(args.out_add_weights)
-        model_evict.save_weights(args.out_evict_weights)
+        model_add.save_weights(out_directory + args.out_add_weights)
+        model_evict.save_weights(out_directory + args.out_evict_weights)
 
 
 
