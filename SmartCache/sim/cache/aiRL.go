@@ -807,7 +807,7 @@ func (cache *AIRL) CheckWatermark() bool {
 // ExtraStats for output
 func (cache *AIRL) ExtraStats() string {
 	return fmt.Sprintf(
-		"SCov:%0.2f%%|ACov:%0.2f%%||Eps:%0.5f|SCov:%0.2f%%|ACov:%0.2f%%|Eps:%0.5f",
+		"SCov:%0.2f%%|ACov:%0.2f%%|Eps:%0.5f||SCov:%0.2f%%|ACov:%0.2f%%|Eps:%0.5f",
 		cache.additionTable.GetStateCoverage(), cache.additionTable.GetActionCoverage(), cache.additionTable.Epsilon,
 		cache.evictionTable.GetStateCoverage(), cache.evictionTable.GetActionCoverage(), cache.evictionTable.Epsilon,
 	)
