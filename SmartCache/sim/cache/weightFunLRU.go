@@ -148,7 +148,7 @@ func (cache *WeightFunLRU) UpdatePolicy(request *Request, fileStats *FileStats, 
 // ExtraStats for output
 func (cache *WeightFunLRU) ExtraStats() string {
 	return fmt.Sprintf(
-		"a:%0.2f|b:%0.2f||g:%0.2f",
+		"a:%0.2f|b:%0.2f|g:%0.2f",
 		cache.Parameters.Alpha, cache.Parameters.Beta, cache.Parameters.Gamma,
 	)
 }
