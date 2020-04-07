@@ -551,6 +551,42 @@ func (cache *SimpleCache) NumFiles() int {
 	return cache.files.Len()
 }
 
+// PercAboveMeanFreq returns the percentage of files with the frequency above the mean value
+func (cache *SimpleCache) PercAboveMeanFreq() float64 {
+	mean := int64(cache.MeanFrequency())
+	tot := 0
+	for file := range cache.files.Get(NoQueue) {
+		if file.Frequency > mean {
+			tot++
+		}
+	}
+	return (float64(tot) / float64(cache.NumFiles())) * 100.
+}
+
+// PercAboveMeanRec returns the percentage of files with the recency above the mean value
+func (cache *SimpleCache) PercAboveMeanRec() float64 {
+	mean := int64(cache.MeanRecency())
+	tot := 0
+	for file := range cache.files.Get(NoQueue) {
+		if file.Recency > mean {
+			tot++
+		}
+	}
+	return (float64(tot) / float64(cache.NumFiles())) * 100.
+}
+
+// PercAboveMeanSize returns the percentage of files with the size above the mean value
+func (cache *SimpleCache) PercAboveMeanSize() float64 {
+	mean := cache.MeanSize()
+	tot := 0
+	for file := range cache.files.Get(NoQueue) {
+		if file.Size > mean {
+			tot++
+		}
+	}
+	return (float64(tot) / float64(cache.NumFiles())) * 100.
+}
+
 // StdDevFreq returns the standard deviation of the frequency
 func (cache *SimpleCache) StdDevFreq() float64 {
 	mean := cache.MeanFrequency()

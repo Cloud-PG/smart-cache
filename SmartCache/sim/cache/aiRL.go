@@ -280,10 +280,16 @@ func (cache *AIRL) getState(request *Request, fileStats *FileStats, featureOrder
 			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(cache.StdDevFreq()))
 		case "stdDevRec":
 			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(cache.StdDevRec()))
+		case "aboveMeanFreq":
+			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(cache.PercAboveMeanFreq()))
+		case "aboveMeanRec":
+			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(cache.PercAboveMeanRec()))
+		case "aboveMeanSize":
+			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(cache.PercAboveMeanSize()))
 		case "numFiles":
 			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(float64(cache.NumFiles())))
 		default:
-			panic(fmt.Sprintf("Cannot prepare input %s", featureName))
+			panic(fmt.Sprintf("ERROR: Cannot prepare state input '%s'", featureName))
 		}
 	}
 	return strings.Join(cache.bufferInputVector, "")
