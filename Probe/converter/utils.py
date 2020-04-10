@@ -139,8 +139,7 @@ class CategoryContainer:
         if query == "categories":
             json_output = json.dumps(
                 {'keys': list(self._data.keys())}, indent=2, sort_keys=True)
-            colorful_json = highlight(
-                json_output, lexers.JsonLexer(), formatters.TerminalFormatter())
+            colorful_json = make_colored_json(json_output)
             return colorful_json
         elif query.find(".") != -1:
             subQuery, category = query.split(".", 1)
@@ -152,22 +151,33 @@ class CategoryContainer:
                     obj = {key: value for key,
                            value in self._data[category].items()}
                 json_output = json.dumps(
-                    {category: obj}, indent=2, sort_keys=True if not sort_by_value else False)
-                colorful_json = highlight(
-                    json_output, lexers.JsonLexer(), formatters.TerminalFormatter())
+                    {category: obj},
+                    indent=2,
+                    sort_keys=True if not sort_by_value else False
+                )
+                colorful_json = make_colored_json(json_output)
                 return colorful_json
             elif subQuery == "valueOf":
                 category, key = category.split(".")
                 json_output = json.dumps(
-                    {category: { key: self._data[category][key]}}, indent=2, sort_keys=True if not sort_by_value else False)
-                colorful_json = highlight(
-                    json_output, lexers.JsonLexer(), formatters.TerminalFormatter())
+                    {category: {key: self._data[category][key]}},
+                    indent=2,
+                    sort_keys=True if not sort_by_value else False
+                )
+                colorful_json = make_colored_json(json_output)
                 return colorful_json
             else:
                 raise Exception(
                     f"Error: sub query {subQuery} of {query} is not correct...")
         else:
             raise Exception(f"Error: query {query} is not correct...")
+
+
+def make_colored_json(json_string: str) -> str:
+    return highlight(
+        json_string, lexers.JsonLexer(),
+        formatters.TerminalFormatter()
+    )
 
 
 def category_replace(items: tuple):
