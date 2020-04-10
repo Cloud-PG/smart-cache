@@ -143,7 +143,7 @@ class CategoryContainer:
                 json_output, lexers.JsonLexer(), formatters.TerminalFormatter())
             return colorful_json
         elif query.find(".") != -1:
-            subQuery, category = query.split(".")
+            subQuery, category = query.split(".", 1)
             if subQuery == "all":
                 if sort_by_value:
                     obj = {key: value for key, value in sorted(
@@ -153,6 +153,13 @@ class CategoryContainer:
                            value in self._data[category].items()}
                 json_output = json.dumps(
                     {category: obj}, indent=2, sort_keys=True if not sort_by_value else False)
+                colorful_json = highlight(
+                    json_output, lexers.JsonLexer(), formatters.TerminalFormatter())
+                return colorful_json
+            elif subQuery == "valueOf":
+                category, key = category.split(".")
+                json_output = json.dumps(
+                    {category: { key: self._data[category][key]}}, indent=2, sort_keys=True if not sort_by_value else False)
                 colorful_json = highlight(
                     json_output, lexers.JsonLexer(), formatters.TerminalFormatter())
                 return colorful_json
