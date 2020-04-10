@@ -1,9 +1,11 @@
+import json
 import sqlite3
 from multiprocessing import Pool
-from os import path, walk, cpu_count
+from os import cpu_count, path, walk
 
 import numpy as np
 import pandas as pd
+from pygments import formatters, highlight, lexers
 from tqdm import tqdm
 
 from..utils import STATUS_ARROW, STATUS_WARNING, STATUS_OK
@@ -132,6 +134,33 @@ class CategoryContainer:
             return self._data[category][value]
         else:
             return self._data[category]
+
+    def query(self, query: str, sort_by_value: bool = False) -> str:
+        if query == "categories":
+            json_output = json.dumps(
+                {'keys': list(self._data.keys())}, indent=2, sort_keys=True)
+            colorful_json = highlight(
+                json_output, lexers.JsonLexer(), formatters.TerminalFormatter())
+            return colorful_json
+        elif query.find(".") != -1:
+            subQuery, category = query.split(".")
+            if subQuery == "all":
+                if sort_by_value:
+                    obj = {key: value for key, value in sorted(
+                        self._data[category].items(), key=lambda elm: elm[1])}
+                else:
+                    obj = {key: value for key,
+                           value in self._data[category].items()}
+                json_output = json.dumps(
+                    {category: obj}, indent=2, sort_keys=True if not sort_by_value else False)
+                colorful_json = highlight(
+                    json_output, lexers.JsonLexer(), formatters.TerminalFormatter())
+                return colorful_json
+            else:
+                raise Exception(
+                    f"Error: sub query {subQuery} of {query} is not correct...")
+        else:
+            raise Exception(f"Error: query {query} is not correct...")
 
 
 def category_replace(items: tuple):
