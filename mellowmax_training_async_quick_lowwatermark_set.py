@@ -38,10 +38,13 @@ parser.add_argument('--load_evict_weights_from_file', type = str, default = None
 parser.add_argument('--out_add_weights', type = str, default = 'weights_add.h5')
 parser.add_argument('--out_evict_weights', type = str, 
                     default = 'weights_evict.h5')
-parser.add_argument('--debug', type = str, default = 'no')
+parser.add_argument('--debug', type = bool, default = False)
 parser.add_argument('--low_watermark', type = float, default = 0.)
 parser.add_argument('--purge_delta', type = int, default = 50000)
 parser.add_argument('--purge_frequency', type = int, default = 2)
+parser.add_argument('--use_target_model', type = bool, default = False)
+parser.add_argument('--target_update_frequency_add', type = int, default = 10000)
+parser.add_argument('--target_update_frequency_evict', type = int, default = 10000)
 
 args = parser.parse_args()
 
@@ -64,7 +67,9 @@ debug = args.debug
 low_watermark = args.low_watermark
 purge_delta = args.purge_delta
 purge_frequency = args.purge_frequency
-
+use_target_model = args.use_target_model
+target_update_frequency_add = args.target_update_frequency_add
+target_update_frequency_evict = args.target_update_frequency_evict
 
 out_directory = args.out_dir
 out_name = args.out_name
@@ -72,6 +77,8 @@ out_name = args.out_name
 if not os.path.isdir(out_directory):
     os.makedirs(out_directory)
 
+if use_target_model == True:
+    print('USING TARGET MODEL')
 ###### FIXED PARAMETERS ####################################################################################################################################
 
 nb_actions = 2
@@ -119,6 +126,26 @@ print(model_evict.summary())
 #model_evict.compile(optimizer = 'adam', loss = huber_loss_mean)
 model_evict.compile(optimizer='adam', loss=tf.keras.losses.Huber())
 
+if use_target_model == True:
+    target_model_evict = Sequential()
+    target_model_evict.add(Dense(16, input_dim=7))
+    target_model_evict.add(Activation('sigmoid'))
+    target_model_evict.add(Dense(32))
+    target_model_evict.add(Activation('sigmoid'))
+    target_model_evict.add(Dense(64))
+    target_model_evict.add(Activation('sigmoid'))
+    target_model_evict.add(Dense(128))
+    target_model_evict.add(Activation('sigmoid'))
+    target_model_evict.add(Dense(64))
+    target_model_evict.add(Activation('sigmoid'))
+    target_model_evict.add(Dense(32))
+    target_model_evict.add(Activation('sigmoid'))
+    target_model_evict.add(Dense(nb_actions))
+    target_model_evict.add(Activation('sigmoid'))
+    print(model_evict.summary())
+    #target_model_evict.compile(optimizer = 'adam', loss = huber_loss_mean)
+    target_model_evict.compile(optimizer='adam', loss=tf.keras.losses.Huber())
+
 if args.load_evict_weights_from_file is None == False:
     model_evict.load_weights(args.load_evict_weights_from_file)
         
@@ -140,6 +167,26 @@ model_add.add(Activation('sigmoid'))
 print(model_add.summary())
 #model_add.compile(optimizer = 'adam', loss = huber_loss_mean)
 model_add.compile(optimizer='adam', loss=tf.keras.losses.Huber())
+
+if use_target_model == True:
+    target_model_add = Sequential()
+    target_model_add.add(Dense(16,input_dim = 7))
+    target_model_add.add(Activation('sigmoid'))
+    target_model_add.add(Dense(32))
+    target_model_add.add(Activation('sigmoid'))
+    target_model_add.add(Dense(64))
+    target_model_add.add(Activation('sigmoid'))
+    target_model_add.add(Dense(128))
+    target_model_add.add(Activation('sigmoid'))
+    target_model_add.add(Dense(64))
+    target_model_add.add(Activation('sigmoid'))
+    target_model_add.add(Dense(32))
+    target_model_add.add(Activation('sigmoid'))
+    target_model_add.add(Dense(nb_actions))
+    target_model_add.add(Activation('sigmoid'))
+    print(model_add.summary())
+    #target_model_add.compile(optimizer = 'adam', loss = huber_loss_mean)
+    target_model_add.compile(optimizer='adam', loss=tf.keras.losses.Huber())
 
 if args.load_add_weights_from_file is None == False:
     model_add.load_weights(args.load_add_weights_from_file)
@@ -179,7 +226,9 @@ while end == False:
 
     ######## ADDING ###########################################################################################################
     if adding_or_evicting == 0:
-
+        if use_target_model == True:
+            if step_add % target_update_frequency_add == 0:
+                target_model_add.set_weights(model_add.get_weights()) 
         # UPDATE STUFF
         step_add += 1
         if eps_add > eps_add_min:
@@ -203,7 +252,7 @@ while end == False:
         hit = environment.check_if_current_is_hit()
         anomalous = environment.current_cpueff_is_anomalous()
 
-        if debug == 'yes' and anomalous == False:
+        if debug == True and anomalous == False:
             print('ADDING-------------------------------------------------------------------------------------')
             print('CURVALUES')
             cur_values_ = np.reshape(cur_values, (1, 7))
@@ -250,25 +299,35 @@ while end == False:
             batch = environment.add_memory_vector[np.random.randint(0, environment.add_memory_vector.shape[0], BATCH_SIZE), :]
             train_cur_vals ,train_actions, train_rewards, train_next_vals = np.split(batch, [7,8,9] , axis = 1)
             target = model_add.predict_on_batch(train_cur_vals)
-            predictions = model_add.predict_on_batch(train_next_vals)
-            if debug == 'yes':
+            if debug == True:
                 print('BATCH')
                 print(batch)
                 print()
                 print('PREDICT ON BATCH')
                 print(target)
                 print()
-            for i in range(0,BATCH_SIZE):
-                action_ = int(train_actions[i])
-                target[i,action_] = train_rewards[i] + gamma * mellowmax(mm_omega, predictions[i])   
+            if use_target_model == False:
+                predictions = model_add.predict_on_batch(train_next_vals)
+                for i in range(0,BATCH_SIZE):
+                    action_ = int(train_actions[i])
+                    target[i,action_] = train_rewards[i] + gamma * mellowmax(mm_omega, predictions[i])   
+            else:
+                predictions = target_model_add.predict_on_batch(train_next_vals)
+                for i in range(0,BATCH_SIZE):
+                    action_ = int(train_actions[i])               
+                    target[i,action_] = train_rewards[i] + gamma * max(predictions[i])  
+            
             model_add.train_on_batch(train_cur_vals, target)
-            if debug == 'yes':
+            if debug == True:
                 print('TARGET')
                 print(target)
                 print()
         
     ### EVICTING #############################################################################################################
     elif adding_or_evicting == 1: 
+        if use_target_model == True:
+            if step_evict % target_update_frequency_evict == 0:
+                target_model_evict.set_weights(model_evict.get_weights()) 
         
         # UPDATE STUFF
         step_evict += 1
@@ -289,10 +348,10 @@ while end == False:
         else:
             cur_values_ = np.reshape(cur_values, (1, 7))
             action = np.argmax(model_evict.predict(cur_values_))
-        if debug == 'yes':
+        if debug == True:
             print('FREEING-------------------------------------------------------------------------------------')
             print('CURVALUES')
-        if debug == 'yes':
+        if debug == True:
             cur_values_ = np.reshape(cur_values, (1, 7))
             print(cur_values_)
             print()
@@ -333,19 +392,27 @@ while end == False:
             batch = environment.evict_memory_vector[np.random.randint(0, environment.evict_memory_vector.shape[0], BATCH_SIZE), :]
             train_cur_vals ,train_actions, train_rewards, train_next_vals = np.split(batch, [7,8,9] , axis = 1)
             target = model_evict.predict_on_batch(train_cur_vals)
-            predictions = model_evict.predict_on_batch(train_next_vals)
-            if debug == 'yes':
+
+            if debug == True:
                 print('BATCH')
                 print(batch)
                 print()
                 print('PREDICT ON BATCH')
                 print(target)
                 print()
-            for i in range(0,BATCH_SIZE):  
-                action_ = int(train_actions[i])
-                target[i,action_] = train_rewards[i] + gamma * mellowmax(mm_omega, predictions[i])   
+            if use_target_model == False:
+                predictions = model_evict.predict_on_batch(train_next_vals)
+                for i in range(0,BATCH_SIZE):  
+                    action_ = int(train_actions[i])
+                    target[i,action_] = train_rewards[i] + gamma * mellowmax(mm_omega, predictions[i])  
+            else:
+                predictions = target_model_add.predict_on_batch(train_next_vals)
+                for i in range(0,BATCH_SIZE):  
+                    action_ = int(train_actions[i])
+                    target[i,action_] = train_rewards[i] + gamma * max(predictions[i])  
+            
             model_evict.train_on_batch(train_cur_vals, target)
-            if debug == 'yes':
+            if debug == True:
                 print('TARGET')
                 print(target)
                 print()
