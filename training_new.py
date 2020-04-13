@@ -198,31 +198,31 @@ random.seed(seed_)
 adding_or_evicting = 0
 step_add = 0
 step_evict = 0
-step_add = 0
-step_evict = 0
+step_add_decay = 0
+step_evict_decay = 0
 
 # addition_counter = 0
 # eviction_counter = 0
 
-with open(out_directory + '/stats.csv', 'w') as f:
-    writer = csv.writer(f)
-    writer.writerow(['time', 'stats_files', 'cache_files'])
+#with open(out_directory + '/stats.csv', 'w') as f:
+#    writer = csv.writer(f)
+#    writer.writerow(['time', 'stats_files', 'cache_files'])
 
 with open(out_directory + '/occupancy.csv', 'w') as file:
     writer = csv.writer(file)
     writer.writerow(['occupancy'])
 
 end = False
-now = time.time()
+#now = time.time()
 while end == False:
-    before = now
-    now = time.time()
-    with open(out_directory + '/stats.csv', 'a') as f:
-        writer = csv.writer(f)
-        writer.writerow([now - before, len(environment._cache._stats._files), len(environment._cache._cached_files)])
+#    before = now
+#    now = time.time()
+#    with open(out_directory + '/stats.csv', 'a') as f:
+#        writer = csv.writer(f)
+#        writer.writerow([now - before, len(environment._cache._stats._files), len(environment._cache._cached_files)])
 
-    if (environment.curDay+1) % purge_frequency == 0 and environment.curRequest == 0:
-        environment.purge()
+    #if (environment.curDay+1) % purge_frequency == 0 and environment.curRequest == 0:
+    #    environment.purge()
 
     ######## ADDING ###########################################################################################################
     if adding_or_evicting == 0:
@@ -231,8 +231,9 @@ while end == False:
                 target_model_add.set_weights(model_add.get_weights()) 
         # UPDATE STUFF
         step_add += 1
-        if eps_add > eps_add_min:
-            eps_add = math.exp(- decay_rate_add * step_add)
+        if eps_add > eps_add_min and step_add > no_training_steps:
+            step_add_decay += 1
+            eps_add = math.exp(- decay_rate_add * step_add_decay)
         cur_values = environment.curValues
         if step_add % 1000 == 0:
             print('epsilon = ' + str(eps_add))
@@ -271,6 +272,10 @@ while end == False:
         # IF IT'S ADDING IS OVER, GIVE REWARD TO ALL EVICTION ACTIONS
         if environment._cache.capacity > environment._cache._h_watermark:
             environment.clear_remaining_evict_window()
+
+        #PURGE UNUSED STATS
+        if (environment.curDay+1) % purge_frequency == 0 and environment.curRequest == 0:
+            environment.purge()
         
         # IF ADDING IS NOT OVER, GET NEXT VALUES AND PREPARE ACTION TO BE REWARDED, GIVING EVENTUAL REWARD
         if environment._cache.capacity <= environment._cache._h_watermark:
@@ -331,7 +336,8 @@ while end == False:
         
         # UPDATE STUFF
         step_evict += 1
-        if eps_evict > eps_evict_min:
+        if eps_evict > eps_evict_min and step_evict > no_training_steps:
+            step_evict_decay += 1
             eps_evict = math.exp(- decay_rate_evict * step_evict)
         cur_values = environment.curValues
         if step_evict % 1000 == 0:
