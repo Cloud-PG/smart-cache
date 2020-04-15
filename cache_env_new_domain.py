@@ -14,9 +14,15 @@ bandwidthLimit = (1000000. / 8.) * 60. * 60. * 24
 # purge_delta = 20000
 it_cpueff_diff = 19
 us_cpueff_diff = 10
-it_maxsize = 47585.251
-it_minsize = 0.105
-it_delta_size = 4785.146
+
+it_mean_size = 3397.512895452965
+it_stdev_size = 2186.2590964080405
+it_limsup_size = it_mean_size + it_stdev_size
+it_liminf_size = it_mean_size - it_stdev_size
+it_delta_size = it_limsup - it_liminf
+it_max_size = 47585.251
+it_min_size = 0.105
+#it_delta_size = 47585.146
 it_total_sites = 12
 it_total_campaigns = 128
 
@@ -434,7 +440,12 @@ class env:
 
         if adding_or_evicting == 0:
             size = curValues[0]
-            coeff = (size - it_minsize)/it_delta_size
+            if size <= it_liminf_size:
+                coeff = 0 
+            elif size >= it_limsup_size:
+                coeff = 1 
+            else:
+                coeff = (size - it_liminf_size)/it_delta_size
             ############################ GIVING REWARD TO ADDITION IF IT IS IN WINDOW AND ADD TO WINDOW ########################################################################
             if curFilename in self._request_window_elements:  # if is in queue                
                 obj = self._request_window_elements[curFilename]
@@ -493,7 +504,12 @@ class env:
 
         for obj in self._eviction_window_elements.values():
             size = obj.cur_values[0]
-            coeff = (size - it_minsize)/it_delta_size
+            if size <= it_liminf_size:
+                coeff = 0 
+            elif size >= it_limsup_size:
+                coeff = 1 
+            else:
+                coeff = (size - it_liminf_size)/it_delta_size
             if obj.action == 0:
                 obj.reward = - 1 * coeff
             else:
@@ -509,8 +525,12 @@ class env:
         toDelete = set()
         for curFilename, obj in self._request_window_elements.items():
             size = obj.cur_values[0]
-            coeff = (size - it_minsize)/it_delta_size
-            
+            if size <= it_liminf_size:
+                coeff = 0 
+            elif size >= it_limsup_size:
+                coeff = 1 
+            else:
+                coeff = (size - it_liminf_size)/it_delta_size
             if obj.counter > self._time_span:
                 if obj.action == 0:
                     obj.reward = - 1 * coeff
