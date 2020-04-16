@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 import pandas as pd
 from bokeh.io import export_png
 from bokeh.layouts import column, row
@@ -23,6 +24,67 @@ class FileStats(object):
         self.sizes = [start_size]
         self.users = set()
         self.sites = set()
+
+
+def plot_year_stats(df: 'pd.DataFrame',
+                    output_filename: str = 'yearstats',
+                    output_type: str = 'show'):
+
+    print(f"{STATUS_ARROW}Get datetimes")
+    df['day'] = pd.to_datetime(df.reqDay, unit="s")
+    print(f"{STATUS_ARROW}Group by day")
+    grouped = df[df.JobSuccess == True].groupby(by="day")
+
+    print(f"{STATUS_ARROW}Get num. files x day")
+    numFiles = grouped.Filename.nunique()
+    print(f"{STATUS_ARROW}Get num. requests x day")
+    numReq = grouped.Filename.count()
+    print(f"{STATUS_ARROW}Get num. jobs x day")
+    numJobs = grouped.JobID.nunique()
+    print(f"{STATUS_ARROW}Get num. tasks x day")
+    numTasks = grouped.TaskID.nunique()
+    print(f"{STATUS_ARROW}Get num. users x day")
+    numUsers = grouped.UserID.nunique()
+    print(f"{STATUS_ARROW}Get num. sites x day")
+    numSites = grouped.SiteName.nunique()
+
+    numFiles.name = "Num. Files"
+    numReq.name = "Num. Req."
+    numJobs.name = "Num. Jobs"
+    numTasks.name = "Num. Tasks"
+    numUsers.name = "Num. Users"
+    numSites.name = "Num. Sites"
+
+    print(f"{STATUS_ARROW}Plot num. files x day")
+    numFiles.plot(kind="line", legend=True,
+                logy=True).legend(bbox_to_anchor=(1, 1))
+    print(f"{STATUS_ARROW}Plot num. requests x day")
+    numReq.plot(kind="line", legend=True,
+                logy=True).legend(bbox_to_anchor=(1, 1))
+    print(f"{STATUS_ARROW}Plot num. jobs x day")
+    numJobs.plot(kind="line", legend=True,
+                logy=True).legend(bbox_to_anchor=(1, 1))
+    print(f"{STATUS_ARROW}Plot num. tasks x day")
+    numTasks.plot(kind="line", legend=True,
+                logy=True).legend(bbox_to_anchor=(1, 1))
+    print(f"{STATUS_ARROW}Plot num. users x day")
+    numUsers.plot(kind="line", legend=True,
+                logy=True).legend(bbox_to_anchor=(1, 1))
+    print(f"{STATUS_ARROW}Plot num. sites x day")
+    numSites.plot(kind="line", legend=True,
+                logy=True).legend(bbox_to_anchor=(1, 1))
+
+    if output_type == 'show':
+        print(f"{STATUS_ARROW}Show results")
+        plt.show()
+    elif output_type == 'png':
+        print(f"{STATUS_ARROW}Save result PNG in: {output_filename}.png")
+        plt.savefig(
+            f"{output_filename}.png",
+            dpi=150,
+            bbox_inches="tight",
+            pad_inches=0.42
+        )
 
 
 def plot_daily_stats(df: 'pd.DataFrame',
@@ -363,7 +425,8 @@ def plot_week_stats(df: 'pd.DataFrame',
         "Average request stats",
         all_weeks,
         ['num_reqXfile', 'num_reqXfile_reqGr1'],
-        ['Avg. num. req. per file', 'Avg. num. req. per file (files > 1 req.)'],
+        ['Avg. num. req. per file',
+            'Avg. num. req. per file (files > 1 req.)'],
         stats,
     )
 

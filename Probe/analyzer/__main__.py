@@ -13,11 +13,11 @@ def main():
     parser.add_argument('path', default=None,
                         help='Folder or file to open')
     parser.add_argument('analysis', default="dailystats",
-                        choices=["dailystats", "weekstats"],
+                        choices=["dailystats", "weekstats", "yearstats"],
                         help='Folder or file to open')
     parser.add_argument('--output-filename', type=str,
-                        default="dailystats",
-                        help='The output file name [DEFAULT: "dailystats"]')
+                        default="stats",
+                        help='The output file name [DEFAULT: "stats"]')
     parser.add_argument('--region', type=str,
                         default="all",
                         help='Region of the data to analyse [DEFAULT: "all"]')
@@ -64,6 +64,13 @@ def main():
                 output_filename=args.output_filename,
                 output_type=args.output_type,
                 reset_stat_days=args.reset_stat_days
+            )
+        elif args.analysis == "yearstats":
+            print(f"{STATUS_ARROW}Extract year stats...")
+            plotter.plot_year_stats(
+                df,
+                output_filename=args.output_filename,
+                output_type=args.output_type,
             )
         else:
             raise Exception(f"I cannot apply {args.analysis} analysis...")
