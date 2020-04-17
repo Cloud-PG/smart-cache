@@ -65,7 +65,7 @@ def main():
                 output_type=args.output_type,
                 reset_stat_days=args.reset_stat_days
             )
-        elif args.analysis == "yearstats":
+        elif args.analysis == "globalstats":
             print(f"{STATUS_ARROW}Extract year stats...")
             plotter.plot_global_stats(
                 df,
