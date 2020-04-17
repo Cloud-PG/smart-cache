@@ -121,13 +121,13 @@ def plot_global_stats(df: 'pd.DataFrame',
     )
 
     figFileTypes, axesFileTypes = plt.subplots(
-        nrows=2, ncols=1, figsize=(16, 16))
+        nrows=1, ncols=2, figsize=(16, 16))
     print(f"{STATUS_ARROW}Plot data types")
     df.DataType.value_counts().plot(
         ax=axesFileTypes[0], kind="pie", figsize=(16, 8))
     print(f"{STATUS_ARROW}Plot file types")
     fileTypes = df.FileType.value_counts()
-    fileTypes[(fileTypes / len(fileTypes.index)) > 0.02].plot(
+    fileTypes[(fileTypes / fileTypes.sum()) > 0.02].plot(
         ax=axesFileTypes[1], kind="pie", figsize=(16, 8))
 
     if output_type == 'show':
