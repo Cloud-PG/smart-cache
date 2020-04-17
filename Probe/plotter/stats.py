@@ -28,10 +28,12 @@ class FileStats(object):
 
 def plot_year_stats(df: 'pd.DataFrame',
                     output_filename: str = 'yearstats',
-                    output_type: str = 'show'):
+                    output_type: str = 'show',
+                    region: str = 'all'):
+    ##
+    # Howto to group by Week
+    # pd.Grouper(key='Date', freq='W-MON')
 
-    print(f"{STATUS_ARROW}Get datetimes")
-    df['day'] = pd.to_datetime(df.reqDay, unit="s")
     print(f"{STATUS_ARROW}Group by day")
     grouped = df[df.JobSuccess == True].groupby(by="day")
 
@@ -47,43 +49,61 @@ def plot_year_stats(df: 'pd.DataFrame',
     numUsers = grouped.UserID.nunique()
     print(f"{STATUS_ARROW}Get num. sites x day")
     numSites = grouped.SiteName.nunique()
+    print(f"{STATUS_ARROW}Get num. request x file")
+    numReqXFile = grouped.Filename.value_counts()
+    numReqXFileAvg = numReqXFile.groupby("day").mean()
+    numReqXFileAvgG1 = numReqXFile[numReqXFile > 1].groupby("day").mean()
 
-    numFiles.name = "Num. Files"
-    numReq.name = "Num. Req."
-    numJobs.name = "Num. Jobs"
-    numTasks.name = "Num. Tasks"
-    numUsers.name = "Num. Users"
-    numSites.name = "Num. Sites"
+    numFiles.name = "Files"
+    numReq.name = "Requests"
+    numJobs.name = "Jobs"
+    numTasks.name = "Tasks"
+    numUsers.name = "Users"
+    numSites.name = "Sites"
+    numReqXFileAvg.name = "Avg. num. req. x file"
+    numReqXFileAvgG1.name = "Avg. num. req. x file (> 1)"
+
+    fig, axes = plt.subplots(nrows=2, ncols=2, sharex=True, figsize=(24, 16))
 
     print(f"{STATUS_ARROW}Plot num. files x day")
-    numFiles.plot(kind="line", legend=True,
-                logy=True).legend(bbox_to_anchor=(1, 1))
+    numFiles.plot(ax=axes[0, 0], kind="line", figsize=(
+        12, 8), legend=True, logy=True).legend(loc='upper right')
     print(f"{STATUS_ARROW}Plot num. requests x day")
-    numReq.plot(kind="line", legend=True,
-                logy=True).legend(bbox_to_anchor=(1, 1))
+    numReq.plot(ax=axes[0, 0], kind="line", figsize=(
+        12, 8), legend=True, logy=True).legend(loc='upper right')
     print(f"{STATUS_ARROW}Plot num. jobs x day")
-    numJobs.plot(kind="line", legend=True,
-                logy=True).legend(bbox_to_anchor=(1, 1))
+    numJobs.plot(ax=axes[0, 1], kind="line", figsize=(
+        12, 8), legend=True, logy=True).legend(loc='upper right')
     print(f"{STATUS_ARROW}Plot num. tasks x day")
-    numTasks.plot(kind="line", legend=True,
-                logy=True).legend(bbox_to_anchor=(1, 1))
+    numTasks.plot(ax=axes[0, 1], kind="line", figsize=(
+        12, 8), legend=True, logy=True).legend(loc='upper right')
     print(f"{STATUS_ARROW}Plot num. users x day")
-    numUsers.plot(kind="line", legend=True,
-                logy=True).legend(bbox_to_anchor=(1, 1))
+    numUsers.plot(ax=axes[1, 0], kind="line", figsize=(
+        12, 8), legend=True, logy=True).legend(loc='upper right')
     print(f"{STATUS_ARROW}Plot num. sites x day")
-    numSites.plot(kind="line", legend=True,
-                logy=True).legend(bbox_to_anchor=(1, 1))
+    numSites.plot(ax=axes[1, 0], kind="line", figsize=(
+        12, 8), legend=True, logy=True).legend(loc='upper right')
+    print(f"{STATUS_ARROW}Plot avg. num. req x file")
+    numReqXFileAvg.plot(ax=axes[1, 1], kind="line", figsize=(
+        12, 8), legend=True, logy=True).legend(loc='upper right')
+    print(f"{STATUS_ARROW}Plot avg. num. req x file > 1")
+    numReqXFileAvgG1.plot(ax=axes[1, 1], kind="line", figsize=(
+        12, 8), legend=True, logy=True).legend(loc='upper right')
+
+    for ax in axes.flatten():
+        ax.grid(True)
 
     if output_type == 'show':
         print(f"{STATUS_ARROW}Show results")
         plt.show()
     elif output_type == 'png':
-        print(f"{STATUS_ARROW}Save result PNG in: {output_filename}.png")
+        filename = f"{output_filename}_{region}.png"
+        print(f"{STATUS_ARROW}Save result PNG in: {filename}")
         plt.savefig(
-            f"{output_filename}.png",
-            dpi=150,
+            filename,
+            dpi=300,
             bbox_inches="tight",
-            pad_inches=0.42
+            pad_inches=0.24
         )
 
 

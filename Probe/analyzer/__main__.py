@@ -71,6 +71,7 @@ def main():
                 df,
                 output_filename=args.output_filename,
                 output_type=args.output_type,
+                region=args.region,
             )
         else:
             raise Exception(f"I cannot apply {args.analysis} analysis...")
