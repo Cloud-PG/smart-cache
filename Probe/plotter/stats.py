@@ -113,10 +113,11 @@ def plot_global_stats(df: 'pd.DataFrame',
     figFileSizes, axesFileSizes = plt.subplots(
         nrows=1, ncols=1, figsize=(16, 8))
     print(f"{STATUS_ARROW}Plot file sizes")
+    sizes = df[df['size (GB)'] < 8.0]
     sns.violinplot(
         ax=axesFileSizes, x="month", y="size (GB)",
-        data=df[df['size (GB)'] < 8.0],
-        palette="muted", figsize=(16, 8)
+        data=sizes, palette="Set2", figsize=(16, 8),
+        bw=.2, hue="DataType", split=True,
     )
 
     figFileTypes, axesFileTypes = plt.subplots(
