@@ -13,7 +13,7 @@ def main():
     parser.add_argument('path', default=None,
                         help='Folder or file to open')
     parser.add_argument('analysis', default="dailystats",
-                        choices=["dailystats", "weekstats", "yearstats"],
+                        choices=["dailystats", "weekstats", "globalstats"],
                         help='Folder or file to open')
     parser.add_argument('--output-filename', type=str,
                         default="stats",
@@ -67,7 +67,7 @@ def main():
             )
         elif args.analysis == "yearstats":
             print(f"{STATUS_ARROW}Extract year stats...")
-            plotter.plot_year_stats(
+            plotter.plot_global_stats(
                 df,
                 output_filename=args.output_filename,
                 output_type=args.output_type,

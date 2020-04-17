@@ -26,7 +26,7 @@ class FileStats(object):
         self.sites = set()
 
 
-def plot_year_stats(df: 'pd.DataFrame',
+def plot_global_stats(df: 'pd.DataFrame',
                     output_filename: str = 'yearstats',
                     output_type: str = 'show',
                     region: str = 'all'):
