@@ -1,5 +1,7 @@
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
+import seaborn as sns
 from bokeh.io import export_png
 from bokeh.layouts import column, row
 from bokeh.models import BasicTickFormatter, ColumnDataSource, Span
@@ -27,15 +29,28 @@ class FileStats(object):
 
 
 def plot_global_stats(df: 'pd.DataFrame',
-                    output_filename: str = 'yearstats',
-                    output_type: str = 'show',
-                    region: str = 'all'):
+                      output_filename: str = 'yearstats',
+                      output_type: str = 'show',
+                      region: str = 'all'):
     ##
     # Howto to group by Week
     # pd.Grouper(key='Date', freq='W-MON')
 
+    print(f"{STATUS_ARROW}Filter DataType data and mc")
+    df = df[(df.DataType == "data") | (df.DataType == "mc")]
+
+    print(f"{STATUS_ARROW}Filter success jobs")
+    df = df[df.JobSuccess == True]
+
+    print(f"{STATUS_ARROW}Add size in GigaBytes")
+    df['size (GB)'] = df.Size / 1024**3
+
+    print(f"{STATUS_ARROW}Add month groups")
+    df['month'] = df.groupby(pd.Grouper(key='day', freq='M')).ngroup()
+    df = df[df.month > 0]
+
     print(f"{STATUS_ARROW}Group by day")
-    grouped = df[df.JobSuccess == True].groupby(by="day")
+    grouped = df.groupby(by="day")
 
     print(f"{STATUS_ARROW}Get num. files x day")
     numFiles = grouped.Filename.nunique()
@@ -63,43 +78,80 @@ def plot_global_stats(df: 'pd.DataFrame',
     numReqXFileAvg.name = "Avg. num. req. x file"
     numReqXFileAvgG1.name = "Avg. num. req. x file (> 1)"
 
-    fig, axes = plt.subplots(nrows=2, ncols=2, sharex=True, figsize=(24, 16))
+    figGeneral, axesGeneral = plt.subplots(
+        nrows=2, ncols=2, sharex=True, figsize=(24, 16)
+    )
 
     print(f"{STATUS_ARROW}Plot num. files x day")
-    numFiles.plot(ax=axes[0, 0], kind="line", figsize=(
+    numFiles.plot(ax=axesGeneral[0, 0], kind="line", figsize=(
         12, 8), legend=True, logy=True).legend(loc='upper right')
     print(f"{STATUS_ARROW}Plot num. requests x day")
-    numReq.plot(ax=axes[0, 0], kind="line", figsize=(
+    numReq.plot(ax=axesGeneral[0, 0], kind="line", figsize=(
         12, 8), legend=True, logy=True).legend(loc='upper right')
     print(f"{STATUS_ARROW}Plot num. jobs x day")
-    numJobs.plot(ax=axes[0, 1], kind="line", figsize=(
+    numJobs.plot(ax=axesGeneral[0, 1], kind="line", figsize=(
         12, 8), legend=True, logy=True).legend(loc='upper right')
     print(f"{STATUS_ARROW}Plot num. tasks x day")
-    numTasks.plot(ax=axes[0, 1], kind="line", figsize=(
+    numTasks.plot(ax=axesGeneral[0, 1], kind="line", figsize=(
         12, 8), legend=True, logy=True).legend(loc='upper right')
     print(f"{STATUS_ARROW}Plot num. users x day")
-    numUsers.plot(ax=axes[1, 0], kind="line", figsize=(
+    numUsers.plot(ax=axesGeneral[1, 0], kind="line", figsize=(
         12, 8), legend=True, logy=True).legend(loc='upper right')
     print(f"{STATUS_ARROW}Plot num. sites x day")
-    numSites.plot(ax=axes[1, 0], kind="line", figsize=(
+    numSites.plot(ax=axesGeneral[1, 0], kind="line", figsize=(
         12, 8), legend=True, logy=True).legend(loc='upper right')
     print(f"{STATUS_ARROW}Plot avg. num. req x file")
-    numReqXFileAvg.plot(ax=axes[1, 1], kind="line", figsize=(
+    numReqXFileAvg.plot(ax=axesGeneral[1, 1], kind="line", figsize=(
         12, 8), legend=True, logy=True).legend(loc='upper right')
     print(f"{STATUS_ARROW}Plot avg. num. req x file > 1")
-    numReqXFileAvgG1.plot(ax=axes[1, 1], kind="line", figsize=(
+    numReqXFileAvgG1.plot(ax=axesGeneral[1, 1], kind="line", figsize=(
         12, 8), legend=True, logy=True).legend(loc='upper right')
 
-    for ax in axes.flatten():
+    for ax in axesGeneral.flatten():
         ax.grid(True)
+
+    figFileSizes, axesFileSizes = plt.subplots(
+        nrows=1, ncols=1, figsize=(16, 8))
+    print(f"{STATUS_ARROW}Plot file sizes")
+    sns.violinplot(
+        ax=axesFileSizes, x="month", y="size (GB)",
+        data=df[df['size (GB)'] < 8.0],
+        palette="muted", figsize=(16, 8)
+    )
+
+    figFileTypes, axesFileTypes = plt.subplots(
+        nrows=2, ncols=1, figsize=(16, 16))
+    print(f"{STATUS_ARROW}Plot data types")
+    df.DataType.value_counts().plot(
+        ax=axesFileTypes[0], kind="pie", figsize=(16, 8))
+    print(f"{STATUS_ARROW}Plot file types")
+    fileTypes = df.FileType.value_counts()
+    fileTypes[(fileTypes / len(fileTypes.index)) > 0.02].plot(
+        ax=axesFileTypes[1], kind="pie", figsize=(16, 8))
 
     if output_type == 'show':
         print(f"{STATUS_ARROW}Show results")
         plt.show()
     elif output_type == 'png':
-        filename = f"{output_filename}_{region}.png"
+        filename = f"{output_filename}_{region}_general.png"
         print(f"{STATUS_ARROW}Save result PNG in: {filename}")
-        plt.savefig(
+        figGeneral.savefig(
+            filename,
+            dpi=300,
+            bbox_inches="tight",
+            pad_inches=0.24
+        )
+        filename = f"{output_filename}_{region}_fileSizes.png"
+        print(f"{STATUS_ARROW}Save result PNG in: {filename}")
+        figFileSizes.savefig(
+            filename,
+            dpi=300,
+            bbox_inches="tight",
+            pad_inches=0.24
+        )
+        filename = f"{output_filename}_{region}_fileTypes.png"
+        print(f"{STATUS_ARROW}Save result PNG in: {filename}")
+        figFileTypes.savefig(
             filename,
             dpi=300,
             bbox_inches="tight",
