@@ -208,17 +208,22 @@ def plot_global_stats(df: 'pd.DataFrame',
     else:
         print(f"{STATUS_ARROW}Plot data types")
         data_types = [cur_df.DataType.value_counts() for cur_df in df]
-        cur_data_type = data_types.pop()
-        for tmp in data_types:
-            cur_data_type.add(tmp, fill_value=0)
-        data_types = cur_data_type
+        data_types = pd.concat(
+            [cur_df.DataType.value_counts() for cur_df in df]
+        ).reset_index().rename(columns={'index': 'types'})
+        data_types = data_types.groupby("types").sum()
+        data_types = pd.Series(
+            data_types.values.flatten(), index=data_types.index
+        )
         data_types.plot(ax=axesFileTypes[0], kind="pie", figsize=(16, 8))
         print(f"{STATUS_ARROW}Plot file types")
-        file_types = [cur_df.FileType.value_counts() for cur_df in df]
-        cur_file_type = file_types.pop()
-        for tmp in file_types:
-            cur_file_type.add(tmp, fill_value=0)
-        file_types = cur_file_type
+        file_types = pd.concat(
+            [cur_df.FileType.value_counts() for cur_df in df]
+        ).reset_index().rename(columns={'index': 'types'})
+        file_types = file_types.groupby("types").sum()
+        file_types = pd.Series(
+            file_types.values.flatten(), index=file_types.index
+        )
         file_types[(file_types / file_types.sum()) > 0.02].plot(
             ax=axesFileTypes[1], kind="pie", figsize=(16, 8))
 
