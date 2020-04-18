@@ -51,9 +51,9 @@ def main():
             month_filter=args.month,
             concat=args.concat,
         )
-        print(f"{STATUS_ARROW}Sort data by date...")
         if args.analysis == "dailystats":
             print(f"{STATUS_ARROW}Extract daily stats...")
+            print(f"{STATUS_ARROW}Sort data by date...")
             utils.sort_by_date(df)
             plotter.plot_daily_stats(
                 df,
@@ -65,6 +65,7 @@ def main():
             print(df.JobStart.astype('datetime64[ms]'))
         elif args.analysis == "weekstats":
             print(f"{STATUS_ARROW}Extract weekstats stats...")
+            print(f"{STATUS_ARROW}Sort data by date...")
             utils.sort_by_date(df)
             plotter.plot_week_stats(
                 df,
