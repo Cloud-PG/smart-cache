@@ -24,3 +24,14 @@ def sort_by_date(df: 'pd.DataFrame', column_name: str = "reqDay") -> 'pd.DataFra
     """
     df.sort_values(by="day", inplace=True)
     return df
+
+
+def str2bool(v: str):
+    """Check if a string is a boolean True.
+
+    :param v: the input string
+    :type v: str
+    :return: True if it is a true boolean string
+    :rtype: bool
+    """
+    return v.lower() in ("yes", "true", "True", "t", "1")

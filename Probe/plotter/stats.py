@@ -31,52 +31,114 @@ class FileStats(object):
 def plot_global_stats(df: 'pd.DataFrame',
                       output_filename: str = 'yearstats',
                       output_type: str = 'show',
-                      region: str = 'all'):
+                      region: str = 'all',
+                      concatenated: bool = True):
     ##
     # Howto to group by Week
     # pd.Grouper(key='Date', freq='W-MON')
 
     print(f"{STATUS_ARROW}Filter DataType data and mc")
-    df = df[(df.DataType == "data") | (df.DataType == "mc")]
+    if concatenated:
+        df = df[(df.DataType == "data") | (df.DataType == "mc")]
+    else:
+        for idx in tqdm(range(len(df))):
+            cur_df = df[idx]
+            df[idx] = cur_df[(cur_df.DataType == "data")
+                             | (cur_df.DataType == "mc")]
 
     print(f"{STATUS_ARROW}Filter success jobs")
-    df = df[df.JobSuccess == True]
+    if concatenated:
+        df = df[df.JobSuccess == True]
+    else:
+        for idx in tqdm(range(len(df))):
+            cur_df = df[idx]
+            df[idx] = cur_df[cur_df.JobSuccess == True]
 
     print(f"{STATUS_ARROW}Add size in GigaBytes")
-    df['size (GB)'] = df.Size / 1024**3
+    if concatenated:
+        df['size (GB)'] = df.Size / 1024**3
+    else:
+        for idx in tqdm(range(len(df))):
+            cur_df = df[idx]
+            df[idx]['size (GB)'] = cur_df.Size / 1024**3
 
     print(f"{STATUS_ARROW}Add month groups")
-    df['month'] = df.groupby(pd.Grouper(key='day', freq='M')).ngroup()
-    df = df[df.month > 0]
+    if concatenated:
+        df['month'] = df.groupby(pd.Grouper(key='day', freq='M')).ngroup()
+        df = df[df.month > 0]
 
-    print(f"{STATUS_ARROW}Group by day")
-    grouped = df.groupby(by="day")
+    if concatenated:
+        print(f"{STATUS_ARROW}Group by day")
+        grouped = df.groupby(by="day")
 
-    print(f"{STATUS_ARROW}Get num. files x day")
-    numFiles = grouped.Filename.nunique()
-    print(f"{STATUS_ARROW}Get num. requests x day")
-    numReq = grouped.Filename.count()
-    print(f"{STATUS_ARROW}Get num. jobs x day")
-    numJobs = grouped.JobID.nunique()
-    print(f"{STATUS_ARROW}Get num. tasks x day")
-    numTasks = grouped.TaskID.nunique()
-    print(f"{STATUS_ARROW}Get num. users x day")
-    numUsers = grouped.UserID.nunique()
-    print(f"{STATUS_ARROW}Get num. sites x day")
-    numSites = grouped.SiteName.nunique()
-    print(f"{STATUS_ARROW}Get num. request x file")
-    numReqXFile = grouped.Filename.value_counts()
-    numReqXFileAvg = numReqXFile.groupby("day").mean()
-    numReqXFileAvgG1 = numReqXFile[numReqXFile > 1].groupby("day").mean()
+        print(f"{STATUS_ARROW}Get num. files x day")
+        numFiles = grouped.Filename.nunique()
+        print(f"{STATUS_ARROW}Get num. requests x day")
+        numReq = grouped.Filename.count()
+        print(f"{STATUS_ARROW}Get num. jobs x day")
+        numJobs = grouped.JobID.nunique()
+        print(f"{STATUS_ARROW}Get num. tasks x day")
+        numTasks = grouped.TaskID.nunique()
+        print(f"{STATUS_ARROW}Get num. users x day")
+        numUsers = grouped.UserID.nunique()
+        print(f"{STATUS_ARROW}Get num. sites x day")
+        numSites = grouped.SiteName.nunique()
+        print(f"{STATUS_ARROW}Get num. request x file")
+        numReqXFile = grouped.Filename.value_counts()
+        numReqXFileAvg = numReqXFile.groupby("day").mean()
+        numReqXFileAvgG1 = numReqXFile[numReqXFile > 1].groupby("day").mean()
 
-    numFiles.name = "Files"
-    numReq.name = "Requests"
-    numJobs.name = "Jobs"
-    numTasks.name = "Tasks"
-    numUsers.name = "Users"
-    numSites.name = "Sites"
-    numReqXFileAvg.name = "Avg. num. req. x file"
-    numReqXFileAvgG1.name = "Avg. num. req. x file (> 1)"
+        numFiles.name = "Files"
+        numReq.name = "Requests"
+        numJobs.name = "Jobs"
+        numTasks.name = "Tasks"
+        numUsers.name = "Users"
+        numSites.name = "Sites"
+        numReqXFileAvg.name = "Avg. num. req. x file"
+        numReqXFileAvgG1.name = "Avg. num. req. x file (> 1)"
+    else:
+        day_indexs = [cur_df.day.iloc[0] for cur_df in df]
+        print(f"{STATUS_ARROW}Get num. files x day")
+        numFiles = pd.Series(
+            data=[cur_df.Filename.nunique() for cur_df in df],
+            index=day_indexs,
+        )
+        print(f"{STATUS_ARROW}Get num. requests x day")
+        numReq = pd.Series(
+            data=[cur_df.Filename.count() for cur_df in df],
+            index=day_indexs,
+        )
+        print(f"{STATUS_ARROW}Get num. jobs x day")
+        numJobs = pd.Series(
+            data=[cur_df.JobID.nunique() for cur_df in df],
+            index=day_indexs,
+        )
+        print(f"{STATUS_ARROW}Get num. tasks x day")
+        numTasks = pd.Series(
+            data=[cur_df.TaskID.nunique() for cur_df in df],
+            index=day_indexs,
+        )
+        print(f"{STATUS_ARROW}Get num. users x day")
+        numUsers = pd.Series(
+            data=[cur_df.UserID.nunique() for cur_df in df],
+            index=day_indexs,
+        )
+        print(f"{STATUS_ARROW}Get num. sites x day")
+        numSites = pd.Series(
+            data=[cur_df.SiteName.nunique() for cur_df in df],
+            index=day_indexs,
+        )
+        print(f"{STATUS_ARROW}Get num. request x file")
+        numReqXFile = [cur_df.Filename.value_counts() for cur_df in df]
+        numReqXFileAvg = pd.Series(
+            data=[cur_values.mean() for cur_values in numReqXFile],
+            index=day_indexs,
+        )
+        numReqXFileAvgG1 = pd.Series(
+            data=[cur_values[cur_values > 1].mean()
+                  for cur_values in numReqXFile],
+            index=day_indexs,
+        )
 
     figGeneral, axesGeneral = plt.subplots(
         nrows=2, ncols=2, sharex=True, figsize=(24, 16)
@@ -112,8 +174,20 @@ def plot_global_stats(df: 'pd.DataFrame',
 
     figFileSizes, axesFileSizes = plt.subplots(
         nrows=1, ncols=1, figsize=(16, 8))
-    print(f"{STATUS_ARROW}Plot file sizes")
-    sizes = df[df['size (GB)'] < 8.0]
+    if concatenated:
+        print(f"{STATUS_ARROW}Plot file sizes")
+        sizes = df[df['size (GB)'] < 8.0]
+    else:
+        sizes = [
+            cur_df[cur_df['size (GB)'] < 8.0][['size (GB)', 'DataType', 'day']]
+            for cur_df in df
+        ]
+        for cur_size in sizes:
+            cur_size['month'] = cur_size.day.apply(
+                lambda elm: elm.month
+            ).astype(int)
+        sizes = pd.concat(sizes)
+
     sns.violinplot(
         ax=axesFileSizes, x="month", y="size (GB)",
         data=sizes, palette="Set2", figsize=(16, 8),
@@ -122,13 +196,22 @@ def plot_global_stats(df: 'pd.DataFrame',
 
     figFileTypes, axesFileTypes = plt.subplots(
         nrows=1, ncols=2, figsize=(16, 16))
-    print(f"{STATUS_ARROW}Plot data types")
-    df.DataType.value_counts().plot(
-        ax=axesFileTypes[0], kind="pie", figsize=(16, 8))
-    print(f"{STATUS_ARROW}Plot file types")
-    fileTypes = df.FileType.value_counts()
-    fileTypes[(fileTypes / fileTypes.sum()) > 0.02].plot(
-        ax=axesFileTypes[1], kind="pie", figsize=(16, 8))
+    if concatenated:
+        print(f"{STATUS_ARROW}Plot data types")
+        df.DataType.value_counts().plot(
+            ax=axesFileTypes[0], kind="pie", figsize=(16, 8))
+        print(f"{STATUS_ARROW}Plot file types")
+        fileTypes = df.FileType.value_counts()
+        fileTypes[(fileTypes / fileTypes.sum()) > 0.02].plot(
+            ax=axesFileTypes[1], kind="pie", figsize=(16, 8))
+    else:
+        print(f"{STATUS_ARROW}Plot data types")
+        data_types = sum([cur_df.DataType.value_counts() for cur_df in df])
+        data_types.plot(ax=axesFileTypes[0], kind="pie", figsize=(16, 8))
+        print(f"{STATUS_ARROW}Plot file types")
+        file_types = sum([cur_df.DataType.value_counts() for cur_df in df])
+        file_types[(file_types / file_types.sum()) > 0.02].plot(
+            ax=axesFileTypes[1], kind="pie", figsize=(16, 8))
 
     if output_type == 'show':
         print(f"{STATUS_ARROW}Show results")

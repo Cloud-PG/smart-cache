@@ -6,11 +6,11 @@ from colorama import init
 from tqdm import tqdm
 
 from .. import loaders
-from ..utils import STATUS_ARROW, STATUS_WARNING
+from ..utils import STATUS_ARROW, STATUS_WARNING, str2bool
 from .extractor import (check_filename_info, check_region_info,
                         get_object_columns, get_unique_values)
 from .utils import (CategoryContainer, convert_categories, save_numeric_df,
-                    shuffle_df, sort_from_avro, str2bool)
+                    shuffle_df, sort_from_avro)
 
 
 def main():

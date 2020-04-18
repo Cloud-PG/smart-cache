@@ -92,7 +92,8 @@ def gen_csv_data(input_path: str, region_filter: str = None,
 
 def csv_data(input_path: str, region_filter: str = None,
              file_type_filter: str = None,
-             month_filter: int = -1) -> 'pd.DataFrame':
+             month_filter: int = -1,
+             concat: bool=True) -> 'pd.DataFrame':
     """Open csv data folder and files
 
     :return: The whole dataset
@@ -115,8 +116,10 @@ def csv_data(input_path: str, region_filter: str = None,
             )
         else:
             if data_frames:
-                print(f"{STATUS_ARROW}Concat dataframes...")
-                return pd.concat(data_frames)
+                if concat:
+                    print(f"{STATUS_ARROW}Concat dataframes...")
+                    return pd.concat(data_frames)
+                return data_frames
             else:
                 pd.DataFrame()
     else:

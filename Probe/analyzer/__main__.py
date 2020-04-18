@@ -3,12 +3,14 @@ import argparse
 from colorama import init
 
 from .. import loaders, plotter, utils
-from ..utils import STATUS_ARROW
+from ..utils import STATUS_ARROW, str2bool
 
 
 def main():
     parser = argparse.ArgumentParser(
         "analyzer", description="Analyse the data")
+    
+    parser.register('type', 'bool', str2bool)  # add type keyword to registries
 
     parser.add_argument('path', default=None,
                         help='Folder or file to open')
@@ -21,6 +23,9 @@ def main():
     parser.add_argument('--region', type=str,
                         default="all",
                         help='Region of the data to analyse [DEFAULT: "all"]')
+    parser.add_argument('--concat', type='bool',
+                        default=True,
+                        help='Indicates if the DataFrames have to be concatenated [DEFAULT: True]')
     parser.add_argument('--reset-stat-days', type=int,
                         default=7,
                         help='Number of days after the stats are reset [DEFAULT: 7]')
@@ -43,7 +48,8 @@ def main():
             args.path,
             region_filter=args.region,
             file_type_filter=args.file_type,
-            month_filter=args.month
+            month_filter=args.month,
+            concat=args.concat,
         )
         print(f"{STATUS_ARROW}Sort data by date...")
         if args.analysis == "dailystats":
@@ -73,6 +79,7 @@ def main():
                 output_filename=args.output_filename,
                 output_type=args.output_type,
                 region=args.region,
+                concatenated=args.concat,
             )
         else:
             raise Exception(f"I cannot apply {args.analysis} analysis...")
