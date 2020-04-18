@@ -158,16 +158,16 @@ def plot_global_stats(df: 'pd.DataFrame',
         12, 8), legend=True, logy=True).legend(loc='upper right')
     print(f"{STATUS_ARROW}Plot num. users x day")
     numUsers.plot(ax=axesGeneral[1, 0], kind="line", figsize=(
-        12, 8), legend=True, logy=True).legend(loc='upper right')
+        12, 8), legend=True).legend(loc='upper right')
     print(f"{STATUS_ARROW}Plot num. sites x day")
     numSites.plot(ax=axesGeneral[1, 0], kind="line", figsize=(
-        12, 8), legend=True, logy=True).legend(loc='upper right')
+        12, 8), legend=True).legend(loc='upper right')
     print(f"{STATUS_ARROW}Plot avg. num. req x file")
     numReqXFileAvg.plot(ax=axesGeneral[1, 1], kind="line", figsize=(
-        12, 8), legend=True, logy=True).legend(loc='upper right')
+        12, 8), legend=True).legend(loc='upper right')
     print(f"{STATUS_ARROW}Plot avg. num. req x file > 1")
     numReqXFileAvgG1.plot(ax=axesGeneral[1, 1], kind="line", figsize=(
-        12, 8), legend=True, logy=True).legend(loc='upper right')
+        12, 8), legend=True).legend(loc='upper right')
 
     for ax in axesGeneral.flatten():
         ax.grid(True)
@@ -207,10 +207,18 @@ def plot_global_stats(df: 'pd.DataFrame',
             ax=axesFileTypes[1], kind="pie", figsize=(16, 8))
     else:
         print(f"{STATUS_ARROW}Plot data types")
-        data_types = sum([cur_df.DataType.value_counts() for cur_df in df])
+        data_types = [cur_df.DataType.value_counts() for cur_df in df]
+        cur_data_type = data_types.pop()
+        for tmp in data_types:
+            cur_data_type.add(tmp, fill_value=0)
+        data_types = cur_data_type
         data_types.plot(ax=axesFileTypes[0], kind="pie", figsize=(16, 8))
         print(f"{STATUS_ARROW}Plot file types")
-        file_types = sum([cur_df.FileType.value_counts() for cur_df in df])
+        file_types = [cur_df.FileType.value_counts() for cur_df in df]
+        cur_file_type = file_types.pop()
+        for tmp in file_types:
+            cur_file_type.add(tmp, fill_value=0)
+        file_types = cur_file_type
         file_types[(file_types / file_types.sum()) > 0.02].plot(
             ax=axesFileTypes[1], kind="pie", figsize=(16, 8))
 
