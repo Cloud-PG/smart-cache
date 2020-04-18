@@ -210,7 +210,7 @@ def plot_global_stats(df: 'pd.DataFrame',
         data_types = sum([cur_df.DataType.value_counts() for cur_df in df])
         data_types.plot(ax=axesFileTypes[0], kind="pie", figsize=(16, 8))
         print(f"{STATUS_ARROW}Plot file types")
-        file_types = sum([cur_df.DataType.value_counts() for cur_df in df])
+        file_types = sum([cur_df.FileType.value_counts() for cur_df in df])
         file_types[(file_types / file_types.sum()) > 0.02].plot(
             ax=axesFileTypes[1], kind="pie", figsize=(16, 8))
 
