@@ -87,15 +87,6 @@ def plot_global_stats(df: 'pd.DataFrame',
         numReqXFile = grouped.Filename.value_counts()
         numReqXFileAvg = numReqXFile.groupby("day").mean()
         numReqXFileAvgG1 = numReqXFile[numReqXFile > 1].groupby("day").mean()
-
-        numFiles.name = "Files"
-        numReq.name = "Requests"
-        numJobs.name = "Jobs"
-        numTasks.name = "Tasks"
-        numUsers.name = "Users"
-        numSites.name = "Sites"
-        numReqXFileAvg.name = "Avg. num. req. x file"
-        numReqXFileAvgG1.name = "Avg. num. req. x file (> 1)"
     else:
         day_indexs = [cur_df.day.iloc[0] for cur_df in df]
         print(f"{STATUS_ARROW}Get num. files x day")
@@ -139,6 +130,15 @@ def plot_global_stats(df: 'pd.DataFrame',
                   for cur_values in numReqXFile],
             index=day_indexs,
         )
+
+    numFiles.name = "Files"
+    numReq.name = "Requests"
+    numJobs.name = "Jobs"
+    numTasks.name = "Tasks"
+    numUsers.name = "Users"
+    numSites.name = "Sites"
+    numReqXFileAvg.name = "Avg. num. req. x file"
+    numReqXFileAvgG1.name = "Avg. num. req. x file (> 1)"
 
     figGeneral, axesGeneral = plt.subplots(
         nrows=2, ncols=2, sharex=True, figsize=(24, 16)
