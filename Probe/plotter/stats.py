@@ -178,11 +178,12 @@ def plot_global_stats(df: 'pd.DataFrame',
         print(f"{STATUS_ARROW}Plot file sizes")
         sizes = df[df['size (GB)'] < 8.0]
     else:
+        print(f"{STATUS_ARROW}Plot file sizes")
         sizes = [
             cur_df[cur_df['size (GB)'] < 8.0][['size (GB)', 'DataType', 'day']]
             for cur_df in df
         ]
-        for cur_size in sizes:
+        for cur_size in tqdm(sizes, desc="Add months"):
             cur_size['month'] = cur_size.day.apply(
                 lambda elm: elm.month
             ).astype(int)
