@@ -158,16 +158,16 @@ def plot_global_stats(df: 'pd.DataFrame',
         12, 8), legend=True, logy=True).legend(loc='upper right')
     print(f"{STATUS_ARROW}Plot num. users x day")
     numUsers.plot(ax=axesGeneral[1, 0], kind="line", figsize=(
-        12, 8), legend=True).legend(loc='upper right')
+        12, 8), legend=True, logy=True).legend(loc='upper right')
     print(f"{STATUS_ARROW}Plot num. sites x day")
     numSites.plot(ax=axesGeneral[1, 0], kind="line", figsize=(
-        12, 8), legend=True).legend(loc='upper right')
+        12, 8), legend=True, logy=True).legend(loc='upper right')
     print(f"{STATUS_ARROW}Plot avg. num. req x file")
     numReqXFileAvg.plot(ax=axesGeneral[1, 1], kind="line", figsize=(
-        12, 8), legend=True).legend(loc='upper right')
+        12, 8), legend=True, logy=True).legend(loc='upper right')
     print(f"{STATUS_ARROW}Plot avg. num. req x file > 1")
     numReqXFileAvgG1.plot(ax=axesGeneral[1, 1], kind="line", figsize=(
-        12, 8), legend=True).legend(loc='upper right')
+        12, 8), legend=True, logy=True).legend(loc='upper right')
 
     for ax in axesGeneral.flatten():
         ax.grid(True)
@@ -176,11 +176,11 @@ def plot_global_stats(df: 'pd.DataFrame',
         nrows=1, ncols=1, figsize=(16, 8))
     if concatenated:
         print(f"{STATUS_ARROW}Plot file sizes")
-        sizes = df[df['size (GB)'] < 8.0]
+        sizes = df[df['size (GB)'] < 16.0]
     else:
         print(f"{STATUS_ARROW}Plot file sizes")
         sizes = [
-            cur_df[cur_df['size (GB)'] < 8.0][['size (GB)', 'DataType', 'day']]
+            cur_df[cur_df['size (GB)'] < 6.0][['size (GB)', 'DataType', 'day']]
             for cur_df in df
         ]
         for cur_size in tqdm(sizes, desc="Add months"):
