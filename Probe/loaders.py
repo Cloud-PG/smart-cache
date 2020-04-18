@@ -29,6 +29,8 @@ def _load_csv_file(input_path: str, region_filter: str = None,
         if tail == ".csv":
             with gzip.GzipFile(input_path, "rb") as data_file:
                 df = pd.read_csv(data_file, index_col=False)
+                df['day'] = pd.to_datetime(df.reqDay, unit="s")
+                df.reset_index(drop=True, inplace=True)
         else:
             raise Exception(f"Input {input_path} with file type '{tail}' is not supported...")
     elif tail == '.csv':
@@ -100,7 +102,7 @@ def csv_data(input_path: str, region_filter: str = None,
         data_frames = []
         files = [file_ for file_ in os.listdir(
             input_path) if file_.find("csv") != -1 and file_.find("numeric") == -1]
-        for filename in tqdm(files, desc=f"{STATUS_ARROW}Load folder {input_path}"):
+        for filename in tqdm(sorted(files), desc=f"{STATUS_ARROW}Load folder {input_path}"):
             if month_filter != -1:
                 if _get_month(filename) != month_filter:
                     continue

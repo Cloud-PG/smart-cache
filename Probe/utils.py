@@ -22,6 +22,5 @@ def sort_by_date(df: 'pd.DataFrame', column_name: str = "reqDay") -> 'pd.DataFra
     :return: the sorted dataframe
     :rtype: pandas.DataFrame
     """
-    df['day'] = pd.to_datetime(df.reqDay, unit="s")
     df.sort_values(by="day", inplace=True)
     return df
