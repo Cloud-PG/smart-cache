@@ -115,6 +115,7 @@ def csv_data(input_path: str, region_filter: str = None,
             )
         else:
             if data_frames:
+                print(f"{STATUS_ARROW}Concat dataframes...")
                 return pd.concat(data_frames)
             else:
                 pd.DataFrame()
