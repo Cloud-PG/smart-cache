@@ -172,15 +172,17 @@ def plot_global_stats(df: 'pd.DataFrame',
     for ax in axesGeneral.flatten():
         ax.grid(True)
 
+    figGeneral.tight_layout()
+
     figFileSizes, axesFileSizes = plt.subplots(
         nrows=1, ncols=1, figsize=(16, 8))
     if concatenated:
         print(f"{STATUS_ARROW}Plot file sizes")
-        sizes = df[df['size (GB)'] < 16.0]
+        sizes = df[['size (GB)', 'DataType', 'day']]
     else:
         print(f"{STATUS_ARROW}Plot file sizes")
         sizes = [
-            cur_df[cur_df['size (GB)'] < 6.0][['size (GB)', 'DataType', 'day']]
+            cur_df[['size (GB)', 'DataType', 'day']].copy()
             for cur_df in df
         ]
         for cur_size in tqdm(sizes, desc="Add months"):
@@ -193,18 +195,20 @@ def plot_global_stats(df: 'pd.DataFrame',
         ax=axesFileSizes, x="month", y="size (GB)",
         data=sizes, palette="Set2", figsize=(16, 8),
         bw=.2, hue="DataType", split=True,
+        scale="count", scale_hue=True, cut=0,
     )
+    figFileSizes.tight_layout()
 
     figFileTypes, axesFileTypes = plt.subplots(
-        nrows=1, ncols=2, figsize=(16, 16))
+        nrows=1, ncols=2, figsize=(16, 8))
     if concatenated:
         print(f"{STATUS_ARROW}Plot data types")
         df.DataType.value_counts().plot(
-            ax=axesFileTypes[0], kind="pie", figsize=(16, 8))
+            ax=axesFileTypes[0], kind="pie", figsize=(8, 8))
         print(f"{STATUS_ARROW}Plot file types")
         fileTypes = df.FileType.value_counts()
         fileTypes[(fileTypes / fileTypes.sum()) > 0.02].plot(
-            ax=axesFileTypes[1], kind="pie", figsize=(16, 8))
+            ax=axesFileTypes[1], kind="pie", figsize=(8, 8))
     else:
         print(f"{STATUS_ARROW}Plot data types")
         data_types = [cur_df.DataType.value_counts() for cur_df in df]
@@ -215,7 +219,10 @@ def plot_global_stats(df: 'pd.DataFrame',
         data_types = pd.Series(
             data_types.values.flatten(), index=data_types.index
         )
-        data_types.plot(ax=axesFileTypes[0], kind="pie", figsize=(16, 8))
+        data_types.name = "Data types"
+        data_types.plot(
+            ax=axesFileTypes[0], kind="pie", figsize=(6, 6), startangle=0.
+        )
         print(f"{STATUS_ARROW}Plot file types")
         file_types = pd.concat(
             [cur_df.FileType.value_counts() for cur_df in df]
@@ -224,8 +231,11 @@ def plot_global_stats(df: 'pd.DataFrame',
         file_types = pd.Series(
             file_types.values.flatten(), index=file_types.index
         )
+        file_types.name = "File types"
         file_types[(file_types / file_types.sum()) > 0.02].plot(
-            ax=axesFileTypes[1], kind="pie", figsize=(16, 8))
+            ax=axesFileTypes[1], kind="pie", figsize=(6, 6), startangle=60.
+        )
+    figFileTypes.tight_layout()
 
     if output_type == 'show':
         print(f"{STATUS_ARROW}Show results")
