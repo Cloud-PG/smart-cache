@@ -98,7 +98,7 @@ def prepare_process_call(args, simulator_exe, cache_type, working_dir: str,
                 f"--aiRLExtTable={args.ai_rl_eviction_extended}"
             )
             exe_args.append(
-                f"--aiRLEpsilonDecay={args.training_phase}"
+                f"--aiRLTraining={args.training_phase}"
             )
 
     elif cache_type == 'lruDatasetVerifier':
