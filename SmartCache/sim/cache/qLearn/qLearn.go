@@ -68,12 +68,14 @@ type QTable struct {
 	ActionStrings    []string             `json:"actionStrings"`
 	RGenerator       *rand.Rand           `json:"r_generator"`
 	UpdateFunction   RLUpdateType         `json:"update_function"`
+	TrainingEnabled  bool                 `json:"training_enabled"`
 }
 
 // Init initilizes the QTable struct
-func (table *QTable) Init(featureLenghts []int, role QTableRole, initEpsilon float64, decayRateEpsilon float64) {
+func (table *QTable) Init(featureLenghts []int, role QTableRole, trainingEnabled bool, initEpsilon float64, decayRateEpsilon float64) {
 	logger = zap.L()
 
+	table.TrainingEnabled = trainingEnabled
 	table.LearningRate = 0.9 // also named Alpha
 	table.DiscountFactor = 0.5
 	table.DecayRateEpsilon = decayRateEpsilon
@@ -151,9 +153,10 @@ func (table *QTable) Init(featureLenghts []int, role QTableRole, initEpsilon flo
 }
 
 // ResetParams resets the learning parameters
-func (table *QTable) ResetParams(initEpsilon float64, decayRateEpsilon float64) {
+func (table *QTable) ResetParams(trainingEnabled bool, initEpsilon float64, decayRateEpsilon float64) {
 	logger = zap.L()
 
+	table.TrainingEnabled = trainingEnabled
 	table.LearningRate = 0.9 // also named Alpha
 	table.DiscountFactor = 0.5
 	table.DecayRateEpsilon = decayRateEpsilon

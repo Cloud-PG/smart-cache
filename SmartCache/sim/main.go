@@ -33,6 +33,7 @@ var (
 	aiRLAdditionFeatureMap string
 	aiRLEvictionFeatureMap string
 	aiRLExtTable           bool
+	aiRLTraining           bool
 	aiRLEpsilonStart       float64
 	aiRLEpsilonDecay       float64
 	buildstamp             string
@@ -187,6 +188,10 @@ func addSimFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().BoolVar(
 		&simColdStartNoStats, "simColdStartNoStats", false,
 		"indicates if the cache have to be empty and without any stats after a dump load",
+	)
+	cmd.PersistentFlags().BoolVar(
+		&aiRLTraining, "aiRLTraining", 1.0,
+		"indicates if the RL training phase is unlocked",
 	)
 	cmd.PersistentFlags().Float64Var(
 		&aiRLEpsilonStart, "aiRLEpsilonStart", 1.0,
@@ -353,6 +358,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 					curCacheInstance.Init(
 						aiRLAdditionFeatureMap,
 						aiRLEvictionFeatureMap,
+						aiRLTraining,
 						aiRLEpsilonStart,
 						aiRLEpsilonDecay,
 						aiRLExtTable,
@@ -379,7 +385,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				loadedDump := curCacheInstance.Load(simLoadDumpFileName)
 
 				if cacheType == "aiRL" {
-					curCacheInstance.Loads(loadedDump, aiRLEpsilonStart, aiRLEpsilonDecay)
+					curCacheInstance.Loads(loadedDump, aiRLTraining, aiRLEpsilonStart, aiRLEpsilonDecay)
 				} else {
 					curCacheInstance.Loads(loadedDump)
 				}
