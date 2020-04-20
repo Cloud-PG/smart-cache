@@ -190,7 +190,7 @@ func addSimFlags(cmd *cobra.Command) {
 		"indicates if the cache have to be empty and without any stats after a dump load",
 	)
 	cmd.PersistentFlags().BoolVar(
-		&aiRLTraining, "aiRLTraining", 1.0,
+		&aiRLTraining, "aiRLTraining", true,
 		"indicates if the RL training phase is unlocked",
 	)
 	cmd.PersistentFlags().Float64Var(

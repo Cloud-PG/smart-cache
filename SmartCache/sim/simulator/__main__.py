@@ -97,6 +97,9 @@ def prepare_process_call(args, simulator_exe, cache_type, working_dir: str,
             exe_args.append(
                 f"--aiRLExtTable={args.ai_rl_eviction_extended}"
             )
+            exe_args.append(
+                f"--aiRLEpsilonDecay={args.training_phase}"
+            )
 
     elif cache_type == 'lruDatasetVerifier':
         dataset_file = path.abspath(
@@ -264,6 +267,9 @@ def main():
     parser.add_argument('--init-epsilon', type=float,
                         default=1.0,
                         help="The initial value of Epsilon in the RL approach [DEFAULT: 1.0]")
+    parser.add_argument('--training-phase', type='bool',
+                        default=True,
+                        help="Indicates if the training phase is enabled [DEFAULT: True]")
     parser.add_argument('--decay-rate-epsilon', type=float,
                         default=0.0000042,
                         help="The decay rate of Epsilon in the RL approach [DEFAULT: 0.0000002]")
