@@ -191,6 +191,7 @@ def plot_global_stats(df: 'pd.DataFrame',
             ).astype(int)
         sizes = pd.concat(sizes)
 
+    sizes = sizes[sizes['size (GB)'] < 10.]
     sns.violinplot(
         ax=axesFileSizes, x="month", y="size (GB)",
         data=sizes, palette="Set2", figsize=(16, 8),
@@ -203,12 +204,20 @@ def plot_global_stats(df: 'pd.DataFrame',
         nrows=1, ncols=2, figsize=(16, 8))
     if concatenated:
         print(f"{STATUS_ARROW}Plot data types")
-        df.DataType.value_counts().plot(
-            ax=axesFileTypes[0], kind="pie", figsize=(8, 8))
+        cur_ax = df.DataType.value_counts().plot(
+            ax=axesFileTypes[0], kind="pie", figsize=(6, 6),
+            labels=None, autopct='%.2f', fontsize=6
+        )
+        cur_ax.legend(loc='upper right',
+                      labels=df.DataType.index, fontsize=4.2)
         print(f"{STATUS_ARROW}Plot file types")
         fileTypes = df.FileType.value_counts()
-        fileTypes[(fileTypes / fileTypes.sum()) > 0.02].plot(
-            ax=axesFileTypes[1], kind="pie", figsize=(8, 8))
+        cur_types = fileTypes[(fileTypes / fileTypes.sum()) > 0.02]
+        cur_types.plot(
+            ax=axesFileTypes[1], kind="pie", figsize=(6, 6),
+            labels=None, autopct='%.2f', fontsize=6
+        )
+        cur_ax.legend(loc='upper right', labels=cur_types.index, fontsize=4.2)
     else:
         print(f"{STATUS_ARROW}Plot data types")
         data_types = [cur_df.DataType.value_counts() for cur_df in df]
@@ -220,9 +229,11 @@ def plot_global_stats(df: 'pd.DataFrame',
             data_types.values.flatten(), index=data_types.index
         )
         data_types.name = "Data types"
-        data_types.plot(
-            ax=axesFileTypes[0], kind="pie", figsize=(6, 6), startangle=0.
+        cur_ax = data_types.plot(
+            ax=axesFileTypes[0], kind="pie", figsize=(6, 6),
+            labels=None, autopct='%.2f', fontsize=6
         )
+        cur_ax.legend(loc='upper right', labels=data_types.index, fontsize=4.2)
         print(f"{STATUS_ARROW}Plot file types")
         file_types = pd.concat(
             [cur_df.FileType.value_counts() for cur_df in df]
@@ -232,9 +243,12 @@ def plot_global_stats(df: 'pd.DataFrame',
             file_types.values.flatten(), index=file_types.index
         )
         file_types.name = "File types"
-        file_types[(file_types / file_types.sum()) > 0.02].plot(
-            ax=axesFileTypes[1], kind="pie", figsize=(6, 6), startangle=60.
+        cur_types = file_types[(file_types / file_types.sum()) > 0.05]
+        cur_ax = cur_types.plot(
+            ax=axesFileTypes[1], kind="pie", figsize=(6, 6),
+            labels=None, autopct='%.2f', fontsize=6
         )
+        cur_ax.legend(loc='upper right', labels=cur_types.index, fontsize=4.2)
     figFileTypes.tight_layout()
 
     if output_type == 'show':
