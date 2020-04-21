@@ -414,7 +414,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					reward := request.Size
 					// reward := 1.
 
-					if cache.dataReadOnHit <= (cache.dataReadOnMiss*0.5) || cache.dataWritten >= (cache.dataReadOnHit*0.5) {
+					if cache.dataReadOnHit <= cache.dataReadOnMiss || cache.dataWritten >= cache.dataReadOnHit {
 						reward = -reward
 					}
 
@@ -490,7 +490,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				if curAction == qlearn.ActionStore {
 					reward := request.Size
 
-					if cache.dataWritten >= (cache.dataReadOnHit*0.5) || cache.dataReadOnMiss >= (cache.bandwidth*0.75) {
+					if cache.dataWritten >= cache.dataReadOnHit || cache.dataReadOnMiss >= (cache.bandwidth*0.75) {
 						reward = -reward
 					}
 					// Update table
@@ -528,7 +528,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					// if cache.dataReadOnHit < (cache.dataReadOnMiss*2.) || cache.dailyReadOnHit < cache.dailyReadOnMisss*2.) {
 					// 	reward = -reward
 					// }
-					if cache.dataReadOnHit <= (cache.dataReadOnMiss*0.5) || cache.dataWritten >= (cache.dataReadOnHit*0.5) {
+					if cache.dataReadOnHit <= cache.dataReadOnMiss || cache.dataWritten >= cache.dataReadOnHit {
 						reward = -reward
 					}
 
