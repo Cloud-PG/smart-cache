@@ -380,6 +380,7 @@ def main():
                         args.window_stop,
                         wf_parameters=weight_function_parameters,
                         dump=True,
+                        dump_files_and_stats=args.dump_files_and_stats,
                         load=True,
                         dump_dir=working_dir,
                         cold_start=True,
