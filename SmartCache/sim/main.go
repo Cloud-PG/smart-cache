@@ -460,10 +460,6 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				"avgNumMiss",
 			})
 
-			if simDump {
-				defer curCacheInstance.Dump(simDumpFileName, simDumpFilesAndStats)
-			}
-
 			simBeginTime := time.Now()
 			start := time.Now()
 			var latestTime time.Time
@@ -675,6 +671,10 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				panic(errMarshal)
 			}
 			statFile.Write(jsonBytes)
+
+			if simDump {
+				curCacheInstance.Dump(simDumpFileName, simDumpFilesAndStats)
+			}
 
 			if cacheType == "aiRL" {
 				// Save tables
