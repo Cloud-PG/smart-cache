@@ -551,42 +551,6 @@ func (cache *SimpleCache) NumFiles() int {
 	return cache.files.Len()
 }
 
-// PercAboveMeanFreq returns the percentage of files with the frequency above the mean value
-func (cache *SimpleCache) PercAboveMeanFreq() float64 {
-	mean := int64(cache.MeanFrequency())
-	tot := 0
-	for file := range cache.files.Get(NoQueue) {
-		if file.Frequency > mean {
-			tot++
-		}
-	}
-	return (float64(tot) / float64(cache.NumFiles())) * 100.
-}
-
-// PercAboveMeanRec returns the percentage of files with the recency above the mean value
-func (cache *SimpleCache) PercAboveMeanRec() float64 {
-	mean := int64(cache.MeanRecency())
-	tot := 0
-	for file := range cache.files.Get(NoQueue) {
-		if file.Recency > mean {
-			tot++
-		}
-	}
-	return (float64(tot) / float64(cache.NumFiles())) * 100.
-}
-
-// PercAboveMeanSize returns the percentage of files with the size above the mean value
-func (cache *SimpleCache) PercAboveMeanSize() float64 {
-	mean := cache.MeanSize()
-	tot := 0
-	for file := range cache.files.Get(NoQueue) {
-		if file.Size > mean {
-			tot++
-		}
-	}
-	return (float64(tot) / float64(cache.NumFiles())) * 100.
-}
-
 // StdDevFreq returns the standard deviation of the frequency
 func (cache *SimpleCache) StdDevFreq() float64 {
 	mean := cache.MeanFrequency()
@@ -594,7 +558,7 @@ func (cache *SimpleCache) StdDevFreq() float64 {
 	for file := range cache.files.Get(NoQueue) {
 		sum += math.Pow(float64(file.Frequency)-mean, 2)
 	}
-	return math.Sqrt(sum)
+	return math.Sqrt(sum / (float64(cache.files.Len()) - 1.0))
 }
 
 // StdDevRec returns the standard deviation of the recency
@@ -604,7 +568,7 @@ func (cache *SimpleCache) StdDevRec() float64 {
 	for file := range cache.files.Get(NoQueue) {
 		sum += math.Pow(float64(file.Recency)-mean, 2)
 	}
-	return math.Sqrt(sum)
+	return math.Sqrt(sum / (float64(cache.files.Len()) - 1.0))
 }
 
 // StdDevSize returns the standard deviation of the size
@@ -614,5 +578,5 @@ func (cache *SimpleCache) StdDevSize() float64 {
 	for file := range cache.files.Get(NoQueue) {
 		sum += math.Pow(file.Size-mean, 2)
 	}
-	return math.Sqrt(sum)
+	return math.Sqrt(sum / (float64(cache.files.Len()) - 1.0))
 }

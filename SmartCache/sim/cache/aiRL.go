@@ -60,10 +60,10 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 	cache.extendedEvictionTable = args[5].(bool)
 
 	if cache.extendedEvictionTable {
-		cache.weightFunction = args[5].(FunctionType)
-		cache.weightAlpha = args[6].(float64)
-		cache.weightBeta = args[7].(float64)
-		cache.weightGamma = args[8].(float64)
+		cache.weightFunction = args[6].(FunctionType)
+		cache.weightAlpha = args[7].(float64)
+		cache.weightBeta = args[8].(float64)
+		cache.weightGamma = args[9].(float64)
 	}
 
 	logger.Info("Feature maps", zap.String("addition map", additionFeatureMap), zap.String("eviction map", evictionFeatureMap))
@@ -282,12 +282,6 @@ func (cache *AIRL) getState(request *Request, fileStats *FileStats, featureOrder
 			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(cache.StdDevFreq()))
 		case "stdDevRec":
 			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(cache.StdDevRec()))
-		case "aboveMeanFreq":
-			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(cache.PercAboveMeanFreq()))
-		case "aboveMeanRec":
-			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(cache.PercAboveMeanRec()))
-		case "aboveMeanSize":
-			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(cache.PercAboveMeanSize()))
 		case "numFiles":
 			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(float64(cache.NumFiles())))
 		default:
@@ -781,6 +775,8 @@ func (cache *AIRL) ExtraStats() string {
 		"SCov:%0.2f%%|ACov:%0.2f%%|Eps:%0.5f||SCov:%0.2f%%|ACov:%0.2f%%|Eps:%0.5f",
 		cache.additionTable.GetStateCoverage(), cache.additionTable.GetActionCoverage(), cache.additionTable.Epsilon,
 		cache.evictionTable.GetStateCoverage(), cache.evictionTable.GetActionCoverage(), cache.evictionTable.Epsilon,
+		// "%0.2f | %0.2f | %0.2f",
+		// cache.StdDevSize(), cache.StdDevRec(), cache.StdDevFreq(),
 	)
 }
 
