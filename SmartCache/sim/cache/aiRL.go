@@ -385,7 +385,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			// 	reward = -reward
 			// }
 
-			if cache.dataReadOnHit <= (cache.dataReadOnMiss * 0.5) {
+			if cache.dataReadOnHit <= (cache.dataReadOnMiss*0.5) || cache.dataWritten >= (cache.dataReadOnHit*0.5) {
 				reward = -reward
 			}
 			// Update table
@@ -414,7 +414,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					reward := request.Size
 					// reward := 1.
 
-					if cache.dataReadOnHit <= (cache.dataReadOnMiss * 0.5) {
+					if cache.dataReadOnHit <= (cache.dataReadOnMiss*0.5) || cache.dataWritten >= (cache.dataReadOnHit*0.5) {
 						reward = -reward
 					}
 
@@ -447,7 +447,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				if curAction == qlearn.ActionNotStore {
 					reward := request.Size
 
-					if cache.dataReadOnHit <= (cache.dataReadOnMiss*0.3) || cache.dataReadOnMiss <= (cache.bandwidth*0.75) {
+					if cache.dataReadOnMiss <= (cache.bandwidth * 0.75) {
 						reward = -reward
 					}
 
@@ -490,7 +490,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				if curAction == qlearn.ActionStore {
 					reward := request.Size
 
-					if cache.dataWritten >= (cache.dataReadOnHit*0.3) || cache.dataReadOnHit <= (cache.dataReadOnMiss*0.5) {
+					if cache.dataWritten >= (cache.dataReadOnHit*0.5) || cache.dataReadOnMiss >= (cache.bandwidth*0.75) {
 						reward = -reward
 					}
 					// Update table
@@ -528,7 +528,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					// if cache.dataReadOnHit < (cache.dataReadOnMiss*2.) || cache.dailyReadOnHit < cache.dailyReadOnMisss*2.) {
 					// 	reward = -reward
 					// }
-					if cache.dataReadOnHit <= (cache.dataReadOnMiss * 0.5) {
+					if cache.dataReadOnHit <= (cache.dataReadOnMiss*0.5) || cache.dataWritten >= (cache.dataReadOnHit*0.5) {
 						reward = -reward
 					}
 
@@ -690,17 +690,18 @@ func (cache *AIRL) Free(amount float64, percentage bool) float64 {
 					randomActionIdx := int(cache.evictionTable.GetRandomFloat() * float64(len(cache.evictionTable.Actions)))
 					curAction = cache.evictionTable.Actions[randomActionIdx]
 				}
+
+				cache.qEvictionPrevState = prevChoice{
+					State:   curState,
+					Action:  curAction,
+					HitRate: cache.HitRate(),
+				}
+
 			} else {
 				// #########################
 				// #####  NO TRAINING  #####
 				// #########################
 				curAction = cache.evictionTable.GetBestAction(curState)
-			}
-
-			cache.qEvictionPrevState = prevChoice{
-				State:   curState,
-				Action:  curAction,
-				HitRate: cache.HitRate(),
 			}
 
 		} else {
