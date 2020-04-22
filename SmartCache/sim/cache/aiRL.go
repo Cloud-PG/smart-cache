@@ -377,8 +377,8 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 		// ##### Eviction Learning phase #####
 		// ###################################
 		if cache.qEvictionPrevState.Action != 0 && len(cache.qEvictionPrevState.State) != 0 {
-			reward := request.Size
 			// reward := 1.
+			reward := request.Size
 
 			// OLD POLICY
 			// if !hit && (cache.dailyWrittenData >= cache.dailyReadOnHit) {
@@ -411,8 +411,8 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				logger.Debug("Learning MISS branch", zap.String("curState", curPrevChoice.State), zap.Int("curAction", int(curPrevChoice.Action)))
 
 				if inPrevStates { // Some action are not taken randomly
-					reward := request.Size
-					// reward := 1.
+					reward := 1.
+					// reward := request.Size
 
 					if cache.dataReadOnHit <= cache.dataReadOnMiss || cache.dataWritten >= cache.dataReadOnHit {
 						reward = -reward
@@ -445,7 +445,8 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				//             QLearn - Take the action NOT STORE
 				// -------------------------------------------------------------
 				if curAction == qlearn.ActionNotStore {
-					reward := request.Size
+					reward := 1.
+					// reward := request.Size
 
 					if cache.dataReadOnMiss <= (cache.bandwidth * 0.75) {
 						reward = -reward
@@ -488,7 +489,8 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				//               QLearn - Take the action STORE
 				// -------------------------------------------------------------
 				if curAction == qlearn.ActionStore {
-					reward := request.Size
+					reward := 1.
+					// reward := request.Size
 
 					if cache.dataWritten >= cache.dataReadOnHit || cache.dataReadOnMiss >= (cache.bandwidth*0.75) {
 						reward = -reward
@@ -521,8 +523,8 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				logger.Debug("Learning HIT branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
 
 				if inPrevStates { // Some action are not taken randomly
-					reward := request.Size
-					// reward := 1.
+					reward := 1.
+					// reward := request.Size
 
 					// OLD POLICY
 					// if cache.dataReadOnHit < (cache.dataReadOnMiss*2.) || cache.dailyReadOnHit < cache.dailyReadOnMisss*2.) {
