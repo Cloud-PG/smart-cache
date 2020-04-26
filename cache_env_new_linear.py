@@ -420,26 +420,20 @@ class env:
 
         if adding_or_evicting == 0:
             size = curValues[0]
-            if size <= it_liminf_size:
-                coeff = 0 
-            elif size >= it_limsup_size:
-                coeff = 1 
-            else:
-                coeff = (size - it_liminf_size)/it_delta_size
             ############################ GIVING REWARD TO ADDITION IF IT IS IN WINDOW AND ADD TO WINDOW ########################################################################
             if curFilename in self._request_window_elements:  # if is in queue                
                 obj = self._request_window_elements[curFilename]
 
                 if obj.counter >= self._time_span:
                     if obj.action == 0:
-                        obj.reward = - 1 * coeff
+                        obj.reward = - size
                     else:
-                        obj.reward = + 1 * coeff
+                        obj.reward = + size
                 else:  # is not invalidated yet
                     if obj.action == 0:
-                        obj.reward = + 1 * coeff
+                        obj.reward = + size
                     else:
-                        obj.reward = - 1 * coeff
+                        obj.reward = - size
 
                 to_add = obj.concat()
                 self.add_memory_vector = np.vstack(
@@ -459,14 +453,14 @@ class env:
                 obj = self._eviction_window_elements[curFilename]
                 if obj.counter >= self._time_span:   # is invalidated
                     if obj.action == 0:
-                        obj.reward = - 1 * coeff
+                        obj.reward = - size
                     else:
-                        obj.reward = + 1 * coeff
+                        obj.reward = + size
                 else:  # is not invalidated yet
                     if obj.action == 0:
-                        obj.reward = + 1 * coeff
+                        obj.reward = + size
                     else:           
-                        obj.reward = - 1 * coeff
+                        obj.reward = - size
 
                 to_add = obj.concat()
                 self.evict_memory_vector = np.vstack(
@@ -484,16 +478,10 @@ class env:
 
         for obj in self._eviction_window_elements.values():
             size = obj.cur_values[0]
-            if size <= it_liminf_size:
-                coeff = 0 
-            elif size >= it_limsup_size:
-                coeff = 1 
-            else:
-                coeff = (size - it_liminf_size)/it_delta_size
             if obj.action == 0:
-                obj.reward = - 1 * coeff
+                obj.reward = - size
             else:
-                obj.reward = + 1 * coeff
+                obj.reward = + size
             to_add = obj.concat()
             self.evict_memory_vector = np.vstack(
                 (self.evict_memory_vector, to_add))
@@ -505,17 +493,11 @@ class env:
         toDelete = set()
         for curFilename, obj in self._request_window_elements.items():
             size = obj.cur_values[0]
-            if size <= it_liminf_size:
-                coeff = 0 
-            elif size >= it_limsup_size:
-                coeff = 1 
-            else:
-                coeff = (size - it_liminf_size)/it_delta_size
             if obj.counter > self._time_span:
                 if obj.action == 0:
-                    obj.reward = - 1 * coeff
+                    obj.reward = - size
                 else:               
-                    obj.reward = + 1 * coeff
+                    obj.reward = + size
                 to_add = obj.concat()
                 self.add_memory_vector = np.vstack(
                     (self.add_memory_vector, to_add))

@@ -6,11 +6,18 @@ import pandas as pd
 import math
 import random
 import cache_env_new
+import cache_env_new_us
+import cache_env_new_linear
 import csv
 import array
 import os
 import argparse
 import time
+
+it_total_sites = 12
+it_total_campaigns = 128
+us_total_sites = 21
+us_total_campaigns = 192
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--data', type=str, 
@@ -21,9 +28,9 @@ parser.add_argument('--end_month', type=int, default=2)
 parser.add_argument('--batch_size', type=int, default=32)
 parser.add_argument('--out_dir', type=str,
                     default='results/results_ok_stats_async_quick_cleaned_huberTF')
-parser.add_argument('--out_name', type=str, default='dQL_add_evic.csv')
+#parser.add_argument('--out_name', type=str, default='dQL_add_evic.csv')
 parser.add_argument('--lr', type=float, default=0.01, help='learning rate')
-parser.add_argument('--memory', type=int, default=30000)
+parser.add_argument('--memory', type=int, default=1000000)
 parser.add_argument('--decay_rate_add', type=float, default=0.00001)
 parser.add_argument('--decay_rate_evict', type=float, default=0.00001)
 parser.add_argument('--warm_up_steps', type=int, default=30000)
@@ -45,11 +52,30 @@ parser.add_argument('--purge_frequency', type = int, default = 2)
 parser.add_argument('--use_target_model', type = bool, default = False)
 parser.add_argument('--target_update_frequency_add', type = int, default = 10000)
 parser.add_argument('--target_update_frequency_evict', type = int, default = 10000)
+parser.add_argument('--region', type = str, default = 'it')
+parser.add_argument('--output_activation', type = str, default = 'sigmoid')
+
 
 args = parser.parse_args()
 
+if args.region == 'it':
+    data_directory = '/home/ubuntu/source2018_numeric_it_with_avro_order'
+    total_sites = it_total_sites
+    total_campaigns = it_total_campaigns
+elif args.region == 'us':
+    data_directory = '/home/ubuntu/source2018_numeric_us_with_avro_order'
+    total_sites = us_total_sites
+    total_campaigns = us_total_campaigns
+else:
+    data_directory = args.data
+
+print(data_directory)
+
+input_len = 7 + total_campaigns + total_sites
+
+
 BATCH_SIZE = args.batch_size
-data_directory = args.data
+#data_directory = args.data
 _startMonth = args.start_month
 _endMonth = args.end_month
 memory = args.memory
@@ -70,9 +96,11 @@ purge_frequency = args.purge_frequency
 use_target_model = args.use_target_model
 target_update_frequency_add = args.target_update_frequency_add
 target_update_frequency_evict = args.target_update_frequency_evict
+output_activation = args.output_activation
 
 out_directory = args.out_dir
-out_name = args.out_name
+#out_name = args.out_name
+out_name = out_directory.split("/")[1] + '_results.csv'
 
 if not os.path.isdir(out_directory):
     os.makedirs(out_directory)
@@ -107,6 +135,7 @@ def huber_loss_mean(y_true, y_pred, clip_delta=1.0):
 
 print('USING HUBER LOSS FROM TENSORFLOW')
 
+
 model_evict = Sequential()
 model_evict.add(Dense(16, input_dim=7))
 model_evict.add(Activation('sigmoid'))
@@ -121,7 +150,7 @@ model_evict.add(Activation('sigmoid'))
 model_evict.add(Dense(32))
 model_evict.add(Activation('sigmoid'))
 model_evict.add(Dense(nb_actions))
-model_evict.add(Activation('sigmoid'))
+model_evict.add(Activation(output_activation))
 print(model_evict.summary())
 #model_evict.compile(optimizer = 'adam', loss = huber_loss_mean)
 model_evict.compile(optimizer='adam', loss=tf.keras.losses.Huber())
@@ -141,14 +170,14 @@ if use_target_model == True:
     target_model_evict.add(Dense(32))
     target_model_evict.add(Activation('sigmoid'))
     target_model_evict.add(Dense(nb_actions))
-    target_model_evict.add(Activation('sigmoid'))
+    target_model_evict.add(Activation(output_activation))
     print(model_evict.summary())
     #target_model_evict.compile(optimizer = 'adam', loss = huber_loss_mean)
     target_model_evict.compile(optimizer='adam', loss=tf.keras.losses.Huber())
 
 if args.load_evict_weights_from_file is None == False:
     model_evict.load_weights(args.load_evict_weights_from_file)
-        
+
 model_add = Sequential()
 model_add.add(Dense(16,input_dim = 7))
 model_add.add(Activation('sigmoid'))
@@ -163,7 +192,7 @@ model_add.add(Activation('sigmoid'))
 model_add.add(Dense(32))
 model_add.add(Activation('sigmoid'))
 model_add.add(Dense(nb_actions))
-model_add.add(Activation('sigmoid'))
+model_add.add(Activation(output_activation))
 print(model_add.summary())
 #model_add.compile(optimizer = 'adam', loss = huber_loss_mean)
 model_add.compile(optimizer='adam', loss=tf.keras.losses.Huber())
@@ -183,17 +212,36 @@ if use_target_model == True:
     target_model_add.add(Dense(32))
     target_model_add.add(Activation('sigmoid'))
     target_model_add.add(Dense(nb_actions))
-    target_model_add.add(Activation('sigmoid'))
+    target_model_add.add(Activation(output_activation))
     print(model_add.summary())
     #target_model_add.compile(optimizer = 'adam', loss = huber_loss_mean)
     target_model_add.compile(optimizer='adam', loss=tf.keras.losses.Huber())
+
 
 if args.load_add_weights_from_file is None == False:
     model_add.load_weights(args.load_add_weights_from_file)
 
 ###### START LOOPING ############################################################################################################################
-environment = cache_env_new.env(
-    _startMonth, _endMonth, data_directory, out_directory, out_name, time_span, purge_delta)
+#environment = cache_env_new.env(
+#    _startMonth, _endMonth, data_directory, out_directory, out_name, time_span, purge_delta)
+
+if args.region == 'it' and output_activation == 'sigmoid':
+    environment = cache_env_new.env(
+        _startMonth, _endMonth, data_directory, out_directory, out_name, time_span, purge_delta)
+
+elif args.region == 'us' and output_activation == 'sigmoid':
+    environment = cache_env_new_us.env(
+        _startMonth, _endMonth, data_directory, out_directory, out_name, time_span, purge_delta)
+
+elif args.region == 'it' and output_activation == 'linear':
+    print('USING LINEAR ACTIVATION')
+    environment = cache_env_new_linear.env(
+        _startMonth, _endMonth, data_directory, out_directory, out_name, time_span, purge_delta)
+
+#elif args.region == 'us' and output_activation == 'linear':
+#    environment = cache_env_new_us_linear.env(
+#        _startMonth, _endMonth, data_directory, out_directory, out_name, time_span, purge_delta)
+
 random.seed(seed_)
 adding_or_evicting = 0
 step_add = 0
@@ -312,12 +360,14 @@ while end == False:
                 print(target)
                 print()
             if use_target_model == False:
-                predictions = model_add.predict_on_batch(train_next_vals)
+                #predictions = model_add.predict_on_batch(train_next_vals)
+                predictions = model_add.predict_on_batch(train_cur_vals)
                 for i in range(0,BATCH_SIZE):
                     action_ = int(train_actions[i])
                     target[i,action_] = train_rewards[i] + gamma * mellowmax(mm_omega, predictions[i])   
             else:
-                predictions = target_model_add.predict_on_batch(train_next_vals)
+                #predictions = target_model_add.predict_on_batch(train_next_vals)
+                predictions = target_model_add.predict_on_batch(train_cur_vals)
                 for i in range(0,BATCH_SIZE):
                     action_ = int(train_actions[i])               
                     target[i,action_] = train_rewards[i] + gamma * max(predictions[i])  
@@ -407,12 +457,14 @@ while end == False:
                 print(target)
                 print()
             if use_target_model == False:
-                predictions = model_evict.predict_on_batch(train_next_vals)
+                #predictions = model_evict.predict_on_batch(train_next_vals)
+                predictions = model_evict.predict_on_batch(train_cur_vals)
                 for i in range(0,BATCH_SIZE):  
                     action_ = int(train_actions[i])
                     target[i,action_] = train_rewards[i] + gamma * mellowmax(mm_omega, predictions[i])  
             else:
-                predictions = target_model_add.predict_on_batch(train_next_vals)
+                #predictions = target_model_add.predict_on_batch(train_next_vals)
+                predictions = target_model_add.predict_on_batch(train_cur_vals)
                 for i in range(0,BATCH_SIZE):  
                     action_ = int(train_actions[i])
                     target[i,action_] = train_rewards[i] + gamma * max(predictions[i])  
