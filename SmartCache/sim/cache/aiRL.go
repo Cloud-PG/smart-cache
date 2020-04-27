@@ -369,6 +369,17 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 	// 	request.Size,
 	// )
 
+	// fmt.Println(
+	// 	"Written data",
+	// 	(cache.dataWritten/cache.dataRead)*100.,
+	// 	"read on hit data",
+	// 	(cache.dataReadOnHit/cache.dataRead)*100.,
+	// 	"read on miss data",
+	// 	(cache.dataReadOnMiss/cache.dataRead)*100.,
+	// 	"read on miss data band",
+	// 	(cache.dataReadOnMiss/cache.bandwidth)*100.,
+	// )
+
 	if cache.evictionTableOK && cache.evictionTable.TrainingEnabled {
 
 		logger.Debug("EVICTION TABLE OK")
@@ -386,7 +397,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			// }
 
 			// if cache.dataReadOnHit <= (cache.dataReadOnMiss*0.3) || cache.dataWritten >= (cache.dataReadOnHit*0.3) {
-			if cache.dataWritten >= cache.dataReadOnHit {
+			if cache.dataWritten/cache.dataRead > 0.33 {
 				reward = -reward
 			}
 			// Update table
@@ -415,7 +426,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					reward := 1.
 					// reward := request.Size
 
-					if cache.dataReadOnHit < cache.dataReadOnMiss {
+					if cache.dataReadOnMiss/cache.dataRead > 0.9 {
 						reward = -reward
 					}
 
@@ -449,7 +460,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					reward := 1.
 					// reward := request.Size
 
-					if cache.dataReadOnMiss <= (cache.bandwidth * 0.75) {
+					if cache.dataReadOnMiss/cache.bandwidth <= 0.75 {
 						reward = -reward
 					}
 
@@ -493,7 +504,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					reward := 1.
 					// reward := request.Size
 
-					if cache.dataReadOnMiss > (cache.bandwidth * 0.75) {
+					if cache.dataReadOnMiss/cache.bandwidth > 0.75 {
 						reward = -reward
 					}
 					// Update table
@@ -531,7 +542,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					// if cache.dataReadOnHit < (cache.dataReadOnMiss*2.) || cache.dailyReadOnHit < cache.dailyReadOnMisss*2.) {
 					// 	reward = -reward
 					// }
-					if cache.dataReadOnHit < cache.dataReadOnMiss || cache.dataWritten >= cache.dataReadOnHit {
+					if cache.dataReadOnHit/cache.dataRead < 0.10 {
 						reward = -reward
 					}
 
