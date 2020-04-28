@@ -9,10 +9,10 @@ from..utils import STATUS_ARROW
 
 def main():
     parser = argparse.ArgumentParser(
-        "qTable inspector", description="Inspect the Q-Learning results")
+        "qTable inspector", description="Inspect the Q-Learning results"
+    )
 
-    parser.add_argument('path',
-                        help='Path of qTable csv')
+    parser.add_argument('path', help='Path of qTable csv')
 
     args, _ = parser.parse_known_args()
 
@@ -59,7 +59,8 @@ def main():
     print("-"*42)
     counter = Counter(action_counter)
     tot = sum(counter.values())
-    assert tot == len(df.index) - state_not_explored, "Error: counter actions..."
+    assert tot == len(df.index) - \
+        state_not_explored, "Error: counter actions..."
     for key in sorted(counter):
         print(f"- {key} =>\t{(counter[key]/tot)*100.:0.2f}%")
     print("-"*42)
