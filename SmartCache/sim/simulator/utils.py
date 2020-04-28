@@ -119,9 +119,12 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False,
                 )
                 if res_len == -1:
                     res_len = len(df.index)
-                assert len(
-                    df.index) == res_len, f"Error: '{file_}' has a different number of results..."
-                cur_section[last_section] = df
+                if len(df.index) != res_len:
+                    print(
+                        f"Warning: '{path.abspath(file_)}' has a different number of results ad will not be counted..."
+                    )
+                else:
+                    cur_section[last_section] = df
 
     if top != 0:
         if 'run_full_normal' in results:
@@ -203,7 +206,8 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False,
             if top_table_output:
                 if group_by == "family":
                     cur_output = top_df.groupby("family").head(top).sort_values(
-                        by=["family", "throughput", "cacheCost", "readOnHitRatio"],
+                        by=["family", "throughput",
+                            "cacheCost", "readOnHitRatio"],
                         ascending=[True, False, True, False]
                     )
                     cur_output.to_csv(
@@ -216,7 +220,8 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False,
                     )
                 else:
                     cur_output = top_df.head(top).sort_values(
-                        by=["throughput", "cacheCost", "readOnHitRatio", "cpuEff"],
+                        by=["throughput", "cacheCost",
+                            "readOnHitRatio", "cpuEff"],
                         ascending=[False, True, False, False]
                     )
                     cur_output.to_csv(
