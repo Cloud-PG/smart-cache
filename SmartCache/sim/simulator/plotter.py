@@ -483,8 +483,11 @@ def plot_measure(tools: list,
                     values['read on miss data'] - values['written data']
                 ) / cache_size*100
             elif target == "throughput":
-                points = (values['read on hit data'] /
-                          values['written data']) * 100.
+                points = (
+                    (
+                        values['read on hit data'] - values['written data']
+                    ) / values['read data']
+                ) * 100.
             elif target == "diffThroughput":
                 points = (
                     values['read on hit data'] -
@@ -495,10 +498,10 @@ def plot_measure(tools: list,
                     results, run_type, filters
                 ):
                     if inner_cache_name.find("lru_") != -1 and inner_cache_name.index("lru_") == 0:
-                        lru_cost = inner_values['read on hit data'] / \
+                        lru_cost = inner_values['read on hit data'] - \
                             inner_values['written data']
                         break
-                points = values['read on hit data'] / values['written data']
+                points = values['read on hit data'] - values['written data']
                 points /= lru_cost
             elif target == "diffThroughputVs":
                 for inner_cache_name, inner_values in filter_results(
@@ -736,6 +739,7 @@ def plot_measure(tools: list,
         else { return "" }
     """)
     cur_fig.add_tools(SaveTool())
+    # cur_fig.legend.label_text_font_size = '20pt'
     add_window_lines(cur_fig, dates, window_size)
 
     return cur_fig
