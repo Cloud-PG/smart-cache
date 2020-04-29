@@ -1,7 +1,10 @@
 import argparse
 from collections import Counter
+from pathlib import Path
 
+import matplotlib.pyplot as plt
 import pandas as pd
+import seaborn as sns
 from colorama import Fore, Style
 
 from..utils import STATUS_ARROW
@@ -17,6 +20,7 @@ def main():
     args, _ = parser.parse_known_args()
 
     df = pd.read_csv(args.path)
+    filename = Path(args.path)
 
     # print(df)
 
@@ -64,6 +68,20 @@ def main():
     for key in sorted(counter):
         print(f"- {key} =>\t{(counter[key]/tot)*100.:0.2f}%")
     print("-"*42)
+
+    fig, axes = plt.subplots(
+        nrows=1, ncols=1, figsize=(8, 32))
+    sns.heatmap(
+        ax=axes,
+        data=df[actions],
+    )
+    fig.tight_layout()
+    fig.savefig(
+        f"{filename.name}.heatmap.png",
+        dpi=300,
+        bbox_inches="tight",
+        pad_inches=0.24
+    )
 
 
 if __name__ == "__main__":
