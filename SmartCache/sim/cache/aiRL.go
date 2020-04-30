@@ -397,11 +397,11 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			// }
 
 			// if cache.dataReadOnHit <= (cache.dataReadOnMiss*0.3) || cache.dataWritten >= (cache.dataReadOnHit*0.3) {
-			if cache.dataWritten/cache.dataRead > 0.33 {
-				reward = -2.0 - float64(cache.qEvictionPrevState.GoodCounter)
+			if cache.dataWritten/cache.dataRead > 0.5 {
+				reward = -2.0
 				cache.qEvictionPrevState.GoodCounter = 0
-			} else if cache.dataReadOnMiss/cache.dataRead > 0.75 {
-				reward = -5.0 - float64(cache.qEvictionPrevState.GoodCounter)
+			} else if cache.dataReadOnMiss/cache.dataRead > 0.9 {
+				reward = -5.0
 				cache.qEvictionPrevState.GoodCounter = 0
 			} else {
 				cache.qEvictionPrevState.GoodCounter++
