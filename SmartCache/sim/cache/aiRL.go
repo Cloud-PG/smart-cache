@@ -16,8 +16,8 @@ import (
 type prevChoice struct {
 	State       string
 	Action      qlearn.ActionType
-	GoodCounter int
-	BadCounter  int
+	GoodStrikes int
+	BadStrikes  int
 }
 
 // AIRL cache
@@ -398,18 +398,18 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			// }
 
 			// if cache.dataReadOnHit <= (cache.dataReadOnMiss*0.3) || cache.dataWritten >= (cache.dataReadOnHit*0.3) {
-			if cache.dataWritten/cache.dataRead > 0.5 {
-				cache.qEvictionPrevState.GoodCounter = 0
-				cache.qEvictionPrevState.BadCounter++
-				reward += float64(cache.qEvictionPrevState.BadCounter)
-			} else if cache.dataReadOnMiss/cache.dataRead > 0.8 {
-				cache.qEvictionPrevState.GoodCounter = 0
-				cache.qEvictionPrevState.BadCounter++
-				reward += float64(cache.qEvictionPrevState.BadCounter)
+			if cache.dataWritten/cache.dataRead > 0.3 {
+				cache.qEvictionPrevState.GoodStrikes = 0
+				cache.qEvictionPrevState.BadStrikes++
+				reward += float64(cache.qEvictionPrevState.BadStrikes)
+			} else if cache.dataReadOnHit/cache.dataRead <= 0.3 {
+				cache.qEvictionPrevState.GoodStrikes = 0
+				cache.qEvictionPrevState.BadStrikes++
+				reward += float64(cache.qEvictionPrevState.BadStrikes)
 			} else {
-				cache.qEvictionPrevState.BadCounter = 0
-				cache.qEvictionPrevState.GoodCounter++
-				reward += float64(cache.qEvictionPrevState.GoodCounter)
+				cache.qEvictionPrevState.BadStrikes = 0
+				cache.qEvictionPrevState.GoodStrikes++
+				reward += float64(cache.qEvictionPrevState.GoodStrikes)
 			}
 
 			// Update table

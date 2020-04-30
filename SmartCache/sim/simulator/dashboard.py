@@ -17,7 +17,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
                  plot_height: int = 480,
                  bandwidth: int = 10,
                  outer_legend: bool = False,
-                 num_points: int=52,
+                 num_points: int = 52,
                  ):
     color_table = {}
     dates = []
@@ -119,7 +119,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
         )
         run_full_normal_hit_rate_figs.append(hit_rate_fig)
     pbar.update(1)
-    
+
     ###########################################################################
     # Occupancy percentage
     ###########################################################################
@@ -142,7 +142,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
         )
         run_full_normal_size_figs.append(occupancy_fig)
     pbar.update(1)
-    
+
     ###########################################################################
     # Free space percentage
     ###########################################################################
@@ -213,6 +213,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
         )
         run_full_normal_cost_figs.append(cache_cost_fig)
     pbar.update(1)
+
     ###########################################################################
     # Global Cost vs lru plot of full normal run
     ###########################################################################
