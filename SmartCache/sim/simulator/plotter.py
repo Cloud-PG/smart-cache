@@ -498,11 +498,6 @@ def plot_measure(tools: list,
                         values['read on hit data'] - values['written data']
                     ) / values['read data']
                 ) * 100.
-            elif target == "diffThroughput":
-                points = (
-                    values['read on hit data'] -
-                    values['read on miss data']
-                ) / values['written data']
             elif target == "throughputVs":
                 for inner_cache_name, inner_values in filter_results(
                     results, run_type, filters
@@ -512,21 +507,6 @@ def plot_measure(tools: list,
                             inner_values['written data']
                         break
                 points = values['read on hit data'] - values['written data']
-                points /= lru_cost
-            elif target == "diffThroughputVs":
-                for inner_cache_name, inner_values in filter_results(
-                    results, run_type, filters
-                ):
-                    if inner_cache_name.find("lru_") != -1 and inner_cache_name.index("lru_") == 0:
-                        lru_cost = (
-                            inner_values['read on hit data'] -
-                            inner_values['read on miss data']
-                        ) / inner_values['written data']
-                        break
-                points = (
-                    values['read on hit data'] -
-                    values['read on miss data']
-                ) / values['written data']
                 points /= lru_cost
             elif target == "network_in_saturation":
                 points = (values['read on miss data'] / cur_band) * 100.

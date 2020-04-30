@@ -286,29 +286,6 @@ def plot_results(folder: str, results: dict, cache_size: float,
     pbar.update(1)
 
     ###########################################################################
-    # Throughput plot of full normal run
-    ###########################################################################
-    with ignored(Exception):
-        throughtput_fig = plot_measure(
-            tools,
-            results,
-            dates,
-            filters,
-            color_table,
-            window_size,
-            x_range=size_fig.x_range,
-            title="Differential Throughput",
-            plot_width=plot_width,
-            plot_height=plot_height,
-            target="diffThroughput",
-            y_axis_label="%",
-            outer_legend=outer_legend,
-            num_points=num_points,
-        )
-        run_full_normal_throughput_figs.append(throughtput_fig)
-    pbar.update(1)
-
-    ###########################################################################
     # Throughput vs LRU plot of full normal run
     ###########################################################################
     with ignored(Exception):
@@ -324,29 +301,6 @@ def plot_results(folder: str, results: dict, cache_size: float,
             plot_width=plot_width,
             plot_height=plot_height,
             target="throughputVs",
-            y_axis_label="ratio",
-            outer_legend=outer_legend,
-            num_points=num_points,
-        )
-        run_full_normal_throughput_figs.append(throughtput_fig)
-    pbar.update(1)
-
-    ###########################################################################
-    # Throughput vs LRU plot of full normal run
-    ###########################################################################
-    with ignored(Exception):
-        throughtput_fig = plot_measure(
-            tools,
-            results,
-            dates,
-            filters,
-            color_table,
-            window_size,
-            x_range=size_fig.x_range,
-            title="Differential Throughput vs LRU",
-            plot_width=plot_width,
-            plot_height=plot_height,
-            target="diffThroughputVs",
             y_axis_label="ratio",
             outer_legend=outer_legend,
             num_points=num_points,
