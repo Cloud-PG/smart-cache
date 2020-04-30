@@ -17,6 +17,7 @@ type prevChoice struct {
 	State       string
 	Action      qlearn.ActionType
 	GoodCounter int
+	BadCounter  int
 }
 
 // AIRL cache
@@ -398,12 +399,15 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 			// if cache.dataReadOnHit <= (cache.dataReadOnMiss*0.3) || cache.dataWritten >= (cache.dataReadOnHit*0.3) {
 			if cache.dataWritten/cache.dataRead > 0.5 {
-				reward = -2.0
 				cache.qEvictionPrevState.GoodCounter = 0
-			} else if cache.dataReadOnMiss/cache.dataRead > 0.9 {
-				reward = -5.0
+				cache.qEvictionPrevState.BadCounter++
+				reward += float64(cache.qEvictionPrevState.BadCounter)
+			} else if cache.dataReadOnMiss/cache.dataRead > 0.8 {
 				cache.qEvictionPrevState.GoodCounter = 0
+				cache.qEvictionPrevState.BadCounter++
+				reward += float64(cache.qEvictionPrevState.BadCounter)
 			} else {
+				cache.qEvictionPrevState.BadCounter = 0
 				cache.qEvictionPrevState.GoodCounter++
 				reward += float64(cache.qEvictionPrevState.GoodCounter)
 			}
