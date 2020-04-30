@@ -440,7 +440,17 @@ def plot_measure(tools: list,
         results, run_type, filters
     ):
         if run_type == "run_full_normal":
-            if target == "costFunction":
+            if target == "sizePerc":
+                cache_size = float(cache_name.split("T_")
+                                   [0].rsplit("_", 1)[-1])
+                cache_size = cache_size * 1024**2
+                points = (values['size'] / cache_size) * 100.
+            elif target == "freeSizePerc":
+                cache_size = float(cache_name.split("T_")
+                                   [0].rsplit("_", 1)[-1])
+                cache_size = cache_size * 1024**2
+                points = ((values['size'].apply(lambda elm: cache_size-elm)) / cache_size) * 100.
+            elif target == "costFunction":
                 cache_size = float(cache_name.split("T_")
                                    [0].rsplit("_", 1)[-1])
                 cache_size = cache_size * 1024**2

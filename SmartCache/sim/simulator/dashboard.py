@@ -64,6 +64,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
 
     figs = []
     run_full_normal_hit_rate_figs = []
+    run_full_normal_size_figs = []
     run_full_normal_throughput_figs = []
     run_full_normal_cost_figs = []
     run_full_normal_net_figs = []
@@ -117,6 +118,52 @@ def plot_results(folder: str, results: dict, cache_size: float,
             num_points=num_points,
         )
         run_full_normal_hit_rate_figs.append(hit_rate_fig)
+    pbar.update(1)
+    
+    ###########################################################################
+    # Occupancy percentage
+    ###########################################################################
+    with ignored(Exception):
+        occupancy_fig = plot_measure(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            x_range=size_fig.x_range,
+            title="Occupancy percentage",
+            plot_width=plot_width,
+            plot_height=plot_height,
+            target="sizePerc",
+            y_axis_label="%",
+            outer_legend=outer_legend,
+            num_points=num_points,
+        )
+        run_full_normal_size_figs.append(occupancy_fig)
+    pbar.update(1)
+    
+    ###########################################################################
+    # Free space percentage
+    ###########################################################################
+    with ignored(Exception):
+        free_space_fig = plot_measure(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            x_range=size_fig.x_range,
+            title="Free space percentage",
+            plot_width=plot_width,
+            plot_height=plot_height,
+            target="freeSizePerc",
+            y_axis_label="%",
+            outer_legend=outer_legend,
+            num_points=num_points,
+        )
+        run_full_normal_size_figs.append(free_space_fig)
     pbar.update(1)
 
     ###########################################################################
@@ -813,6 +860,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
 
     figs.append(column(
         row(*run_full_normal_hit_rate_figs),
+        row(*run_full_normal_size_figs),
         row(*run_full_normal_throughput_figs),
         row(*run_full_normal_cost_figs),
         row(*run_full_normal_net_figs),
