@@ -320,6 +320,10 @@ func (table *QTable) Update(state string, action ActionType, reward float64) {
 	case RLQLearning:
 		nextStateIdx := getArgMax(table.States[state]) // The next state is the max value
 		table.States[state][actionIdx] = curStateValue + table.LearningRate*(reward+table.DiscountFactor*table.States[state][nextStateIdx]-curStateValue)
+		// fmt.Printf(
+		// 	"OLD VALUE %0.2f | NEW VALUE %0.2f | CUR REW %0.2f\n",
+		// 	curStateValue, table.States[state][actionIdx], reward,
+		// )
 	}
 }
 

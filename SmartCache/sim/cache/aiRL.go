@@ -14,9 +14,9 @@ import (
 )
 
 type prevChoice struct {
-	State   string
-	Action  qlearn.ActionType
-	HitRate float64
+	State       string
+	Action      qlearn.ActionType
+	GoodCounter int
 }
 
 // AIRL cache
@@ -388,7 +388,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 		// ##### Eviction Learning phase #####
 		// ###################################
 		if cache.qEvictionPrevState.Action != 0 && len(cache.qEvictionPrevState.State) != 0 {
-			reward := 1.
+			reward := 0.
 			// reward := request.Size
 
 			// OLD POLICY
@@ -398,8 +398,16 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 			// if cache.dataReadOnHit <= (cache.dataReadOnMiss*0.3) || cache.dataWritten >= (cache.dataReadOnHit*0.3) {
 			if cache.dataWritten/cache.dataRead > 0.33 {
-				reward = -reward
+				reward = -2.0 - float64(cache.qEvictionPrevState.GoodCounter)
+				cache.qEvictionPrevState.GoodCounter = 0
+			} else if cache.dataReadOnMiss/cache.dataRead > 0.75 {
+				reward = -5.0 - float64(cache.qEvictionPrevState.GoodCounter)
+				cache.qEvictionPrevState.GoodCounter = 0
+			} else {
+				cache.qEvictionPrevState.GoodCounter++
+				reward += float64(cache.qEvictionPrevState.GoodCounter)
 			}
+
 			// Update table
 			cache.evictionTable.Update(cache.qEvictionPrevState.State, cache.qEvictionPrevState.Action, reward)
 			// Update epsilon
@@ -468,9 +476,8 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					cache.additionTable.Update(curState, curAction, reward)
 
 					cache.qAdditionPrevStates[request.Filename] = prevChoice{
-						State:   curState,
-						Action:  curAction,
-						HitRate: cache.HitRate(),
+						State:  curState,
+						Action: curAction,
 					}
 
 					// Update epsilon
@@ -511,9 +518,8 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					cache.additionTable.Update(curState, curAction, reward)
 
 					cache.qAdditionPrevStates[request.Filename] = prevChoice{
-						State:   curState,
-						Action:  curAction,
-						HitRate: cache.HitRate(),
+						State:  curState,
+						Action: curAction,
 					}
 				}
 			} else {
@@ -706,9 +712,8 @@ func (cache *AIRL) Free(amount float64, percentage bool) float64 {
 				}
 
 				cache.qEvictionPrevState = prevChoice{
-					State:   curState,
-					Action:  curAction,
-					HitRate: cache.HitRate(),
+					State:  curState,
+					Action: curAction,
 				}
 
 			} else {
