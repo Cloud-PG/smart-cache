@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import math
 
+input_len = 4
 bandwidthLimit = (1000000. / 8.) * 60. * 60. * 24
 # time_span = 20000
 # purge_delta = 20000
@@ -100,6 +101,7 @@ class cache(object):
     def __init__(self, size: float = 104857600, h_watermark: float = 95., l_watermark: float = 75.):
         self._size: float = 0.0
         self._max_size = size
+        print('CREATED CACHE WITH SIZE {}'.format(self._max_size))
 
         self._cached_files = set()
         self._cached_files_keys = []
@@ -239,13 +241,13 @@ class WindowElement(object):
             [self.action],
             [self.reward],
             self.next_values,
-        )), (1, 16))
+        )), (1, 2*input_len + 1 + 1 ))
 
 
 class env:
     ''' object that emulates cache mechanism '''
 
-    def __init__(self, start_month, end_month, directory, out_directory, out_name, time_span, purge_delta):
+    def __init__(self, start_month, end_month, directory, out_directory, out_name, time_span, purge_delta, output_activation, cache_size):
         # print('STO USANDO LA VERSIONE PIU AGGIORNATA')
         # set period
         self._startMonth = start_month
@@ -255,6 +257,10 @@ class env:
         self._out_name = out_name
         self._time_span = time_span 
         self._purge_delta = purge_delta
+        if output_activation == 'sigmoid':
+            self._output_activation = 0
+        else:
+            self._output_activation = 1
 
         start = datetime(2018, 1, 1)
         delta = timedelta(days=1)
@@ -282,7 +288,7 @@ class env:
 
         # create cache
         self.adding_or_evicting = 0
-        self._cache = cache()
+        self._cache = cache(size = cache_size)
         self.time_span = time_span
         self.size_tot = 0
 
@@ -294,8 +300,8 @@ class env:
         self._eviction_window_elements = {}
 
         # initialize experience replay memory vectors
-        self.add_memory_vector = np.empty((1,16))
-        self.evict_memory_vector = np.empty((1,16))
+        self.add_memory_vector = np.empty((1, 2 * input_len +1 + 1))
+        self.evict_memory_vector = np.empty((1, 2 * input_len +1 + 1))
 
         # begin reading data
         self.curRequest = -1
@@ -324,10 +330,10 @@ class env:
             filestats.tot_requests,
             self.curRequest_from_start - filestats._last_request,
             0. if filestats._datatype == 0 else 1.,
-            self._cache._get_mean_recency(
-                self.curRequest_from_start),
-            self._cache._get_mean_frequency(),
-            self._cache._get_mean_size()
+            #self._cache._get_mean_recency(
+            #    self.curRequest_from_start),
+            #self._cache._get_mean_frequency(),
+            #self._cache._get_mean_size()
         ])
 
         print('Environment initialized')
@@ -420,12 +426,15 @@ class env:
 
         if adding_or_evicting == 0:
             size = curValues[0]
-            if size <= it_liminf_size:
-                coeff = 0 
-            elif size >= it_limsup_size:
-                coeff = 1 
+            if self._output_activation == 1:
+                coeff = size
             else:
-                coeff = (size - it_liminf_size)/it_delta_size
+                if size <= it_liminf_size:
+                    coeff = 0 
+                elif size >= it_limsup_size:
+                    coeff = 1 
+                else:
+                    coeff = (size - it_liminf_size)/it_delta_size
             ############################ GIVING REWARD TO ADDITION IF IT IS IN WINDOW AND ADD TO WINDOW ########################################################################
             if curFilename in self._request_window_elements:  # if is in queue                
                 obj = self._request_window_elements[curFilename]
@@ -484,12 +493,15 @@ class env:
 
         for obj in self._eviction_window_elements.values():
             size = obj.cur_values[0]
-            if size <= it_liminf_size:
-                coeff = 0 
-            elif size >= it_limsup_size:
-                coeff = 1 
+            if self._output_activation == 1:
+                coeff = size
             else:
-                coeff = (size - it_liminf_size)/it_delta_size
+                if size <= it_liminf_size:
+                    coeff = 0 
+                elif size >= it_limsup_size:
+                    coeff = 1 
+                else:
+                    coeff = (size - it_liminf_size)/it_delta_size
             if obj.action == 0:
                 obj.reward = - 1 * coeff
             else:
@@ -505,12 +517,15 @@ class env:
         toDelete = set()
         for curFilename, obj in self._request_window_elements.items():
             size = obj.cur_values[0]
-            if size <= it_liminf_size:
-                coeff = 0 
-            elif size >= it_limsup_size:
-                coeff = 1 
+            if self._output_activation == 1:
+                coeff = size
             else:
-                coeff = (size - it_liminf_size)/it_delta_size
+                if size <= it_liminf_size:
+                    coeff = 0 
+                elif size >= it_limsup_size:
+                    coeff = 1 
+                else:
+                    coeff = (size - it_liminf_size)/it_delta_size
             if obj.counter > self._time_span:
                 if obj.action == 0:
                     obj.reward = - 1 * coeff
@@ -550,10 +565,10 @@ class env:
             filestats.tot_requests,
             self.curRequest_from_start - filestats._last_request,
             0. if filestats._datatype == 0 else 1.,
-            self._cache._get_mean_recency(
-                self.curRequest_from_start),
-            self._cache._get_mean_frequency(),
-            self._cache._get_mean_size(),
+            #self._cache._get_mean_recency(
+            #    self.curRequest_from_start),
+            #self._cache._get_mean_frequency(),
+            #self._cache._get_mean_size(),
         ])
 
         return self.curValues
@@ -572,10 +587,10 @@ class env:
             filestats.tot_requests,
             self.curRequest_from_start - filestats._last_request,
             0. if filestats._datatype == 0 else 1.,
-            self._cache._get_mean_recency(
-                self.curRequest_from_start),
-            self._cache._get_mean_frequency(),
-            self._cache._get_mean_size(),
+            #self._cache._get_mean_recency(
+            #    self.curRequest_from_start),
+            #self._cache._get_mean_frequency(),
+            #self._cache._get_mean_size(),
         ])
 
         return self.curValues

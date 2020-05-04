@@ -1,5 +1,6 @@
 from keras.models import Sequential
 from keras.layers import Input, Dense, Activation, Flatten
+import keras.optimizers
 import tensorflow as tf
 import numpy as np
 import pandas as pd
@@ -7,7 +8,7 @@ import math
 import random
 import cache_env_new
 import cache_env_new_us
-import cache_env_new_linear
+#import cache_env_new_linear
 import csv
 import array
 import os
@@ -29,7 +30,7 @@ parser.add_argument('--batch_size', type=int, default=32)
 parser.add_argument('--out_dir', type=str,
                     default='results/results_ok_stats_async_quick_cleaned_huberTF')
 #parser.add_argument('--out_name', type=str, default='dQL_add_evic.csv')
-parser.add_argument('--lr', type=float, default=0.01, help='learning rate')
+parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
 parser.add_argument('--memory', type=int, default=1000000)
 parser.add_argument('--decay_rate_add', type=float, default=0.00001)
 parser.add_argument('--decay_rate_evict', type=float, default=0.00001)
@@ -54,12 +55,15 @@ parser.add_argument('--target_update_frequency_add', type = int, default = 10000
 parser.add_argument('--target_update_frequency_evict', type = int, default = 10000)
 parser.add_argument('--region', type = str, default = 'it')
 parser.add_argument('--output_activation', type = str, default = 'sigmoid')
+parser.add_argument('--cache_size', type = int, default = 104857600)
+parser.add_argument('--report_choices', type = bool, default = False)
+
 
 
 args = parser.parse_args()
 
 if args.region == 'it':
-    data_directory = '/home/ubuntu/source2018_numeric_it_with_avro_order'
+    data_directory = args.data
     total_sites = it_total_sites
     total_campaigns = it_total_campaigns
 elif args.region == 'us':
@@ -71,11 +75,13 @@ else:
 
 print(data_directory)
 
-input_len = 7 + total_campaigns + total_sites
+input_len = 4 
+#input_len = 7 + total_campaigns + total_sites
 
 
 BATCH_SIZE = args.batch_size
 #data_directory = args.data
+learning_rate = args.lr
 _startMonth = args.start_month
 _endMonth = args.end_month
 memory = args.memory
@@ -97,6 +103,8 @@ use_target_model = args.use_target_model
 target_update_frequency_add = args.target_update_frequency_add
 target_update_frequency_evict = args.target_update_frequency_evict
 output_activation = args.output_activation
+cache_size = args.cache_size
+report_choices = args.report_choices
 
 out_directory = args.out_dir
 #out_name = args.out_name
@@ -110,7 +118,7 @@ if use_target_model == True:
 ###### FIXED PARAMETERS ####################################################################################################################################
 
 nb_actions = 2
-observation_shape = (7,)
+observation_shape = (input_len,)
 seed_ = 2019
 DailyBandwidth1Gbit = 10. * (1000. / 8.) * 60. * 60. * 24.       #MB in a day with 10 Gbit/s
 
@@ -135,9 +143,10 @@ def huber_loss_mean(y_true, y_pred, clip_delta=1.0):
 
 print('USING HUBER LOSS FROM TENSORFLOW')
 
+optimizer = keras.optimizers.Adam(lr=learning_rate)
 
 model_evict = Sequential()
-model_evict.add(Dense(16, input_dim=7))
+model_evict.add(Dense(16, input_dim=input_len))
 model_evict.add(Activation('sigmoid'))
 model_evict.add(Dense(32))
 model_evict.add(Activation('sigmoid'))
@@ -157,7 +166,7 @@ model_evict.compile(optimizer='adam', loss=tf.keras.losses.Huber())
 
 if use_target_model == True:
     target_model_evict = Sequential()
-    target_model_evict.add(Dense(16, input_dim=7))
+    target_model_evict.add(Dense(16, input_dim=input_len))
     target_model_evict.add(Activation('sigmoid'))
     target_model_evict.add(Dense(32))
     target_model_evict.add(Activation('sigmoid'))
@@ -173,13 +182,14 @@ if use_target_model == True:
     target_model_evict.add(Activation(output_activation))
     print(model_evict.summary())
     #target_model_evict.compile(optimizer = 'adam', loss = huber_loss_mean)
+    #target_model_evict.compile(optimizer=optimizer, loss=tf.keras.losses.Huber())
     target_model_evict.compile(optimizer='adam', loss=tf.keras.losses.Huber())
 
 if args.load_evict_weights_from_file is None == False:
     model_evict.load_weights(args.load_evict_weights_from_file)
 
 model_add = Sequential()
-model_add.add(Dense(16,input_dim = 7))
+model_add.add(Dense(16,input_dim = input_len))
 model_add.add(Activation('sigmoid'))
 model_add.add(Dense(32))
 model_add.add(Activation('sigmoid'))
@@ -199,7 +209,7 @@ model_add.compile(optimizer='adam', loss=tf.keras.losses.Huber())
 
 if use_target_model == True:
     target_model_add = Sequential()
-    target_model_add.add(Dense(16,input_dim = 7))
+    target_model_add.add(Dense(16,input_dim = input_len))
     target_model_add.add(Activation('sigmoid'))
     target_model_add.add(Dense(32))
     target_model_add.add(Activation('sigmoid'))
@@ -225,18 +235,18 @@ if args.load_add_weights_from_file is None == False:
 #environment = cache_env_new.env(
 #    _startMonth, _endMonth, data_directory, out_directory, out_name, time_span, purge_delta)
 
-if args.region == 'it' and output_activation == 'sigmoid':
+if args.region == 'it':
     environment = cache_env_new.env(
-        _startMonth, _endMonth, data_directory, out_directory, out_name, time_span, purge_delta)
+        _startMonth, _endMonth, data_directory, out_directory, out_name, time_span, purge_delta, output_activation, cache_size)
 
 elif args.region == 'us' and output_activation == 'sigmoid':
     environment = cache_env_new_us.env(
         _startMonth, _endMonth, data_directory, out_directory, out_name, time_span, purge_delta)
 
-elif args.region == 'it' and output_activation == 'linear':
-    print('USING LINEAR ACTIVATION')
-    environment = cache_env_new_linear.env(
-        _startMonth, _endMonth, data_directory, out_directory, out_name, time_span, purge_delta)
+#elif args.region == 'it' and output_activation == 'linear':
+#    print('USING LINEAR ACTIVATION')
+#    environment = cache_env_new_linear.env(
+#        _startMonth, _endMonth, data_directory, out_directory, out_name, time_span, purge_delta)
 
 #elif args.region == 'us' and output_activation == 'linear':
 #    environment = cache_env_new_us_linear.env(
@@ -249,12 +259,19 @@ step_evict = 0
 step_add_decay = 0
 step_evict_decay = 0
 
-# addition_counter = 0
-# eviction_counter = 0
+addition_counter = 0
+eviction_counter = 0
+
+daily_add_actions = []
+daily_evict_actions = []
 
 #with open(out_directory + '/stats.csv', 'w') as f:
 #    writer = csv.writer(f)
 #    writer.writerow(['time', 'stats_files', 'cache_files'])
+#if report_choices == True:
+#    with open(out_directory + 'addition_choices_{}.csv'.format(addition_counter), 'w') as file:
+#        writer = csv.writer(file)
+#        writer.writerow(['addition choices'])
 
 with open(out_directory + '/occupancy.csv', 'w') as file:
     writer = csv.writer(file)
@@ -277,6 +294,7 @@ while end == False:
         if use_target_model == True:
             if step_add % target_update_frequency_add == 0:
                 target_model_add.set_weights(model_add.get_weights()) 
+                #print('UPDATED WEIGHTS')
         # UPDATE STUFF
         step_add += 1
         if eps_add > eps_add_min and step_add > no_training_steps:
@@ -295,18 +313,19 @@ while end == False:
             else:
                 action = 1
         else:
-            cur_values_ = np.reshape(cur_values, (1, 7))
+            cur_values_ = np.reshape(cur_values, (1, input_len))
             action = np.argmax(model_add.predict(cur_values_))
 
         hit = environment.check_if_current_is_hit()
         anomalous = environment.current_cpueff_is_anomalous()
 
+        '''
         if debug == True and anomalous == False:
             print('ADDING-------------------------------------------------------------------------------------')
             print('CURVALUES')
-            cur_values_ = np.reshape(cur_values, (1, 7))
+            cur_values_ = np.reshape(cur_values, (1, input_len))
             print(cur_values)
-
+        '''
         # GET THIS REQUEST
         if anomalous == False:
             if environment._cache._dailyReadOnMiss / DailyBandwidth1Gbit * 100 < 95. or hit == True:
@@ -316,7 +335,7 @@ while end == False:
         if step_add % 1000 == 0:
             print('Request: ' + str(environment.curRequest) + ' / ' + str(environment.df_length) + '  -  Occupancy: ' + str(round(environment._cache.capacity,2)) 
                 + '%  -  ' + 'Hit rate: ' + str(round(environment._cache._hit/(environment._cache._hit + environment._cache._miss)*100,2)) +'%' + ' ACTION: ' +  str(action))
-        
+            print()
         # IF IT'S ADDING IS OVER, GIVE REWARD TO ALL EVICTION ACTIONS
         if environment._cache.capacity > environment._cache._h_watermark:
             environment.clear_remaining_evict_window()
@@ -346,12 +365,34 @@ while end == False:
         while(environment.add_memory_vector.shape[0] > memory):
             environment.add_memory_vector = np.delete(
                 environment.add_memory_vector, 0, 0)
+        
+        
+        if report_choices == True:
+            daily_add_actions.append(action) 
+            if environment.curRequest == 0 and environment.curDay > 0:   
+                with open(out_directory + '/addition_choices_{}.csv'.format(environment.curDay), 'w') as file:
+                    writer = csv.writer(file)
+                    writer.writerow(['addition_choice'])
+                    for i in range(0,len(daily_add_actions)):
+                        writer.writerow([daily_add_actions[i]])
+                with open(out_directory + '/eviction_choices_{}.csv'.format(environment.curDay), 'w') as file:
+                    writer = csv.writer(file)
+                    writer.writerow(['eviction_choice'])
+                    for i in range(0,len(daily_evict_actions)):
+                        writer.writerow([daily_evict_actions[i]])
+                daily_add_actions.clear()
+                daily_evict_actions.clear()
 
         # TRAIN NETWORK
         if step_add > no_training_steps:
             batch = environment.add_memory_vector[np.random.randint(0, environment.add_memory_vector.shape[0], BATCH_SIZE), :]
-            train_cur_vals ,train_actions, train_rewards, train_next_vals = np.split(batch, [7,8,9] , axis = 1)
+            train_cur_vals ,train_actions, train_rewards, train_next_vals = np.split(batch, [input_len, input_len + 1, input_len + 2] , axis = 1)
+            #print(train_cur_vals)
+            #print(train_actions)
+            #print(train_rewards)
+            #print(train_next_vals)
             target = model_add.predict_on_batch(train_cur_vals)
+            '''
             if debug == True:
                 print('BATCH')
                 print(batch)
@@ -359,6 +400,7 @@ while end == False:
                 print('PREDICT ON BATCH')
                 print(target)
                 print()
+            '''
             if use_target_model == False:
                 #predictions = model_add.predict_on_batch(train_next_vals)
                 predictions = model_add.predict_on_batch(train_cur_vals)
@@ -373,13 +415,15 @@ while end == False:
                     target[i,action_] = train_rewards[i] + gamma * max(predictions[i])  
             
             model_add.train_on_batch(train_cur_vals, target)
+            '''
             if debug == True:
                 print('TARGET')
                 print(target)
                 print()
-        
+            '''
     ### EVICTING #############################################################################################################
     elif adding_or_evicting == 1: 
+        
         if use_target_model == True:
             if step_evict % target_update_frequency_evict == 0:
                 target_model_evict.set_weights(model_evict.get_weights()) 
@@ -402,13 +446,13 @@ while end == False:
             else:
                 action = 1
         else:
-            cur_values_ = np.reshape(cur_values, (1, 7))
+            cur_values_ = np.reshape(cur_values, (1, input_len))
             action = np.argmax(model_evict.predict(cur_values_))
         if debug == True:
             print('FREEING-------------------------------------------------------------------------------------')
             print('CURVALUES')
         if debug == True:
-            cur_values_ = np.reshape(cur_values, (1, 7))
+            cur_values_ = np.reshape(cur_values, (1, input_len))
             print(cur_values_)
             print()
 
@@ -423,7 +467,7 @@ while end == False:
         if step_evict % 1000 == 0:
             print('Freeing memory ' + str(environment._cached_files_index) + '/' + str(len(environment._cache._cached_files_keys)) + 
                     '  -  Occupancy: ' + str(round(environment._cache.capacity,2)) + '%  - action: ' + str(action))
-        
+            print()
         # IF EVICTING IS NOT OVER, GET NEXT VALUES AND PREPARE ACTION TO BE REWARDED, GIVING EVENTUAL REWARD
         if environment._cached_files_index + 1 != len(environment._cache._cached_files_keys) and environment._cache.capacity >= low_watermark:
             next_values = environment.get_next_file_in_cache_values()
@@ -437,6 +481,9 @@ while end == False:
         # KEEP MEMORY LENGTH LESS THAN LIMIT
         while(environment.evict_memory_vector.shape[0] > memory):
             environment.evict_memory_vector = np.delete(environment.evict_memory_vector, 0, 0)
+        
+        if report_choices == True:
+            daily_evict_actions.append(action) 
 
         # TRAIN NETWORK
         if step_evict > no_training_steps + 5000:
@@ -446,9 +493,9 @@ while end == False:
             #print(model_evict.predict(cur_values_))
             #print()
             batch = environment.evict_memory_vector[np.random.randint(0, environment.evict_memory_vector.shape[0], BATCH_SIZE), :]
-            train_cur_vals ,train_actions, train_rewards, train_next_vals = np.split(batch, [7,8,9] , axis = 1)
+            train_cur_vals ,train_actions, train_rewards, train_next_vals = np.split(batch, [input_len, input_len+1, input_len+2] , axis = 1)
             target = model_evict.predict_on_batch(train_cur_vals)
-
+            
             if debug == True:
                 print('BATCH')
                 print(batch)
@@ -479,13 +526,17 @@ while end == False:
     #### STOP ADDING ################################################################################################################################
     if adding_or_evicting == 0 and environment._cache.capacity > environment._cache._h_watermark:
         adding_or_evicting = 1 
-        #addition_counter += 1
+        addition_counter += 1
         #print('STOP ADDING')
         #environment._cache._cached_files_keys = list(environment._cache._cached_files.keys())
         environment._cache._cached_files_keys = list(environment._cache._cached_files)
         random.shuffle(environment._cache._cached_files_keys)
+        to_print = np.asarray(environment._cache._cached_files_keys)
         environment._cached_files_index = -1
         cur_values = environment.get_next_file_in_cache_values()
+        print('STARTED EVICTION AT: ' + str(step_add) + ' - files in cache are ' + str(np.sort(to_print)))
+        print()
+
         
     ### STOP EVICTING ################################################################################################################################
     if adding_or_evicting == 1 and (environment._cached_files_index + 1 == len(environment._cache._cached_files_keys) or environment._cache.capacity < low_watermark):
@@ -493,8 +544,12 @@ while end == False:
             writer = csv.writer(file)
             writer.writerow([environment._cache.capacity])
         adding_or_evicting = 0
-        #eviction_counter += 1
+        eviction_counter += 1
         cur_values = environment.get_next_request_values()
+        #if report_choices == True:
+        #    with open(out_directory + 'addition_choices_{}.csv'.format(addition_counter), 'w') as file:
+        #        writer = csv.writer(file)
+        #        writer.writerow(['addition choices'])
 
     ### END ####################################################################################################################################
     if environment.curDay == environment._idx_end:
