@@ -398,7 +398,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			// }
 
 			// if cache.dataReadOnHit <= (cache.dataReadOnMiss*0.3) || cache.dataWritten >= (cache.dataReadOnHit*0.3) {
-			if cache.dataWritten/cache.dataRead > 0.5 || cache.dataReadOnHit/cache.dataRead <= 0.2 {
+			if cache.dataWritten/cache.dataRead > 0.75 || cache.dataReadOnHit/cache.dataRead <= 0.25 {
 				cache.qEvictionPrevState.GoodStrikes = 0
 				cache.qEvictionPrevState.BadStrikes++
 				reward -= float64(cache.qEvictionPrevState.BadStrikes)
