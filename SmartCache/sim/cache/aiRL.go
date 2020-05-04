@@ -398,12 +398,12 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			// }
 
 			// if cache.dataReadOnHit <= (cache.dataReadOnMiss*0.3) || cache.dataWritten >= (cache.dataReadOnHit*0.3) {
-			if cache.dataWritten/cache.dataRead > 0.75 || cache.dataReadOnHit/cache.dataRead <= 0.25 {
+			if cache.dataWritten/cache.dataRead > 0.60 {
 				// cache.qEvictionPrevState.GoodStrikes = 0
 				// cache.qEvictionPrevState.BadStrikes++
 				// reward -= float64(cache.qEvictionPrevState.BadStrikes)
 				// reward += request.Size / 1024.
-				reward -= 2.0
+				reward -= 1.0
 			} else {
 				// cache.qEvictionPrevState.BadStrikes = 0
 				// cache.qEvictionPrevState.GoodStrikes++
