@@ -402,23 +402,23 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				// cache.qEvictionPrevState.GoodStrikes = 0
 				// cache.qEvictionPrevState.BadStrikes++
 				// reward -= float64(cache.qEvictionPrevState.BadStrikes)
-				// reward += request.Size / 1024.
-				reward -= 1.0
+				reward -= request.Size / 1024.
+				// reward -= 1.0
 			}
 			if cache.dataReadOnHit/cache.dataRead < 0.25 {
 				// cache.qEvictionPrevState.GoodStrikes = 0
 				// cache.qEvictionPrevState.BadStrikes++
 				// reward -= float64(cache.qEvictionPrevState.BadStrikes)
-				// reward += request.Size / 1024.
-				reward -= 1.0
+				reward -= request.Size / 1024.
+				// reward -= 1.0
 			}
 
 			if reward == 0. {
 				// cache.qEvictionPrevState.BadStrikes = 0
 				// cache.qEvictionPrevState.GoodStrikes++
 				// reward += float64(cache.qEvictionPrevState.GoodStrikes)
-				// reward += request.Size / 1024
-				reward += 1.0
+				reward += request.Size / 1024.
+				// reward += 1.0
 			}
 
 			// Update table
