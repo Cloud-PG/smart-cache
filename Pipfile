@@ -41,6 +41,7 @@ pillow = ">=6.2.0"
 python-dotenv = "*"
 colorama = "*"
 coloredlogs = "*"
+plotly = "*"
 
 [requires]
 python_version = "3.7"
