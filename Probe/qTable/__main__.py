@@ -1,11 +1,10 @@
 import argparse
-from collections import Counter
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
-from colorama import Fore, Style
+from colorama import Style
 
 from..utils import STATUS_ARROW
 
@@ -26,58 +25,126 @@ def main():
 
     sort_by = [column for column in df.columns if column.find("Action") == -1]
     actions = [column for column in df.columns if column.find("Action") != -1]
+    state_features = [
+        column for column in df.columns if column.find("Action") == -1
+    ]
     action_counters = [0 for _ in range(len(actions))]
 
     df = df.sort_values(by=sort_by)
+    df.reset_index(drop=True, inplace=True)
 
     print("-"*80)
     print(" | ".join(sort_by+['Action']))
     print("-"*80)
 
-    state_not_explored = 0
-    action_counter = []
+    df['best'] = df[actions].idxmax(axis=1)
+    df['explored'] = df[actions].apply(
+        lambda row: not all([val == 0. for val in row]), axis=1)
 
-    for idx, row in enumerate(df.itertuples()):
-        action_values = [getattr(row, value) for value in actions]
-        best_action = actions[action_values.index(max(action_values))]
-        for idx, value in enumerate(action_values):
-            if value != 0.:
-                action_counters[idx] += 1
-
-        if all([value == 0.0 for value in action_values]):
-            state_values = " | ".join(
-                [str(getattr(row, value)) for value in sort_by])
-            print(f"{Style.DIM}{Fore.YELLOW}{state_values} {STATUS_ARROW} {Style.DIM}{Fore.YELLOW}{'NOT EXPLORED'}{Style.RESET_ALL}")
-            state_not_explored += 1
-        else:
-            action_counter.append(best_action)  # Count only explored actions
-            state_values = " | ".join(
-                [str(getattr(row, value)) for value in sort_by])
-            print(
-                f"{Style.BRIGHT}{state_values} {STATUS_ARROW} {Style.BRIGHT}{best_action}{Style.RESET_ALL}")
-
-    print("-"*42)
-    print(
-        f"Explored {((df.shape[0] - state_not_explored) / df.shape[0])*100.:0.2f}% states and {(sum(action_counters) / (df.shape[0] * 2))*100.:0.2f}% of actions"
+    explored_res = df.explored.value_counts()
+    explored_res.rename("State exploration", inplace=True)
+    explored_res.index = explored_res.index.map(
+        {True: 'Explored', False: 'Not explored'}
     )
-    print("-"*42)
-    counter = Counter(action_counter)
-    tot = sum(counter.values())
-    assert tot == len(df.index) - \
-        state_not_explored, "Error: counter actions..."
-    for key in sorted(counter):
-        print(f"- {key} =>\t{(counter[key]/tot)*100.:0.2f}%")
-    print("-"*42)
+    action_stats = df.best.value_counts()
+    action_stats.rename("Action distribution", inplace=True)
 
-    fig, axes = plt.subplots(
-        nrows=1, ncols=1, figsize=(8, 32))
+    print(f"{STATUS_ARROW}Plot explored states pie")
+    fig_action_general, (axes_explored_states, axes_actions) = plt.subplots(
+        nrows=1, ncols=2, figsize=(16, 8))
+    explored_res.plot(
+        ax=axes_explored_states,
+        kind="pie",
+        autopct='%.2f%%'
+    ).legend()
+    axes_explored_states.legend(loc='upper right')
+    print(f"{STATUS_ARROW}Plot action states pie")
+    action_stats.plot(
+        ax=axes_actions,
+        kind="pie",
+        autopct='%.2f%%'
+    ).legend()
+    axes_actions.legend(loc='upper right')
+    fig_action_general.tight_layout()
+    fig_action_general.savefig(
+        f"{filename.name}.actionGeneral.png",
+        dpi=300,
+        bbox_inches="tight",
+        pad_inches=0.24
+    )
+
+    fig_actions, action_axes = plt.subplots(
+        nrows=len(actions), ncols=3, figsize=(
+            8*len(actions), 8*len(state_features)
+        )
+    )
+    for idx, action in enumerate(actions):
+        cur_axes = action_axes[idx]
+        for ax in cur_axes:
+            ax.set_title(action)
+        cur_data = df[df.best == action][state_features]
+        for col_idx, column in enumerate(state_features):
+            print(f"{STATUS_ARROW}Plot column {column} of action {action} pie")
+            cur_data[column].value_counts().plot(
+                ax=cur_axes[col_idx],
+                kind="pie",
+                autopct='%.2f%%',
+            )
+            cur_axes[col_idx].legend(loc='upper right')
+    fig_actions.tight_layout()
+    fig_actions.savefig(
+        f"{filename.name}.actions.png",
+        dpi=300,
+        bbox_inches="tight",
+        pad_inches=0.24
+    )
+
+    print(f"{STATUS_ARROW}Plot heatmap")
+    fig_table_map, (axes_bars, axes_heatmap) = plt.subplots(
+        nrows=1, ncols=2, figsize=(16, 32),
+        sharey=True, constrained_layout=True,
+    )
     sns.heatmap(
-        ax=axes,
+        ax=axes_heatmap,
         data=df[actions],
+        cbar_kws={"orientation": "horizontal"},
+        annot=True,
     )
-    fig.tight_layout()
-    fig.savefig(
-        f"{filename.name}.heatmap.png",
+    axes_heatmap.invert_yaxis()
+
+    print(f"{STATUS_ARROW}Plot bars")
+    df[actions].plot(
+        ax=axes_bars,
+        kind="barh", stacked=False, width=0.5,
+        align='edge',
+        ylim=(
+            df[actions].min().min(),
+            df[actions].max().max()
+        ),
+    ).legend()
+    axes_bars.legend(loc='lower left')
+    axes_bars.axvline(x=0, c="k")
+    state_labels = [
+        " | ".join(
+            [
+                f"{state_features[idx-1]}:{row[idx]}"
+                for idx in range(1, len(row))
+            ]
+        ) for row in df[state_features].itertuples()
+    ]
+    # axes_bars.set_yticks(np.arange(len(df.index))+0.5)
+    axes_bars.set_yticklabels(
+        state_labels,
+        fontdict={
+            'fontsize': 16,
+            'verticalalignment': 'bottom'
+        },
+    )
+    axes_bars.grid()
+
+    # fig_table_map.tight_layout()
+    fig_table_map.savefig(
+        f"{filename.name}.tableMap.png",
         dpi=300,
         bbox_inches="tight",
         pad_inches=0.24
