@@ -131,14 +131,14 @@ def plot_global_stats(df: 'pd.DataFrame',
             index=day_indexs,
         )
 
-    numFiles.name = "Files"
-    numReq.name = "Requests"
-    numJobs.name = "Jobs"
-    numTasks.name = "Tasks"
-    numUsers.name = "Users"
-    numSites.name = "Sites"
-    numReqXFileAvg.name = "Avg. num. req. x file"
-    numReqXFileAvgG1.name = "Avg. num. req. x file (> 1)"
+    numFiles.rename("Files")
+    numReq.rename("Requests")
+    numJobs.rename("Jobs")
+    numTasks.rename("Tasks")
+    numUsers.rename("Users")
+    numSites.rename("Sites")
+    numReqXFileAvg.rename("Avg. num. req. x file")
+    numReqXFileAvgG1.rename("Avg. num. req. x file (> 1)")
 
     figGeneral, axesGeneral = plt.subplots(
         nrows=2, ncols=2, sharex=True, figsize=(24, 16)
