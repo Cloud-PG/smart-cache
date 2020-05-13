@@ -15,7 +15,8 @@ import (
 )
 
 const (
-	csvHeader = "Filename,SiteName,UserID,TaskID,TaskMonitorID,JobID,Protocol,JobExecExitCode,JobStart,JobEnd,NumCPU,WrapWC,WrapCPU,Size,DataType,FileType,JobLengthH,JobLengthM,JobSuccess,CPUTime,IOTime,reqDay,Region,Campain,Process"
+	csvHeader        = "Filename,SiteName,UserID,TaskID,TaskMonitorID,JobID,Protocol,JobExecExitCode,JobStart,JobEnd,NumCPU,WrapWC,WrapCPU,Size,DataType,FileType,JobLengthH,JobLengthM,JobSuccess,CPUTime,IOTime,reqDay,Region,Campain,Process"
+	readerBufferSize = 1024
 )
 
 var (
@@ -94,7 +95,7 @@ type CSVRecord struct {
 }
 
 func recordGenerator(csvReader *csv.Reader, curFile *os.File, headerMap []int) chan CSVRecord {
-	channel := make(chan CSVRecord)
+	channel := make(chan CSVRecord, readerBufferSize)
 	go func() {
 		defer close(channel)
 		defer curFile.Close()
