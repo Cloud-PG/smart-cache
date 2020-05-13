@@ -104,13 +104,13 @@ func (man *Manager) Init() {
 }
 
 // Check if a file is in cache
-func (man *Manager) Check(file int64) bool {
+func (man Manager) Check(file int64) bool {
 	_, inCache := man.files[file]
 	return inCache
 }
 
 // Len returns the number of files in cache
-func (man *Manager) Len() int {
+func (man Manager) Len() int {
 	return len(man.files)
 }
 
