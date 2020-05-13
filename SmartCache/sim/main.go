@@ -310,17 +310,19 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 
 			// ------------------------- Create cache --------------------------
 			curCacheInstance := genCache(cacheType)
-			curCacheInstance.SetBandwidth(simBandwidth)
+
+			// ----------------------- Configure cache -------------------------
+			cache.SetBandwidth(curCacheInstance, simBandwidth)
 			// selectedRegion := fmt.Sprintf("_%s_", strings.ToLower(simRegion))
 			switch simRegion {
 			// TODO: add filter as a parameter
 			case "us":
 				recordFilter = cache.UsMINIAODNOT1andT3{}
 				dataTypeFilter = cache.UsDataMcTypes{}
-				curCacheInstance.SetRegion("us")
+				cache.SetRegion(curCacheInstance, "us")
 			case "it":
 				dataTypeFilter = cache.ItDataMcTypes{}
-				curCacheInstance.SetRegion("it")
+				cache.SetRegion(curCacheInstance, "it")
 			}
 
 			switch typeCmd {
@@ -331,7 +333,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 						fmt.Println("ERR: No feature map indicated...")
 						os.Exit(-1)
 					}
-					curCacheInstance.Init(aiFeatureMap, aiModel)
+					cache.Init(curCacheInstance, aiFeatureMap, aiModel)
 				case "aiRL":
 					if aiRLAdditionFeatureMap == "" {
 						logger.Info("No addition feature map indicated...")
@@ -355,7 +357,8 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 						os.Exit(-1)
 					}
 
-					curCacheInstance.Init(
+					cache.Init(
+						curCacheInstance,
 						aiRLAdditionFeatureMap,
 						aiRLEvictionFeatureMap,
 						aiRLTraining,
@@ -369,7 +372,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 					)
 				}
 			case testDatasetCmd:
-				curCacheInstance.Init(dataset2TestPath)
+				cache.Init(curCacheInstance, dataset2TestPath)
 			}
 
 			if simDumpFileName == "" {
@@ -382,21 +385,21 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			if simLoadDump {
 				logger.Info("Loading cache dump", zap.String("filename", simLoadDumpFileName))
 
-				loadedDump := curCacheInstance.Load(simLoadDumpFileName)
+				loadedDump := cache.Load(curCacheInstance, simLoadDumpFileName)
 
 				if cacheType == "aiRL" {
-					curCacheInstance.Loads(loadedDump, aiRLTraining, aiRLEpsilonStart, aiRLEpsilonDecay)
+					cache.Loads(curCacheInstance, loadedDump, aiRLTraining, aiRLEpsilonStart, aiRLEpsilonDecay)
 				} else {
-					curCacheInstance.Loads(loadedDump)
+					cache.Loads(curCacheInstance, loadedDump)
 				}
 
 				logger.Info("Cache dump loaded!")
 				if simColdStart {
 					if simColdStartNoStats {
-						curCacheInstance.Clear()
+						cache.Clear(curCacheInstance)
 						logger.Info("Cache Files deleted... COLD START with NO STATISTICS")
 					} else {
-						curCacheInstance.ClearFiles()
+						cache.ClearFiles(curCacheInstance)
 						logger.Info("Cache Files deleted... COLD START")
 					}
 				} else {
@@ -492,23 +495,23 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 					if windowCounter >= simStartFromWindow {
 						csvSimOutput.Write([]string{
 							fmt.Sprintf("%s", latestTime),
-							fmt.Sprintf("%f", curCacheInstance.Size()),
-							fmt.Sprintf("%0.2f", curCacheInstance.HitRate()),
-							fmt.Sprintf("%0.2f", curCacheInstance.HitOverMiss()),
-							fmt.Sprintf("%0.2f", curCacheInstance.WeightedHitRate()),
-							fmt.Sprintf("%f", curCacheInstance.DataWritten()),
-							fmt.Sprintf("%f", curCacheInstance.DataRead()),
-							fmt.Sprintf("%f", curCacheInstance.DataReadOnHit()),
-							fmt.Sprintf("%f", curCacheInstance.DataReadOnMiss()),
-							fmt.Sprintf("%f", curCacheInstance.DataDeleted()),
-							fmt.Sprintf("%f", curCacheInstance.CPUEff()),
-							fmt.Sprintf("%f", curCacheInstance.CPUHitEff()),
-							fmt.Sprintf("%f", curCacheInstance.CPUMissEff()),
-							fmt.Sprintf("%f", curCacheInstance.CPUEffUpperBound()),
-							fmt.Sprintf("%f", curCacheInstance.CPUEffLowerBound()),
+							fmt.Sprintf("%f", cache.Size(curCacheInstance)),
+							fmt.Sprintf("%0.2f", cache.HitRate(curCacheInstance)),
+							fmt.Sprintf("%0.2f", cache.HitOverMiss(curCacheInstance)),
+							fmt.Sprintf("%0.2f", cache.WeightedHitRate(curCacheInstance)),
+							fmt.Sprintf("%f", cache.DataWritten(curCacheInstance)),
+							fmt.Sprintf("%f", cache.DataRead(curCacheInstance)),
+							fmt.Sprintf("%f", cache.DataReadOnHit(curCacheInstance)),
+							fmt.Sprintf("%f", cache.DataReadOnMiss(curCacheInstance)),
+							fmt.Sprintf("%f", cache.DataDeleted(curCacheInstance)),
+							fmt.Sprintf("%f", cache.CPUEff(curCacheInstance)),
+							fmt.Sprintf("%f", cache.CPUHitEff(curCacheInstance)),
+							fmt.Sprintf("%f", cache.CPUMissEff(curCacheInstance)),
+							fmt.Sprintf("%f", cache.CPUEffUpperBound(curCacheInstance)),
+							fmt.Sprintf("%f", cache.CPUEffLowerBound(curCacheInstance)),
 						})
 					}
-					curCacheInstance.ClearHitMissStats()
+					cache.ClearHitMissStats(curCacheInstance)
 					// Update time window
 					latestTime = curTime
 					windowStepCounter++
@@ -595,11 +598,11 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 							zap.Uint32("step", windowStepCounter),
 							zap.Uint32("windowSize", simWindowSize),
 							zap.Int64("numDailyRecords", numDailyRecords),
-							zap.Float64("hitRate", curCacheInstance.HitRate()),
-							zap.Float64("capacity", curCacheInstance.Capacity()),
+							zap.Float64("hitRate", cache.HitRate(curCacheInstance)),
+							zap.Float64("capacity", cache.Capacity(curCacheInstance)),
 							zap.Float64("redirectedData", redirectedData),
 							zap.Int64("numRedirected", numRedirected),
-							zap.String("extra", curCacheInstance.ExtraStats()),
+							zap.String("extra", cache.ExtraStats(curCacheInstance)),
 							zap.Float64("it/s", float64(numIterations)/time.Now().Sub(start).Seconds()),
 						)
 						totIterations += numIterations
@@ -658,7 +661,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			}
 			jsonBytes, errMarshal := json.Marshal(cache.SimulationStats{
 				TimeElapsed:           fmt.Sprintf("%02d:%02d:%02d", elTH, elTM, elTS),
-				Extra:                 curCacheInstance.ExtraStats(),
+				Extra:                 cache.ExtraStats(curCacheInstance),
 				TotNumRecords:         totNumRecords,
 				TotFilteredRecords:    numFilteredRecords,
 				TotJumpedRecords:      numJumpedRecords,
@@ -673,15 +676,15 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			statFile.Write(jsonBytes)
 
 			if simDump {
-				curCacheInstance.Dump(simDumpFileName, simDumpFilesAndStats)
+				cache.Dump(curCacheInstance, simDumpFileName, simDumpFilesAndStats)
 			}
 
 			if cacheType == "aiRL" {
 				// Save tables
 				logger.Info("Save addition table...")
-				writeQTable(resultAdditionQTableName, curCacheInstance.ExtraOutput("additionQtable"))
+				writeQTable(resultAdditionQTableName, cache.ExtraOutput(curCacheInstance, "additionQtable"))
 				logger.Info("Save eviction table...")
-				writeQTable(resultEvictionQTableName, curCacheInstance.ExtraOutput("evictionQtable"))
+				writeQTable(resultEvictionQTableName, cache.ExtraOutput(curCacheInstance, "evictionQtable"))
 			}
 
 			logger.Info("Simulation DONE!")
@@ -757,7 +760,7 @@ func genCache(cacheType string) cache.Cache {
 		cacheInstance = &cache.SimpleCache{
 			MaxSize: cacheSizeMegabytes,
 		}
-		cacheInstance.Init()
+		cache.Init(cacheInstance)
 	case "lfu":
 		logger.Info("Create LFU Cache",
 			zap.Float64("cacheSize", cacheSizeMegabytes),
@@ -843,7 +846,7 @@ func genCache(cacheType string) cache.Cache {
 			},
 			SelFunctionType: selFunctionType,
 		}
-		cacheInstance.Init()
+		cache.Init(cacheInstance)
 	default:
 		fmt.Printf("ERR: '%s' is not a valid cache type...\n", cacheType)
 		os.Exit(-2)

@@ -87,16 +87,16 @@ type Cache interface {
 // GetSimCacheStatus create a cache status message
 func GetSimCacheStatus(cache Cache) *pb.SimCacheStatus {
 	return &pb.SimCacheStatus{
-		HitRate:         cache.HitRate(),
-		WeightedHitRate: cache.WeightedHitRate(),
-		HitOverMiss:     cache.HitOverMiss(),
-		Size:            cache.Size(),
-		Capacity:        cache.Capacity(),
-		DataWritten:     cache.DataWritten(),
-		DataRead:        cache.DataRead(),
-		DataReadOnHit:   cache.DataReadOnHit(),
-		DataReadOnMiss:  cache.DataReadOnMiss(),
-		DataDeleted:     cache.DataDeleted(),
+		HitRate:         HitRate(cache),
+		WeightedHitRate: WeightedHitRate(cache),
+		HitOverMiss:     HitOverMiss(cache),
+		Size:            Size(cache),
+		Capacity:        Capacity(cache),
+		DataWritten:     DataWritten(cache),
+		DataRead:        DataRead(cache),
+		DataReadOnHit:   DataReadOnHit(cache),
+		DataReadOnMiss:  DataReadOnMiss(cache),
+		DataDeleted:     DataDeleted(cache),
 	}
 }
 
@@ -141,13 +141,188 @@ func GetFile(bandwidthManager bool, cache Cache, vars ...interface{}) (bool, boo
 		cacheRequest.Size = vars[1].(float64)
 	}
 
-	hit := cache.Check(cacheRequest.Filename)
-	if bandwidthManager && !hit && cache.BandwidthUsage() >= 95.0 {
+	hit := Check(cache, cacheRequest.Filename)
+	if bandwidthManager && !hit && BandwidthUsage(cache) >= 95.0 {
 		return false, true
 	}
-	fileStats := cache.BeforeRequest(&cacheRequest, hit)
-	added := cache.UpdatePolicy(&cacheRequest, fileStats, hit)
-	cache.AfterRequest(&cacheRequest, hit, added)
-	cache.CheckWatermark()
+	fileStats := BeforeRequest(cache, &cacheRequest, hit)
+	added := UpdatePolicy(cache, &cacheRequest, fileStats, hit)
+	AfterRequest(cache, &cacheRequest, hit, added)
+	CheckWatermark(cache)
 	return added, false
+}
+
+// Init initializes the cache instance
+func Init(cache Cache, args ...interface{}) interface{} {
+	return cache.Init(args...)
+}
+
+// HitRate of the current cache instance
+func HitRate(cache Cache) float64 {
+	return cache.HitRate()
+}
+
+// HitOverMiss of the current cache instance
+func HitOverMiss(cache Cache) float64 {
+	return cache.HitOverMiss()
+}
+
+// WeightedHitRate of the current cache instance
+func WeightedHitRate(cache Cache) float64 {
+	return cache.WeightedHitRate()
+}
+
+// Size of the current cache instance
+func Size(cache Cache) float64 {
+	return cache.Size()
+}
+
+// Capacity of the current cache instance
+func Capacity(cache Cache) float64 {
+	return cache.Capacity()
+}
+
+// DataWritten of the current cache instance
+func DataWritten(cache Cache) float64 {
+	return cache.DataWritten()
+}
+
+// DataRead of the current cache instance
+func DataRead(cache Cache) float64 {
+	return cache.DataRead()
+}
+
+// DataReadOnHit of the current cache instance
+func DataReadOnHit(cache Cache) float64 {
+	return cache.DataReadOnHit()
+}
+
+// DataReadOnMiss of the current cache instance
+func DataReadOnMiss(cache Cache) float64 {
+	return cache.DataReadOnMiss()
+}
+
+// DataDeleted of the current cache instance
+func DataDeleted(cache Cache) float64 {
+	return cache.DataDeleted()
+}
+
+// CPUEff of the current cache instance
+func CPUEff(cache Cache) float64 {
+	return cache.CPUEff()
+}
+
+// CPUHitEff of the current cache instance
+func CPUHitEff(cache Cache) float64 {
+	return cache.CPUHitEff()
+}
+
+// CPUMissEff of the current cache instance
+func CPUMissEff(cache Cache) float64 {
+	return cache.CPUMissEff()
+}
+
+// CPUEffUpperBound of the current cache instance
+func CPUEffUpperBound(cache Cache) float64 {
+	return cache.CPUEffUpperBound()
+}
+
+// CPUEffLowerBound of the current cache instance
+func CPUEffLowerBound(cache Cache) float64 {
+	return cache.CPUEffLowerBound()
+}
+
+// MeanSize of the current cache instance
+func MeanSize(cache Cache) float64 {
+	return cache.MeanSize()
+}
+
+// MeanFrequency of the current cache instance
+func MeanFrequency(cache Cache) float64 {
+	return cache.MeanFrequency()
+}
+
+// MeanRecency of the current cache instance
+func MeanRecency(cache Cache) float64 {
+	return cache.MeanRecency()
+}
+
+// BandwidthUsage of the current cache instance
+func BandwidthUsage(cache Cache) float64 {
+	return cache.BandwidthUsage()
+}
+
+// ExtraStats return the extra statistics of the current cache instance
+func ExtraStats(cache Cache) string {
+	return cache.ExtraStats()
+}
+
+// ExtraOutput return the extra info of the current cache instance
+func ExtraOutput(cache Cache, key string) string {
+	return cache.ExtraOutput(key)
+}
+
+// SetRegion set the region for the simulation of the current cache instance
+func SetRegion(cache Cache, region string) {
+	cache.SetRegion(region)
+}
+
+// SetBandwidth set the bandwidth for the simulation  of the current cache instance
+func SetBandwidth(cache Cache, bandSize float64) {
+	cache.SetBandwidth(bandSize)
+}
+
+// Dump the current cache instance
+func Dump(cache Cache, filename string, fileAndStats bool) {
+	cache.Dump(filename, fileAndStats)
+}
+
+// Loads a cache instance
+func Loads(cache Cache, data [][]byte, args ...interface{}) {
+	cache.Loads(data, args...)
+}
+
+// Load a current cache instance
+func Load(cache Cache, filename string) [][]byte {
+	return cache.Load(filename)
+}
+
+// Clear the current cache instance
+func Clear(cache Cache) {
+	cache.Clear()
+}
+
+// ClearFiles the current cache instance
+func ClearFiles(cache Cache) {
+	cache.ClearFiles()
+}
+
+// ClearHitMissStats the current cache instance
+func ClearHitMissStats(cache Cache) {
+	cache.ClearHitMissStats()
+}
+
+// Check the current cache instance
+func Check(cache Cache, filename int64) bool {
+	return cache.Check(filename)
+}
+
+// CheckWatermark of the current cache instance
+func CheckWatermark(cache Cache) bool {
+	return cache.CheckWatermark()
+}
+
+// BeforeRequest of the current cache instance
+func BeforeRequest(cache Cache, request *Request, hit bool) *FileStats {
+	return cache.BeforeRequest(request, hit)
+}
+
+// UpdatePolicy of the current cache instance
+func UpdatePolicy(cache Cache, request *Request, fileStats *FileStats, hit bool) bool {
+	return cache.UpdatePolicy(request, fileStats, hit)
+}
+
+// AfterRequest of the current cache instance
+func AfterRequest(cache Cache, request *Request, hit bool, added bool) {
+	cache.AfterRequest(request, hit, added)
 }
