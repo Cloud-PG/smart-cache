@@ -136,7 +136,7 @@ def main():
     axes_bars.set_yticklabels(
         state_labels,
         fontdict={
-            'fontsize': 16,
+            # 'fontsize': 16,
             'verticalalignment': 'bottom'
         },
     )
