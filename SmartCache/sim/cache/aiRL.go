@@ -398,14 +398,14 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			// }
 
 			// if cache.dataReadOnHit <= (cache.dataReadOnMiss*0.3) || cache.dataWritten >= (cache.dataReadOnHit*0.3) {
-			if cache.dataWritten/cache.dataRead >= 0.75 {
+			if cache.dataWritten/cache.dataRead >= 0.7 {
 				// cache.qEvictionPrevState.GoodStrikes = 0
 				// cache.qEvictionPrevState.BadStrikes++
 				// reward -= float64(cache.qEvictionPrevState.BadStrikes)
 				reward -= request.Size / 1024.
 				// reward -= 1.0
 			}
-			if cache.dataReadOnHit/cache.dataRead < 0.25 {
+			if cache.dataReadOnHit/cache.dataRead < 0.3 {
 				// cache.qEvictionPrevState.GoodStrikes = 0
 				// cache.qEvictionPrevState.BadStrikes++
 				// reward -= float64(cache.qEvictionPrevState.BadStrikes)
@@ -444,11 +444,14 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				logger.Debug("Learning MISS branch", zap.String("curState", curPrevChoice.State), zap.Int("curAction", int(curPrevChoice.Action)))
 
 				if inPrevStates { // Some action are not taken randomly
-					reward := 1.
+					reward := 0.
 					// reward := request.Size
 
-					if cache.dataReadOnMiss/cache.dataRead > 0.75 || cache.dataWritten/cache.dataRead > 0.33 {
-						reward = -reward
+					if cache.dataReadOnHit/cache.dataRead < 0.25 {
+						reward -= request.Size / 1024.
+					}
+					if reward == 0. {
+						reward += request.Size / 1024.
 					}
 
 					// Update table
@@ -478,11 +481,14 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				//             QLearn - Take the action NOT STORE
 				// -------------------------------------------------------------
 				if curAction == qlearn.ActionNotStore {
-					reward := 1.
+					reward := 0.
 					// reward := request.Size
 
-					if cache.dataReadOnMiss/cache.bandwidth < 0.75 {
-						reward = -reward
+					if cache.dataReadOnMiss/cache.bandwidth < 0.75 || cache.dataWritten/cache.dataRead < 0.1 {
+						reward -= request.Size / 1024.
+					}
+					if reward == 0. {
+						reward += request.Size / 1024.
 					}
 
 					// Update table
@@ -521,11 +527,14 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				//               QLearn - Take the action STORE
 				// -------------------------------------------------------------
 				if curAction == qlearn.ActionStore {
-					reward := 1.
+					reward := 0.
 					// reward := request.Size
 
-					if cache.dataReadOnMiss/cache.bandwidth >= 0.75 {
-						reward = -reward
+					if cache.dataReadOnMiss/cache.bandwidth > 0.75 || cache.dataWritten/cache.dataRead > 0.25 {
+						reward -= request.Size / 1024.
+					}
+					if reward == 0. {
+						reward += request.Size / 1024.
 					}
 					// Update table
 					cache.additionTable.Update(curState, curAction, reward)
@@ -554,15 +563,18 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				logger.Debug("Learning HIT branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
 
 				if inPrevStates { // Some action are not taken randomly
-					reward := 1.
+					reward := 0.
 					// reward := request.Size
 
 					// OLD POLICY
 					// if cache.dataReadOnHit < (cache.dataReadOnMiss*2.) || cache.dailyReadOnHit < cache.dailyReadOnMisss*2.) {
 					// 	reward = -reward
 					// }
-					if cache.dataReadOnHit/cache.dataRead < 0.25 || cache.dataWritten/cache.dataRead > 0.33 {
-						reward = -reward
+					if cache.dataReadOnHit/cache.dataRead < 0.3 || cache.dataWritten/cache.dataRead > 0.75 {
+						reward -= request.Size / 1024.
+					}
+					if reward == 0. {
+						reward += request.Size / 1024.
 					}
 
 					// Update table
