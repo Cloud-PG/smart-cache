@@ -143,7 +143,7 @@ def main():
                         help='The cache bandwidth in Gbits [DEFAULT: 10.0]')
     parser.add_argument('--cache-bandwidth-redirect', type='bool',
                         default=False,
-                        help='Redirect files when cache bandwidth is over 95% [DEFAULT: False]')
+                        help='Redirect files when cache bandwidth is over 95 percent [DEFAULT: False]')
     parser.add_argument('--weight-function', type=str,
                         choices=[
                             "FuncAdditive",
@@ -266,13 +266,13 @@ def main():
                         help='Use eviction extended feature map [DEFAULT: False]')
     parser.add_argument('--init-epsilon', type=float,
                         default=1.0,
-                        help="The initial value of Epsilon in the RL approach [DEFAULT: 1.0]")
+                        help='The initial value of Epsilon in the RL approach [DEFAULT: 1.0]')
     parser.add_argument('--training-phase', type='bool',
                         default=True,
-                        help="Indicates if the training phase is enabled [DEFAULT: True]")
+                        help='Indicates if the training phase is enabled [DEFAULT: True]')
     parser.add_argument('--decay-rate-epsilon', type=float,
                         default=0.0000042,
-                        help="The decay rate of Epsilon in the RL approach [DEFAULT: 0.0000002]")
+                        help='The decay rate of Epsilon in the RL approach [DEFAULT: 0.0000002]')
     parser.add_argument('--dump-files-and-stats', type='bool',
                         default=True,
                         help='Indicates if dump cache files and stats [DEFAULT: True]')
