@@ -247,7 +247,7 @@ func (cache *AIRL) Loads(inputString [][]byte, vars ...interface{}) {
 
 }
 
-func (cache *AIRL) getState(request *Request, fileStats *FileStats, featureOrder []string, featureMap map[string]featuremap.Obj) string {
+func (cache *AIRL) getState(request *Request, fileStats *FileStats, featureOrder []string, featureMap map[string]featuremap.Obj, nextState bool) string {
 
 	cacheCapacity := float64(cache.Capacity())
 	deltaHighWatermark := float64(cache.HighWaterMark) - cacheCapacity
@@ -260,7 +260,11 @@ func (cache *AIRL) getState(request *Request, fileStats *FileStats, featureOrder
 		case "size":
 			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(request.Size))
 		case "numReq":
-			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(float64(fileStats.Frequency)))
+			if nextState {
+				cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(float64(fileStats.Frequency+1)))
+			} else {
+				cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(float64(fileStats.Frequency)))
+			}
 		case "cacheUsage":
 			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(cacheCapacity))
 		case "dataType":
@@ -268,7 +272,17 @@ func (cache *AIRL) getState(request *Request, fileStats *FileStats, featureOrder
 		case "fileType":
 			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(request.FileType))
 		case "deltaLastRequest":
-			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(float64(fileStats.DeltaLastRequest)))
+			if nextState {
+				curVal := float64(fileStats.DeltaLastRequest)
+				diffPerc := curVal * 0.1
+				if cache.additionTable.GetRandomFloat() > 0.5 {
+					cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(curVal+diffPerc))
+				} else {
+					cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(curVal-diffPerc))
+				}
+			} else {
+				cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(float64(fileStats.DeltaLastRequest)))
+			}
 		case "deltaHighWatermark":
 			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(deltaHighWatermark))
 		case "meanSize":
@@ -349,6 +363,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 		added             = false
 		curAction         qlearn.ActionType
 		curState          string
+		newState          string
 		requestedFileSize = request.Size
 	)
 
@@ -422,7 +437,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			}
 
 			// Update table
-			cache.evictionTable.Update(cache.qEvictionPrevState.State, cache.qEvictionPrevState.Action, reward)
+			cache.evictionTable.Update(cache.qEvictionPrevState.State, cache.qEvictionPrevState.Action, reward, "")
 			// Update epsilon
 			cache.evictionTable.UpdateEpsilon()
 		}
@@ -432,7 +447,9 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 		logger.Debug("ADDITION TABLE OK")
 
-		curState = cache.getState(request, fileStats, cache.additionFeatureMapOrder, cache.additionFeatureMap)
+		curState = cache.getState(request, fileStats, cache.additionFeatureMapOrder, cache.additionFeatureMap, false)
+		// newState = cache.getState(request, fileStats, cache.additionFeatureMapOrder, cache.additionFeatureMap, true)
+		newState = ""
 		// Check training
 		if cache.additionTable.TrainingEnabled {
 
@@ -447,7 +464,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					reward := 0.
 					// reward := request.Size
 
-					if cache.dataReadOnHit/cache.dataRead < 0.25 {
+					if cache.dataReadOnHit/cache.dataRead < 0.3 {
 						reward -= request.Size / 1024.
 					}
 					if reward == 0. {
@@ -455,7 +472,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					}
 
 					// Update table
-					cache.additionTable.Update(curPrevChoice.State, curPrevChoice.Action, reward)
+					cache.additionTable.Update(curPrevChoice.State, curPrevChoice.Action, reward, newState)
 				}
 				// -------------------------------------------------------------
 
@@ -484,7 +501,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					reward := 0.
 					// reward := request.Size
 
-					if cache.dataReadOnMiss/cache.bandwidth < 0.75 || cache.dataWritten/cache.dataRead < 0.1 {
+					if cache.dataReadOnMiss/cache.bandwidth < 0.5 || cache.dataWritten/cache.dataRead < 0.1 {
 						reward -= request.Size / 1024.
 					}
 					if reward == 0. {
@@ -492,7 +509,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					}
 
 					// Update table
-					cache.additionTable.Update(curState, curAction, reward)
+					cache.additionTable.Update(curState, curAction, reward, newState)
 
 					cache.qAdditionPrevStates[request.Filename] = prevChoice{
 						State:  curState,
@@ -530,14 +547,14 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					reward := 0.
 					// reward := request.Size
 
-					if cache.dataReadOnMiss/cache.bandwidth > 0.75 || cache.dataWritten/cache.dataRead > 0.25 {
+					if cache.dataReadOnMiss/cache.bandwidth > 0.75 || cache.dataWritten/cache.dataRead > 0.5 {
 						reward -= request.Size / 1024.
 					}
 					if reward == 0. {
 						reward += request.Size / 1024.
 					}
 					// Update table
-					cache.additionTable.Update(curState, curAction, reward)
+					cache.additionTable.Update(curState, curAction, reward, newState)
 
 					cache.qAdditionPrevStates[request.Filename] = prevChoice{
 						State:  curState,
@@ -570,7 +587,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					// if cache.dataReadOnHit < (cache.dataReadOnMiss*2.) || cache.dailyReadOnHit < cache.dailyReadOnMisss*2.) {
 					// 	reward = -reward
 					// }
-					if cache.dataReadOnHit/cache.dataRead < 0.3 || cache.dataWritten/cache.dataRead > 0.75 {
+					if cache.dataReadOnHit/cache.dataRead < 0.3 {
 						reward -= request.Size / 1024.
 					}
 					if reward == 0. {
@@ -578,7 +595,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					}
 
 					// Update table
-					cache.additionTable.Update(curPrevChoice.State, curPrevChoice.Action, reward)
+					cache.additionTable.Update(curPrevChoice.State, curPrevChoice.Action, reward, newState)
 				}
 			}
 
@@ -594,7 +611,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				// ##### MISS branch  #####
 				// ########################
 
-				curState = cache.getState(request, fileStats, cache.additionFeatureMapOrder, cache.additionFeatureMap)
+				curState = cache.getState(request, fileStats, cache.additionFeatureMapOrder, cache.additionFeatureMap, false)
 				curAction = cache.additionTable.GetBestAction(curState)
 				logger.Debug("Normal MISS branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
 				// ----------------------------------
@@ -717,7 +734,7 @@ func (cache *AIRL) Free(amount float64, percentage bool) float64 {
 
 	if sizeToDelete > 0. {
 		if cache.evictionTableOK {
-			curState = cache.getState(nil, nil, cache.evictionFeatureMapOrder, cache.evictionFeatureMap)
+			curState = cache.getState(nil, nil, cache.evictionFeatureMapOrder, cache.evictionFeatureMap, false)
 			// Check training
 			if cache.evictionTable.TrainingEnabled {
 				// Check learning phase or not

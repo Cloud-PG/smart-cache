@@ -309,16 +309,19 @@ func (table QTable) GetActionIndex(action ActionType) int {
 }
 
 // Update change the Q-table values of the given action
-func (table *QTable) Update(state string, action ActionType, reward float64) {
+func (table *QTable) Update(state string, action ActionType, reward float64, newState string) {
 	curStateValue := table.GetAction(state, action)
 	actionIdx := table.GetActionIndex(action)
+	if newState == "" {
+		newState = state
+	}
 	switch table.UpdateFunction {
 	case RLSARSA:
 		// TODO: fix next state with a proper one, not the maximum of the same state
-		nextStateIdx := getArgMax(table.States[state]) // The next state is the same
+		nextStateIdx := getArgMax(table.States[newState]) // The next state is the same
 		table.States[state][actionIdx] = (1.0-table.LearningRate)*curStateValue + table.LearningRate*(reward+table.DiscountFactor*table.States[state][nextStateIdx])
 	case RLQLearning:
-		nextStateIdx := getArgMax(table.States[state]) // The next state is the max value
+		nextStateIdx := getArgMax(table.States[newState]) // The next state is the max value
 		table.States[state][actionIdx] = curStateValue + table.LearningRate*(reward+table.DiscountFactor*table.States[state][nextStateIdx]-curStateValue)
 		// fmt.Printf(
 		// 	"OLD VALUE %0.2f | NEW VALUE %0.2f | CUR REW %0.2f\n",
