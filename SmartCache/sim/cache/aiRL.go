@@ -448,6 +448,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 		logger.Debug("ADDITION TABLE OK")
 
 		curState = cache.getState(request, fileStats, cache.additionFeatureMapOrder, cache.additionFeatureMap, false)
+		// Guess the new state
 		// newState = cache.getState(request, fileStats, cache.additionFeatureMapOrder, cache.additionFeatureMap, true)
 		newState = ""
 		// Check training
