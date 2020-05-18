@@ -112,6 +112,8 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False,
                     if part not in cur_section:
                         cur_section[part] = {}
                     cur_section = cur_section[part]
+                if not section:
+                    continue
                 last_section = section.pop()
                 file_path = path.join(root, file_)
                 df = pd.read_csv(
