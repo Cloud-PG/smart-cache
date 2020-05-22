@@ -449,8 +449,10 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 		curState = cache.getState(request, fileStats, cache.additionFeatureMapOrder, cache.additionFeatureMap, false)
 		// Guess the new state
-		// newState = cache.getState(request, fileStats, cache.additionFeatureMapOrder, cache.additionFeatureMap, true)
-		newState = ""
+		newState = cache.getState(request, fileStats, cache.additionFeatureMapOrder, cache.additionFeatureMap, true)
+
+		// newState = ""  // FOR LOD AND ECML
+
 		// Check training
 		if cache.additionTable.TrainingEnabled {
 
@@ -576,28 +578,26 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 				// -------------------------------------------------------------
 				// QLearn - hit reward on best action
-				curPrevChoice, inPrevStates := cache.qAdditionPrevStates[request.Filename]
+				curPrevChoice := cache.qAdditionPrevStates[request.Filename]
 
 				logger.Debug("Learning HIT branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
 
-				if inPrevStates { // Some action are not taken randomly
-					reward := 0.
-					// reward := request.Size
+				reward := 0.
+				// reward := request.Size
 
-					// OLD POLICY
-					// if cache.dataReadOnHit < (cache.dataReadOnMiss*2.) || cache.dailyReadOnHit < cache.dailyReadOnMisss*2.) {
-					// 	reward = -reward
-					// }
-					if cache.dataReadOnHit/cache.dataRead < 0.3 {
-						reward -= request.Size / 1024.
-					}
-					if reward == 0. {
-						reward += request.Size / 1024.
-					}
-
-					// Update table
-					cache.additionTable.Update(curPrevChoice.State, curPrevChoice.Action, reward, newState)
+				// OLD POLICY
+				// if cache.dataReadOnHit < (cache.dataReadOnMiss*2.) || cache.dailyReadOnHit < cache.dailyReadOnMisss*2.) {
+				// 	reward = -reward
+				// }
+				if cache.dataReadOnHit/cache.dataRead < 0.3 {
+					reward -= request.Size / 1024.
 				}
+				if reward == 0. {
+					reward += request.Size / 1024.
+				}
+
+				// Update table
+				cache.additionTable.Update(curPrevChoice.State, curPrevChoice.Action, reward, newState)
 			}
 
 			// Update epsilon
