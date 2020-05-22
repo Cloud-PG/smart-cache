@@ -498,6 +498,8 @@ def plot_measure(tools: list,
                         values['read on hit data'] - values['written data']
                     ) / values['read data']
                 ) * 100.
+                # Old throughput
+                # points = (values['read on hit data'] / values['written data']) * 100.
             elif target == "throughputVs":
                 for inner_cache_name, inner_values in filter_results(
                     results, run_type, filters
