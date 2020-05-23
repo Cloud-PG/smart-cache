@@ -42,6 +42,8 @@ def main():
     args, _ = parser.parse_known_args()
 
     init()
+    
+    # TODO: convert all plots to plotly
 
     if args.path is not None:
         df = loaders.csv_data(
