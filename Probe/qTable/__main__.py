@@ -28,14 +28,9 @@ def main():
     state_features = [
         column for column in df.columns if column.find("Action") == -1
     ]
-    action_counters = [0 for _ in range(len(actions))]
 
     df = df.sort_values(by=sort_by)
     df.reset_index(drop=True, inplace=True)
-
-    print("-"*80)
-    print(" | ".join(sort_by+['Action']))
-    print("-"*80)
 
     df['best'] = df[actions].idxmax(axis=1)
     df['explored'] = df[actions].apply(
