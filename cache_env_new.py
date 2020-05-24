@@ -72,8 +72,9 @@ class Stats(object):
     def __init__(self):
         self._files = {}
     
+    '''
     def get_or_set_without_updating_stats_list(self, filename: str, size: float, datatype: int, request: int) -> 'FileStats':
-        '''return filestat for that file: if no stat for that file is in list, creates a new stat and adds it to stats, otherwise it simply gets it '''
+        return filestat for that file: if no stat for that file is in list, creates a new stat and adds it to stats, otherwise it simply gets it
         stats = None
         if filename not in self._files:
             stats = FileStats(size, datatype)
@@ -83,6 +84,7 @@ class Stats(object):
             # stats._datatype = datatype
             # stats._last_request = request
         return stats
+    '''
 
     def get_or_set(self, filename: str, size: float, datatype: int, request: int) -> 'FileStats':
         '''return filestat for that file: if no stat for that file is in list, creates a new stat and adds it to stats, otherwise it simply gets it '''
@@ -93,7 +95,7 @@ class Stats(object):
             self._files[filename] = stats
         else:
             stats = self._files[filename]
-            stats._last_request = request
+            #stats._last_request = request
         return stats
 
 class cache(object):
@@ -247,7 +249,7 @@ class WindowElement(object):
 class env:
     ''' object that emulates cache mechanism '''
 
-    def __init__(self, start_month, end_month, directory, out_directory, out_name, time_span, purge_delta, output_activation, cache_size):
+    def __init__(self, start_month, end_month, directory, out_directory, out_name, time_span_add, time_span_evict, purge_delta, output_activation, cache_size, size_reduction):
         # print('STO USANDO LA VERSIONE PIU AGGIORNATA')
         # set period
         self._startMonth = start_month
@@ -255,12 +257,15 @@ class env:
         self._directory = directory
         self._out_directory = out_directory
         self._out_name = out_name
-        self._time_span = time_span 
+        #self._time_span = time_span 
+        self._time_span_add = time_span_add 
+        self._time_span_evict = time_span_evict 
         self._purge_delta = purge_delta
         if output_activation == 'sigmoid':
             self._output_activation = 0
         else:
             self._output_activation = 1
+        self._size_reduction = size_reduction
 
         start = datetime(2018, 1, 1)
         delta = timedelta(days=1)
@@ -289,7 +294,7 @@ class env:
         # create cache
         self.adding_or_evicting = 0
         self._cache = cache(size = cache_size)
-        self.time_span = time_span
+        #self.time_span = time_span
         self.size_tot = 0
 
         # dictonaries containing actions waiting to be rewarded and then added to memory
@@ -323,8 +328,12 @@ class env:
         filename = self.df.Filename[self.curRequest]
         size = self.df.Size[self.curRequest]
         datatype = self.df.DataType[self.curRequest]
-        filestats = self._cache._stats.get_or_set_without_updating_stats_list(
-            filename, size, datatype, self.curRequest_from_start)
+        #filestats = self._cache._stats.get_or_set_without_updating_stats_list(
+            #filename, size, datatype, self.curRequest_from_start)
+        
+        filestats = self._cache.before_request(
+            filename, hit, size, datatype, self.curRequest_from_start)
+        
         self.curValues = np.array([
             filestats._size,
             filestats.tot_requests,
@@ -406,7 +415,8 @@ class env:
         file_ = sorted(os.listdir(self._directory))[i]
         with gzip.open(self._directory + '/' + str(file_)) as f:
             df_ = pd.read_csv(f)
-            df_['Size'] = df_['Size']/1048576.
+            if self._size_reduction==True:
+                df_['Size'] = df_['Size']/1048576.
             df_ = df_[df_['JobSuccess'] == True]
             df_ = df_[(df_['DataType'] == 0) | (df_['DataType'] == 1)]
             df_.reset_index(drop=True, inplace=True)
@@ -415,7 +425,7 @@ class env:
         print()
         print(file_)
     
-    def update_windows_getting_eventual_rewards(self, adding_or_evicting, curFilename, curValues, nextValues, action):
+    def update_windows_getting_eventual_rewards_waiting(self, adding_or_evicting, curFilename, curValues, nextValues, action):
         '''
             - if you are in adding mode, this function updates counters of adding and evicting windows, then
         searches for this filename in both windows: if it finds it, gives reward and removes it from window. 
@@ -423,6 +433,76 @@ class env:
             - if you are in evicting mode, this function simply adds this values to eviciton window which should be
             empty when eviction starts
         '''
+
+        if adding_or_evicting == 0:
+            size = curValues[0]
+            if self._output_activation == 1:
+                coeff = size
+            else:
+                if size <= it_liminf_size:
+                    coeff = 0 
+                elif size >= it_limsup_size:
+                    coeff = 1 
+                else:
+                    coeff = (size - it_liminf_size)/it_delta_size
+            ############################ GIVING REWARD TO ADDITION IF IT IS IN WINDOW AND ADD TO WINDOW ########################################################################
+            if curFilename in self._request_window_elements:  # if is in queue                
+                obj = self._request_window_elements[curFilename]
+
+                if obj.counter >= self._time_span_add:
+                    if obj.action == 0:
+                        obj.reward = - 1 * coeff
+                    else:
+                        obj.reward = + 1 * coeff
+                else:  # is not invalidated yet
+                    if obj.action == 0:
+                        obj.reward = + 1 * coeff
+                    else:
+                        obj.reward = - 1 * coeff
+
+                to_add = obj.concat()
+                self.add_memory_vector = np.vstack(
+                    (self.add_memory_vector, to_add))
+
+            for obj in self._request_window_elements.values():  # increment counters
+                obj.counter += 1
+            for item in self._eviction_window_elements.values():  # increment counters
+                for obj in item:
+                    obj.counter += 1
+
+            self._request_window_elements[curFilename] = WindowElement(
+                1, curValues, 0, action, nextValues
+            )
+            
+            ######### GIVING REWARD TO EVICTION AND REMOVING FROM WINDOW ################################################################################################
+            if curFilename in self._eviction_window_elements:  # if is in queue
+                for obj in self._eviction_window_elements[curFilename]: 
+                    if obj.counter >= self._time_span_evict:   # is invalidated
+                        if obj.action == 0:
+                            obj.reward = - 1 * coeff
+                        else:
+                            obj.reward = + 1 * coeff
+                    else:                               # is not invalidated yet
+                        if obj.action == 0:
+                            obj.reward = + 1 * coeff
+                        else:           
+                            obj.reward = - 1 * coeff
+
+                    to_add = obj.concat()
+                    self.evict_memory_vector = np.vstack(
+                        (self.evict_memory_vector, to_add))
+
+                del self._eviction_window_elements[curFilename]            
+            
+        elif adding_or_evicting == 1:
+            to_add = WindowElement(1, curValues, 0, action, nextValues)
+            if curFilename not in self._eviction_window_elements: 
+                self._eviction_window_elements[curFilename] = [to_add]
+            else:
+                self._eviction_window_elements[curFilename].append(to_add)
+    '''
+    def update_windows_getting_eventual_rewards(self, adding_or_evicting, curFilename, curValues, nextValues, action):
+
 
         if adding_or_evicting == 0:
             size = curValues[0]
@@ -487,9 +567,11 @@ class env:
             self._eviction_window_elements[curFilename] = WindowElement(
                 1, curValues, 0, action, nextValues
             )
+    '''
 
+    '''
     def clear_remaining_evict_window(self):
-        '''gives reward to every action in evict window and deletes it'''
+
 
         for obj in self._eviction_window_elements.values():
             size = obj.cur_values[0]
@@ -511,9 +593,64 @@ class env:
                 (self.evict_memory_vector, to_add))
 
         self._eviction_window_elements.clear()
+    '''
 
-    def look_for_invalidated_add(self):
+    def look_for_invalidated_add_evict(self):
         ''' looks for invalidated actions in add window, gives rewards and deletes them'''
+        toDelete = set()
+        for curFilename, obj in self._request_window_elements.items():
+            size = obj.cur_values[0]
+            if self._output_activation == 1:
+                coeff = size
+            else:
+                if size <= it_liminf_size:
+                    coeff = 0 
+                elif size >= it_limsup_size:
+                    coeff = 1 
+                else:
+                    coeff = (size - it_liminf_size)/it_delta_size
+            if obj.counter > self._time_span_add:
+                if obj.action == 0:
+                    obj.reward = - 1 * coeff
+                else:               
+                    obj.reward = + 1 * coeff
+                to_add = obj.concat()
+                self.add_memory_vector = np.vstack(
+                    (self.add_memory_vector, to_add))
+                toDelete |= set([curFilename,])
+
+        for filename in toDelete:
+            del self._request_window_elements[filename]
+            
+        toDelete = set()
+        for curFilename, item in self._eviction_window_elements.items():
+            for obj in item:
+                size = obj.cur_values[0]
+                if self._output_activation == 1:
+                    coeff = size
+                else:
+                    if size <= it_liminf_size:
+                        coeff = 0 
+                    elif size >= it_limsup_size:
+                        coeff = 1 
+                    else:
+                        coeff = (size - it_liminf_size)/it_delta_size
+                if obj.counter > self._time_span_evict:
+                    if obj.action == 0:
+                        obj.reward = - 1 * coeff
+                    else:               
+                        obj.reward = + 1 * coeff
+                    to_add = obj.concat()
+                    self.evict_memory_vector = np.vstack(
+                        (self.evict_memory_vector, to_add))
+                    toDelete |= set([curFilename,])
+
+        for filename in toDelete:
+            del self._eviction_window_elements[filename]
+    
+    '''
+    def look_for_invalidated_add(self):
+
         toDelete = set()
         for curFilename, obj in self._request_window_elements.items():
             size = obj.cur_values[0]
@@ -538,6 +675,7 @@ class env:
 
         for filename in toDelete:
             del self._request_window_elements[filename]
+    '''
 
     def get_next_request_values(self):    
         ''' 
@@ -557,9 +695,12 @@ class env:
         hit = self._cache.check(filename)
         size = self.df.Size[self.curRequest]
         datatype = self.df.DataType[self.curRequest]
-        filestats = self._cache._stats.get_or_set_without_updating_stats_list(
-            filename, size, datatype, self.curRequest_from_start)
+        #filestats = self._cache._stats.get_or_set_without_updating_stats_list(
+            #filename, size, datatype, self.curRequest_from_start)
 
+        filestats = self._cache.before_request(
+            filename, hit, size, datatype, self.curRequest_from_start)
+        
         self.curValues = np.array([
             filestats._size,
             filestats.tot_requests,
@@ -614,9 +755,11 @@ class env:
         filename = self.df.Filename[self.curRequest]
         size = self.df.Size[self.curRequest]
         datatype = self.df.DataType[self.curRequest]
-        filestats = self._cache.before_request(
-            filename, hit, size, datatype, self.curRequest_from_start)
         
+        #filestats = self._cache.before_request(
+            #filename, hit, size, datatype, self.curRequest_from_start)
+        filestats = self._cache._stats._files[filename]
+
         filestats._last_request = self.curRequest_from_start
         added = self._cache.update_policy(filename, filestats, hit, action)
         self._cache.after_request(filestats, hit, added)
