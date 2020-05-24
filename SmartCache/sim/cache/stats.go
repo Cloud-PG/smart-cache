@@ -175,6 +175,8 @@ type FileStats struct {
 	Recency           int64       `json:"recency"`
 	Users             []int64     `json:"users"`
 	Sites             []int64     `json:"sites"`
+	DataType          int64       `json:"dataType"`
+	FileType          int64       `json:"fileType"`
 }
 
 // DiffLastUpdate returns the number of days from the last update stats
