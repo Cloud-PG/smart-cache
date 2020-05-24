@@ -13,11 +13,72 @@ import (
 	"go.uber.org/zap"
 )
 
-type prevChoice struct {
+// PrevChoice represents a choice in the past
+type PrevChoice struct {
+	Filename    int64
+	Size        float64
 	State       string
 	Action      qlearn.ActionType
 	GoodStrikes int
 	BadStrikes  int
+}
+
+const (
+	memorySize = 1000
+	trace      = 100
+)
+
+// Memory represents the agent memory
+type Memory struct {
+	pastChoices []PrevChoice
+	insertIdx   int
+	traceIdx    int
+}
+
+// Init initializes the agent memory
+func (mem *Memory) Init() {
+	mem.pastChoices = make([]PrevChoice, memorySize)
+	for idx := 0; idx < len(mem.pastChoices); idx++ {
+		mem.pastChoices[idx].Filename = -1
+	}
+}
+
+// Insert a new memory
+func (mem *Memory) Insert(filename int64, size float64, state string, action qlearn.ActionType) {
+	curCell := mem.pastChoices[mem.insertIdx]
+	curCell.Filename = filename
+	curCell.Size = size
+	curCell.State = state
+	curCell.Action = action
+	mem.insertIdx = (mem.insertIdx + 1) % len(mem.pastChoices)
+}
+
+// Remember the past
+func (mem *Memory) Remember() chan PrevChoice {
+	iter := make(chan PrevChoice, trace)
+	go func() {
+		defer close(iter)
+		diff := 0
+		if mem.insertIdx > mem.traceIdx {
+			diff = mem.insertIdx - mem.traceIdx
+		} else {
+			diff = len(mem.pastChoices) - mem.traceIdx + mem.insertIdx
+		}
+		if diff >= trace {
+			for idx := 0; idx < trace; idx++ {
+				// fmt.Println(idx, diff)
+				curIdx := (mem.traceIdx + idx) % len(mem.pastChoices)
+				if curIdx >= mem.insertIdx {
+					break
+				}
+				if mem.pastChoices[curIdx].Filename != -1 {
+					iter <- mem.pastChoices[curIdx]
+				}
+			}
+			mem.traceIdx = (mem.traceIdx + diff) % len(mem.pastChoices)
+		}
+	}()
+	return iter
 }
 
 // AIRL cache
@@ -31,8 +92,8 @@ type AIRL struct {
 	evictionFeatureMapOrder []string
 	additionTable           qlearn.QTable
 	evictionTable           qlearn.QTable
-	qAdditionPrevStates     map[int64]prevChoice
-	qEvictionPrevState      prevChoice
+	qAdditionPrevStates     Memory
+	qEvictionPrevState      PrevChoice
 	extendedEvictionTable   bool
 	points                  float64
 	prevPoints              float64
@@ -51,7 +112,7 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 
 	cache.SimpleCache.Init()
 
-	cache.qAdditionPrevStates = make(map[int64]prevChoice, 0)
+	cache.qAdditionPrevStates.Init()
 
 	additionFeatureMap := args[0].(string)
 	evictionFeatureMap := args[1].(string)
@@ -247,7 +308,7 @@ func (cache *AIRL) Loads(inputString [][]byte, vars ...interface{}) {
 
 }
 
-func (cache *AIRL) getState(request *Request, fileStats *FileStats, featureOrder []string, featureMap map[string]featuremap.Obj, nextState bool) string {
+func (cache *AIRL) getState(fileStats *FileStats, featureOrder []string, featureMap map[string]featuremap.Obj) string {
 
 	cacheCapacity := float64(cache.Capacity())
 	deltaHighWatermark := float64(cache.HighWaterMark) - cacheCapacity
@@ -258,31 +319,17 @@ func (cache *AIRL) getState(request *Request, fileStats *FileStats, featureOrder
 		curObj, _ := featureMap[featureName]
 		switch featureName {
 		case "size":
-			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(request.Size))
+			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(fileStats.Size))
 		case "numReq":
-			if nextState {
-				cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(float64(fileStats.Frequency+1)))
-			} else {
-				cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(float64(fileStats.Frequency)))
-			}
+			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(float64(fileStats.Frequency)))
 		case "cacheUsage":
 			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(cacheCapacity))
 		case "dataType":
-			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(request.DataType))
+			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(fileStats.DataType))
 		case "fileType":
-			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(request.FileType))
+			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(fileStats.FileType))
 		case "deltaLastRequest":
-			if nextState {
-				curVal := float64(fileStats.DeltaLastRequest)
-				diffPerc := curVal * 0.1
-				if cache.additionTable.GetRandomFloat() > 0.5 {
-					cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(curVal+diffPerc))
-				} else {
-					cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(curVal-diffPerc))
-				}
-			} else {
-				cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(float64(fileStats.DeltaLastRequest)))
-			}
+			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(float64(fileStats.DeltaLastRequest)))
 		case "deltaHighWatermark":
 			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(deltaHighWatermark))
 		case "meanSize":
@@ -413,7 +460,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			// }
 
 			// if cache.dataReadOnHit <= (cache.dataReadOnMiss*0.3) || cache.dataWritten >= (cache.dataReadOnHit*0.3) {
-			if cache.dataWritten/cache.dataRead >= 0.7 {
+			if cache.dataWritten/cache.dataRead >= 0.3 {
 				// cache.qEvictionPrevState.GoodStrikes = 0
 				// cache.qEvictionPrevState.BadStrikes++
 				// reward -= float64(cache.qEvictionPrevState.BadStrikes)
@@ -447,38 +494,42 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 		logger.Debug("ADDITION TABLE OK")
 
-		curState = cache.getState(request, fileStats, cache.additionFeatureMapOrder, cache.additionFeatureMap, false)
-		// Guess the new state
-		newState = cache.getState(request, fileStats, cache.additionFeatureMapOrder, cache.additionFeatureMap, true)
+		curState = cache.getState(fileStats, cache.additionFeatureMapOrder, cache.additionFeatureMap)
 
 		// newState = ""  // FOR LOD AND ECML
 
 		// Check training
 		if cache.additionTable.TrainingEnabled {
 
-			if !hit {
-				// -------------------------------------------------------------
-				// QLearn - miss reward on best action
-				curPrevChoice, inPrevStates := cache.qAdditionPrevStates[request.Filename]
-
-				logger.Debug("Learning MISS branch", zap.String("curState", curPrevChoice.State), zap.Int("curAction", int(curPrevChoice.Action)))
-
-				if inPrevStates { // Some action are not taken randomly
-					reward := 0.
-					// reward := request.Size
-
-					if cache.dataReadOnHit/cache.dataRead < 0.3 {
-						reward -= request.Size / 1024.
+			for memory := range cache.qAdditionPrevStates.Remember() {
+				curHit := cache.Check(memory.Filename)
+				curFileStats := cache.stats.Get(memory.Filename)
+				newState = cache.getState(curFileStats, cache.additionFeatureMapOrder, cache.additionFeatureMap)
+				reward := 0.
+				// reward := memory.Size
+				if !curHit {
+					if cache.dataReadOnMiss/cache.dataRead > 0.5 {
+						reward -= memory.Size / 1024.
 					}
 					if reward == 0. {
-						reward += request.Size / 1024.
+						reward += memory.Size / 1024.
 					}
-
-					// Update table
-					cache.additionTable.Update(curPrevChoice.State, curPrevChoice.Action, reward, newState)
+				} else {
+					if cache.dataReadOnHit/cache.dataRead < 0.5 {
+						reward -= memory.Size / 1024.
+					}
+					if cache.dataWritten/cache.dataRead > 0.5 {
+						reward -= memory.Size / 1024.
+					}
+					if reward == 0. {
+						reward += memory.Size / 1024.
+					}
 				}
-				// -------------------------------------------------------------
+				// Update table
+				cache.additionTable.Update(memory.State, memory.Action, reward, newState)
+			}
 
+			if !hit {
 				// Check learning phase or not
 				if expEvictionTradeoff := cache.additionTable.GetRandomFloat(); expEvictionTradeoff > cache.additionTable.Epsilon {
 					// ########################
@@ -512,12 +563,9 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					}
 
 					// Update table
-					cache.additionTable.Update(curState, curAction, reward, newState)
+					cache.additionTable.Update(curState, curAction, reward, curState)
 
-					cache.qAdditionPrevStates[request.Filename] = prevChoice{
-						State:  curState,
-						Action: curAction,
-					}
+					cache.qAdditionPrevStates.Insert(request.Filename, request.Size, curState, curAction)
 
 					// Update epsilon
 					cache.additionTable.UpdateEpsilon()
@@ -557,12 +605,9 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 						reward += request.Size / 1024.
 					}
 					// Update table
-					cache.additionTable.Update(curState, curAction, reward, newState)
+					cache.additionTable.Update(curState, curAction, reward, curState)
 
-					cache.qAdditionPrevStates[request.Filename] = prevChoice{
-						State:  curState,
-						Action: curAction,
-					}
+					cache.qAdditionPrevStates.Insert(request.Filename, request.Size, curState, curAction)
 				}
 			} else {
 				// #######################
@@ -575,29 +620,6 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					Recency:   fileStats.Recency,
 					Weight:    fileStats.Weight,
 				})
-
-				// -------------------------------------------------------------
-				// QLearn - hit reward on best action
-				curPrevChoice := cache.qAdditionPrevStates[request.Filename]
-
-				logger.Debug("Learning HIT branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
-
-				reward := 0.
-				// reward := request.Size
-
-				// OLD POLICY
-				// if cache.dataReadOnHit < (cache.dataReadOnMiss*2.) || cache.dailyReadOnHit < cache.dailyReadOnMisss*2.) {
-				// 	reward = -reward
-				// }
-				if cache.dataReadOnHit/cache.dataRead < 0.3 {
-					reward -= request.Size / 1024.
-				}
-				if reward == 0. {
-					reward += request.Size / 1024.
-				}
-
-				// Update table
-				cache.additionTable.Update(curPrevChoice.State, curPrevChoice.Action, reward, newState)
 			}
 
 			// Update epsilon
@@ -612,7 +634,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				// ##### MISS branch  #####
 				// ########################
 
-				curState = cache.getState(request, fileStats, cache.additionFeatureMapOrder, cache.additionFeatureMap, false)
+				curState = cache.getState(fileStats, cache.additionFeatureMapOrder, cache.additionFeatureMap)
 				curAction = cache.additionTable.GetBestAction(curState)
 				logger.Debug("Normal MISS branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
 				// ----------------------------------
@@ -735,7 +757,7 @@ func (cache *AIRL) Free(amount float64, percentage bool) float64 {
 
 	if sizeToDelete > 0. {
 		if cache.evictionTableOK {
-			curState = cache.getState(nil, nil, cache.evictionFeatureMapOrder, cache.evictionFeatureMap, false)
+			curState = cache.getState(nil, cache.evictionFeatureMapOrder, cache.evictionFeatureMap)
 			// Check training
 			if cache.evictionTable.TrainingEnabled {
 				// Check learning phase or not
@@ -754,7 +776,7 @@ func (cache *AIRL) Free(amount float64, percentage bool) float64 {
 					curAction = cache.evictionTable.Actions[randomActionIdx]
 				}
 
-				cache.qEvictionPrevState = prevChoice{
+				cache.qEvictionPrevState = PrevChoice{
 					State:  curState,
 					Action: curAction,
 				}
@@ -803,11 +825,6 @@ func (cache *AIRL) Free(amount float64, percentage bool) float64 {
 			totalDeleted += curFile.Size
 
 			deletedFiles = append(deletedFiles, curFile.Filename)
-
-			_, inPrevStates := cache.qAdditionPrevStates[curFile.Filename]
-			if inPrevStates {
-				delete(cache.qAdditionPrevStates, curFile.Filename)
-			}
 
 			if totalDeleted >= sizeToDelete {
 				break
