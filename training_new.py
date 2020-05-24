@@ -1,12 +1,13 @@
-from keras.models import Sequential
-from keras.layers import Input, Dense, Activation, Flatten
+#from keras.models import Sequential
+#from keras.layers import Input, Dense, Activation, Flatten
 import keras.optimizers
-import tensorflow as tf
+#import tensorflow as tf
 import numpy as np
 import pandas as pd
 import math
 import random
 import cache_env_new
+from model_architectures import *
 import cache_env_new_us
 #import cache_env_new_linear
 import csv
@@ -133,112 +134,20 @@ observation_shape = (input_len,)
 seed_ = 2019
 DailyBandwidth1Gbit = bandwidth * (1000. / 8.) * 60. * 60. * 24.       #MB in a day with 10 Gbit/s
 
-####### EXTRA FUNCTION DEFINITIONS ##################################################################################################################
-def mellowmax(omega, x):
-    sum_ = sum((math.exp(omega * val) for val in x))
-    return math.log(sum_/len(x))/omega
-
-def huber_loss(y_true, y_pred, clip_delta=1.0):
-    error = y_true - y_pred
-    cond  = tf.keras.backend.abs(error) < clip_delta
-
-    squared_loss = 0.5 * tf.keras.backend.square(error)
-    linear_loss  = clip_delta * (tf.keras.backend.abs(error) - 0.5 * clip_delta)
-
-    return tf.where(cond, squared_loss, linear_loss)
-
-def huber_loss_mean(y_true, y_pred, clip_delta=1.0):
-    return tf.keras.backend.mean(huber_loss(y_true, y_pred, clip_delta))
-
 ############## DEFINE ADD AND EVICT MODELS #########################################################################################################
 
 print('USING HUBER LOSS FROM TENSORFLOW')
 
 optimizer = keras.optimizers.Adam(lr=learning_rate)
 
-model_evict = Sequential()
-model_evict.add(Dense(16, input_dim=input_len))
-model_evict.add(Activation('sigmoid'))
-model_evict.add(Dense(32))
-model_evict.add(Activation('sigmoid'))
-model_evict.add(Dense(64))
-model_evict.add(Activation('sigmoid'))
-model_evict.add(Dense(128))
-model_evict.add(Activation('sigmoid'))
-model_evict.add(Dense(64))
-model_evict.add(Activation('sigmoid'))
-model_evict.add(Dense(32))
-model_evict.add(Activation('sigmoid'))
-model_evict.add(Dense(nb_actions))
-model_evict.add(Activation(output_activation))
-print(model_evict.summary())
-#model_evict.compile(optimizer = 'adam', loss = huber_loss_mean)
-model_evict.compile(optimizer='adam', loss=tf.keras.losses.Huber())
-
+model_add = small_dense(input_len, output_activation, nb_actions)
+model_evict = small_dense(input_len, output_activation, nb_actions)
 if use_target_model == True:
-    target_model_evict = Sequential()
-    target_model_evict.add(Dense(16, input_dim=input_len))
-    target_model_evict.add(Activation('sigmoid'))
-    target_model_evict.add(Dense(32))
-    target_model_evict.add(Activation('sigmoid'))
-    target_model_evict.add(Dense(64))
-    target_model_evict.add(Activation('sigmoid'))
-    target_model_evict.add(Dense(128))
-    target_model_evict.add(Activation('sigmoid'))
-    target_model_evict.add(Dense(64))
-    target_model_evict.add(Activation('sigmoid'))
-    target_model_evict.add(Dense(32))
-    target_model_evict.add(Activation('sigmoid'))
-    target_model_evict.add(Dense(nb_actions))
-    target_model_evict.add(Activation(output_activation))
-    print(model_evict.summary())
-    #target_model_evict.compile(optimizer = 'adam', loss = huber_loss_mean)
-    #target_model_evict.compile(optimizer=optimizer, loss=tf.keras.losses.Huber())
-    target_model_evict.compile(optimizer='adam', loss=tf.keras.losses.Huber())
+    target_model_add = small_dense(input_len, output_activation, nb_actions)
+    target_model_evict = small_dense(input_len, output_activation, nb_actions)
 
 if args.load_evict_weights_from_file is None == False:
     model_evict.load_weights(args.load_evict_weights_from_file)
-
-model_add = Sequential()
-model_add.add(Dense(16,input_dim = input_len))
-model_add.add(Activation('sigmoid'))
-model_add.add(Dense(32))
-model_add.add(Activation('sigmoid'))
-model_add.add(Dense(64))
-model_add.add(Activation('sigmoid'))
-model_add.add(Dense(128))
-model_add.add(Activation('sigmoid'))
-model_add.add(Dense(64))
-model_add.add(Activation('sigmoid'))
-model_add.add(Dense(32))
-model_add.add(Activation('sigmoid'))
-model_add.add(Dense(nb_actions))
-model_add.add(Activation(output_activation))
-print(model_add.summary())
-#model_add.compile(optimizer = 'adam', loss = huber_loss_mean)
-model_add.compile(optimizer='adam', loss=tf.keras.losses.Huber())
-
-if use_target_model == True:
-    target_model_add = Sequential()
-    target_model_add.add(Dense(16,input_dim = input_len))
-    target_model_add.add(Activation('sigmoid'))
-    target_model_add.add(Dense(32))
-    target_model_add.add(Activation('sigmoid'))
-    target_model_add.add(Dense(64))
-    target_model_add.add(Activation('sigmoid'))
-    target_model_add.add(Dense(128))
-    target_model_add.add(Activation('sigmoid'))
-    target_model_add.add(Dense(64))
-    target_model_add.add(Activation('sigmoid'))
-    target_model_add.add(Dense(32))
-    target_model_add.add(Activation('sigmoid'))
-    target_model_add.add(Dense(nb_actions))
-    target_model_add.add(Activation(output_activation))
-    print(model_add.summary())
-    #target_model_add.compile(optimizer = 'adam', loss = huber_loss_mean)
-    target_model_add.compile(optimizer='adam', loss=tf.keras.losses.Huber())
-
-
 if args.load_add_weights_from_file is None == False:
     model_add.load_weights(args.load_add_weights_from_file)
 
@@ -647,4 +556,110 @@ while end == False:
         model_evict.save_weights(out_directory + args.out_evict_weights)
 
 
+'''
+model_evict = Sequential()
+model_evict.add(Dense(16, input_dim=input_len))
+model_evict.add(Activation('sigmoid'))
+model_evict.add(Dense(32))
+model_evict.add(Activation('sigmoid'))
+model_evict.add(Dense(64))
+model_evict.add(Activation('sigmoid'))
+model_evict.add(Dense(128))
+model_evict.add(Activation('sigmoid'))
+model_evict.add(Dense(64))
+model_evict.add(Activation('sigmoid'))
+model_evict.add(Dense(32))
+model_evict.add(Activation('sigmoid'))
+model_evict.add(Dense(nb_actions))
+model_evict.add(Activation(output_activation))
+print(model_evict.summary())
+#model_evict.compile(optimizer = 'adam', loss = huber_loss_mean)
+model_evict.compile(optimizer='adam', loss=tf.keras.losses.Huber())
 
+if use_target_model == True:
+    target_model_evict = Sequential()
+    target_model_evict.add(Dense(16, input_dim=input_len))
+    target_model_evict.add(Activation('sigmoid'))
+    target_model_evict.add(Dense(32))
+    target_model_evict.add(Activation('sigmoid'))
+    target_model_evict.add(Dense(64))
+    target_model_evict.add(Activation('sigmoid'))
+    target_model_evict.add(Dense(128))
+    target_model_evict.add(Activation('sigmoid'))
+    target_model_evict.add(Dense(64))
+    target_model_evict.add(Activation('sigmoid'))
+    target_model_evict.add(Dense(32))
+    target_model_evict.add(Activation('sigmoid'))
+    target_model_evict.add(Dense(nb_actions))
+    target_model_evict.add(Activation(output_activation))
+    print(model_evict.summary())
+    #target_model_evict.compile(optimizer = 'adam', loss = huber_loss_mean)
+    #target_model_evict.compile(optimizer=optimizer, loss=tf.keras.losses.Huber())
+    target_model_evict.compile(optimizer='adam', loss=tf.keras.losses.Huber())
+
+if args.load_evict_weights_from_file is None == False:
+    model_evict.load_weights(args.load_evict_weights_from_file)
+
+model_add = Sequential()
+model_add.add(Dense(16,input_dim = input_len))
+model_add.add(Activation('sigmoid'))
+model_add.add(Dense(32))
+model_add.add(Activation('sigmoid'))
+model_add.add(Dense(64))
+model_add.add(Activation('sigmoid'))
+model_add.add(Dense(128))
+model_add.add(Activation('sigmoid'))
+model_add.add(Dense(64))
+model_add.add(Activation('sigmoid'))
+model_add.add(Dense(32))
+model_add.add(Activation('sigmoid'))
+model_add.add(Dense(nb_actions))
+model_add.add(Activation(output_activation))
+print(model_add.summary())
+#model_add.compile(optimizer = 'adam', loss = huber_loss_mean)
+model_add.compile(optimizer='adam', loss=tf.keras.losses.Huber())
+
+if use_target_model == True:
+    target_model_add = Sequential()
+    target_model_add.add(Dense(16,input_dim = input_len))
+    target_model_add.add(Activation('sigmoid'))
+    target_model_add.add(Dense(32))
+    target_model_add.add(Activation('sigmoid'))
+    target_model_add.add(Dense(64))
+    target_model_add.add(Activation('sigmoid'))
+    target_model_add.add(Dense(128))
+    target_model_add.add(Activation('sigmoid'))
+    target_model_add.add(Dense(64))
+    target_model_add.add(Activation('sigmoid'))
+    target_model_add.add(Dense(32))
+    target_model_add.add(Activation('sigmoid'))
+    target_model_add.add(Dense(nb_actions))
+    target_model_add.add(Activation(output_activation))
+    print(model_add.summary())
+    #target_model_add.compile(optimizer = 'adam', loss = huber_loss_mean)
+    target_model_add.compile(optimizer='adam', loss=tf.keras.losses.Huber())
+
+
+if args.load_add_weights_from_file is None == False:
+    model_add.load_weights(args.load_add_weights_from_file)
+
+
+'''
+
+'''
+def mellowmax(omega, x):
+    sum_ = sum((math.exp(omega * val) for val in x))
+    return math.log(sum_/len(x))/omega
+
+def huber_loss(y_true, y_pred, clip_delta=1.0):
+    error = y_true - y_pred
+    cond  = tf.keras.backend.abs(error) < clip_delta
+
+    squared_loss = 0.5 * tf.keras.backend.square(error)
+    linear_loss  = clip_delta * (tf.keras.backend.abs(error) - 0.5 * clip_delta)
+
+    return tf.where(cond, squared_loss, linear_loss)
+
+def huber_loss_mean(y_true, y_pred, clip_delta=1.0):
+    return tf.keras.backend.mean(huber_loss(y_true, y_pred, clip_delta))
+'''
