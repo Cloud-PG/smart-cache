@@ -76,7 +76,7 @@ func (table *QTable) Init(featureLenghts []int, role QTableRole, trainingEnabled
 	logger = zap.L()
 
 	table.TrainingEnabled = trainingEnabled
-	table.LearningRate = 0.9 // also named Alpha
+	table.LearningRate = 0.5 // also named Alpha
 	table.DiscountFactor = 0.5
 	table.DecayRateEpsilon = decayRateEpsilon
 	table.Epsilon = initEpsilon

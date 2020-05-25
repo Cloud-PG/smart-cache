@@ -25,7 +25,7 @@ type PrevChoice struct {
 
 const (
 	memorySize = 1000
-	trace      = 100
+	trace      = 10
 )
 
 // Memory represents the agent memory
@@ -73,6 +73,7 @@ func (mem *Memory) Remember() chan PrevChoice {
 				}
 				if mem.pastChoices[curIdx].Filename != -1 {
 					iter <- mem.pastChoices[curIdx]
+					mem.pastChoices[curIdx].Filename = -1
 				}
 			}
 			mem.traceIdx = (mem.traceIdx + diff) % len(mem.pastChoices)
@@ -464,23 +465,32 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				// cache.qEvictionPrevState.GoodStrikes = 0
 				// cache.qEvictionPrevState.BadStrikes++
 				// reward -= float64(cache.qEvictionPrevState.BadStrikes)
-				reward -= request.Size / 1024.
-				// reward -= 1.0
+				if hit {
+					reward -= request.Size / 1024.
+				} else {
+					reward -= 1.0
+				}
 			}
 			if cache.dataReadOnHit/cache.dataRead < 0.3 {
 				// cache.qEvictionPrevState.GoodStrikes = 0
 				// cache.qEvictionPrevState.BadStrikes++
 				// reward -= float64(cache.qEvictionPrevState.BadStrikes)
-				reward -= request.Size / 1024.
-				// reward -= 1.0
+				if hit {
+					reward -= request.Size / 1024.
+				} else {
+					reward -= 1.0
+				}
 			}
 
 			if reward == 0. {
 				// cache.qEvictionPrevState.BadStrikes = 0
 				// cache.qEvictionPrevState.GoodStrikes++
 				// reward += float64(cache.qEvictionPrevState.GoodStrikes)
-				reward += request.Size / 1024.
-				// reward += 1.0
+				if hit {
+					reward += request.Size / 1024.
+				} else {
+					reward += 1.0
+				}
 			}
 
 			// Update table
@@ -515,10 +525,10 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 						reward += memory.Size / 1024.
 					}
 				} else {
-					if cache.dataReadOnHit/cache.dataRead < 0.5 {
+					if cache.dataReadOnHit/cache.dataRead < 0.3 {
 						reward -= memory.Size / 1024.
 					}
-					if cache.dataWritten/cache.dataRead > 0.5 {
+					if cache.dataWritten/cache.dataRead > 0.3 {
 						reward -= memory.Size / 1024.
 					}
 					if reward == 0. {
