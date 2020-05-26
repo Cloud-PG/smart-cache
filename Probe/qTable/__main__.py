@@ -52,11 +52,15 @@ def main():
         clf, out_file=None,
         feature_names=state_features,
         class_names=actions,
-        filled=True, rounded=True,
+        filled=True, 
+        rounded=True,
         special_characters=True,
+        leaves_parallel=True,
+        impurity=True,
+        proportion=True,
     )
     graph = graphviz.Source(dot_data)
-    print(f"{STATUS_ARROW}Plot explored states pie")
+    print(f"{STATUS_ARROW}Plot decision tree")
     graph.render(f"{filename.name}.decisionTree")
 
     explored_res = df.explored.value_counts()
