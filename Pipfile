@@ -42,6 +42,8 @@ python-dotenv = "*"
 colorama = "*"
 coloredlogs = "*"
 plotly = "*"
+sklearn = "*"
+graphviz = "*"
 
 [requires]
 python_version = "3.7"

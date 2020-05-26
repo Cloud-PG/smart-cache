@@ -1,10 +1,11 @@
 import argparse
 from pathlib import Path
 
+import graphviz
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
-from colorama import Style
+from sklearn import tree
 
 from..utils import STATUS_ARROW
 
@@ -35,6 +36,28 @@ def main():
     df['best'] = df[actions].idxmax(axis=1)
     df['explored'] = df[actions].apply(
         lambda row: not all([val == 0. for val in row]), axis=1)
+
+    df_dtree_X = df[state_features].copy()
+    for column in state_features:
+        df_dtree_X[column].replace(to_replace={
+            'max': max(pd.to_numeric(df_dtree_X[column], errors='coerce')) * 2
+        }, inplace=True)
+    df_dtree_labels = df['best'].copy()
+    df_dtree_labels.replace(to_replace={
+        (key, actions.index(key)) for key in actions
+    })
+    clf = tree.DecisionTreeClassifier()
+    clf = clf.fit(df_dtree_X, df_dtree_labels)
+    dot_data = tree.export_graphviz(
+        clf, out_file=None,
+        feature_names=state_features,
+        class_names=actions,
+        filled=True, rounded=True,
+        special_characters=True,
+    )
+    graph = graphviz.Source(dot_data)
+    print(f"{STATUS_ARROW}Plot explored states pie")
+    graph.render(f"{filename.name}.decisionTree")
 
     explored_res = df.explored.value_counts()
     explored_res.rename("State exploration", inplace=True)
