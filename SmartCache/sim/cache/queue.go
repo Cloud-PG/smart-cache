@@ -93,8 +93,10 @@ const (
 
 // Manager manages the files in cache
 type Manager struct {
-	files map[int64]*FileSupportData
-	queue []*FileSupportData
+	files        map[int64]*FileSupportData
+	queue        []*FileSupportData
+	FrequencySum float64
+	SizeSum      float64
 }
 
 // Init initialize the struct
@@ -180,6 +182,9 @@ func (man Manager) Get(queue queueType) chan *FileSupportData {
 // Remove a file already in queue
 func (man *Manager) Remove(files []int64) {
 	for _, file := range files {
+		curFile := man.files[file]
+		man.SizeSum -= curFile.Size
+		man.FrequencySum -= float64(curFile.Frequency)
 		delete(man.files, file)
 	}
 	man.queue = man.queue[:len(man.files)]
@@ -189,16 +194,25 @@ func (man *Manager) Remove(files []int64) {
 func (man *Manager) Insert(file FileSupportData) {
 	man.files[file.Filename] = &file
 	man.queue = append(man.queue, make([]*FileSupportData, 1)...)
+	man.SizeSum += file.Size
+	man.FrequencySum += float64(file.Frequency)
 }
 
 // Update a file into the queue manager
 func (man *Manager) Update(file FileSupportData) error {
 	curFile, inCache := man.files[file.Filename]
 	if inCache {
+		// Remove old stats
+		man.SizeSum -= curFile.Size
+		man.FrequencySum -= float64(curFile.Frequency)
+		// Add new stats
 		curFile.Frequency = file.Frequency
 		curFile.Recency = file.Recency
 		curFile.Size = file.Size
 		curFile.Weight = file.Weight
+		// Update sums
+		man.SizeSum += file.Size
+		man.FrequencySum += float64(file.Frequency)
 		return nil
 	}
 	return errors.New("File not in manager")
