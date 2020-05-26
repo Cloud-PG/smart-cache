@@ -459,6 +459,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			// if !hit && (cache.dailyWrittenData >= cache.dailyReadOnHit) {
 			// 	reward = -reward
 			// }
+			newState = cache.getState(nil, cache.evictionFeatureMapOrder, cache.evictionFeatureMap)
 
 			// if cache.dataReadOnHit <= (cache.dataReadOnMiss*0.3) || cache.dataWritten >= (cache.dataReadOnHit*0.3) {
 			if cache.dataWritten/cache.dataRead >= 0.3 {
@@ -494,7 +495,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			}
 
 			// Update table
-			cache.evictionTable.Update(cache.qEvictionPrevState.State, cache.qEvictionPrevState.Action, reward, "")
+			cache.evictionTable.Update(cache.qEvictionPrevState.State, cache.qEvictionPrevState.Action, reward, newState)
 			// Update epsilon
 			cache.evictionTable.UpdateEpsilon()
 		}
