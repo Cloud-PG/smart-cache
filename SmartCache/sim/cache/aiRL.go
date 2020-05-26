@@ -85,26 +85,27 @@ func (mem *Memory) Remember() chan PrevChoice {
 // AIRL cache
 type AIRL struct {
 	SimpleCache
-	additionTableOK         bool
-	evictionTableOK         bool
-	additionFeatureMap      map[string]featuremap.Obj
-	additionFeatureMapOrder []string
-	evictionFeatureMap      map[string]featuremap.Obj
-	evictionFeatureMapOrder []string
-	additionTable           qlearn.QTable
-	evictionTable           qlearn.QTable
-	qAdditionPrevStates     Memory
-	qEvictionPrevState      PrevChoice
-	extendedEvictionTable   bool
-	points                  float64
-	prevPoints              float64
-	bufferCategory          []bool
-	bufferInputVector       []string
-	chanCategory            chan bool
-	weightFunction          FunctionType
-	weightAlpha             float64
-	weightBeta              float64
-	weightGamma             float64
+	additionTableOK            bool
+	evictionTableOK            bool
+	additionFeatureMap         map[string]featuremap.Obj
+	additionFeatureMapOrder    []string
+	evictionFeatureMap         map[string]featuremap.Obj
+	evictionFeatureMapOrder    []string
+	additionTable              qlearn.QTable
+	evictionTable              qlearn.QTable
+	qAdditionPrevStates        Memory
+	qEvictionPrevState         PrevChoice
+	extendedEvictionTable      bool
+	evictionTableUpdateCounter int
+	points                     float64
+	prevPoints                 float64
+	bufferCategory             []bool
+	bufferInputVector          []string
+	chanCategory               chan bool
+	weightFunction             FunctionType
+	weightAlpha                float64
+	weightBeta                 float64
+	weightGamma                float64
 }
 
 // Init the AIRL struct
@@ -128,6 +129,7 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 		cache.weightBeta = args[8].(float64)
 		cache.weightGamma = args[9].(float64)
 	}
+	cache.evictionTableUpdateCounter = 100
 
 	logger.Info("Feature maps", zap.String("addition map", additionFeatureMap), zap.String("eviction map", evictionFeatureMap))
 
@@ -459,7 +461,13 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			// if !hit && (cache.dailyWrittenData >= cache.dailyReadOnHit) {
 			// 	reward = -reward
 			// }
-			newState = cache.getState(nil, cache.evictionFeatureMapOrder, cache.evictionFeatureMap)
+			if cache.evictionTableUpdateCounter == 0 {
+				newState = cache.getState(nil, cache.evictionFeatureMapOrder, cache.evictionFeatureMap)
+				cache.evictionTableUpdateCounter = 100
+			} else {
+				cache.evictionTableUpdateCounter--
+				newState = cache.qEvictionPrevState.State
+			}
 
 			// if cache.dataReadOnHit <= (cache.dataReadOnMiss*0.3) || cache.dataWritten >= (cache.dataReadOnHit*0.3) {
 			if cache.dataWritten/cache.dataRead >= 0.3 {
