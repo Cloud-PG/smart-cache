@@ -160,7 +160,7 @@ class cache(object):
             #self._cached_files[filename] = file_stats
             return True
         elif hit:
-            self._cached_files.add(filename)
+            #self._cached_files.add(filename)
             #self._cached_files[filename] = file_stats
             #self._cached_files.move_to_end(filename)
             return False
@@ -226,6 +226,25 @@ class dfWrapper(object):
         for column in df:
             setattr(self, column, df[column].to_numpy())
 
+class WindowElement_no_next_values(object):
+
+    __slots__ = ['counter', 'cur_values', 'reward', 'action']
+
+    def __init__(self, counter=-1, cur_values=[], reward=-1, action=-1):
+        self.counter = counter
+        self.cur_values = cur_values
+        self.reward = reward
+        self.action = action
+
+    def concat(self):
+        return np.reshape(np.concatenate((
+            self.cur_values,
+            [self.action],
+            [self.reward],
+        )), (1, input_len + 1 + 1 ))
+
+
+
 class WindowElement(object):
 
     __slots__ = ['counter', 'cur_values', 'reward', 'action', 'next_values']
@@ -249,7 +268,7 @@ class WindowElement(object):
 class env:
     ''' object that emulates cache mechanism '''
 
-    def __init__(self, start_month, end_month, directory, out_directory, out_name, time_span_add, time_span_evict, purge_delta, output_activation, cache_size, size_reduction):
+    def __init__(self, start_month, end_month, directory, out_directory, out_name, time_span_add, time_span_evict, purge_delta, output_activation, cache_size):
         # print('STO USANDO LA VERSIONE PIU AGGIORNATA')
         # set period
         self._startMonth = start_month
@@ -265,7 +284,6 @@ class env:
             self._output_activation = 0
         else:
             self._output_activation = 1
-        self._size_reduction = size_reduction
 
         start = datetime(2018, 1, 1)
         delta = timedelta(days=1)
@@ -305,8 +323,10 @@ class env:
         self._eviction_window_elements = {}
 
         # initialize experience replay memory vectors
-        self.add_memory_vector = np.empty((1, 2 * input_len +1 + 1))
-        self.evict_memory_vector = np.empty((1, 2 * input_len +1 + 1))
+        #self.add_memory_vector = np.empty((1, 2 * input_len +1 + 1))
+        #self.evict_memory_vector = np.empty((1, 2 * input_len +1 + 1))
+        self.add_memory_vector = np.empty((1, input_len +1 + 1))
+        self.evict_memory_vector = np.empty((1, input_len +1 + 1))
 
         # begin reading data
         self.curRequest = -1
@@ -415,8 +435,7 @@ class env:
         file_ = sorted(os.listdir(self._directory))[i]
         with gzip.open(self._directory + '/' + str(file_)) as f:
             df_ = pd.read_csv(f)
-            if self._size_reduction==True:
-                df_['Size'] = df_['Size']/1048576.
+            df_['Size'] = df_['Size']/1048576.
             df_ = df_[df_['JobSuccess'] == True]
             df_ = df_[(df_['DataType'] == 0) | (df_['DataType'] == 1)]
             df_.reset_index(drop=True, inplace=True)
@@ -425,7 +444,7 @@ class env:
         print()
         print(file_)
     
-    def update_windows_getting_eventual_rewards_waiting(self, adding_or_evicting, curFilename, curValues, nextValues, action):
+    def update_windows_getting_eventual_rewards_waiting_no_next_values(self, adding_or_evicting, curFilename, curValues, action):
         '''
             - if you are in adding mode, this function updates counters of adding and evicting windows, then
         searches for this filename in both windows: if it finds it, gives reward and removes it from window. 
@@ -433,6 +452,81 @@ class env:
             - if you are in evicting mode, this function simply adds this values to eviciton window which should be
             empty when eviction starts
         '''
+
+        if adding_or_evicting == 0:
+            size = curValues[0]
+            if self._output_activation == 1:
+                coeff = size
+            else:
+                if size <= it_liminf_size:
+                    coeff = 0 
+                elif size >= it_limsup_size:
+                    coeff = 1 
+                else:
+                    coeff = (size - it_liminf_size)/it_delta_size
+            ############################ GIVING REWARD TO ADDITION IF IT IS IN WINDOW AND ADD TO WINDOW ########################################################################
+            if curFilename in self._request_window_elements:  # if is in queue                
+                obj = self._request_window_elements[curFilename]
+
+                if obj.counter >= self._time_span_add:
+                    if obj.action == 0:
+                        obj.reward = - 1 * coeff
+                    else:
+                        obj.reward = + 1 * coeff
+                else:  # is not invalidated yet
+                    if obj.action == 0:
+                        obj.reward = + 1 * coeff
+                    else:
+                        obj.reward = - 1 * coeff
+
+                to_add = obj.concat()
+                self.add_memory_vector = np.vstack(
+                    (self.add_memory_vector, to_add))
+
+            for obj in self._request_window_elements.values():  # increment counters
+                obj.counter += 1
+            for item in self._eviction_window_elements.values():  # increment counters
+                for obj in item:
+                    obj.counter += 1
+
+            self._request_window_elements[curFilename] = WindowElement_no_next_values(
+                1, curValues, 0, action)
+            
+            ######### GIVING REWARD TO EVICTION AND REMOVING FROM WINDOW ################################################################################################
+            if curFilename in self._eviction_window_elements:  # if is in queue
+                for obj in self._eviction_window_elements[curFilename]: 
+                    if obj.counter >= self._time_span_evict:   # is invalidated
+                        if obj.action == 0:
+                            obj.reward = - 1 * coeff
+                        else:
+                            obj.reward = + 1 * coeff
+                    else:                               # is not invalidated yet
+                        if obj.action == 0:
+                            obj.reward = + 1 * coeff
+                        else:           
+                            obj.reward = - 1 * coeff
+
+                    to_add = obj.concat()
+                    self.evict_memory_vector = np.vstack(
+                        (self.evict_memory_vector, to_add))
+
+                del self._eviction_window_elements[curFilename]            
+            
+        elif adding_or_evicting == 1:
+            to_add = WindowElement_no_next_values(1, curValues, 0, action)
+            if curFilename not in self._eviction_window_elements: 
+                self._eviction_window_elements[curFilename] = [to_add]
+            else:
+                self._eviction_window_elements[curFilename].append(to_add)
+    '''
+    def update_windows_getting_eventual_rewards_waiting(self, adding_or_evicting, curFilename, curValues, nextValues, action):
+        
+            - if you are in adding mode, this function updates counters of adding and evicting windows, then
+        searches for this filename in both windows: if it finds it, gives reward and removes it from window. 
+        Then adding window is updated with new curvalues, nextvalues, action and counter is restarted
+            - if you are in evicting mode, this function simply adds this values to eviciton window which should be
+            empty when eviction starts
+        
 
         if adding_or_evicting == 0:
             size = curValues[0]
@@ -501,99 +595,6 @@ class env:
             else:
                 self._eviction_window_elements[curFilename].append(to_add)
     '''
-    def update_windows_getting_eventual_rewards(self, adding_or_evicting, curFilename, curValues, nextValues, action):
-
-
-        if adding_or_evicting == 0:
-            size = curValues[0]
-            if self._output_activation == 1:
-                coeff = size
-            else:
-                if size <= it_liminf_size:
-                    coeff = 0 
-                elif size >= it_limsup_size:
-                    coeff = 1 
-                else:
-                    coeff = (size - it_liminf_size)/it_delta_size
-            ############################ GIVING REWARD TO ADDITION IF IT IS IN WINDOW AND ADD TO WINDOW ########################################################################
-            if curFilename in self._request_window_elements:  # if is in queue                
-                obj = self._request_window_elements[curFilename]
-
-                if obj.counter >= self._time_span:
-                    if obj.action == 0:
-                        obj.reward = - 1 * coeff
-                    else:
-                        obj.reward = + 1 * coeff
-                else:  # is not invalidated yet
-                    if obj.action == 0:
-                        obj.reward = + 1 * coeff
-                    else:
-                        obj.reward = - 1 * coeff
-
-                to_add = obj.concat()
-                self.add_memory_vector = np.vstack(
-                    (self.add_memory_vector, to_add))
-
-            for obj in self._request_window_elements.values():  # increment counters
-                obj.counter += 1
-            for obj in self._eviction_window_elements.values():  # increment counters
-                obj.counter += 1
-
-            self._request_window_elements[curFilename] = WindowElement(
-                1, curValues, 0, action, nextValues
-            )
-            
-            ######### GIVING REWARD TO EVICTION AND REMOVING FROM WINDOW ################################################################################################
-            if curFilename in self._eviction_window_elements:  # if is in queue
-                obj = self._eviction_window_elements[curFilename]
-                if obj.counter >= self._time_span:   # is invalidated
-                    if obj.action == 0:
-                        obj.reward = - 1 * coeff
-                    else:
-                        obj.reward = + 1 * coeff
-                else:  # is not invalidated yet
-                    if obj.action == 0:
-                        obj.reward = + 1 * coeff
-                    else:           
-                        obj.reward = - 1 * coeff
-
-                to_add = obj.concat()
-                self.evict_memory_vector = np.vstack(
-                    (self.evict_memory_vector, to_add))
-
-                del self._eviction_window_elements[curFilename]            
-            
-        elif adding_or_evicting == 1:
-            self._eviction_window_elements[curFilename] = WindowElement(
-                1, curValues, 0, action, nextValues
-            )
-    '''
-
-    '''
-    def clear_remaining_evict_window(self):
-
-
-        for obj in self._eviction_window_elements.values():
-            size = obj.cur_values[0]
-            if self._output_activation == 1:
-                coeff = size
-            else:
-                if size <= it_liminf_size:
-                    coeff = 0 
-                elif size >= it_limsup_size:
-                    coeff = 1 
-                else:
-                    coeff = (size - it_liminf_size)/it_delta_size
-            if obj.action == 0:
-                obj.reward = - 1 * coeff
-            else:
-                obj.reward = + 1 * coeff
-            to_add = obj.concat()
-            self.evict_memory_vector = np.vstack(
-                (self.evict_memory_vector, to_add))
-
-        self._eviction_window_elements.clear()
-    '''
 
     def look_for_invalidated_add_evict(self):
         ''' looks for invalidated actions in add window, gives rewards and deletes them'''
@@ -648,35 +649,6 @@ class env:
         for filename in toDelete:
             del self._eviction_window_elements[filename]
     
-    '''
-    def look_for_invalidated_add(self):
-
-        toDelete = set()
-        for curFilename, obj in self._request_window_elements.items():
-            size = obj.cur_values[0]
-            if self._output_activation == 1:
-                coeff = size
-            else:
-                if size <= it_liminf_size:
-                    coeff = 0 
-                elif size >= it_limsup_size:
-                    coeff = 1 
-                else:
-                    coeff = (size - it_liminf_size)/it_delta_size
-            if obj.counter > self._time_span:
-                if obj.action == 0:
-                    obj.reward = - 1 * coeff
-                else:               
-                    obj.reward = + 1 * coeff
-                to_add = obj.concat()
-                self.add_memory_vector = np.vstack(
-                    (self.add_memory_vector, to_add))
-                toDelete |= set([curFilename,])
-
-        for filename in toDelete:
-            del self._request_window_elements[filename]
-    '''
-
     def get_next_request_values(self):    
         ''' 
         gets the values of next request to be feeded to AI (from global stats), and sets them as curvalues (and returns them):
@@ -812,3 +784,98 @@ class env:
 
     def check_if_current_is_hit(self):
         return self._cache.check(self.df.Filename[self.curRequest])
+
+        '''
+    def update_windows_getting_eventual_rewards(self, adding_or_evicting, curFilename, curValues, nextValues, action):
+
+
+        if adding_or_evicting == 0:
+            size = curValues[0]
+            if self._output_activation == 1:
+                coeff = size
+            else:
+                if size <= it_liminf_size:
+                    coeff = 0 
+                elif size >= it_limsup_size:
+                    coeff = 1 
+                else:
+                    coeff = (size - it_liminf_size)/it_delta_size
+            ############################ GIVING REWARD TO ADDITION IF IT IS IN WINDOW AND ADD TO WINDOW ########################################################################
+            if curFilename in self._request_window_elements:  # if is in queue                
+                obj = self._request_window_elements[curFilename]
+
+                if obj.counter >= self._time_span:
+                    if obj.action == 0:
+                        obj.reward = - 1 * coeff
+                    else:
+                        obj.reward = + 1 * coeff
+                else:  # is not invalidated yet
+                    if obj.action == 0:
+                        obj.reward = + 1 * coeff
+                    else:
+                        obj.reward = - 1 * coeff
+
+                to_add = obj.concat()
+                self.add_memory_vector = np.vstack(
+                    (self.add_memory_vector, to_add))
+
+            for obj in self._request_window_elements.values():  # increment counters
+                obj.counter += 1
+            for obj in self._eviction_window_elements.values():  # increment counters
+                obj.counter += 1
+
+            self._request_window_elements[curFilename] = WindowElement(
+                1, curValues, 0, action, nextValues
+            )
+            
+            ######### GIVING REWARD TO EVICTION AND REMOVING FROM WINDOW ################################################################################################
+            if curFilename in self._eviction_window_elements:  # if is in queue
+                obj = self._eviction_window_elements[curFilename]
+                if obj.counter >= self._time_span:   # is invalidated
+                    if obj.action == 0:
+                        obj.reward = - 1 * coeff
+                    else:
+                        obj.reward = + 1 * coeff
+                else:  # is not invalidated yet
+                    if obj.action == 0:
+                        obj.reward = + 1 * coeff
+                    else:           
+                        obj.reward = - 1 * coeff
+
+                to_add = obj.concat()
+                self.evict_memory_vector = np.vstack(
+                    (self.evict_memory_vector, to_add))
+
+                del self._eviction_window_elements[curFilename]            
+            
+        elif adding_or_evicting == 1:
+            self._eviction_window_elements[curFilename] = WindowElement(
+                1, curValues, 0, action, nextValues
+            )
+    '''
+
+    '''
+    def clear_remaining_evict_window(self):
+
+
+        for obj in self._eviction_window_elements.values():
+            size = obj.cur_values[0]
+            if self._output_activation == 1:
+                coeff = size
+            else:
+                if size <= it_liminf_size:
+                    coeff = 0 
+                elif size >= it_limsup_size:
+                    coeff = 1 
+                else:
+                    coeff = (size - it_liminf_size)/it_delta_size
+            if obj.action == 0:
+                obj.reward = - 1 * coeff
+            else:
+                obj.reward = + 1 * coeff
+            to_add = obj.concat()
+            self.evict_memory_vector = np.vstack(
+                (self.evict_memory_vector, to_add))
+
+        self._eviction_window_elements.clear()
+    '''
