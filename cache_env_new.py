@@ -316,10 +316,10 @@ class env:
         self.size_tot = 0
 
         # dictonaries containing actions waiting to be rewarded and then added to memory
-        self._request_window_filenames = {}
+        #self._request_window_filenames = {}
+        #self._eviction_window_filenames = {}
+        
         self._request_window_elements = {}
-
-        self._eviction_window_filenames = {}
         self._eviction_window_elements = {}
 
         # initialize experience replay memory vectors
