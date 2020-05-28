@@ -1,3 +1,0 @@
-[submodule "SmartCache/plugin/dasgoclient"]
-	path = SmartCache/plugin/dasgoclient
-	url = https://github.com/dmwm/dasgoclient.git

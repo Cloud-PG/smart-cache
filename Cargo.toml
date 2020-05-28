@@ -1,0 +1,12 @@
+[package]
+name = "stats-mod"
+version = "0.1.0"
+edition = "2018"
+
+[lib]
+name = "stats_mod"
+crate-type = ["cdylib"]
+
+[dependencies.pyo3]
+version = "0.10.1"
+features = ["extension-module"]
