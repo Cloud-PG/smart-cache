@@ -7,6 +7,8 @@ from bokeh.models import (BasicTickFormatter, FuncTickFormatter, Legend,
 from bokeh.palettes import Category20
 from bokeh.plotting import figure
 
+from .utils import get_cache_size
+
 _LINE_WIDTH = 2.8
 
 _DAY_SECONDS = 60. * 60. * 24.
@@ -441,26 +443,18 @@ def plot_measure(tools: list,
     ):
         if run_type == "run_full_normal":
             if target == "sizePerc":
-                cache_size = float(cache_name.split("T_")
-                                   [0].rsplit("_", 1)[-1])
-                cache_size = cache_size * 1024**2
+                cache_size = get_cache_size(cache_name)
                 points = (values['size'] / cache_size) * 100.
             elif target == "freeSizePerc":
-                cache_size = float(cache_name.split("T_")
-                                   [0].rsplit("_", 1)[-1])
-                cache_size = cache_size * 1024**2
+                cache_size = get_cache_size(cache_name)
                 points = ((values['size'].apply(lambda elm: cache_size-elm)) / cache_size) * 100.
             elif target == "costFunction":
-                cache_size = float(cache_name.split("T_")
-                                   [0].rsplit("_", 1)[-1])
-                cache_size = cache_size * 1024**2
+                cache_size = get_cache_size(cache_name)
                 points = ((values['written data'] +
                            values['deleted data'] +
                            values['read on miss data']) / cache_size) * 100.
             elif target == "cacheCost":
-                cache_size = float(cache_name.split("T_")
-                                   [0].rsplit("_", 1)[-1])
-                cache_size = cache_size * 1024**2
+                cache_size = get_cache_size(cache_name)
                 points = ((values['written data'] +
                            values['deleted data']) / cache_size) * 100.
             elif target == "costFunctionVs":
@@ -486,9 +480,7 @@ def plot_measure(tools: list,
                 points = values['written data'] + values['deleted data']
                 points /= lru_cost
             elif target == "miss":
-                cache_size = float(cache_name.split("T_")
-                                   [0].rsplit("_", 1)[-1])
-                cache_size = cache_size * 1024**2
+                cache_size = get_cache_size(cache_name)
                 points = (
                     values['read on miss data'] - values['written data']
                 ) / cache_size*100

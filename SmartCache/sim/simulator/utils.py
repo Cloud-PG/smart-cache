@@ -85,6 +85,24 @@ def job_run(processes: list) -> bool:
     return len(running_processes) > 0
 
 
+def get_cache_size(cache_name):
+    if cache_name.find("T_") != -1:
+        cache_size = float(cache_name.split("T_")
+                           [0].rsplit("_", 1)[-1])
+        return float(cache_size * 1024**2)
+    elif cache_name.find("G_") != -1:
+        cache_size = float(cache_name.split("G_")
+                           [0].rsplit("_", 1)[-1])
+        return float(cache_size * 1024)
+    elif cache_name.find("M_") != -1:
+        cache_size = float(cache_name.split("M_")
+                           [0].rsplit("_", 1)[-1])
+        return float(cache_size * 1024)
+    else:
+        raise Exception(
+            f"Error: '{cache_name}' cache name with unspecified size...")
+
+
 def get_result_section(cur_path: str, source_folder: str):
     section = []
     target = path.dirname(source_folder) or path.basename(source_folder)
@@ -132,9 +150,7 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False,
         if 'run_full_normal' in results:
             leaderboard = []
             for cache_name, df in tqdm(results['run_full_normal'].items(), desc="Create stats for top results"):
-                cache_size = float(cache_name.split("T_")
-                                   [0].rsplit("_", 1)[-1])
-                cache_size = float(cache_size * 1024**2)
+                cache_size = get_cache_size(cache_name)
                 cache_cost = (
                     (df['written data'] + df['deleted data']) / cache_size) * 100.
                 throughput = (df['read on hit data'] /
