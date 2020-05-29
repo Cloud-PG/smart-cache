@@ -3,6 +3,7 @@ import select
 import subprocess
 from contextlib import contextmanager
 from os import path, walk
+from pathlib import Path
 
 import coloredlogs
 import pandas as pd
@@ -222,6 +223,7 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False,
                     del results['run_full_normal'][cache_name]
 
             if top_table_output:
+                csv_dest_folder = Path(folder)
                 if group_by == "family":
                     cur_output = top_df.groupby("family").head(top).sort_values(
                         by=["family", "throughput",
@@ -229,11 +231,11 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False,
                         ascending=[True, False, True, False]
                     )
                     cur_output.to_csv(
-                        f"top_{top}_results.csv", index=False,
+                        csv_dest_folder.joinpath(f"top_{top}_results.csv"), index=False,
                         float_format='%.2f'
                     )
                     cur_output.to_latex(
-                        f"top_{top}_results.tex", index=False,
+                        csv_dest_folder.joinpath(f"top_{top}_results.tex"), index=False,
                         float_format='%.2f'
                     )
                 else:
@@ -243,11 +245,11 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False,
                         ascending=[False, True, False, False]
                     )
                     cur_output.to_csv(
-                        f"top_{top}_results.csv", index=False,
+                        csv_dest_folder.joinpath(f"top_{top}_results.csv"), index=False,
                         float_format='%.2f'
                     )
                     cur_output.to_latex(
-                        f"top_{top}_results.tex", index=False,
+                        csv_dest_folder.joinpath(f"top_{top}_results.tex"), index=False,
                         float_format='%.2f'
                     )
 

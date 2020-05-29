@@ -61,7 +61,7 @@ def main():
     )
     graph = graphviz.Source(dot_data)
     print(f"{STATUS_ARROW}Plot decision tree")
-    graph.render(f"{filename.name}.decisionTree")
+    graph.render(filename.parent.joinpath(f"{filename.name}.decisionTree"))
 
     explored_res = df.explored.value_counts()
     explored_res.rename("State exploration", inplace=True)
@@ -115,7 +115,7 @@ def main():
             cur_axes[col_idx].legend(loc='upper right')
     fig_actions.tight_layout()
     fig_actions.savefig(
-        f"{filename.name}.actions.png",
+        filename.parent.joinpath(f"{filename.name}.actions.png"),
         dpi=300,
         bbox_inches="tight",
         pad_inches=0.24
@@ -166,7 +166,7 @@ def main():
 
     # fig_table_map.tight_layout()
     fig_table_map.savefig(
-        f"{filename.name}.tableMap.png",
+        filename.parent.joinpath(f"{filename.name}.tableMap.png"),
         dpi=300,
         bbox_inches="tight",
         pad_inches=0.24
