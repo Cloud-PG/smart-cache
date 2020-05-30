@@ -166,6 +166,24 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False,
                 ]
 
                 if table_type == "leaderboard":
+                    # New Throughput
+                    values[1] = (
+                        ((
+                            df['read on hit data'] - df['written data']
+                        ) / df['read data'])*100.
+                    ).mean()
+                    # Bandwidth
+                    values.append(
+                        ((df['read on miss data'] / ((1000. / 8.) * 60. * 60. * 24. * bandwidth)) * 100.).mean())
+                    # Free Space
+                    values.append(
+                        (((df['size'].apply(
+                            lambda elm: cache_size-elm)) / cache_size) * 100.).mean()
+                    )
+                    # Hit Rate
+                    values.append(df['hit rate'].mean())
+                    leaderboard.append(values)
+                elif table_type == "old_leaderboard":
                     values.append(
                         ((df['read on miss data'] / ((1000. / 8.) * 60. * 60. * 24. * bandwidth)) * 100.).mean())
                     values.append(df['CPU efficiency'].mean())
@@ -187,6 +205,19 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False,
                     leaderboard.append(values)
 
             if table_type == "leaderboard":
+                top_df = pd.DataFrame(
+                    leaderboard,
+                    columns=[
+                        "cacheName", "throughput", "cacheCost",
+                        "readOnHitRatio", "bandSaturation", "freeSpace",
+                        "hitRate",
+                    ]
+                )
+                top_df = top_df.sort_values(
+                    by=["throughput", "cacheCost", "readOnHitRatio", "hitRate"],
+                    ascending=[False, False, True, False]
+                )
+            elif table_type == "old_leaderboard":
                 top_df = pd.DataFrame(
                     leaderboard,
                     columns=[
@@ -231,26 +262,31 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False,
                         ascending=[True, False, True, False]
                     )
                     cur_output.to_csv(
-                        csv_dest_folder.joinpath(f"top_{top}_results.csv"), index=False,
-                        float_format='%.2f'
+                        csv_dest_folder.joinpath(f"top_{top}_results.csv"), 
+                        index=False, float_format='%.2f'
                     )
                     cur_output.to_latex(
-                        csv_dest_folder.joinpath(f"top_{top}_results.tex"), index=False,
-                        float_format='%.2f'
+                        csv_dest_folder.joinpath(f"top_{top}_results.tex"), 
+                        index=False, float_format='%.2f'
                     )
                 else:
+                    sort_by = ["throughput", "cacheCost",
+                               "readOnHitRatio", ]
+                    if table_type == "old_leaderboard":
+                        sort_by.append("cpuEff")
+                    elif table_type == "leaderboard":
+                        sort_by.insert(0, "hitRate")
                     cur_output = top_df.head(top).sort_values(
-                        by=["throughput", "cacheCost",
-                            "readOnHitRatio", "cpuEff"],
+                        by=sort_by,
                         ascending=[False, True, False, False]
                     )
                     cur_output.to_csv(
-                        csv_dest_folder.joinpath(f"top_{top}_results.csv"), index=False,
-                        float_format='%.2f'
+                        csv_dest_folder.joinpath(f"top_{top}_results.csv"), 
+                        index=False, float_format='%.2f'
                     )
                     cur_output.to_latex(
-                        csv_dest_folder.joinpath(f"top_{top}_results.tex"), index=False,
-                        float_format='%.2f'
+                        csv_dest_folder.joinpath(f"top_{top}_results.tex"), 
+                        index=False, float_format='%.2f'
                     )
 
     return results

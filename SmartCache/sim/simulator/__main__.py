@@ -177,7 +177,7 @@ def main():
     parser.add_argument('--export-table', type='bool',
                         default=False,
                         help='Export top results as a csv table [DEFAULT: False]')
-    parser.add_argument('--table-type', choices=['leaderboard', 'weight'],
+    parser.add_argument('--table-type', choices=['leaderboard', 'old_leaderboard', 'weight'],
                         default='leaderboard',
                         help='Export top results as a csv table [DEFAULT: leaderboard]')
     parser.add_argument('--group-by', type=str, choices=['family', 'None'],

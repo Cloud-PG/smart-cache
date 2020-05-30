@@ -44,6 +44,7 @@ coloredlogs = "*"
 plotly = "*"
 sklearn = "*"
 graphviz = "*"
+tabulate = "*"
 
 [requires]
 python_version = "3.7"
