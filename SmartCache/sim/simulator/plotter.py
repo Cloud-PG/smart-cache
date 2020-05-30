@@ -156,6 +156,9 @@ def plot_column(tools: list,
                 cur_fig.y_range = Range1d(0, y_max_range)
             if upper_bound is not None and upper_bound_points is None and not np.array_equal(upper_bound_points, values[upper_bound].to_numpy()):
                 points = upper_bound_points = values[upper_bound].to_numpy()
+                if any(np.isnan(points)):
+                    print("WARNING [Upper bound]: some points are NaN and will be put to 0...")
+                    points[np.isnan(points)] = 0.0
                 cur_line = cur_fig.line(
                     dates if num_points == -
                     1 else collapse2numpoints(num_points, x=dates),
@@ -182,6 +185,9 @@ def plot_column(tools: list,
                 )
             if lower_bound is not None and lower_bound_points is None and not np.array_equal(lower_bound_points, values[lower_bound].to_numpy()):
                 points = lower_bound_points = values[lower_bound].to_numpy()
+                if any(np.isnan(points)):
+                    print("WARNING [Lower bound]: some points are NaN and will be put to 0...")
+                    points[np.isnan(points)] = 0.0
                 cur_line = cur_fig.line(
                     dates if num_points == -
                     1 else collapse2numpoints(num_points, x=dates),
