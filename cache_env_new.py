@@ -468,7 +468,8 @@ class env:
             if curFilename in self._request_window_elements:  # if is in queue                
                 obj = self._request_window_elements[curFilename]
 
-                if obj.counter >= self._time_span_add:
+                #if obj.counter >= self._time_span_add:
+                if (self.curRequest_from_start - obj.counter) >= self._time_span_add:
                     if obj.action == 0:
                         obj.reward = - 1 * coeff
                     else:
@@ -483,19 +484,22 @@ class env:
                 self.add_memory_vector = np.vstack(
                     (self.add_memory_vector, to_add))
 
-            for obj in self._request_window_elements.values():  # increment counters
-                obj.counter += 1
-            for item in self._eviction_window_elements.values():  # increment counters
-                for obj in item:
-                    obj.counter += 1
+            #for obj in self._request_window_elements.values():  # increment counters
+            #    obj.counter += 1
+            #for item in self._eviction_window_elements.values():  # increment counters
+            #    for obj in item:
+            #        obj.counter += 1
+            #self._request_window_elements[curFilename] = WindowElement_no_next_values(
+            #    1, curValues, 0, action)
 
             self._request_window_elements[curFilename] = WindowElement_no_next_values(
-                1, curValues, 0, action)
+                self.curRequest_from_start, curValues, 0, action)
             
             ######### GIVING REWARD TO EVICTION AND REMOVING FROM WINDOW ################################################################################################
             if curFilename in self._eviction_window_elements:  # if is in queue
                 for obj in self._eviction_window_elements[curFilename]: 
-                    if obj.counter >= self._time_span_evict:   # is invalidated
+                    #if obj.counter >= self._time_span_evict:   # is invalidated
+                    if (self.curRequest_from_start - obj.counter) >= self._time_span_evict:   # is invalidated
                         if obj.action == 0:
                             obj.reward = - 1 * coeff
                         else:
@@ -513,7 +517,9 @@ class env:
                 del self._eviction_window_elements[curFilename]            
             
         elif adding_or_evicting == 1:
-            to_add = WindowElement_no_next_values(1, curValues, 0, action)
+            #to_add = WindowElement_no_next_values(1, curValues, 0, action)
+            to_add = WindowElement_no_next_values(self.curRequest_from_start, curValues, 0, action)
+
             if curFilename not in self._eviction_window_elements: 
                 self._eviction_window_elements[curFilename] = [to_add]
             else:
@@ -610,7 +616,8 @@ class env:
                     coeff = 1 
                 else:
                     coeff = (size - it_liminf_size)/it_delta_size
-            if obj.counter > self._time_span_add:
+            #if obj.counter > self._time_span_add:
+            if (self.curRequest_from_start - obj.counter) > self._time_span_add:
                 if obj.action == 0:
                     obj.reward = - 1 * coeff
                 else:               
@@ -636,7 +643,8 @@ class env:
                         coeff = 1 
                     else:
                         coeff = (size - it_liminf_size)/it_delta_size
-                if obj.counter > self._time_span_evict:
+                #if obj.counter > self._time_span_evict:
+                if (self.curRequest_from_start - obj.counter) > self._time_span_evict:
                     if obj.action == 0:
                         obj.reward = - 1 * coeff
                     else:               

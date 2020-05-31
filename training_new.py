@@ -205,6 +205,7 @@ if timing == True:
             'add_pending_length',
             'evict_memory_length', 
             'evict_pending_length'])
+
 while end == False:
 
     ######## REPORT TIMING ##################################################################################################
@@ -339,7 +340,7 @@ while end == False:
                 environment.add_memory_vector, 0, 0)
 
         # LOOK PERIODICALLY FOR INVALIDATED PENDING ADDING AND EVICTING ACTIONS
-        if step_add % 5000:
+        if step_add % 100000 == 0:
             environment.look_for_invalidated_add_evict()
 
         # KEEP MEMORY LENGTH LESS THAN LIMIT
@@ -354,10 +355,10 @@ while end == False:
             #train_cur_vals ,train_actions, train_rewards, train_next_vals = np.split(batch, [input_len, input_len + 1, input_len + 2] , axis = 1)
             train_cur_vals ,train_actions, train_rewards = np.split(batch, [input_len, input_len + 1] , axis = 1)
             target = model_add.predict_on_batch(train_cur_vals)
-            #if debug == True:
-            #    print('PREDICT ON BATCH')
-            #    print(target)
-            #    print()
+            if debug == True:
+                print('PREDICT ON BATCH')
+                print(target)
+                print()
             if use_target_model == False:
                 #predictions = model_add.predict_on_batch(train_next_vals)
                 predictions = model_add.predict_on_batch(train_cur_vals)
@@ -475,8 +476,8 @@ while end == False:
         to_print = np.asarray(environment._cache._cached_files_keys)
         environment._cached_files_index = -1
         cur_values = environment.get_next_file_in_cache_values()
-        print('STARTED EVICTION AT: ' + str(step_add) + ' - files in cache are ' + str(np.sort(to_print)))
-        print()
+        #print('STARTED EVICTION AT: ' + str(step_add) + ' - files in cache are ' + str(np.sort(to_print)))
+        #print()
 
         
     ### STOP EVICTING ##########################################################################################
