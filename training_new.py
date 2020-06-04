@@ -319,15 +319,15 @@ while end == False and test == False:
                 daily_res_evict_actions.clear()
                 daily_notres_evict_actions.clear()
         
-        if step_add % 1 == 0 and hit == False:
+        if step_add % 1000000 == 0 and hit == False:
             print('Request: ' + str(environment.curRequest) + ' / ' + str(environment.df_length) + ' - ACTION: ' +  str(action) + '  -  Occupancy: ' + str(round(environment._cache.capacity,2)) 
                 + '%  -  ' + 'Hit rate: ' + str(round(environment._cache._hit/(environment._cache._hit + environment._cache._miss)*100,2)) +'%' )
             print()
         
-        else: 
-            print('Request: ' + str(environment.curRequest) + ' / ' + str(environment.df_length) + ' - HIT' + ' -  Occupancy: ' + str(round(environment._cache.capacity,2)) 
-                + '%  -  ' + 'Hit rate: ' + str(round(environment._cache._hit/(environment._cache._hit + environment._cache._miss)*100,2)) +'%' )
-            print()
+        #else: 
+        #    print('Request: ' + str(environment.curRequest) + ' / ' + str(environment.df_length) + ' - HIT' + ' -  Occupancy: ' + str(round(environment._cache.capacity,2)) 
+        #        + '%  -  ' + 'Hit rate: ' + str(round(environment._cache._hit/(environment._cache._hit + environment._cache._miss)*100,2)) +'%' )
+        #    print()
         '''
         # IF IT'S ADDING IS OVER, GIVE REWARD TO ALL EVICTION ACTIONS
         if environment._cache.capacity > environment._cache._h_watermark:
@@ -450,7 +450,7 @@ while end == False and test == False:
                 daily_notres_evict_actions.append(action) 
 
 
-        if step_evict % 1 == 0:
+        if step_evict % 10000000 == 0:
             print('Freeing memory ' + str(environment._cached_files_index) + '/' + str(len(environment._cache._cached_files_keys)) + 
                     '  -  Occupancy: ' + str(round(environment._cache.capacity,2)) + '%  - action: ' + str(action))
             print()
