@@ -433,7 +433,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			csvSimOutput.Create(simOutFile)
 			defer csvSimOutput.Close()
 
-			csvSimOutput.Write([]string{"date",
+			csvHeaderColumns := []string{"date",
 				"size",
 				"hit rate",
 				"hit over miss",
@@ -448,7 +448,12 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				"CPU miss efficiency",
 				"CPU efficiency upper bound",
 				"CPU efficiency lower bound",
-			})
+			}
+			if cacheType == "aiRL" {
+				csvHeaderColumns = append(csvHeaderColumns, "Addition value function")
+				csvHeaderColumns = append(csvHeaderColumns, "Eviction value function")
+			}
+			csvSimOutput.Write(csvHeaderColumns)
 
 			csvSimReport := cache.OutputCSV{}
 			csvSimReport.Create(resultReportStatsName)
@@ -493,7 +498,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 
 				if curTime.Sub(latestTime).Hours() >= 24. {
 					if windowCounter >= simStartFromWindow {
-						csvSimOutput.Write([]string{
+						csvRow := []string{
 							fmt.Sprintf("%s", latestTime),
 							fmt.Sprintf("%f", cache.Size(curCacheInstance)),
 							fmt.Sprintf("%0.2f", cache.HitRate(curCacheInstance)),
@@ -509,7 +514,11 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 							fmt.Sprintf("%f", cache.CPUMissEff(curCacheInstance)),
 							fmt.Sprintf("%f", cache.CPUEffUpperBound(curCacheInstance)),
 							fmt.Sprintf("%f", cache.CPUEffLowerBound(curCacheInstance)),
-						})
+						}
+						if cacheType == "aiRL" {
+							csvRow = append(csvRow, strings.Split(cache.ExtraOutput(curCacheInstance, "valueFunctions"), ",")...)
+						}
+						csvSimOutput.Write(csvRow)
 					}
 					cache.ClearHitMissStats(curCacheInstance)
 					// Update time window

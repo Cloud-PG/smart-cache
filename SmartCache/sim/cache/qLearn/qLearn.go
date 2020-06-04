@@ -69,6 +69,7 @@ type QTable struct {
 	RGenerator       *rand.Rand           `json:"r_generator"`
 	UpdateFunction   RLUpdateType         `json:"update_function"`
 	TrainingEnabled  bool                 `json:"training_enabled"`
+	ValueFunction    float64              `json:"value_function"`
 }
 
 // Init initilizes the QTable struct
@@ -164,8 +165,14 @@ func (table *QTable) ResetParams(trainingEnabled bool, initEpsilon float64, deca
 	table.MaxEpsilon = 1.0
 	table.MinEpsilon = 0.1
 	table.StepNum = 0
+	table.ValueFunction = 0.
 
 	logger.Info("Parameters restored as default...")
+}
+
+// ResetValueFunction clean the value function
+func (table *QTable) ResetValueFunction() {
+	table.ValueFunction = 0.
 }
 
 func (table QTable) genAllStates(featureLenghts []int) chan []bool {
@@ -310,6 +317,7 @@ func (table QTable) GetActionIndex(action ActionType) int {
 
 // Update change the Q-table values of the given action
 func (table *QTable) Update(state string, action ActionType, reward float64, newState string) {
+	table.ValueFunction += reward
 	curStateValue := table.GetAction(state, action)
 	actionIdx := table.GetActionIndex(action)
 	if newState == "" {

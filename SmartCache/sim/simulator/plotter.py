@@ -448,7 +448,17 @@ def plot_measure(tools: list,
         results, run_type, filters
     ):
         if run_type == "run_full_normal":
-            if target == "sizePerc":
+            if target == "additionValueFunction":
+                if 'Addition value function' in values.columns:
+                    points = values['Addition value function']
+                else:
+                    continue
+            elif target == "evictionValueFunction":
+                if 'Eviction value function' in values.columns:
+                    points = values['Eviction value function']
+                else:
+                    continue
+            elif target == "sizePerc":
                 cache_size = get_cache_size(cache_name)
                 points = (values['size'] / cache_size) * 100.
             elif target == "freeSizePerc":

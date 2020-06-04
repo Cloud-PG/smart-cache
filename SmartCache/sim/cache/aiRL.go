@@ -24,7 +24,7 @@ type PrevChoice struct {
 }
 
 const (
-	memorySize = 1000
+	memorySize = 100
 	trace      = 10
 )
 
@@ -129,7 +129,7 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 		cache.weightBeta = args[8].(float64)
 		cache.weightGamma = args[9].(float64)
 	}
-	cache.evictionTableUpdateCounter = 100
+	cache.evictionTableUpdateCounter = 1000
 
 	logger.Info("Feature maps", zap.String("addition map", additionFeatureMap), zap.String("eviction map", evictionFeatureMap))
 
@@ -437,7 +437,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 	// fmt.Println(
 	// 	"Written data",
-	// 	(cache.dataWritten/cache.dataRead)*100.,
+	// 	(cache.dataWritten/cache.dataRead)*0.,
 	// 	"read on hit data",
 	// 	(cache.dataReadOnHit/cache.dataRead)*100.,
 	// 	"read on miss data",
@@ -463,7 +463,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			// }
 			if cache.evictionTableUpdateCounter == 0 {
 				newState = cache.getState(nil, cache.evictionFeatureMapOrder, cache.evictionFeatureMap)
-				cache.evictionTableUpdateCounter = 100
+				cache.evictionTableUpdateCounter = 1000
 			} else {
 				cache.evictionTableUpdateCounter--
 				newState = cache.qEvictionPrevState.State
@@ -520,6 +520,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 		// Check training
 		if cache.additionTable.TrainingEnabled {
 
+			// if expEvictionTradeoff := cache.additionTable.GetRandomFloat(); expEvictionTradeoff <= cache.additionTable.Epsilon {
 			for memory := range cache.qAdditionPrevStates.Remember() {
 				curHit := cache.Check(memory.Filename)
 				curFileStats := cache.stats.Get(memory.Filename)
@@ -547,6 +548,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				// Update table
 				cache.additionTable.Update(memory.State, memory.Action, reward, newState)
 			}
+			// }
 
 			if !hit {
 				// Check learning phase or not
@@ -887,6 +889,16 @@ func (cache *AIRL) ExtraOutput(info string) string {
 		result = cache.additionTable.ToString(cache.additionFeatureMap, cache.additionFeatureMapOrder)
 	case "evictionQtable":
 		result = cache.evictionTable.ToString(cache.evictionFeatureMap, cache.evictionFeatureMapOrder)
+	case "valueFunctions":
+		additionValueFunction := 0.
+		evictionValueFunction := 0.
+		if cache.additionTableOK {
+			additionValueFunction = cache.additionTable.ValueFunction
+		}
+		if cache.evictionTableOK {
+			evictionValueFunction = cache.evictionTable.ValueFunction
+		}
+		result = fmt.Sprintf("%0.2f,%0.2f", additionValueFunction, evictionValueFunction)
 	default:
 		result = "NONE"
 	}

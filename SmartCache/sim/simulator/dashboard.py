@@ -68,13 +68,14 @@ def plot_results(folder: str, results: dict, cache_size: float,
     run_full_normal_throughput_figs = []
     run_full_normal_cost_figs = []
     run_full_normal_net_figs = []
+    run_full_normal_value_functions_figs = []
     run_full_normal_data_rw_figs = []
     run_full_normal_data_read_stats_figs = []
     run_full_normal_cpu_eff_figs = []
     run_single_window_figs = []
     run_next_period_figs = []
 
-    pbar = tqdm(total=25, desc="Plot results", ascii=True)
+    pbar = tqdm(total=27, desc="Plot results", ascii=True)
 
     ###########################################################################
     # Size plot of full normal run
@@ -380,6 +381,50 @@ def plot_results(folder: str, results: dict, cache_size: float,
             num_points=num_points,
         )
         run_full_normal_net_figs.append(net_in)
+    pbar.update(1)
+
+    ###########################################################################
+    # Addition value function
+    ###########################################################################
+    with ignored(Exception):
+        net_in = plot_measure(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            x_range=size_fig.x_range,
+            title=f"Addition value function",
+            target="additionValueFunction",
+            plot_width=plot_width,
+            plot_height=plot_height,
+            outer_legend=outer_legend,
+            num_points=num_points,
+        )
+        run_full_normal_value_functions_figs.append(net_in)
+    pbar.update(1)
+
+    ###########################################################################
+    # Eviction value function
+    ###########################################################################
+    with ignored(Exception):
+        net_in = plot_measure(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            x_range=size_fig.x_range,
+            title=f"Eviction value function",
+            target="evictionValueFunction",
+            plot_width=plot_width,
+            plot_height=plot_height,
+            outer_legend=outer_legend,
+            num_points=num_points,
+        )
+        run_full_normal_value_functions_figs.append(net_in)
     pbar.update(1)
 
     ###########################################################################
@@ -821,6 +866,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
         row(*run_full_normal_throughput_figs),
         row(*run_full_normal_cost_figs),
         row(*run_full_normal_net_figs),
+        row(*run_full_normal_value_functions_figs),
         row(*run_full_normal_data_rw_figs),
         row(*run_full_normal_data_read_stats_figs),
         row(*run_full_normal_cpu_eff_figs),
