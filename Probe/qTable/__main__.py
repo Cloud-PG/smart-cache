@@ -52,7 +52,7 @@ def main():
         clf, out_file=None,
         feature_names=state_features,
         class_names=actions,
-        filled=True, 
+        filled=True,
         rounded=True,
         special_characters=True,
         leaves_parallel=True,
