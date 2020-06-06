@@ -1,5 +1,6 @@
 import pandas as pd
 from colorama import Fore, Style
+from pathlib import Path
 
 STATUS_ARROW = f"{Style.BRIGHT + Fore.MAGENTA}==> {Style.RESET_ALL}"
 
@@ -35,3 +36,18 @@ def str2bool(v: str):
     :rtype: bool
     """
     return v.lower() in ("yes", "true", "True", "t", "1")
+
+
+def search_runs(folder: Path) -> list:
+    """Search for previous training results.
+
+    :param folder: result folder
+    :type folder: Path
+    :return: list of the files of previous runs
+    :rtype: list
+    """
+    runs = []
+    for file_ in folder.glob("*_run-*.csv"):
+        runs.append(file_)
+
+    return list(sorted(runs))

@@ -7,7 +7,7 @@ import pandas as pd
 import seaborn as sns
 from sklearn import tree
 
-from..utils import STATUS_ARROW
+from..utils import STATUS_ARROW, search_runs
 
 
 def main():
@@ -20,9 +20,49 @@ def main():
     args, _ = parser.parse_known_args()
 
     df = pd.read_csv(args.path)
+    # print(df)
+
     filename = Path(args.path)
 
-    # print(df)
+    print(f"{STATUS_ARROW}Plot value function")
+    tableType = filename.name.split(".csv")[0].rsplit(
+        "_", 1)[1].replace("Qtable", "").strip()
+    prev_runs = search_runs(filename.resolve().parent)
+    value_function_runs = []
+    value_function_index = None
+    for file_ in prev_runs:
+        cur_df = pd.read_csv(file_)
+        if value_function_index is None:
+            # Full date example: 2020-01-01 00:00:00 +0100 CET
+            value_function_index = pd.to_datetime(
+                cur_df.date.apply(lambda elm: elm.split()[0]),
+                format="%Y-%m-%d"
+            )
+        if tableType == "addition":
+            value_function_runs.append(cur_df['Addition value function'])
+        elif tableType == "eviction":
+            value_function_runs.append(cur_df['Eviction value function'])
+        else:
+            raise Exception(f"ERROR: wrong type {tableType}...")
+    value_fun_df = pd.DataFrame({
+        f'run {idx}': values
+        for idx, values in enumerate(value_function_runs)
+    })
+    value_fun_df.set_index(value_function_index, drop=True, inplace=True)
+    cur_ax = value_fun_df.plot.line(
+        figsize=(16, 8),
+        # width=1.0,
+    )
+    cur_ax.grid('on', which='both')
+    cur_ax.legend()
+    cur_ax.axhline(y=0, color='k', linestyle='-')
+    fig_value_function = cur_ax.get_figure()
+    fig_value_function.savefig(
+        filename.parent.joinpath(f"{filename.name}.valueFunction.png"),
+        dpi=300,
+        bbox_inches="tight",
+        pad_inches=0.24
+    )
 
     sort_by = [column for column in df.columns if column.find("Action") == -1]
     actions = [column for column in df.columns if column.find("Action") != -1]

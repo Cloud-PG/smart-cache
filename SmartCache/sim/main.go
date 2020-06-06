@@ -6,6 +6,7 @@ import (
 	"log"
 	"math"
 	"os"
+	"path/filepath"
 	"runtime/pprof"
 	"strings"
 	"time"
@@ -308,6 +309,10 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			resultAdditionQTableName := baseName + "_additionQtable.csv"
 			resultEvictionQTableName := baseName + "_evictionQtable.csv"
 
+			if simOutFile == "" {
+				simOutFile = resultFileName
+			}
+
 			// ------------------------- Create cache --------------------------
 			curCacheInstance := genCache(cacheType)
 
@@ -385,6 +390,16 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			if simLoadDump {
 				logger.Info("Loading cache dump", zap.String("filename", simLoadDumpFileName))
 
+				latestCacheRun := cache.GetSimulationRunNum(filepath.Dir(simLoadDumpFileName))
+
+				os.Rename(
+					simOutFile,
+					fmt.Sprintf("%s_run-%02d.csv",
+						strings.Split(simOutFile, ".")[0],
+						latestCacheRun,
+					),
+				)
+
 				loadedDump := cache.Load(curCacheInstance, simLoadDumpFileName)
 
 				if cacheType == "aiRL" {
@@ -423,10 +438,6 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				curFolder, _ := os.Open(pathString)
 				defer curFolder.Close()
 				iterator = cache.OpenSimFolder(curFolder)
-			}
-
-			if simOutFile == "" {
-				simOutFile = resultFileName
 			}
 
 			csvSimOutput := cache.OutputCSV{}
