@@ -1,10 +1,28 @@
 from keras.models import Sequential
 from keras.layers import Input, Dense, Activation, Flatten
 import keras.optimizers
+import keras.initializers
 import tensorflow as tf
 import math
 
-def dense(input_len, output_activation, nb_actions):
+def minimal_dense(input_len, output_activation, nb_actions, lr):
+    model = Sequential()
+    model.add(Dense(16, input_dim=input_len))
+    model.add(Activation('sigmoid'))
+    model.add(Dense(nb_actions))
+    model.add(Activation(output_activation))
+    print(model.summary())
+    #opt = keras.optimizers.Adam(learning_rate=0.00001)
+    opt = keras.optimizers.Adam(learning_rate=lr)
+    model.compile(loss=tf.keras.losses.Huber(), optimizer=opt)
+    #model.compile(optimizer='adam', loss=tf.keras.losses.Huber())
+
+    return model
+
+
+
+
+def dense(input_len, output_activation, nb_actions, lr):
     model = Sequential()
     model.add(Dense(16, input_dim=input_len))
     model.add(Activation('sigmoid'))
@@ -21,10 +39,26 @@ def dense(input_len, output_activation, nb_actions):
     model.add(Dense(nb_actions))
     model.add(Activation(output_activation))
     print(model.summary())
-    model.compile(optimizer='adam', loss=tf.keras.losses.Huber())
+    opt = keras.optimizers.Adam(learning_rate=lr)
+    model.compile(loss=tf.keras.losses.Huber(), optimizer=opt)
+    #model.compile(optimizer='adam', loss=tf.keras.losses.Huber())
 
     return model
 
+def small_dense(input_len, output_activation, nb_actions, lr, seed_):
+    model = Sequential()
+    initializer = keras.initializers.glorot_uniform(seed = seed_)
+    model.add(Dense(16, input_dim=input_len, activation = 'sigmoid', kernel_initializer=initializer))
+    model.add(Dense(32, activation = 'sigmoid', kernel_initializer=initializer))
+    model.add(Dense(nb_actions, activation = output_activation, kernel_initializer=initializer))
+    print(model.summary())
+    #opt = keras.optimizers.Adam(learning_rate=0.00001)
+    opt = keras.optimizers.Adam(learning_rate=lr)
+    model.compile(loss=tf.keras.losses.Huber(), optimizer=opt)
+    #model.compile(optimizer='adam', loss=tf.keras.losses.Huber())
+
+    return model
+'''
 def small_dense(input_len, output_activation, nb_actions, lr):
     model = Sequential()
     model.add(Dense(16, input_dim=input_len))
@@ -40,8 +74,8 @@ def small_dense(input_len, output_activation, nb_actions, lr):
     #model.compile(optimizer='adam', loss=tf.keras.losses.Huber())
 
     return model
-
-def big_dense(input_len, output_activation, nb_actions):
+'''
+def big_dense(input_len, output_activation, nb_actions, lr):
     model = Sequential()
     model.add(Dense(16, input_dim=input_len))
     model.add(Activation('sigmoid'))
@@ -66,7 +100,9 @@ def big_dense(input_len, output_activation, nb_actions):
     model.add(Dense(nb_actions))
     model.add(Activation(output_activation))
     print(model.summary())
-    model.compile(optimizer='adam', loss=tf.keras.losses.Huber())
+    opt = keras.optimizers.Adam(learning_rate=lr)
+    model.compile(loss=tf.keras.losses.Huber(), optimizer=opt)
+    #model.compile(optimizer='adam', loss=tf.keras.losses.Huber())
 
     return model
 

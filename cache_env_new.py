@@ -8,8 +8,9 @@ from datetime import datetime, timedelta
 import numpy as np
 import pandas as pd
 import math
+from statistics import mean
 
-input_len = 4
+input_len = 6
 bandwidthLimit = (1000000. / 8.) * 60. * 60. * 24
 # time_span = 20000
 # purge_delta = 20000
@@ -119,7 +120,9 @@ class cache(object):
 
         self._dailyReadOnHit: float = 0.0
         self._dailyReadOnMiss: float = 0.0
-
+        self._daily_reward: float = 0.0
+        self._daily_rewards_add = []
+        self._daily_rewards_evict = []
         self.daily_anomalous_CPUeff_counter = 0
 
         self._CPUeff: float = 0.0
@@ -359,6 +362,8 @@ class env:
             filestats.tot_requests,
             self.curRequest_from_start - filestats._last_request,
             0. if filestats._datatype == 0 else 1.,
+            self._cache.capacity/100.,
+            self._cache.hit_rate()
             #self._cache._get_mean_recency(
             #    self.curRequest_from_start),
             #self._cache._get_mean_frequency(),
@@ -387,7 +392,7 @@ class env:
                      'CPU hit efficiency',
                      'CPU miss efficiency',
                      'CPU efficiency upper bound',
-                     'CPU efficiency lower bound'
+                     'CPU efficiency lower bound',
                      ])
 
         with open(self._out_directory + '/' + self._out_name, 'a', newline='') as file:
@@ -408,7 +413,7 @@ class env:
                  0,
                  0,
                  0,
-                 0
+                 0,                    
                  ])
 
         return
@@ -423,7 +428,9 @@ class env:
 
         self._cache._dailyReadOnHit: float = 0.0
         self._cache._dailyReadOnMiss: float = 0.0
-
+        #self._cache._daily_reward: float = 0.0
+        self._cache._daily_rewards_add = []
+        self._cache._daily_rewards_evict = []
         self._cache._CPUeff: float = 0.0
 
         self._cache.daily_anomalous_CPUeff_counter: int = 0
@@ -479,7 +486,8 @@ class env:
                         obj.reward = + 1 * coeff
                     else:
                         obj.reward = - 1 * coeff
-
+                #self._cache._daily_reward += obj.reward
+                self._cache._daily_rewards_add.append(obj.reward)
                 to_add = obj.concat()
                 self.add_memory_vector = np.vstack(
                     (self.add_memory_vector, to_add))
@@ -509,7 +517,8 @@ class env:
                             obj.reward = + 1 * coeff
                         else:           
                             obj.reward = - 1 * coeff
-
+                    #self._cache._daily_reward += obj.reward
+                    self._cache._daily_rewards_evict.append(obj.reward)
                     to_add = obj.concat()
                     self.evict_memory_vector = np.vstack(
                         (self.evict_memory_vector, to_add))
@@ -561,6 +570,8 @@ class env:
                                 obj.reward = - 1 * coeff
                             else:               
                                 obj.reward = + 1 * coeff
+                        #self._cache._daily_reward += obj.reward
+                        self._cache._daily_rewards_add.append(obj.reward)
                         to_add = obj.concat()
                         self.add_memory_vector = np.vstack((self.add_memory_vector, to_add))
                         del self._request_window_elements[curFilename][i]
@@ -587,6 +598,8 @@ class env:
                                 obj.reward = - 1 * coeff
                             else:               
                                 obj.reward = + 1 * coeff
+                        #self._cache._daily_reward += obj.reward
+                        self._cache._daily_rewards_evict.append(obj.reward)
                         to_add = obj.concat()
                         self.evict_memory_vector = np.vstack((self.evict_memory_vector, to_add))
                         del self._eviction_window_elements[curFilename][i]   
@@ -699,6 +712,8 @@ class env:
                     obj.reward = - 1 * coeff
                 else:               
                     obj.reward = + 1 * coeff
+                #self._cache._daily_reward += obj.reward
+                self._cache._daily_rewards_add.append(obj.reward)
                 to_add = obj.concat()
                 self.add_memory_vector = np.vstack(
                     (self.add_memory_vector, to_add))
@@ -727,6 +742,8 @@ class env:
                         obj.reward = - 1 * coeff
                     else:               
                         obj.reward = + 1 * coeff
+                    #self._cache._daily_reward += obj.reward
+                    self._cache._daily_rewards_evict.append(obj.reward)
                     to_add = obj.concat()
                     self.evict_memory_vector = np.vstack(
                         (self.evict_memory_vector, to_add))
@@ -758,6 +775,8 @@ class env:
                         obj.reward = - 1 * coeff
                     else:               
                         obj.reward = + 1 * coeff
+                    #self._cache._daily_reward += obj.reward
+                    self._cache._daily_rewards_add.append(obj.reward)
                     to_add = obj.concat()
                     self.add_memory_vector = np.vstack(
                         (self.add_memory_vector, to_add))
@@ -788,6 +807,7 @@ class env:
                     else:               
                         obj.reward = + 1 * coeff
                     to_add = obj.concat()
+                    self._cache._daily_rewards_evict.append(obj.reward)
                     self.evict_memory_vector = np.vstack(
                         (self.evict_memory_vector, to_add))
                     del self._eviction_window_elements[curFilename][i]
@@ -825,6 +845,8 @@ class env:
             filestats.tot_requests,
             self.curRequest_from_start - filestats._last_request,
             0. if filestats._datatype == 0 else 1.,
+            self._cache.capacity/100.,
+            self._cache.hit_rate()
             #self._cache._get_mean_recency(
             #    self.curRequest_from_start),
             #self._cache._get_mean_frequency(),
@@ -871,6 +893,8 @@ class env:
             filestats.tot_requests,
             self.curRequest_from_start - filestats._last_request,
             0. if filestats._datatype == 0 else 1.,
+            self._cache.capacity/100.,
+            self._cache.hit_rate()
             #self._cache._get_mean_recency(
             #    self.curRequest_from_start),
             #self._cache._get_mean_frequency(),
@@ -891,6 +915,8 @@ class env:
             filestats.tot_requests,
             self.curRequest_from_start - filestats._last_request,
             0. if filestats._datatype == 0 else 1.,
+            self._cache.capacity/100.,
+            self._cache.hit_rate()
             #self._cache._get_mean_recency(
             #    self.curRequest_from_start),
             #self._cache._get_mean_frequency(),

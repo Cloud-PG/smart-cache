@@ -69,6 +69,7 @@ parser.add_argument('--write_everything', type = bool, default = False)
 parser.add_argument('--timing', type = bool, default = False)
 parser.add_argument('--invalidated_search_frequency', type = int, default = 100000)
 parser.add_argument('--test', type = bool, default = False)
+parser.add_argument('--seed', type = int, default = 2019)
 
 
 args = parser.parse_args()
@@ -86,7 +87,7 @@ else:
 
 print(data_directory)
 
-input_len = 4 
+input_len = 6
 #input_len = 7 + total_campaigns + total_sites
 
 
@@ -140,23 +141,51 @@ if use_target_model == True:
 
 nb_actions = 2
 observation_shape = (input_len,)
-seed_ = 2019
+seed_ = args.seed
 DailyBandwidth1Gbit = bandwidth * (1000. / 8.) * 60. * 60. * 24.       #MB in a day with <bandwidth> Gbit/s
 
 ############## DEFINE ADD AND EVICT MODELS ##########################################################################
 
-model_add = small_dense(input_len, output_activation, nb_actions, learning_rate)
-model_evict = small_dense(input_len, output_activation, nb_actions, learning_rate)
+
+'''
+model_add = minimal_dense(input_len, output_activation, nb_actions, learning_rate)
+model_evict = minimal_dense(input_len, output_activation, nb_actions, learning_rate)
 if use_target_model == True:
-    target_model_add = small_dense(input_len, output_activation, nb_actions, learning_rate)
-    target_model_evict = small_dense(input_len, output_activation, nb_actions, learning_rate)
+    target_model_add = minimal_dense(input_len, output_activation, nb_actions, learning_rate)
+    target_model_evict = minimal_dense(input_len, output_activation, nb_actions, learning_rate)
+'''
 
 
+
+model_add = small_dense(input_len, output_activation, nb_actions, learning_rate, seed_)
+model_evict = small_dense(input_len, output_activation, nb_actions, learning_rate, seed_ + 1)
+if use_target_model == True:
+    target_model_add = small_dense(input_len, output_activation, nb_actions, learning_rate, seed_ + 2)
+    target_model_evict = small_dense(input_len, output_activation, nb_actions, learning_rate, seed_ + 3)
+
+
+'''
+model_add = dense(input_len, output_activation, nb_actions, learning_rate)
+model_evict = dense(input_len, output_activation, nb_actions, learning_rate)
+if use_target_model == True:
+    target_model_add = dense(input_len, output_activation, nb_actions, learning_rate)
+    target_model_evict = dense(input_len, output_activation, nb_actions, learning_rate)
+'''
+
+'''
+model_add = big_dense(input_len, output_activation, nb_actions, learning_rate)
+model_evict = big_dense(input_len, output_activation, nb_actions, learning_rate)
+if use_target_model == True:
+    target_model_add = big_dense(input_len, output_activation, nb_actions, learning_rate)
+    target_model_evict = big_dense(input_len, output_activation, nb_actions, learning_rate)
+'''
 if args.load_weights_from_file == True:
-    model_add.load_weights(out_directory + '/' + args.in_add_weights)
+    #model_add.load_weights(out_directory + '/' + args.in_add_weights)
+    model_add.load_weights(args.in_add_weights)
     print('ADD WEIGHTS LOADED')
 if args.load_weights_from_file == True:
-    model_evict.load_weights(out_directory + '/' + args.in_evict_weights)
+    #model_evict.load_weights(out_directory + '/' + args.in_evict_weights)
+    model_evict.load_weights(args.in_evict_weights)
     print('EVICT WEIGHTS LOADED')
 
 
@@ -175,6 +204,7 @@ if args.region == 'it':
 #        _startMonth, _endMonth, data_directory, out_directory, out_name, time_span, purge_delta)
 
 random.seed(seed_)
+np.random.seed(seed_)
 adding_or_evicting = 0
 step_add = 0
 step_evict = 0
@@ -188,6 +218,7 @@ step_evict_decay = 0
 addition_counter = 0
 eviction_counter = 0
 
+daily_reward = []
 daily_add_actions = []
 daily_evict_actions = []
 daily_res_add_actions = []
@@ -216,7 +247,8 @@ if timing == True:
 
 end_of_cache = False
 while end == False and test == False:
-
+    #print(len(environment._cache._daily_rewards_add))
+    #print(len(environment._cache._daily_rewards_evict))
     ######## REPORT TIMING ##################################################################################################
     if timing == True:
         before = now
@@ -247,6 +279,8 @@ while end == False and test == False:
             elif annealing_type == 'linear':
                 eps_add = eps_add_max - slope_add * step_add_decay
         cur_values = environment.curValues
+        if debug == True:
+            print(cur_values)
         if step_add % 10000000 == 0:
             print('epsilon = ' + str(eps_add))
                 
@@ -280,7 +314,18 @@ while end == False and test == False:
                 daily_res_add_actions.append(action)
             else:
                 daily_notres_add_actions.append(action) 
-            if environment.curRequest == 0 and environment.curDay > 0:   
+            #if environment.curRequest == 0 and environment.curDay > 0:
+            if environment.curRequest + 1 == environment.df_length  and environment.curDay > 0:      
+                with open(out_directory + '/rewards_add_{}.csv'.format(environment.curDay), 'w') as file:
+                    writer = csv.writer(file)
+                    writer.writerow(['reward','eps_add'])
+                    for i in range(0,len(environment._cache._daily_rewards_add)):
+                        writer.writerow([environment._cache._daily_rewards_add[i], eps_add])
+                with open(out_directory + '/rewards_evict_{}.csv'.format(environment.curDay), 'w') as file:
+                    writer = csv.writer(file)
+                    writer.writerow(['reward', 'eps_evict'])
+                    for i in range(0,len(environment._cache._daily_rewards_evict)):
+                        writer.writerow([environment._cache._daily_rewards_evict[i], eps_evict])
                 with open(out_directory + '/addition_choices_{}.csv'.format(environment.curDay), 'w') as file:
                     writer = csv.writer(file)
                     writer.writerow(['addition_choice'])
@@ -319,15 +364,15 @@ while end == False and test == False:
                 daily_res_evict_actions.clear()
                 daily_notres_evict_actions.clear()
         
-        if step_add % 1000000 == 0 and hit == False:
+        if debug == True and step_add % 1 == 0 and hit == False:
             print('Request: ' + str(environment.curRequest) + ' / ' + str(environment.df_length) + ' - ACTION: ' +  str(action) + '  -  Occupancy: ' + str(round(environment._cache.capacity,2)) 
                 + '%  -  ' + 'Hit rate: ' + str(round(environment._cache._hit/(environment._cache._hit + environment._cache._miss)*100,2)) +'%' )
             print()
         
-        #else: 
-        #    print('Request: ' + str(environment.curRequest) + ' / ' + str(environment.df_length) + ' - HIT' + ' -  Occupancy: ' + str(round(environment._cache.capacity,2)) 
-        #        + '%  -  ' + 'Hit rate: ' + str(round(environment._cache._hit/(environment._cache._hit + environment._cache._miss)*100,2)) +'%' )
-        #    print()
+        elif debug == True and step_add % 1 == 0 and hit == True:
+            print('Request: ' + str(environment.curRequest) + ' / ' + str(environment.df_length) + ' - HIT' + ' -  Occupancy: ' + str(round(environment._cache.capacity,2)) 
+                + '%  -  ' + 'Hit rate: ' + str(round(environment._cache._hit/(environment._cache._hit + environment._cache._miss)*100,2)) +'%' )
+            print()
         '''
         # IF IT'S ADDING IS OVER, GIVE REWARD TO ALL EVICTION ACTIONS
         if environment._cache.capacity > environment._cache._h_watermark:
@@ -383,7 +428,8 @@ while end == False and test == False:
             #train_cur_vals ,train_actions, train_rewards, train_next_vals = np.split(batch, [input_len, input_len + 1, input_len + 2] , axis = 1)
             train_cur_vals ,train_actions, train_rewards = np.split(batch, [input_len, input_len + 1] , axis = 1)
             target = model_add.predict_on_batch(train_cur_vals)
-            if debug == True:
+            if debug == True and step_add % 100 == 0:
+            #if debug == True and step_add == warm_up_steps_add + 1:
                 print('PREDICT ON BATCH')
                 print(batch)
                 print(target)
@@ -419,6 +465,8 @@ while end == False and test == False:
             elif annealing_type == 'linear':
                 eps_evict = eps_evict_max - slope_evict * step_evict_decay
         cur_values = environment.curValues
+        if debug == True:
+            print(cur_values)
         if step_evict % 100000000 == 0:
             print('epsilon = ' + str(eps_evict))
         
@@ -450,7 +498,7 @@ while end == False and test == False:
                 daily_notres_evict_actions.append(action) 
 
 
-        if step_evict % 10000000 == 0:
+        if debug == True and step_evict % 1 == 0:
             print('Freeing memory ' + str(environment._cached_files_index) + '/' + str(len(environment._cache._cached_files_keys)) + 
                     '  -  Occupancy: ' + str(round(environment._cache.capacity,2)) + '%  - action: ' + str(action))
             print()
@@ -492,11 +540,11 @@ while end == False and test == False:
             train_cur_vals ,train_actions, train_rewards = np.split(batch, [input_len, input_len+1] , axis = 1)
             target = model_evict.predict_on_batch(train_cur_vals)
             
-            if debug == True:
-                print('PREDICT ON BATCH')
-                print(batch)
-                print(target)
-                print()
+            #if debug == True and step_evict % 1 == 0:
+            #    print('PREDICT ON BATCH')
+            #    print(batch)
+            #    print(target)
+            #    print()
             if use_target_model == False:
                 #predictions = model_evict.predict_on_batch(train_next_vals)
                 predictions = model_evict.predict_on_batch(train_cur_vals)
@@ -559,8 +607,10 @@ while end == False and test == False:
     ### END #####################################################################################################
     if environment.curDay == environment._idx_end:
         end = True
-        model_add.save_weights(out_directory + '/' + args.out_add_weights)
-        model_evict.save_weights(out_directory + '/' + args.out_evict_weights)
+        #model_add.save_weights(out_directory + '/' + args.out_add_weights)
+        #model_evict.save_weights(out_directory + '/' + args.out_evict_weights)
+        model_add.save_weights(args.out_add_weights)
+        model_evict.save_weights(args.out_evict_weights)
         print('WEIGHTS SAVED')
 
 ###################################
@@ -611,6 +661,11 @@ while end == False and test == True:
             else:
                 daily_notres_add_actions.append(action) 
             if environment.curRequest == 0 and environment.curDay > 0:   
+                with open(out_directory + '/rewards_{}.csv'.format(environment.curDay), 'w') as file:
+                    writer = csv.writer(file)
+                    writer.writerow(['reward'])
+                    for i in range(0,len(daily_add_actions)):
+                        writer.writerow([daily_add_actions[i]])
                 with open(out_directory + '/addition_choices_{}.csv'.format(environment.curDay), 'w') as file:
                     writer = csv.writer(file)
                     writer.writerow(['addition_choice'])
