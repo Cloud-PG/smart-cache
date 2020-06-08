@@ -49,14 +49,14 @@ def main():
         for idx, values in enumerate(value_function_runs)
     })
     value_fun_df.set_index(value_function_index, drop=True, inplace=True)
-    cur_ax = value_fun_df.plot.line(
+    val_fun_cur_ax = value_fun_df.plot.line(
         figsize=(16, 8),
         # width=1.0,
     )
-    cur_ax.grid('on', which='both')
-    cur_ax.legend()
-    cur_ax.axhline(y=0, color='k', linestyle='-')
-    fig_value_function = cur_ax.get_figure()
+    val_fun_cur_ax.grid('on', which='both')
+    val_fun_cur_ax.legend()
+    val_fun_cur_ax.axhline(y=0, color='k', linestyle='-')
+    fig_value_function = val_fun_cur_ax.get_figure()
     fig_value_function.savefig(
         filename.parent.joinpath(f"{filename.name}.valueFunction.png"),
         dpi=300,
@@ -136,7 +136,7 @@ def main():
     )
 
     fig_actions, action_axes = plt.subplots(
-        nrows=len(actions), ncols=3, figsize=(
+        nrows=len(actions), ncols=len(state_features), figsize=(
             8*len(actions), 8*len(state_features)
         )
     )
