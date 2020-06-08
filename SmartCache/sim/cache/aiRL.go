@@ -313,9 +313,6 @@ func (cache *AIRL) Loads(inputString [][]byte, vars ...interface{}) {
 
 func (cache *AIRL) getState(fileStats *FileStats, featureOrder []string, featureMap map[string]featuremap.Obj) string {
 
-	cacheCapacity := float64(cache.Capacity())
-	deltaHighWatermark := float64(cache.HighWaterMark) - cacheCapacity
-
 	cache.bufferInputVector = cache.bufferInputVector[:0]
 
 	for _, featureName := range featureOrder {
@@ -326,7 +323,9 @@ func (cache *AIRL) getState(fileStats *FileStats, featureOrder []string, feature
 		case "numReq":
 			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(float64(fileStats.Frequency)))
 		case "cacheUsage":
-			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(cacheCapacity))
+			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(float64(cache.Capacity())))
+		case "cacheHitRate":
+			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(cache.HitRate()))
 		case "dataType":
 			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(fileStats.DataType))
 		case "fileType":
@@ -334,6 +333,7 @@ func (cache *AIRL) getState(fileStats *FileStats, featureOrder []string, feature
 		case "deltaLastRequest":
 			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(float64(fileStats.DeltaLastRequest)))
 		case "deltaHighWatermark":
+			deltaHighWatermark := float64(cache.HighWaterMark) - float64(fileStats.DeltaLastRequest)
 			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(deltaHighWatermark))
 		case "meanSize":
 			cache.bufferInputVector = append(cache.bufferInputVector, curObj.GetValue(cache.MeanSize()))
