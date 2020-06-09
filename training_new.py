@@ -16,6 +16,8 @@ import array
 import os
 import argparse
 import time
+import sys
+np.set_printoptions(threshold=sys.maxsize)
 
 it_total_sites = 12
 it_total_campaigns = 128
@@ -67,7 +69,7 @@ parser.add_argument('--report_particular_choices', type = bool, default = False)
 parser.add_argument('--bandwidth', type = float, default = 10.)
 parser.add_argument('--write_everything', type = bool, default = False)
 parser.add_argument('--timing', type = bool, default = False)
-parser.add_argument('--invalidated_search_frequency', type = int, default = 100000)
+parser.add_argument('--invalidated_search_frequency', type = int, default = 30000)
 parser.add_argument('--test', type = bool, default = False)
 parser.add_argument('--seed', type = int, default = 2019)
 
@@ -366,12 +368,12 @@ while end == False and test == False:
         
         if debug == True and step_add % 1 == 0 and hit == False:
             print('Request: ' + str(environment.curRequest) + ' / ' + str(environment.df_length) + ' - ACTION: ' +  str(action) + '  -  Occupancy: ' + str(round(environment._cache.capacity,2)) 
-                + '%  -  ' + 'Hit rate: ' + str(round(environment._cache._hit/(environment._cache._hit + environment._cache._miss)*100,2)) +'%' )
+                + '%  -  ' + 'Hit rate: ' + str(round(environment._cache._hit/(environment._cache._hit + environment._cache._miss)*100,2)) +'%', '\r' )
             print()
         
         elif debug == True and step_add % 1 == 0 and hit == True:
             print('Request: ' + str(environment.curRequest) + ' / ' + str(environment.df_length) + ' - HIT' + ' -  Occupancy: ' + str(round(environment._cache.capacity,2)) 
-                + '%  -  ' + 'Hit rate: ' + str(round(environment._cache._hit/(environment._cache._hit + environment._cache._miss)*100,2)) +'%' )
+                + '%  -  ' + 'Hit rate: ' + str(round(environment._cache._hit/(environment._cache._hit + environment._cache._miss)*100,2)) +'%' , '\r')
             print()
         '''
         # IF IT'S ADDING IS OVER, GIVE REWARD TO ALL EVICTION ACTIONS
@@ -414,6 +416,7 @@ while end == False and test == False:
         # LOOK PERIODICALLY FOR INVALIDATED PENDING ADDING AND EVICTING ACTIONS
         if step_add % args.invalidated_search_frequency == 0:
             #environment.look_for_invalidated_add_evict()
+            print('LOOKING FOR INVALIDATED FILES')
             environment.look_for_invalidated_add_evict_accumulate()
 
         # KEEP MEMORY LENGTH LESS THAN LIMIT
@@ -425,24 +428,24 @@ while end == False and test == False:
         # TRAIN NETWORK
         if step_add > warm_up_steps_add and test == False:
             batch = environment.add_memory_vector[np.random.randint(0, environment.add_memory_vector.shape[0], BATCH_SIZE), :]
-            #train_cur_vals ,train_actions, train_rewards, train_next_vals = np.split(batch, [input_len, input_len + 1, input_len + 2] , axis = 1)
-            train_cur_vals ,train_actions, train_rewards = np.split(batch, [input_len, input_len + 1] , axis = 1)
+            train_cur_vals ,train_actions, train_rewards, train_next_vals = np.split(batch, [input_len, input_len + 1, input_len + 2] , axis = 1)
+            #train_cur_vals ,train_actions, train_rewards = np.split(batch, [input_len, input_len + 1] , axis = 1)
             target = model_add.predict_on_batch(train_cur_vals)
-            if debug == True and step_add % 100 == 0:
+            #if debug == True and step_add % 100 == 0:
             #if debug == True and step_add == warm_up_steps_add + 1:
-                print('PREDICT ON BATCH')
-                print(batch)
-                print(target)
-                print()
+                #print('PREDICT ON BATCH')
+                #print(batch)
+                #print(target)
+                #print()
             if use_target_model == False:
-                #predictions = model_add.predict_on_batch(train_next_vals)
-                predictions = model_add.predict_on_batch(train_cur_vals)
+                predictions = model_add.predict_on_batch(train_next_vals)
+                #predictions = model_add.predict_on_batch(train_cur_vals)
                 for i in range(0,BATCH_SIZE):
                     action_ = int(train_actions[i])
                     target[i,action_] = train_rewards[i] + gamma * mellowmax(mm_omega, predictions[i])   
             else:
-                #predictions = target_model_add.predict_on_batch(train_next_vals)
-                predictions = target_model_add.predict_on_batch(train_cur_vals)
+                predictions = target_model_add.predict_on_batch(train_next_vals)
+                #predictions = target_model_add.predict_on_batch(train_cur_vals)
                 for i in range(0,BATCH_SIZE):
                     action_ = int(train_actions[i])               
                     target[i,action_] = train_rewards[i] + gamma * max(predictions[i])  
@@ -499,8 +502,8 @@ while end == False and test == False:
 
 
         if debug == True and step_evict % 1 == 0:
-            print('Freeing memory ' + str(environment._cached_files_index) + '/' + str(len(environment._cache._cached_files_keys)) + 
-                    '  -  Occupancy: ' + str(round(environment._cache.capacity,2)) + '%  - action: ' + str(action))
+            print('Freeing memory ' + str(environment._cached_files_index) + '/' + str(len(environment._cache._cached_files_keys)) +  ' - action: ' + str(action)
+                    + '  -  Occupancy: ' + str(round(environment._cache.capacity,2)) + '%') 
             print()
         
         #print(environment._cached_files_index)
@@ -536,24 +539,24 @@ while end == False and test == False:
         # TRAIN NETWORK
         if step_evict > warm_up_steps_evict and test == False:
             batch = environment.evict_memory_vector[np.random.randint(0, environment.evict_memory_vector.shape[0], BATCH_SIZE), :]
-            #train_cur_vals ,train_actions, train_rewards, train_next_vals = np.split(batch, [input_len, input_len+1, input_len+2] , axis = 1)
-            train_cur_vals ,train_actions, train_rewards = np.split(batch, [input_len, input_len+1] , axis = 1)
+            train_cur_vals ,train_actions, train_rewards, train_next_vals = np.split(batch, [input_len, input_len+1, input_len+2] , axis = 1)
+            #train_cur_vals ,train_actions, train_rewards = np.split(batch, [input_len, input_len+1] , axis = 1)
             target = model_evict.predict_on_batch(train_cur_vals)
             
-            #if debug == True and step_evict % 1 == 0:
-            #    print('PREDICT ON BATCH')
-            #    print(batch)
-            #    print(target)
-            #    print()
+            if debug == True and step_evict % 100 == 0:
+                print('PREDICT ON BATCH')
+                print(batch)
+                print(target)
+                print()
             if use_target_model == False:
-                #predictions = model_evict.predict_on_batch(train_next_vals)
-                predictions = model_evict.predict_on_batch(train_cur_vals)
+                predictions = model_evict.predict_on_batch(train_next_vals)
+                #predictions = model_evict.predict_on_batch(train_cur_vals)
                 for i in range(0,BATCH_SIZE):  
                     action_ = int(train_actions[i])
                     target[i,action_] = train_rewards[i] + gamma * mellowmax(mm_omega, predictions[i])  
             else:
-                #predictions = target_model_add.predict_on_batch(train_next_vals)
-                predictions = target_model_add.predict_on_batch(train_cur_vals)
+                predictions = target_model_add.predict_on_batch(train_next_vals)
+                #predictions = target_model_add.predict_on_batch(train_cur_vals)
                 for i in range(0,BATCH_SIZE):  
                     action_ = int(train_actions[i])
                     target[i,action_] = train_rewards[i] + gamma * max(predictions[i])  
@@ -646,7 +649,7 @@ while end == False and test == True:
         action = np.argmax(model_add.predict(cur_values_))
         hit = environment.check_if_current_is_hit()
         anomalous = environment.current_cpueff_is_anomalous()
-
+        #action = 0
 
         # GET THIS REQUEST
         if anomalous == False:
@@ -727,11 +730,23 @@ while end == False and test == True:
     ### EVICTING #############################################################################################################
     elif adding_or_evicting == 1: 
         
-        cur_values = environment.curValues
-        cur_values_ = np.reshape(cur_values, (1, input_len))
+        # GET ACTION
+        rnd_eps = random.random()
+        if rnd_eps < eps_evict:
+            rnd = random.random()
+            if rnd < 0.5:
+                action = 0
+            else:
+                action = 1
+        else:
+            cur_values_ = np.reshape(cur_values, (1, input_len))
+            action = np.argmax(model_evict.predict(cur_values_))
         print(model_evict.predict(cur_values_))
-        action = np.argmax(model_evict.predict(cur_values_))
-        
+        #cur_values = environment.curValues
+        #cur_values_ = np.reshape(cur_values, (1, input_len))
+        #print(model_evict.predict(cur_values_))
+        #action = np.argmax(model_evict.predict(cur_values_))
+        #action = 1
         # IF ADDING IS NOT OVER, GET NEXT VALUES AND PREPARE ACTION TO BE REWARDED, GIVING EVENTUAL REWARD
         curFilename, curSize = environment.get_filename_and_size_of_current_cache_file()
         if action == 1:
