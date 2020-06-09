@@ -231,13 +231,14 @@ class dfWrapper(object):
 
 class WindowElement_no_next_values(object):
 
-    __slots__ = ['counter', 'cur_values', 'reward', 'action']
+    __slots__ = ['counter', 'cur_values', 'reward', 'action', 'next_values']
 
     def __init__(self, counter=-1, cur_values=[], reward=-1, action=-1):
         self.counter = counter
         self.cur_values = cur_values
         self.reward = reward
         self.action = action
+        self.next_values = np.zeros(input_len)
 
     def concat(self):
         return np.reshape(np.concatenate((
@@ -245,6 +246,22 @@ class WindowElement_no_next_values(object):
             [self.action],
             [self.reward],
         )), (1, input_len + 1 + 1 ))
+    
+    def concat_with_next_values(self, occupancy, hit_rate):
+
+        self.next_values[0] = self.cur_values[0] 
+        self.next_values[1] = self.cur_values[1] + 1
+        self.next_values[2] = self.cur_values[2]
+        self.next_values[3] = self.cur_values[3]  
+        self.next_values[4] = occupancy/100.
+        self.next_values[5] = hit_rate
+
+        return np.reshape(np.concatenate((
+            self.cur_values,
+            [self.action],
+            [self.reward],
+            self.next_values,
+        )), (1, 2*input_len + 1 + 1 ))
 
 
 
@@ -326,10 +343,10 @@ class env:
         self._eviction_window_elements = {}
 
         # initialize experience replay memory vectors
-        #self.add_memory_vector = np.empty((1, 2 * input_len +1 + 1))
-        #self.evict_memory_vector = np.empty((1, 2 * input_len +1 + 1))
-        self.add_memory_vector = np.empty((1, input_len +1 + 1))
-        self.evict_memory_vector = np.empty((1, input_len +1 + 1))
+        self.add_memory_vector = np.empty((1, 2 * input_len +1 + 1))
+        self.evict_memory_vector = np.empty((1, 2 * input_len +1 + 1))
+        #self.add_memory_vector = np.empty((1, input_len +1 + 1))
+        #self.evict_memory_vector = np.empty((1, input_len +1 + 1))
 
         # begin reading data
         self.curRequest = -1
@@ -488,7 +505,8 @@ class env:
                         obj.reward = - 1 * coeff
                 #self._cache._daily_reward += obj.reward
                 self._cache._daily_rewards_add.append(obj.reward)
-                to_add = obj.concat()
+                #to_add = obj.concat()
+                to_add = obj.concat_with_next_values(self._cache.capacity, self._cache.hit_rate())
                 self.add_memory_vector = np.vstack(
                     (self.add_memory_vector, to_add))
 
@@ -519,7 +537,8 @@ class env:
                             obj.reward = - 1 * coeff
                     #self._cache._daily_reward += obj.reward
                     self._cache._daily_rewards_evict.append(obj.reward)
-                    to_add = obj.concat()
+                    #to_add = obj.concat()
+                    to_add = obj.concat_with_next_values(self._cache.capacity, self._cache.hit_rate())
                     self.evict_memory_vector = np.vstack(
                         (self.evict_memory_vector, to_add))
 
@@ -572,7 +591,9 @@ class env:
                                 obj.reward = + 1 * coeff
                         #self._cache._daily_reward += obj.reward
                         self._cache._daily_rewards_add.append(obj.reward)
-                        to_add = obj.concat()
+                        #to_add = obj.concat()
+                        to_add = obj.concat_with_next_values(self._cache.capacity, self._cache.hit_rate())
+                        #print(to_add)
                         self.add_memory_vector = np.vstack((self.add_memory_vector, to_add))
                         del self._request_window_elements[curFilename][i]
 
@@ -600,7 +621,8 @@ class env:
                                 obj.reward = + 1 * coeff
                         #self._cache._daily_reward += obj.reward
                         self._cache._daily_rewards_evict.append(obj.reward)
-                        to_add = obj.concat()
+                        #to_add = obj.concat()
+                        to_add = obj.concat_with_next_values(self._cache.capacity, self._cache.hit_rate())
                         self.evict_memory_vector = np.vstack((self.evict_memory_vector, to_add))
                         del self._eviction_window_elements[curFilename][i]   
                     else:                               # is not invalidated yet
@@ -614,6 +636,7 @@ class env:
                 self._eviction_window_elements[curFilename] = [to_add]
             else:
                 self._eviction_window_elements[curFilename].append(to_add)
+
     '''
     def update_windows_getting_eventual_rewards_waiting(self, adding_or_evicting, curFilename, curValues, nextValues, action):
         
@@ -714,7 +737,8 @@ class env:
                     obj.reward = + 1 * coeff
                 #self._cache._daily_reward += obj.reward
                 self._cache._daily_rewards_add.append(obj.reward)
-                to_add = obj.concat()
+                #to_add = obj.concat()
+                to_add = obj.concat_with_next_values(self._cache.capacity, self._cache.hit_rate())
                 self.add_memory_vector = np.vstack(
                     (self.add_memory_vector, to_add))
                 toDelete |= set([curFilename,])
@@ -744,7 +768,8 @@ class env:
                         obj.reward = + 1 * coeff
                     #self._cache._daily_reward += obj.reward
                     self._cache._daily_rewards_evict.append(obj.reward)
-                    to_add = obj.concat()
+                    #to_add = obj.concat()
+                    to_add = obj.concat_with_next_values(self._cache.capacity, self._cache.hit_rate())
                     self.evict_memory_vector = np.vstack(
                         (self.evict_memory_vector, to_add))
                     toDelete |= set([curFilename,])
@@ -771,13 +796,25 @@ class env:
                 #if obj.counter > self._time_span_add:
                 
                 if (self.curRequest_from_start - obj.counter) > self._time_span_add:
-                    if obj.action == 0:
-                        obj.reward = - 1 * coeff
-                    else:               
-                        obj.reward = + 1 * coeff
+                    if obj.reward != 0:   #some hits
+                        if obj.action == 0:
+                            obj.reward = + obj.reward * coeff 
+                        else:
+                            obj.reward = - obj.reward * coeff
+                    else:                  #no hits at all
+                        if obj.action == 0:
+                            obj.reward = - 1 * coeff
+                        else:               
+                            obj.reward = + 1 * coeff
+                    #if obj.action == 0:
+                    #    obj.reward = - 1 * coeff
+                    #else:               
+                    #    obj.reward = + 1 * coeff
                     #self._cache._daily_reward += obj.reward
                     self._cache._daily_rewards_add.append(obj.reward)
-                    to_add = obj.concat()
+                    #to_add = obj.concat()
+                    to_add = obj.concat_with_next_values(self._cache.capacity, self._cache.hit_rate())
+                    #print(to_add)
                     self.add_memory_vector = np.vstack(
                         (self.add_memory_vector, to_add))
                     del self._request_window_elements[curFilename][i]
@@ -802,11 +839,22 @@ class env:
                 #if obj.counter > self._time_span_evict:
                 #print(self.curRequest_from_start - obj.counter)
                 if (self.curRequest_from_start - obj.counter) > self._time_span_evict:
-                    if obj.action == 0:
-                        obj.reward = - 1 * coeff
-                    else:               
-                        obj.reward = + 1 * coeff
-                    to_add = obj.concat()
+                    if obj.reward != 0:   #some hits
+                        if obj.action == 0:
+                            obj.reward = + obj.reward * coeff 
+                        else:
+                            obj.reward = - obj.reward * coeff
+                    else:                  #no hits at all
+                        if obj.action == 0:
+                            obj.reward = - 1 * coeff
+                        else:               
+                            obj.reward = + 1 * coeff
+                    #if obj.action == 0:
+                    #    obj.reward = - 1 * coeff
+                    #else:               
+                    #    obj.reward = + 1 * coeff
+                    #to_add = obj.concat()
+                    to_add = obj.concat_with_next_values(self._cache.capacity, self._cache.hit_rate())
                     self._cache._daily_rewards_evict.append(obj.reward)
                     self.evict_memory_vector = np.vstack(
                         (self.evict_memory_vector, to_add))
