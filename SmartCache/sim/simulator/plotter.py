@@ -482,6 +482,8 @@ def plot_measure(tools: list,
                             inner_values['deleted data'] + \
                             inner_values['read on miss data']
                         break
+                else:
+                    continue
                 points = values['written data'] + \
                     values['deleted data'] + values['read on miss data']
                 points /= lru_cost
@@ -493,6 +495,8 @@ def plot_measure(tools: list,
                         lru_cost = inner_values['written data'] + \
                             inner_values['deleted data']
                         break
+                else:
+                    continue
                 points = values['written data'] + values['deleted data']
                 points /= lru_cost
             elif target == "miss":
@@ -516,6 +520,8 @@ def plot_measure(tools: list,
                         lru_cost = inner_values['read on hit data'] - \
                             inner_values['written data']
                         break
+                else:
+                    continue
                 points = values['read on hit data'] - values['written data']
                 points /= lru_cost
             elif target == "network_in_saturation":
