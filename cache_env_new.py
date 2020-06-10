@@ -780,9 +780,14 @@ class env:
 
     def look_for_invalidated_add_evict_accumulate(self):
         ''' looks for invalidated actions in add window, gives rewards and deletes them'''
-        #toDelete = set()
+        toDelete = set()
+        counter = 0
+        print('REQUEST START: ' + str(len(self._request_window_elements)))
         for curFilename, item in self._request_window_elements.items():
+            len_ = len(self._request_window_elements)
+            counter += 1
             for i, obj in enumerate(item): 
+                #print('ADD - ' + str(counter) + '/' + str(len_) + ' - ' + str(i))
                 size = obj.cur_values[0]
                 if self._output_activation == 1:
                     coeff = size
@@ -794,7 +799,8 @@ class env:
                     else:
                         coeff = (size - it_liminf_size)/it_delta_size
                 #if obj.counter > self._time_span_add:
-                
+                #if (self.curRequest_from_start - obj.counter > self._time_span_add + 50000):
+                    #print(self.curRequest_from_start - obj.counter)
                 if (self.curRequest_from_start - obj.counter) > self._time_span_add:
                     if obj.reward != 0:   #some hits
                         if obj.action == 0:
@@ -818,14 +824,22 @@ class env:
                     self.add_memory_vector = np.vstack(
                         (self.add_memory_vector, to_add))
                     del self._request_window_elements[curFilename][i]
-                    #toDelete |= set([curFilename,])
+                    if len(self._request_window_elements[curFilename]) == 0:
+                        toDelete |= set([curFilename,])
+                    
+        for filename in toDelete:
+            del self._request_window_elements[filename]
 
-        #for filename in toDelete:
-        #    del self._request_window_elements[filename]
+        print('REQUEST END: ' + str(len(self._request_window_elements)))
             
-        #toDelete = set()
+        toDelete = set()
+        counter = 0
+        print('EVICT START: ' + str(len(self._eviction_window_elements)))
         for curFilename, item in self._eviction_window_elements.items():
+            counter += 1
+            len_ = len(self._eviction_window_elements)
             for i,obj in enumerate(item):
+                #print('EVICT - ' + str(counter) + '/' + str(len_) + ' - ' + str(i))
                 size = obj.cur_values[0]
                 if self._output_activation == 1:
                     coeff = size
@@ -859,11 +873,13 @@ class env:
                     self.evict_memory_vector = np.vstack(
                         (self.evict_memory_vector, to_add))
                     del self._eviction_window_elements[curFilename][i]
-                    #toDelete |= set([curFilename,])
+                    if len(self._eviction_window_elements[curFilename]) == 0:
+                        toDelete |= set([curFilename,])
 
-        #for filename in toDelete:
-            #del self._eviction_window_elements[filename]
+        for filename in toDelete:
+            del self._eviction_window_elements[filename]
     
+        print('EVICT END: ' + str(len(self._eviction_window_elements)))
     def get_next_request_values(self):    
         ''' 
         gets the values of next request to be feeded to AI (from global stats), and sets them as curvalues (and returns them):
