@@ -9,7 +9,6 @@ autopep8 = "*"
 flake8 = "*"
 rope = "*"
 pylama = "*"
-v = {editable = true,version = "*"}
 yapf = "*"
 black = "*"
 
@@ -45,9 +44,10 @@ plotly = "*"
 sklearn = "*"
 graphviz = "*"
 tabulate = "*"
+modin = "*"
 
 [requires]
-python_version = "3.7"
+python_version = ">=3.7"
 
 [pipenv]
 allow_prereleases = true
