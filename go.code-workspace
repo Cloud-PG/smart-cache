@@ -13,7 +13,6 @@
 		}
 	],
 	"settings": {
-		"python.pythonPath": "${env:VIRTUAL_ENV}/bin/python",
 		"go.useLanguageServer": true,
 		"[go]": {
 			"editor.snippetSuggestions": "none",
@@ -46,6 +45,6 @@
 			"deepCompletion": true, // enable deep completion
 		},
 		"files.eol": "\n",
-		"liveServer.settings.multiRootWorkspaceName": "smart-cache-data", // formatting only supports LF line endings
+		"liveServer.settings.multiRootWorkspaceName": "smart-cache-data",
 	}
 }
