@@ -2,10 +2,10 @@ import gzip
 import os
 from os import path
 
-import pandas as pd
+import modin.pandas as pd
 from tqdm import tqdm
 
-from .utils import STATUS_WARNING, STATUS_ARROW
+from .utils import STATUS_ARROW, STATUS_WARNING
 
 __all__ = ['csv_data']
 
