@@ -1,25 +1,33 @@
 import argparse
+import json
 
 from colorama import init
 
 from .. import loaders, plotter, utils
 from ..utils import STATUS_ARROW, str2bool
+from .features import Features
 
 
 def main():
     parser = argparse.ArgumentParser(
         "analyzer", description="Analyse the data")
-    
+
     parser.register('type', 'bool', str2bool)  # add type keyword to registries
 
     parser.add_argument('path', default=None,
                         help='Folder or file to open')
     parser.add_argument('analysis', default="dailystats",
-                        choices=["dailystats", "weekstats", "globalstats"],
+                        choices=[
+                            "dailystats", "weekstats", "globalstats",
+                            "feature_bins"
+                        ],
                         help='Folder or file to open')
     parser.add_argument('--output-filename', type=str,
                         default="stats",
                         help='The output file name [DEFAULT: "stats"]')
+    parser.add_argument('--feature-filename', type=str,
+                        default="",
+                        help='The feature JSON filename [DEFAULT: ""]')
     parser.add_argument('--region', type=str,
                         default="all",
                         help='Region of the data to analyse [DEFAULT: "all"]')
@@ -42,7 +50,7 @@ def main():
     args, _ = parser.parse_known_args()
 
     init()
-    
+
     # TODO: convert all plots to plotly
 
     if args.path is not None:
@@ -53,7 +61,17 @@ def main():
             month_filter=args.month,
             concat=args.concat,
         )
-        if args.analysis == "dailystats":
+        if args.analysis == "feature_bins":
+            print(f"{STATUS_ARROW}Open feature file...")
+            with open(args.feature_filename, "rb") as feature_file:
+                feature_dict = json.load(feature_file)
+            print(f"{STATUS_ARROW}Create feature object...")
+            cur_features = Features(feature_dict, df)
+            print(f"{STATUS_ARROW}Analyze size bins...")
+            size_res = cur_features.check_bins_of('size')
+            print(f"{STATUS_ARROW}Plot size bins...")
+            cur_features.plot_bins_of(size_res)
+        elif args.analysis == "dailystats":
             print(f"{STATUS_ARROW}Extract daily stats...")
             print(f"{STATUS_ARROW}Sort data by date...")
             utils.sort_by_date(df)
