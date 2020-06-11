@@ -40,6 +40,7 @@ class Features(object):
         counts, bins = np_hist
         fig = px.bar(
             x=bins[1:], y=counts, labels={'x': 'bin', 'y': 'count'},
+            # log_y=True,
         )
         fig.layout = _LAYOUT
         fig.show()
