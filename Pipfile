@@ -45,6 +45,7 @@ sklearn = "*"
 graphviz = "*"
 tabulate = "*"
 modin = "*"
+dask = "*"
 
 [requires]
 python_version = ">=3.7"
