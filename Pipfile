@@ -44,7 +44,7 @@ plotly = "*"
 sklearn = "*"
 graphviz = "*"
 tabulate = "*"
-modin = "*"
+modin = {extras = ["dask"], version = "*"}
 dask = "*"
 
 [requires]
