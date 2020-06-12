@@ -1,21 +1,28 @@
-from distutils.extension import Extension
-
+from setuptools import setup, Extension
 import numpy
+
 from Cython.Build import cythonize
-from setuptools import setup
+
 
 extensions = [
     Extension(
-        "cacheenvnewcython",
-        sources=["cacheenvnewcython.pyx"],
+        name="stats",
+        sources=[
+            "dQL/stats.pyx"
+        ],
         include_dirs=[
-            numpy.get_include()
+            numpy.get_include(),
         ],
         extra_compile_args=["-O3"],
-        language="c++"
+        language="c++",
+        
     )
 ]
 
 setup(
-    ext_modules=cythonize(extensions)
+    ext_modules=cythonize(
+        extensions,
+        language_level=3,
+    ),
+    package_dir={'': 'dQL'},
 )
