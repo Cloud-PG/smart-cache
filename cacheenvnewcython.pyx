@@ -55,22 +55,26 @@ cdef struct FileStats:
 
 cdef class Stats(object):
     ''' object that contains a list of all filestats '''
-    cdef unordered_map[int, FileStats] _files
+    cdef public unordered_map[int, FileStats] _files
 
     #def __init__(self):
         #self._files = {}
 
     cpdef FileStats get_or_set(self, filename: int, size: float, datatype: int, request: int):
         '''return filestat for that file: if no stat for that file is in list, creates a new stat and adds it to stats, otherwise it simply gets it '''
+        
+        print('BEFORE ALL')
         cdef unordered_map[int,FileStats].iterator it = self._files.begin()
         cdef FileStats stats
 
+        print('BEFORE SEARCHING')
         found = False
         while(it != self._files.end()):
             if dereference(it).first == filename:
                 found = True
                 break
             postincrement(it)
+        print('AFTER SEARCHING')
 
         if found == False:
             stats._size = size
@@ -81,7 +85,9 @@ cdef class Stats(object):
             self._files[filename] = stats
         else:
             stats = self._files[filename]
-        
+        print('abcibcasjj')
+
+
         return stats
 
 cdef class cache(object):
@@ -117,24 +123,22 @@ cdef class cache(object):
         #self._stats = Stats()
 
         # Stat attributes
-        self._hit: int = 0
-        self._miss: int = 0
-        self._written_data: float = 0.0
-        self._deleted_data: float = 0.0
-        self._read_data: float = 0.0
+        self._hit = 0
+        self._miss = 0
+        self._written_data = 0.0
+        self._deleted_data = 0.0
+        self._read_data = 0.0
 
-        self._dailyReadOnHit: float = 0.0
-        self._dailyReadOnMiss: float = 0.0
-        self._daily_reward: float = 0.0
-        self._daily_rewards_add = []
-        self._daily_rewards_evict = []
+        self._dailyReadOnHit = 0.0
+        self._dailyReadOnMiss = 0.0
+        self._daily_reward = 0.0
         self._daily_anomalous_CPUeff_counter = 0
 
-        self._CPUeff: float = 0.0
+        self._CPUeff = 0.0
 
-        self._h_watermark: float = h_watermark
-        self._l_watermark: float = l_watermark
-
+        self._h_watermark = h_watermark
+        self._l_watermark = l_watermark
+        print('FINISHED CREATING CACHE')
     @property
     def capacity(self) -> float:
         ''' gets current cache occupancy '''
@@ -158,8 +162,11 @@ cdef class cache(object):
 
     def before_request(self, filename, hit: bool, size, datatype, request: int) -> 'FileStats':
         ''' get stats for that file and update it '''
-        stats = self._stats.get_or_set(filename, size, datatype, request)
-        stats.update(hit)       
+        stats = self._stats.get_or_set(filename, size, datatype, request)  
+        if hit: 
+            stats._hit += 1
+        else:
+            stats._miss += 1     
         return stats    
 
     def update_policy(self, filename, file_stats, hit: bool, action: int) -> bool:
@@ -311,6 +318,7 @@ class env:
         self._time_span_add = time_span_add 
         self._time_span_evict = time_span_evict 
         self._purge_delta = purge_delta
+        
         if output_activation == 'sigmoid':
             self._output_activation = 0
         else:
