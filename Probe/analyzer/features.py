@@ -22,8 +22,12 @@ class Features(object):
         self._features = []
         for key, value in features.items():
             if value.get('type', False) == "float" and value.get('buckets', False):
+                cur_values = []
+                cur_values.extend(value.get('keys'))
+                if value.get('bucket_open_right', False):
+                    cur_values.extend([cur_values[-1]*2])
                 self._features.append(key)
-                setattr(self, key, value.get('keys'))
+                setattr(self, key, cur_values)
 
     def check_all_features(self):
         for feature in tqdm(self._features, desc=f"{STATUS_ARROW}Check features",
@@ -83,7 +87,7 @@ class Features(object):
     def plot_bins_of(self, feature: str, np_hist: tuple):
         counts, bins = np_hist
         fig = px.bar(
-            x=[str(cur_bin) for cur_bin in bins],
+            x=[str(cur_bin) for cur_bin in bins[:-1]],
             y=(counts / counts.sum()) * 100.,
             title=f"Feature {feature}",
         )
