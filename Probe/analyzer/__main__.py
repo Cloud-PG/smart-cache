@@ -67,10 +67,8 @@ def main():
                 feature_dict = json.load(feature_file)
             print(f"{STATUS_ARROW}Create feature object...")
             cur_features = Features(feature_dict, df)
-            print(f"{STATUS_ARROW}Analyze size bins...")
-            size_res = cur_features.check_bins_of('size')
-            print(f"{STATUS_ARROW}Plot size bins...")
-            cur_features.plot_bins_of(size_res)
+            print(f"{STATUS_ARROW}Analyze all bins...")
+            size_res = cur_features.check_all_features()
         elif args.analysis == "dailystats":
             print(f"{STATUS_ARROW}Extract daily stats...")
             print(f"{STATUS_ARROW}Sort data by date...")
