@@ -1,6 +1,6 @@
-import modin.pandas as pd
+# import modin.pandas as pd
 import numpy as np
-# import pandas as pd
+import pandas as pd
 import plotly.express as px
 from plotly.graph_objs import Layout
 from tqdm import tqdm

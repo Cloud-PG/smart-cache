@@ -2,8 +2,8 @@ import gzip
 import os
 from os import path
 
-import modin.pandas as pd
-# import pandas as pd
+# import modin.pandas as pd
+import pandas as pd
 from tqdm import tqdm
 
 from .utils import STATUS_ARROW, STATUS_WARNING
