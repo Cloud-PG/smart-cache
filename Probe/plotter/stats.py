@@ -48,11 +48,11 @@ def plot_global_stats(df: 'pd.DataFrame',
 
     print(f"{STATUS_ARROW}Filter success jobs")
     if concatenated:
-        df = df[df.JobSuccess == True]
+        df = df[df.JobSuccess.astype(bool)]
     else:
         for idx in tqdm(range(len(df))):
             cur_df = df[idx]
-            df[idx] = cur_df[cur_df.JobSuccess == True]
+            df[idx] = cur_df[cur_df.JobSuccess.astype(bool)]
 
     print(f"{STATUS_ARROW}Add size in GigaBytes")
     if concatenated:

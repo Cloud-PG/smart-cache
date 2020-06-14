@@ -28,6 +28,9 @@ def main():
     parser.add_argument('--feature-filename', type=str,
                         default="",
                         help='The feature JSON filename [DEFAULT: ""]')
+    parser.add_argument('--feature-list', type=str,
+                        default="",
+                        help='The feature names to analyze as bins [DEFAULT: ""]')
     parser.add_argument('--region', type=str,
                         default="all",
                         help='Region of the data to analyse [DEFAULT: "all"]')
@@ -63,12 +66,19 @@ def main():
         )
         if args.analysis == "feature_bins":
             print(f"{STATUS_ARROW}Open feature file...")
-            with open(args.feature_filename, "rb") as feature_file:
-                feature_dict = json.load(feature_file)
+            if args.feature_filename:
+                with open(args.feature_filename, "rb") as feature_file:
+                    feature_dict = json.load(feature_file)
+            else:
+                feature_dict = {}
             print(f"{STATUS_ARROW}Create feature object...")
-            cur_features = Features(feature_dict, df)
+            cur_features = Features(
+                feature_dict, df,
+                concatenated=args.concat,
+            )
             print(f"{STATUS_ARROW}Analyze all bins...")
-            size_res = cur_features.check_all_features()
+            feature_bins = [elm for elm in args.feature_list.split(",") if elm]
+            size_res = cur_features.check_all_features(feature_bins)
         elif args.analysis == "dailystats":
             print(f"{STATUS_ARROW}Extract daily stats...")
             print(f"{STATUS_ARROW}Sort data by date...")
