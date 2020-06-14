@@ -25,6 +25,9 @@ def main():
     parser.add_argument('--output-filename', type=str,
                         default="stats",
                         help='The output file name [DEFAULT: "stats"]')
+    parser.add_argument('--output-folder', type=str,
+                        default="analysis",
+                        help='The output folder name [DEFAULT: "analysis"]')
     parser.add_argument('--feature-filename', type=str,
                         default="",
                         help='The feature JSON filename [DEFAULT: ""]')
@@ -75,6 +78,7 @@ def main():
             cur_features = Features(
                 feature_dict, df,
                 concatenated=args.concat,
+                output_folder=args.output_folder,
             )
             print(f"{STATUS_ARROW}Analyze all bins...")
             feature_bins = [elm for elm in args.feature_list.split(",") if elm]

@@ -6,6 +6,7 @@ import pandas as pd
 import plotly.express as px
 from plotly.graph_objs import Layout
 from tqdm import tqdm
+from pathlib import Path
 
 from ..utils import STATUS_ARROW
 
@@ -20,10 +21,14 @@ _LAYOUT = Layout(
 class Features(object):
 
     def __init__(self, features: dict, df: 'pd.DataFrame',
-                 concatenated: bool = True):
+                 concatenated: bool = True,
+                 output_folder: str = "analysis"):
         self._df = df
         self._concatenated = concatenated
         self._filter_data(concatenated)
+
+        self._output_folder = Path(output_folder)
+        self._output_folder.mkdir(parents=True, exist_ok=True)
 
         self._features = []
         for key, value in features.items():
@@ -119,8 +124,9 @@ class Features(object):
                 all_files = self._df.Filename
                 tot_files = len(all_files.index)
             else:
-                all_files = (cur_df.Filename for cur_df in self._df)
-                tot_files = sum([len(elm.index) for elm in all_files])
+                all_files = np.concatenate([cur_df.Filename.to_numpy()
+                                            for cur_df in self._df])
+                tot_files = len(all_files)
             for idx, filename in tqdm(enumerate(all_files),
                                       desc=f"{STATUS_ARROW}Calculate delta times",
                                       ascii=True, position=0,
@@ -142,9 +148,11 @@ class Features(object):
 
     def plot_bins_of(self, feature: str, np_hist: tuple):
         counts, bins = np_hist
+        percentages = (counts / counts.sum()) * 100.
+        percentages[np.isnan(percentages)] = 0.
         fig = px.bar(
             x=[str(cur_bin) for cur_bin in bins[:-1]],
-            y=(counts / counts.sum()) * 100.,
+            y=percentages,
             title=f"Feature {feature}",
         )
         # fig.update_xaxes(type="log")
@@ -159,4 +167,6 @@ class Features(object):
         )
         # fig.update_yaxes(type="linear")
         # fig.show()
-        fig.write_image(f"feature_{feature}_bins.png")
+        fig.write_image(
+            self._output_folder.joinpath(f"feature_{feature}_bins.png")
+        )
