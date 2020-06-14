@@ -1,4 +1,5 @@
 # import modin.pandas as pd
+from pathlib import Path
 from typing import List
 
 import numpy as np
@@ -6,7 +7,6 @@ import pandas as pd
 import plotly.express as px
 from plotly.graph_objs import Layout
 from tqdm import tqdm
-from pathlib import Path
 
 from ..utils import STATUS_ARROW
 
