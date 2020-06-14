@@ -168,5 +168,7 @@ class Features(object):
         # fig.update_yaxes(type="linear")
         # fig.show()
         fig.write_image(
-            self._output_folder.joinpath(f"feature_{feature}_bins.png")
+            self._output_folder.joinpath(
+                f"feature_{feature}_bins.png"
+            ).as_posix()
         )
