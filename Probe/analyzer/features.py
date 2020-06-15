@@ -209,12 +209,12 @@ class Features(object):
         )
         # fig.update_yaxes(type="linear")
         # fig.show()
-        print(f"{STATUS_ARROW}Save bin plot of {feature} as png")
-        fig.write_image(
-            self._output_folder.joinpath(
-                f"feature_{feature}_bins.png"
-            ).as_posix()
-        )
+        # print(f"{STATUS_ARROW}Save bin plot of {feature} as png")
+        # fig.write_image(
+        #     self._output_folder.joinpath(
+        #         f"feature_{feature}_bins.png"
+        #     ).as_posix()
+        # )
         print(f"{STATUS_ARROW}Save bin plot of {feature} as html")
         fig.write_html(
             self._output_folder.joinpath(
@@ -256,12 +256,12 @@ class Features(object):
             'title': f"Feature {feature}",
         })
         # fig.show()
-        print(f"{STATUS_ARROW}Save violin plot of {feature} as pnh")
-        fig.write_image(
-            self._output_folder.joinpath(
-                f"feature_{feature}_violin.png"
-            ).as_posix()
-        )
+        # print(f"{STATUS_ARROW}Save violin plot of {feature} as pnh")
+        # fig.write_image(
+        #     self._output_folder.joinpath(
+        #         f"feature_{feature}_violin.png"
+        #     ).as_posix()
+        # )
         print(f"{STATUS_ARROW}Save violin plot of {feature} as html")
         fig.write_html(
             self._output_folder.joinpath(
