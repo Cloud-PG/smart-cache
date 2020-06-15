@@ -23,9 +23,11 @@ class Features(object):
 
     def __init__(self, features: dict, df: 'pd.DataFrame',
                  concatenated: bool = True,
-                 output_folder: str = "analysis"):
+                 output_folder: str = "analysis",
+                 region: str = 'all'):
         self._df = df
         self._concatenated = concatenated
+        self._region = region
         self._filter_data(concatenated)
 
         self._output_folder = Path(output_folder)
@@ -46,9 +48,14 @@ class Features(object):
         print(f"{STATUS_ARROW}Filter DataType data and mc")
         if concatenated:
             if self._df.DataType.dtype == np.int64:
-                self._df = self._df[
-                    (self._df.DataType == 0) | (self._df.DataType == 1)
-                ]
+                if self._region == 'it':
+                    self._df = self._df[
+                        (self._df.DataType == 0) | (self._df.DataType == 1)
+                    ]
+                elif self._region == 'us':
+                    self._df = self._df[
+                        (self._df.DataType == 0) | (self._df.DataType == 3)
+                    ]
             else:
                 self._df = self._df[
                     (self._df.DataType == "data") | (self._df.DataType == "mc")
@@ -57,9 +64,14 @@ class Features(object):
             for idx in tqdm(range(len(self._df))):
                 cur_df = self._df[idx]
                 if cur_df.DataType.dtype == np.int64:
-                    self._df[idx] = cur_df[
-                        (cur_df.DataType == 0) | (cur_df.DataType == 1)
-                    ]
+                    if self._region == 'it':
+                        self._df[idx] = cur_df[
+                            (cur_df.DataType == 0) | (cur_df.DataType == 1)
+                        ]
+                    elif self._region == 'us':
+                        self._df[idx] = cur_df[
+                            (cur_df.DataType == 0) | (cur_df.DataType == 3)
+                        ]
                 else:
                     self._df[idx] = cur_df[
                         (cur_df.DataType == "data") | (cur_df.DataType == "mc")

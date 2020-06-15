@@ -77,6 +77,7 @@ def main():
             print(f"{STATUS_ARROW}Create feature object...")
             cur_features = Features(
                 feature_dict, df,
+                region=args.region,
                 concatenated=args.concat,
                 output_folder=args.output_folder,
             )
