@@ -214,6 +214,7 @@ class Features(object):
         #         f"feature_{feature}_bins.png"
         #     ).as_posix()
         # )
+        print(f"{STATUS_ARROW}Save bin plot of {feature} as html")
         fig.write_html(
             self._output_folder.joinpath(
                 f"feature_{feature}_bins.html"
@@ -259,6 +260,7 @@ class Features(object):
         #         f"feature_{feature}_violin.png"
         #     ).as_posix()
         # )
+        print(f"{STATUS_ARROW}Save violin plot of {feature} as html")
         fig.write_html(
             self._output_folder.joinpath(
                 f"feature_{feature}_violin.html"
