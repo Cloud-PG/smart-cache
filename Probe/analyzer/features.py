@@ -86,7 +86,7 @@ class Features(object):
             self.plot_bins_of(feature, np_hist)
             self.plot_violin_of(feature, np_hist)
 
-    def check_bins_of(self, feature: str, n_bins: int = 6):
+    def check_bins_of(self, feature: str, n_bins: int = 'fd'):
         cur_bins = getattr(
             self, feature) if feature in self._features else n_bins
         if feature == 'size':
