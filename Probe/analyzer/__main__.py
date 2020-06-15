@@ -82,7 +82,7 @@ def main():
             )
             print(f"{STATUS_ARROW}Analyze all bins...")
             feature_bins = [elm for elm in args.feature_list.split(",") if elm]
-            size_res = cur_features.check_all_features(feature_bins)
+            cur_features.check_all_features(feature_bins)
         elif args.analysis == "dailystats":
             print(f"{STATUS_ARROW}Extract daily stats...")
             print(f"{STATUS_ARROW}Sort data by date...")

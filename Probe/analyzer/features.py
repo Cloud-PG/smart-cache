@@ -5,6 +5,7 @@ from typing import List
 import numpy as np
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 from plotly.graph_objs import Layout
 from tqdm import tqdm
 
@@ -31,6 +32,7 @@ class Features(object):
         self._output_folder.mkdir(parents=True, exist_ok=True)
 
         self._features = []
+        self._features_data = {}
         for key, value in features.items():
             if value.get('type', False) == "float" and value.get('buckets', False):
                 cur_values = []
@@ -43,15 +45,25 @@ class Features(object):
     def _filter_data(self, concatenated: bool = True):
         print(f"{STATUS_ARROW}Filter DataType data and mc")
         if concatenated:
-            self._df = self._df[
-                (self._df.DataType == "data") | (self._df.DataType == "mc")
-            ]
+            if self._df.DataType.dtype == np.int64:
+                self._df = self._df[
+                    (self._df.DataType == 0) | (self._df.DataType == 1)
+                ]
+            else:
+                self._df = self._df[
+                    (self._df.DataType == "data") | (self._df.DataType == "mc")
+                ]
         else:
             for idx in tqdm(range(len(self._df))):
                 cur_df = self._df[idx]
-                self._df[idx] = cur_df[
-                    (cur_df.DataType == "data") | (cur_df.DataType == "mc")
-                ]
+                if cur_df.DataType.dtype == np.int64:
+                    self._df[idx] = cur_df[
+                        (cur_df.DataType == 0) | (cur_df.DataType == 1)
+                    ]
+                else:
+                    self._df[idx] = cur_df[
+                        (cur_df.DataType == "data") | (cur_df.DataType == "mc")
+                    ]
 
         print(f"{STATUS_ARROW}Filter success jobs")
         if concatenated:
@@ -72,6 +84,7 @@ class Features(object):
                             ascii=True, position=1):
             np_hist = self.check_bins_of(feature)
             self.plot_bins_of(feature, np_hist)
+            self.plot_violin_of(feature, np_hist)
 
     def check_bins_of(self, feature: str, n_bins: int = 6):
         cur_bins = getattr(
@@ -89,11 +102,20 @@ class Features(object):
                         sizes, (cur_df['Size'] / 1024 **
                                 2).astype(int).to_numpy()
                     ])
-            return np.histogram(
+            self._features_data[feature] = sizes
+            counts, bins = np.histogram(
                 sizes,
                 bins=cur_bins,
                 density=False
             )
+            if feature in self._features:
+                return counts, bins
+            else:
+                return np.histogram(
+                    sizes,
+                    bins=bins.round(0),
+                    density=False
+                )
         elif feature == 'numReq':
             files_x_day = None
             if self._concatenated:
@@ -111,11 +133,20 @@ class Features(object):
                 numReqXDay = np.concatenate([
                     numReqXDay, day.Filename.value_counts().to_numpy()
                 ])
-            return np.histogram(
+            self._features_data[feature] = numReqXDay
+            counts, bins = np.histogram(
                 numReqXDay,
                 bins=cur_bins,
                 density=False
             )
+            if feature in self._features:
+                return counts, bins
+            else:
+                return np.histogram(
+                    numReqXDay,
+                    bins=bins.round(0),
+                    density=False
+                )
         elif feature == 'deltaLastRequest':
             delta_files = []
             files = {}
@@ -137,21 +168,32 @@ class Features(object):
                     cur_delta = idx - files[filename]
                     files[filename] = idx
                     delta_files.append(cur_delta)
-            return np.histogram(
+            delta_files = np.array(delta_files)
+            self._features_data[feature] = delta_files
+            counts, bins = np.histogram(
                 delta_files,
                 bins=cur_bins,
                 density=False
             )
+            if feature in self._features:
+                return counts, bins
+            else:
+                return np.histogram(
+                    delta_files,
+                    bins=bins.round(0),
+                    density=False
+                )
         else:
             raise Exception(
                 f"ERROR: feature {feature} can not be checked...")
 
     def plot_bins_of(self, feature: str, np_hist: tuple):
         counts, bins = np_hist
+        # print(counts, bins)
         percentages = (counts / counts.sum()) * 100.
         percentages[np.isnan(percentages)] = 0.
         fig = px.bar(
-            x=[str(cur_bin) for cur_bin in bins[:-1]],
+            x=[str(cur_bin) for cur_bin in bins[1:]],
             y=percentages,
             title=f"Feature {feature}",
         )
@@ -167,8 +209,58 @@ class Features(object):
         )
         # fig.update_yaxes(type="linear")
         # fig.show()
-        fig.write_image(
+        # fig.write_image(
+        #     self._output_folder.joinpath(
+        #         f"feature_{feature}_bins.png"
+        #     ).as_posix()
+        # )
+        fig.write_html(
             self._output_folder.joinpath(
-                f"feature_{feature}_bins.png"
+                f"feature_{feature}_bins.html"
+            ).as_posix()
+        )
+
+    def plot_violin_of(self, feature: str, np_hist: tuple):
+        _, bins = np_hist
+        cur_feature_data = self._features_data[feature]
+        fig = go.Figure()
+        prev = bins[0]
+        fig.add_trace(
+            go.Violin(
+                y=cur_feature_data,
+                x0=-1,
+                name="global",
+                box_visible=True,
+                meanline_visible=True,
+            )
+        )
+        for cur_bin in bins[1:]:
+            cur_data = cur_feature_data[
+                (cur_feature_data >= prev) &
+                (cur_feature_data < cur_bin)
+            ]
+            fig.add_trace(
+                go.Violin(
+                    y=cur_data,
+                    name=str(cur_bin),
+                    box_visible=True,
+                    meanline_visible=True,
+                    points="all",
+                )
+            )
+            prev = cur_bin
+        fig.update_layout(_LAYOUT)
+        fig.update_layout({
+            'title': f"Feature {feature}",
+        })
+        # fig.show()
+        # fig.write_image(
+        #     self._output_folder.joinpath(
+        #         f"feature_{feature}_violin.png"
+        #     ).as_posix()
+        # )
+        fig.write_html(
+            self._output_folder.joinpath(
+                f"feature_{feature}_violin.html"
             ).as_posix()
         )

@@ -2,6 +2,7 @@ import gzip
 import os
 from os import path
 
+import numpy as np
 # import modin.pandas as pd
 import pandas as pd
 from tqdm import tqdm
@@ -33,18 +34,25 @@ def _load_csv_file(input_path: str, region_filter: str = None,
                 df['day'] = pd.to_datetime(df.reqDay, unit="s")
                 df.reset_index(drop=True, inplace=True)
         else:
-            raise Exception(f"Input {input_path} with file type '{tail}' is not supported...")
+            raise Exception(
+                f"Input {input_path} with file type '{tail}' is not supported...")
     elif tail == '.csv':
         df = pd.read_csv(input_path, index_col=False)
     else:
-        raise Exception(f"Input {input_path} with file type '{tail}' is not supported...")
+        raise Exception(
+            f"Input {input_path} with file type '{tail}' is not supported...")
 
     if region_filter and region_filter != "all":
-        df = df[df.SiteName.str.contains(f"_{region_filter}_", case=False)]
+        if df.SiteName.dtype != np.int64:
+            df = df[df.SiteName.str.contains(f"_{region_filter}_", case=False)]
 
     if file_type_filter and file_type_filter != "all":
-        df = df[df.Filename.str.contains(
-            f"/{file_type_filter}/", case=False, regex=True)]
+        if df.SiteName.dtype != np.int64:
+            df = df[
+                df.Filename.str.contains(
+                    f"/{file_type_filter}/", case=False, regex=True
+                )
+            ]
 
     return df
 
@@ -57,7 +65,9 @@ def _get_month(filename: str) -> int:
     :return: the number of the month found inthe filename
     :rtype: int
     """
-    return int(filename.split(".")[0].replace("results_", "").split("-")[1])
+    prefix = "results_numeric" if filename.find(
+        "results_numeric") != -1 else "results_"
+    return int(filename.split(".")[0].replace(prefix, "").split("-")[1])
 
 
 def gen_csv_data(input_path: str, region_filter: str = None,
@@ -70,8 +80,10 @@ def gen_csv_data(input_path: str, region_filter: str = None,
     :rtype: generator
     """
     if path.isdir(input_path):
-        files = [file_ for file_ in os.listdir(
-            input_path) if file_.find("csv") != -1 and file_.find("numeric") == -1]
+        files = [
+            file_ for file_ in os.listdir(
+                input_path) if file_.find("csv") != -1
+        ]
         yield len(files)
         for filename in sorted(files):
             if month_filter != -1:
@@ -94,7 +106,7 @@ def gen_csv_data(input_path: str, region_filter: str = None,
 def csv_data(input_path: str, region_filter: str = None,
              file_type_filter: str = None,
              month_filter: int = -1,
-             concat: bool=True) -> 'pd.DataFrame':
+             concat: bool = True) -> 'pd.DataFrame':
     """Open csv data folder and files
 
     :return: The whole dataset
@@ -102,8 +114,10 @@ def csv_data(input_path: str, region_filter: str = None,
     """
     if path.isdir(input_path):
         data_frames = []
-        files = [file_ for file_ in os.listdir(
-            input_path) if file_.find("csv") != -1 and file_.find("numeric") == -1]
+        files = [
+            file_ for file_ in os.listdir(
+                input_path) if file_.find("csv") != -1
+        ]
         for filename in tqdm(sorted(files), desc=f"{STATUS_ARROW}Load folder {input_path}"):
             if month_filter != -1:
                 if _get_month(filename) != month_filter:
