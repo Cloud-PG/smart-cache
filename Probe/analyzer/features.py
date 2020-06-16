@@ -120,7 +120,7 @@ class Features(object):
             self.plot_bins_of(feature, np_hist)
             self.plot_violin_of(feature, np_hist)
 
-    def check_bins_of(self, feature: str, n_bins: int = 6):
+    def check_bins_of(self, feature: str, n_bins: int=6):
         all_data = None
         if feature == 'size':
             if self._concatenated:
@@ -211,11 +211,19 @@ class Features(object):
         if feature in self._features:
             cur_bins = np.array(getattr(self, feature))
         else:
-            _, cur_bins = np.histogram(
-                sizes,
-                bins=n_bins,
-                density=False
-            )
+            # _, cur_bins = np.histogram(
+            #     all_data,
+            #     bins=6,
+            #     density=False
+            # )
+            cur_bins = []
+            step = int(100. / n_bins)
+            for qx in range(step, 100, step):
+                cur_bins.append(np.quantile(all_data, qx/100.))
+            
+            cur_bins = np.array(cur_bins + [cur_bins[-1]*2])
+            if feature == "numReq":
+                cur_bins = np.unique(cur_bins.astype(int))
 
         prev_bin = 0.
         counts = []
@@ -241,12 +249,12 @@ class Features(object):
         percentages = (counts / counts.sum()) * 100.
         percentages[np.isnan(percentages)] = 0.
         fig = px.bar(
-            x=[str(cur_bin) for cur_bin in bins],
+            x=[str(cur_bin) for cur_bin in bins[:-1]] + ['max'],
             y=percentages,
             title=f"Feature {feature}",
         )
         # fig.update_xaxes(type="log")
-        fig.update_yaxes(type="log")
+        # fig.update_yaxes(type="log")
         fig.update_layout(_LAYOUT)
         fig.update_layout(
             xaxis_title="bin",
@@ -299,7 +307,7 @@ class Features(object):
                 go.Violin(
                     y=cur_data,
                     x0=bin_idx,
-                    name=str(cur_bin),
+                    name=str(cur_bin) if bin_idx != bins.shape[0] else 'max',
                     box_visible=True,
                     meanline_visible=True,
                     # points="all",
