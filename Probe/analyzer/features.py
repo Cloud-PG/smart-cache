@@ -120,7 +120,43 @@ class Features(object):
             self.plot_bins_of(feature, np_hist)
             self.plot_violin_of(feature, np_hist)
 
-    def check_bins_of(self, feature: str, n_bins: int=6):
+    def __get_groups(self):
+        groups = None
+        if self._concatenated:
+            if self._group_by == 'd':
+                groups = self._df.groupby('reqDay')
+            elif self._group_by == 'w':
+                groups = self._df.groupby('week')
+            elif self._group_by == 'm':
+                groups = self._df.groupby('month')
+        else:
+            if self._group_by == 'd':
+                groups = [
+                    (idx, cur_df)
+                    for idx, cur_df in enumerate(self._df)
+                ]
+            else:
+                if self._group_by == 'w':
+                    group_by = 'week'
+                elif self._group_by == 'm':
+                    group_by = 'month'
+                groups = {}
+                for cur_df in self._df:
+                    for week, cur_week in cur_df.groupby(group_by):
+                        if week not in groups:
+                            groups[week] = cur_week
+                        else:
+                            groups[week] = pd.concat([
+                                groups[week],
+                                cur_week,
+                            ], ignore_index=True)
+                groups = [
+                    (group_key, groups[group_key])
+                    for group_key in sorted(groups)
+                ]
+        return groups
+
+    def check_bins_of(self, feature: str, n_bins: int = 6):
         all_data = None
         if feature == 'size':
             if self._concatenated:
@@ -138,41 +174,8 @@ class Features(object):
             self._features_data[feature] = sizes
             all_data = sizes
         elif feature == 'numReq':
-            groups = None
-            if self._concatenated:
-                if self._group_by == 'd':
-                    groups = self._df.groupby('reqDay')
-                elif self._group_by == 'w':
-                    groups = self._df.groupby('week')
-                elif self._group_by == 'm':
-                    groups = self._df.groupby('month')
-            else:
-                if self._group_by == 'd':
-                    groups = [
-                        (idx, cur_df)
-                        for idx, cur_df in enumerate(self._df)
-                    ]
-                else:
-                    if self._group_by == 'w':
-                        group_by = 'week'
-                    elif self._group_by == 'm':
-                        group_by = 'month'
-                    groups = {}
-                    for cur_df in self._df:
-                        for week, cur_week in cur_df.groupby(group_by):
-                            if week not in groups:
-                                groups[week] = cur_week
-                            else:
-                                groups[week] = pd.concat([
-                                    groups[week],
-                                    cur_week,
-                                ], ignore_index=True)
-                    groups = [
-                        (group_key, groups[group_key])
-                        for group_key in sorted(groups)
-                    ]
             numReqXGroup = np.array([])
-            for _, group in tqdm(groups,
+            for _, group in tqdm(self.__get_groups(),
                                  desc=f"{STATUS_ARROW}Calculate frequencies x day",
                                  ascii=True):
                 numReqXGroup = np.concatenate([
@@ -182,25 +185,19 @@ class Features(object):
             all_data = numReqXGroup
         elif feature == 'deltaLastRequest':
             delta_files = []
-            files = {}
-            all_files = None
-            if self._concatenated:
-                all_files = self._df.Filename
-                tot_files = len(all_files.index)
-            else:
-                all_files = np.concatenate([cur_df.Filename.to_numpy()
-                                            for cur_df in self._df])
-                tot_files = len(all_files)
-            for idx, filename in tqdm(enumerate(all_files),
-                                      desc=f"{STATUS_ARROW}Calculate delta times",
-                                      ascii=True,
-                                      total=tot_files):
-                if filename not in files:
-                    files[filename] = idx
-                else:
-                    cur_delta = idx - files[filename]
-                    files[filename] = idx
-                    delta_files.append(cur_delta)
+            for _, group in tqdm(self.__get_groups(),
+                                 desc=f"{STATUS_ARROW}Calculate delta times",
+                                      ascii=True):
+                files = {}
+                for _t_, row in enumerate(group.itertuples()):
+                    filename = row.Filename
+                    if filename not in files:
+                        files[filename] = _t_
+                    else:
+                        cur_delta = _t_ - files[filename]
+                        files[filename] = _t_
+                        delta_files.append(cur_delta)
+
             delta_files = np.array(delta_files)
             self._features_data[feature] = delta_files
             all_data = delta_files
@@ -220,7 +217,7 @@ class Features(object):
             step = int(100. / n_bins)
             for qx in range(step, 100, step):
                 cur_bins.append(np.quantile(all_data, qx/100.))
-            
+
             cur_bins = np.array(cur_bins + [cur_bins[-1]*2])
             if feature == "numReq":
                 cur_bins = np.unique(cur_bins.astype(int))
