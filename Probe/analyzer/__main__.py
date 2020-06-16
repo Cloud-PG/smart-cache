@@ -28,6 +28,10 @@ def main():
     parser.add_argument('--output-folder', type=str,
                         default="analysis",
                         help='The output folder name [DEFAULT: "analysis"]')
+    parser.add_argument('--group-by', type=str,
+                        choices=['d', 'w', 'm'],
+                        default="d",
+                        help='Group by day ("d"), week ("w") or month ("m") [DEFAULT: "d"]')
     parser.add_argument('--feature-filename', type=str,
                         default="",
                         help='The feature JSON filename [DEFAULT: ""]')
@@ -80,6 +84,7 @@ def main():
                 region=args.region,
                 concatenated=args.concat,
                 output_folder=args.output_folder,
+                group_by=args.group_by,
             )
             print(f"{STATUS_ARROW}Analyze all bins...")
             feature_bins = [elm for elm in args.feature_list.split(",") if elm]
