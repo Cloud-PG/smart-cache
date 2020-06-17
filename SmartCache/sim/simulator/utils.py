@@ -154,10 +154,16 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False,
                 cache_size = get_cache_size(cache_name)
                 cache_cost = (
                     (df['written data'] + df['deleted data']) / cache_size) * 100.
+                # Old cost
+                # cache_cost = df['written data'] + \
+                #     df['deleted data'] + df['read on miss data']
                 throughput = (df['read on hit data'] /
                               df['written data']) * 100.
+                # Old Throughput
+                # throughput = df['read on hit data'] / df['written data']
                 read_on_hit_ratio = (df['read on hit data'] /
                                      df['read data']) * 100.
+                # read_on_hit_ratio = df['read on hit data']
                 values = [
                     cache_name,
                     throughput.mean(),

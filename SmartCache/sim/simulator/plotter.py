@@ -473,6 +473,9 @@ def plot_measure(tools: list,
                 cache_size = get_cache_size(cache_name)
                 points = ((values['written data'] +
                            values['deleted data']) / cache_size) * 100.
+                # Old cost
+                # points = values['written data'] + \
+                #     values['deleted data'] + values['read on miss data']
             elif target == "costFunctionVs":
                 for inner_cache_name, inner_values in filter_results(
                     results, run_type, filters
@@ -512,6 +515,8 @@ def plot_measure(tools: list,
                 ) * 100.
                 # Old throughput
                 # points = (values['read on hit data'] / values['written data']) * 100.
+                # very Old throughput
+                # points = values['read on hit data'] / values['written data']
             elif target == "throughputVs":
                 for inner_cache_name, inner_values in filter_results(
                     results, run_type, filters
@@ -745,7 +750,7 @@ def plot_measure(tools: list,
         else { return "" }
     """)
     cur_fig.add_tools(SaveTool())
-    # cur_fig.legend.label_text_font_size = '20pt'
+    # cur_fig.legend.label_text_font_size = '14pt'
     add_window_lines(cur_fig, dates, window_size)
 
     return cur_fig
