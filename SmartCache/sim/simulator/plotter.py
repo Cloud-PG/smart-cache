@@ -383,6 +383,11 @@ def plot_column(tools: list,
     """)
     cur_fig.xaxis.major_label_orientation = np.pi / 4.
     cur_fig.add_tools(SaveTool())
+    # cur_fig.legend.label_text_font_size = '16pt'
+    # cur_fig.xaxis.axis_label_text_font_size = "16pt"
+    # cur_fig.xaxis.major_label_text_font_size = "16pt"
+    # cur_fig.yaxis.axis_label_text_font_size = "16pt"
+    # cur_fig.yaxis.major_label_text_font_size = "16pt"
     add_window_lines(cur_fig, dates, window_size)
 
     return cur_fig
@@ -750,7 +755,11 @@ def plot_measure(tools: list,
         else { return "" }
     """)
     cur_fig.add_tools(SaveTool())
-    # cur_fig.legend.label_text_font_size = '14pt'
+    # cur_fig.legend.label_text_font_size = '16pt'
+    # cur_fig.xaxis.axis_label_text_font_size = "16pt"
+    # cur_fig.xaxis.major_label_text_font_size = "16pt"
+    # cur_fig.yaxis.axis_label_text_font_size = "16pt"
+    # cur_fig.yaxis.major_label_text_font_size = "16pt"
     add_window_lines(cur_fig, dates, window_size)
 
     return cur_fig
