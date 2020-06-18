@@ -543,12 +543,10 @@ func (cache *SimpleCache) NumFiles() int {
 
 // StdDevFreq returns the standard deviation of the frequency
 func (cache *SimpleCache) StdDevFreq() float64 {
-	mean := cache.MeanFrequency()
-	sum := 0.0
-	for file := range cache.files.Get(NoQueue) {
-		sum += math.Pow(float64(file.Frequency)-mean, 2)
-	}
-	return math.Sqrt(sum / (float64(cache.files.Len()) - 1.0))
+	sum := cache.files.FrequencySum
+	sumSquare := cache.files.FrequencySumSquare
+	len := float64(cache.files.Len())
+	return math.Sqrt((sumSquare - ((sum * sum) / len)) / (len - 1.0))
 }
 
 // StdDevRec returns the standard deviation of the recency
@@ -563,10 +561,8 @@ func (cache *SimpleCache) StdDevRec() float64 {
 
 // StdDevSize returns the standard deviation of the size
 func (cache *SimpleCache) StdDevSize() float64 {
-	mean := cache.MeanSize()
-	sum := 0.0
-	for file := range cache.files.Get(NoQueue) {
-		sum += math.Pow(file.Size-mean, 2)
-	}
-	return math.Sqrt(sum / (float64(cache.files.Len()) - 1.0))
+	sum := cache.files.SizeSum
+	sumSquare := cache.files.SizeSumSquare
+	len := float64(cache.files.Len())
+	return math.Sqrt((sumSquare - ((sum * sum) / len)) / (len - 1.0))
 }

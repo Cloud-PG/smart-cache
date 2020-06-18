@@ -93,10 +93,12 @@ const (
 
 // Manager manages the files in cache
 type Manager struct {
-	files        map[int64]*FileSupportData
-	queue        []*FileSupportData
-	FrequencySum float64
-	SizeSum      float64
+	files              map[int64]*FileSupportData
+	queue              []*FileSupportData
+	FrequencySum       float64
+	FrequencySumSquare float64
+	SizeSum            float64
+	SizeSumSquare      float64
 }
 
 // Init initialize the struct
@@ -184,7 +186,9 @@ func (man *Manager) Remove(files []int64) {
 	for _, file := range files {
 		curFile := man.files[file]
 		man.SizeSum -= curFile.Size
+		man.SizeSumSquare -= (curFile.Size * curFile.Size)
 		man.FrequencySum -= float64(curFile.Frequency)
+		man.FrequencySumSquare -= float64(curFile.Frequency * curFile.Frequency)
 		delete(man.files, file)
 	}
 	man.queue = man.queue[:len(man.files)]
@@ -195,7 +199,9 @@ func (man *Manager) Insert(file FileSupportData) {
 	man.files[file.Filename] = &file
 	man.queue = append(man.queue, make([]*FileSupportData, 1)...)
 	man.SizeSum += file.Size
+	man.SizeSumSquare += (file.Size * file.Size)
 	man.FrequencySum += float64(file.Frequency)
+	man.FrequencySumSquare += float64(file.Frequency * file.Frequency)
 }
 
 // Update a file into the queue manager
@@ -204,7 +210,9 @@ func (man *Manager) Update(file FileSupportData) error {
 	if inCache {
 		// Remove old stats
 		man.SizeSum -= curFile.Size
+		man.SizeSumSquare -= (curFile.Size * curFile.Size)
 		man.FrequencySum -= float64(curFile.Frequency)
+		man.FrequencySumSquare -= float64(curFile.Frequency * curFile.Frequency)
 		// Add new stats
 		curFile.Frequency = file.Frequency
 		curFile.Recency = file.Recency
@@ -212,7 +220,9 @@ func (man *Manager) Update(file FileSupportData) error {
 		curFile.Weight = file.Weight
 		// Update sums
 		man.SizeSum += file.Size
+		man.SizeSumSquare += (file.Size * file.Size)
 		man.FrequencySum += float64(file.Frequency)
+		man.FrequencySumSquare += float64(file.Frequency * file.Frequency)
 		return nil
 	}
 	return errors.New("File not in manager")
