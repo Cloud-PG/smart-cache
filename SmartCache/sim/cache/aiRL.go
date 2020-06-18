@@ -808,7 +808,6 @@ func (cache *AIRL) Free(amount float64, percentage bool) float64 {
 				// #########################
 				curAction = cache.evictionTable.GetBestAction(curState)
 			}
-
 		} else {
 			curAction = qlearn.ActionRemoveWithLRU
 		}
