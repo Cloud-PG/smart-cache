@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 
@@ -108,6 +109,24 @@ func GetEntries(featureMapFilePath string) chan Entry {
 
 		defer close(channel)
 		defer featureMapFile.Close()
+
+		if mainType := reflect.TypeOf(tmpMap).Kind(); mainType == reflect.Map {
+			mapIter := reflect.ValueOf(tmpMap).MapRange()
+			for mapIter.Next() {
+				// var feature = mapIter.Key().String()
+				curFeature := mapIter.Value().Interface().(map[string]interface{})
+				fmt.Println(curFeature)
+				// curFeatureIter := .MapRange()
+				// for curFeatureIter.Next() {
+				// 	var key = curFeatureIter.Key().String()
+				// 	var value = curFeatureIter.Value().String()
+				// 	fmt.Println(feature, key, reflect.TypeOf(value), value)
+				// }
+			}
+		} else {
+			logger.Error("Feature entries", zap.String("error", "Not a valid feature JSON"))
+			os.Exit(-1)
+		}
 
 		lvl0 := tmpMap.(map[string]interface{})
 		for k0, v0 := range lvl0 {
