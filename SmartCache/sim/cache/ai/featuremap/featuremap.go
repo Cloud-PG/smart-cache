@@ -20,7 +20,6 @@ type Obj struct {
 	Type            reflect.Kind
 	Int64Values     []int64
 	Float64Values   []float64
-	StringValues    []string
 	Buckets         bool
 	BucketOpenRight bool
 }
@@ -30,12 +29,37 @@ type FeatureManager struct {
 	Features []Obj
 }
 
+// FeatureIter returns all the feature objects
+func (manager FeatureManager) FeatureIter() chan Obj {
+	outChan := make(chan Obj, len(manager.Features))
+	go func() {
+		defer close(outChan)
+		for _, curObj := range manager.Features {
+			outChan <- curObj
+		}
+	}()
+	return outChan
+}
+
+// FeatureI returns the feature at requested position
+func (manager FeatureManager) FeatureI(idx int) Obj {
+	return manager.Features[idx]
+}
+
+// FeatureIdexes returns a map of the feature indexes
+func (manager FeatureManager) FeatureIdexes(idx int) map[string]int {
+	indexes := make(map[string]int, 0)
+	for idx, curObj := range manager.Features {
+		indexes[curObj.Name] = idx
+	}
+	return indexes
+}
+
 // Parse a feature map file and returns the map of keys and objects
 func Parse(featureMapFilePath string) FeatureManager {
 	manager := FeatureManager{}
 	manager.Features = make([]Obj, 0)
 	manager.Populate(featureMapFilePath)
-
 	return manager
 }
 
@@ -88,6 +112,7 @@ func (manager *FeatureManager) Populate(featureMapFilePath string) {
 				curStruct := Obj{
 					Name: feature,
 				}
+
 				for featureIter.Next() {
 					curFeatureKey := featureIter.Key().String()
 					curFeatureValue := featureIter.Value()
@@ -104,9 +129,6 @@ func (manager *FeatureManager) Populate(featureMapFilePath string) {
 							case reflect.Float64:
 								curStruct.Type = reflect.Float64
 								curStruct.Float64Values = curSlice.Interface().([]float64)
-							case reflect.String:
-								curStruct.Type = reflect.String
-								curStruct.StringValues = curSlice.Interface().([]string)
 							}
 						} else {
 							logger.Error(
@@ -119,7 +141,17 @@ func (manager *FeatureManager) Populate(featureMapFilePath string) {
 							os.Exit(-1)
 						}
 					case "openRight":
-						curStruct.BucketOpenRight = true
+						if curFeatureValue.Elem().Bool() {
+							curStruct.BucketOpenRight = true
+							switch curStruct.Type {
+							case reflect.Int64:
+								curStruct.Type = reflect.Int64
+								curStruct.Int64Values = append(curStruct.Int64Values, math.MaxInt64)
+							case reflect.Float64:
+								curStruct.Type = reflect.Float64
+								curStruct.Float64Values = append(curStruct.Float64Values, math.MaxFloat64)
+							}
+						}
 					default:
 						logger.Error(
 							"Feature entries",
@@ -156,19 +188,12 @@ func (manager *FeatureManager) Populate(featureMapFilePath string) {
 // Size returns the number of possible elements
 func (obj Obj) Size() int {
 	if obj.Buckets {
-		size := 0
-		if obj.BucketOpenRight {
-			size++
-		}
 		switch obj.Type {
 		case reflect.Int64:
-			size += len(obj.Int64Values)
+			return len(obj.Int64Values)
 		case reflect.Float64:
-			size += len(obj.Float64Values)
-		case reflect.String:
-			size += len(obj.StringValues)
+			return len(obj.Float64Values)
 		}
-		return size
 	}
 	return -1
 }
@@ -180,24 +205,42 @@ func (obj Obj) Value(idx int) interface{} {
 		case reflect.Int64:
 			if obj.BucketOpenRight {
 				return math.MaxInt64
-			} else {
-				return obj.Int64Values[idx]
 			}
+			return obj.Int64Values[idx]
+
 		case reflect.Float64:
 			if obj.BucketOpenRight {
 				return math.MaxFloat64
-			} else {
-				return obj.Float64Values[idx]
 			}
-		case reflect.String:
-			if obj.BucketOpenRight {
-				return "max"
-			} else {
-				return obj.StringValues[idx]
-			}
+			return obj.Float64Values[idx]
+
 		}
 	}
 	return nil
+}
+
+// Values returns all the values (as interface generator) of the feature
+func (obj Obj) Values() chan interface{} {
+	outChan := make(chan interface{}, obj.Size())
+	if obj.Buckets {
+		switch obj.Type {
+		case reflect.Int64:
+			go func() {
+				defer close(outChan)
+				for _, elm := range obj.Int64Values {
+					outChan <- elm
+				}
+			}()
+		case reflect.Float64:
+			go func() {
+				defer close(outChan)
+				for _, elm := range obj.Int64Values {
+					outChan <- elm
+				}
+			}()
+		}
+	}
+	return outChan
 }
 
 // Index returns the index of the value for the selected feature
@@ -211,28 +254,12 @@ func (obj Obj) Index(value interface{}) int {
 					return idx
 				}
 			}
-			if obj.BucketOpenRight {
-				return len(obj.Int64Values)
-			}
 		case reflect.Float64:
 			curVal := value.(float64)
 			for idx, val := range obj.Float64Values {
 				if curVal <= val {
 					return idx
 				}
-			}
-			if obj.BucketOpenRight {
-				return len(obj.Float64Values)
-			}
-		case reflect.String:
-			curVal := value.(string)
-			for idx, val := range obj.StringValues {
-				if curVal <= val {
-					return idx
-				}
-			}
-			if obj.BucketOpenRight {
-				return len(obj.StringValues)
 			}
 		}
 	}
