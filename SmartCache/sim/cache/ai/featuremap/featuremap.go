@@ -23,7 +23,6 @@ type Obj struct {
 	StringValues    []string
 	Buckets         bool
 	BucketOpenRight bool
-	channel         chan interface{}
 }
 
 // FeatureManager collects and manages the features
