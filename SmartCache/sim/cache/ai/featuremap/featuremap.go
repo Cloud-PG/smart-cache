@@ -4,72 +4,44 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"reflect"
-	"strconv"
-	"strings"
 
 	"go.uber.org/zap"
 )
 
 type mapType int
 
-const (
-	// TypeBool is the type bool for the feature map
-	TypeBool mapType = iota - 4
-	// TypeInt is the type int for the feature map
-	TypeInt
-	// TypeFloat is the type float for the feature map
-	TypeFloat
-	// TypeString is the type string for the feature map
-	TypeString
-)
-
 // Obj represents a map object
 type Obj struct {
-	Feature         string
-	Type            mapType
-	Keys            []interface{}
-	KeysB           []bool
-	KeysI           []int64
-	KeysF           []float64
-	KeysS           []string
-	Values          map[string]int
-	OutputValues    []string
-	UnknownValues   bool
+	Name            string
+	Type            reflect.Kind
+	Int64Values     []int64
+	Float64Values   []float64
+	StringValues    []string
 	Buckets         bool
 	BucketOpenRight bool
 	channel         chan interface{}
 }
 
-// Key is a key of the map
-type Key struct {
-	ValueB bool
-	ValueI int64
-	ValueF float64
-	ValueS string
-}
-
-// Entry is a parsed entry of the feature map
-type Entry struct {
-	Key   string
-	Value Obj
+// FeatureManager collects and manages the features
+type FeatureManager struct {
+	Features []Obj
 }
 
 // Parse a feature map file and returns the map of keys and objects
-func Parse(featureMapFilePath string) map[string]Obj {
-	tmpMap := make(map[string]Obj, 0)
+func Parse(featureMapFilePath string) FeatureManager {
+	manager := FeatureManager{}
+	manager.Features = make([]Obj, 0)
+	manager.Populate(featureMapFilePath)
 
-	for entry := range GetEntries(featureMapFilePath) {
-		tmpMap[entry.Key] = entry.Value
-	}
-
-	return tmpMap
+	return manager
 }
 
-// GetEntries returns the entries of a feature map
-func GetEntries(featureMapFilePath string) chan Entry {
+// Populate reads the feature map files and populates the manager
+func (manager *FeatureManager) Populate(featureMapFilePath string) {
 	logger := zap.L()
 
 	var tmpMap interface{}
@@ -104,256 +76,166 @@ func GetEntries(featureMapFilePath string) chan Entry {
 		os.Exit(-1)
 	}
 
-	channel := make(chan Entry)
-	go func() {
+	defer featureMapFile.Close()
 
-		defer close(channel)
-		defer featureMapFile.Close()
+	if mainType := reflect.TypeOf(tmpMap).Kind(); mainType == reflect.Map {
+		mapIter := reflect.ValueOf(tmpMap).MapRange()
+		for mapIter.Next() {
+			feature := mapIter.Key().String()
+			curFeature := mapIter.Value().Interface().(map[string]interface{})
 
-		if mainType := reflect.TypeOf(tmpMap).Kind(); mainType == reflect.Map {
-			mapIter := reflect.ValueOf(tmpMap).MapRange()
-			for mapIter.Next() {
-				// var feature = mapIter.Key().String()
-				curFeature := mapIter.Value().Interface().(map[string]interface{})
-				fmt.Println(curFeature)
-				// curFeatureIter := .MapRange()
-				// for curFeatureIter.Next() {
-				// 	var key = curFeatureIter.Key().String()
-				// 	var value = curFeatureIter.Value().String()
-				// 	fmt.Println(feature, key, reflect.TypeOf(value), value)
-				// }
-			}
-		} else {
-			logger.Error("Feature entries", zap.String("error", "Not a valid feature JSON"))
-			os.Exit(-1)
-		}
-
-		lvl0 := tmpMap.(map[string]interface{})
-		for k0, v0 := range lvl0 {
-			curObj := v0.(map[string]interface{})
-			curStruct := Obj{}
-			for objK, objV := range curObj {
-				switch objK {
-				case "feature":
-					curStruct.Feature = objV.(string)
-				case "type":
-					curType := objV.(string)
-					switch curType {
-					case "int":
-						curStruct.Type = TypeInt
-					case "float":
-						curStruct.Type = TypeFloat
-					case "string":
-						curStruct.Type = TypeString
-					case "bool":
-						curStruct.Type = TypeBool
-					}
-				case "keys":
-					curStruct.Keys = objV.([]interface{})
-				case "values":
-					curValues := objV.(map[string]interface{})
-					curStruct.Values = make(map[string]int)
-					for vK, vV := range curValues {
-						curStruct.Values[vK] = int(vV.(float64))
-					}
-				case "unknown_values":
-					curStruct.UnknownValues = objV.(bool)
-				case "buckets":
-					curStruct.Buckets = objV.(bool)
-				case "bucket_open_right":
-					curStruct.BucketOpenRight = objV.(bool)
+			if featureType := reflect.TypeOf(curFeature).Kind(); featureType == reflect.Map {
+				featureIter := reflect.ValueOf(curFeature).MapRange()
+				curStruct := Obj{
+					Name: feature,
 				}
-			}
+				for featureIter.Next() {
+					curFeatureKey := featureIter.Key().String()
+					curFeatureValue := featureIter.Value()
 
-			for _, elm := range curStruct.Keys {
-				switch curStruct.Type {
-				case TypeInt:
-					curStruct.KeysI = append(curStruct.KeysI, int64(elm.(float64)))
-				case TypeFloat:
-					curStruct.KeysF = append(curStruct.KeysF, elm.(float64))
-				case TypeString:
-					curStruct.KeysS = append(curStruct.KeysS, elm.(string))
-				case TypeBool:
-					curStruct.KeysB = append(curStruct.KeysB, elm.(bool))
-				}
-			}
-			for key := range curStruct.Values {
-				if curStruct.Type == TypeFloat {
-					splitStr := strings.Split(key, ".")
-					if key != "max" && (len(splitStr) < 2 || len(splitStr[1]) != 1) {
-						panic(fmt.Sprintf("Key %s is a float without a single decimal number", key))
+					switch curFeatureKey {
+					case "buckets":
+						if curFeatureValue.Kind() == reflect.Slice {
+							curSlice := curFeatureValue.Slice(0, curFeatureValue.Len())
+							curStruct.Buckets = true
+							switch curSlice.Type().Elem().Kind() {
+							case reflect.Int64:
+								curStruct.Type = reflect.Int64
+								curStruct.Int64Values = curSlice.Interface().([]int64)
+							case reflect.Float64:
+								curStruct.Type = reflect.Float64
+								curStruct.Float64Values = curSlice.Interface().([]float64)
+							case reflect.String:
+								curStruct.Type = reflect.String
+								curStruct.StringValues = curSlice.Interface().([]string)
+							}
+						} else {
+							logger.Error(
+								"Feature entries",
+								zap.String(
+									"error",
+									fmt.Sprintf("bucket of %s is not a slice", feature),
+								),
+							)
+							os.Exit(-1)
+						}
+					case "openRight":
+						curStruct.BucketOpenRight = true
+					default:
+						logger.Error(
+							"Feature entries",
+							zap.String(
+								"error",
+								fmt.Sprintf("entry %s of  %s is not allowed", curFeatureKey, feature),
+							),
+						)
+						os.Exit(-1)
 					}
 				}
-			}
+				// Output the structure
+				// fmt.Println(curStruct)
 
-			curStruct.prepareOutputs()
+				manager.Features = append(manager.Features, curStruct)
 
-			// Output the structure
-			// fmt.Println(curStruct)
-
-			channel <- Entry{
-				Key:   k0,
-				Value: curStruct,
-			}
-		}
-	}()
-
-	return channel
-}
-
-// GetLenKeys returns the length of a key
-func (curMap Obj) GetLenKeys() int {
-	var lenght int
-	switch curMap.Type {
-	case TypeInt:
-		lenght = len(curMap.KeysI)
-	case TypeFloat:
-		lenght = len(curMap.KeysF)
-	case TypeString:
-		lenght = len(curMap.KeysS)
-	case TypeBool:
-		lenght = len(curMap.KeysB)
-	}
-	return lenght
-}
-
-// GetLenKeys returns the length of a key
-func (curMap *Obj) prepareOutputs() {
-	curMap.OutputValues = make([]string, 0)
-	lenKeys := len(curMap.Values)
-	for idx := 0; idx < lenKeys; idx++ {
-		curVector := make([]bool, lenKeys)
-		curVector[idx] = true
-		curMap.OutputValues = append(curMap.OutputValues, bool2string(curVector))
-	}
-}
-
-// bool2string returns the string of 0s and 1s of a given bool slice
-func bool2string(state []bool) string {
-	var resIdx string
-	for idx := 0; idx < len(state); idx++ {
-		if state[idx] {
-			resIdx += "1"
-		} else {
-			resIdx += "0"
-		}
-	}
-	return resIdx
-}
-
-// GetValue returns the boolean vector representing the value
-func (curMap *Obj) GetValue(value interface{}) string {
-	var result string
-	if curMap.Buckets == false {
-		if curMap.UnknownValues {
-			switch curMap.Type {
-			case TypeBool:
-				pos, inMap := curMap.Values[fmt.Sprintf("%t", value.(bool))]
-				if inMap {
-					result = curMap.OutputValues[pos]
-				} else {
-					result = curMap.OutputValues[curMap.Values["unknown"]]
-				}
-			case TypeInt:
-				pos, inMap := curMap.Values[string(value.(int64))]
-				if inMap {
-					result = curMap.OutputValues[pos]
-				} else {
-					result = curMap.OutputValues[curMap.Values["unknown"]]
-				}
-			case TypeFloat:
-				pos, inMap := curMap.Values[fmt.Sprintf("%0.2f", value.(float64))]
-				if inMap {
-					result = curMap.OutputValues[pos]
-				} else {
-					result = curMap.OutputValues[curMap.Values["unknown"]]
-				}
-			case TypeString:
-				pos, inMap := curMap.Values[value.(string)]
-				if inMap {
-					result = curMap.OutputValues[pos]
-				} else {
-					result = curMap.OutputValues[curMap.Values["unknown"]]
-				}
-			}
-		} else {
-			switch curMap.Type {
-			case TypeBool:
-				strVal := strconv.FormatBool(value.(bool))
-				pos, inMap := curMap.Values[strVal]
-				if inMap {
-					result = curMap.OutputValues[pos]
-				} else {
-					panic(fmt.Sprintf("Value '%s' not present in keys...", strVal))
-				}
-			case TypeInt:
-				strVal := strconv.FormatInt(value.(int64), 10)
-				pos, inMap := curMap.Values[strVal]
-				if inMap {
-					result = curMap.OutputValues[pos]
-				} else {
-					panic(fmt.Sprintf("Value '%s' not present in keys...", strVal))
-				}
-			case TypeFloat:
-				strVal := fmt.Sprintf("%0.2f", value.(float64))
-				pos, inMap := curMap.Values[strVal]
-				if inMap {
-					result = curMap.OutputValues[pos]
-				} else {
-					panic(fmt.Sprintf("Value '%s' not present in keys...", strVal))
-				}
-			case TypeString:
-				pos, inMap := curMap.Values[value.(string)]
-				if inMap {
-					result = curMap.OutputValues[pos]
-				} else {
-					panic("Value not present...")
-				}
+			} else {
+				logger.Error(
+					"Feature entries",
+					zap.String(
+						"error",
+						fmt.Sprintf("feature %s is not a valid map", feature),
+					),
+				)
+				os.Exit(-1)
 			}
 		}
 	} else {
-		var (
-			inputValueI int64
-			inputValueF float64
-			inputValueS string
-			resPrepared = false
-		)
-		switch curMap.Type {
-		case TypeInt:
-			inputValueI = int64(value.(float64))
-			for _, curKey := range curMap.KeysI {
-				if inputValueI <= curKey {
-					result = curMap.OutputValues[curMap.Values[fmt.Sprintf("%d", curKey)]]
-					resPrepared = true
-					break
-				}
-			}
-		case TypeFloat:
-			inputValueF = value.(float64)
-			for _, curKey := range curMap.KeysF {
-				if inputValueF <= curKey {
-					result = curMap.OutputValues[curMap.Values[fmt.Sprintf("%0.1f", curKey)]]
-					resPrepared = true
-					break
-				}
-			}
-		case TypeString:
-			inputValueS = value.(string)
-			for _, curKey := range curMap.KeysS {
-				if inputValueS <= curKey {
-					result = curMap.OutputValues[curMap.Values[fmt.Sprintf("%s", curKey)]]
-					resPrepared = true
-					break
-				}
-			}
+		logger.Error("Feature entries", zap.String("error", "Not a valid feature JSON"))
+		os.Exit(-1)
+	}
+}
+
+// Size returns the number of possible elements
+func (obj Obj) Size() int {
+	if obj.Buckets {
+		size := 0
+		if obj.BucketOpenRight {
+			size++
 		}
-		if !resPrepared {
-			if curMap.BucketOpenRight == true {
-				result = curMap.OutputValues[curMap.Values["max"]]
+		switch obj.Type {
+		case reflect.Int64:
+			size += len(obj.Int64Values)
+		case reflect.Float64:
+			size += len(obj.Float64Values)
+		case reflect.String:
+			size += len(obj.StringValues)
+		}
+		return size
+	}
+	return -1
+}
+
+// Value returns the value (as interface) of a specific index of a feature
+func (obj Obj) Value(idx int) interface{} {
+	if obj.Buckets {
+		switch obj.Type {
+		case reflect.Int64:
+			if obj.BucketOpenRight {
+				return math.MaxInt64
 			} else {
-				panic(fmt.Sprintf("Cannot convert a value '%v'", value))
+				return obj.Int64Values[idx]
+			}
+		case reflect.Float64:
+			if obj.BucketOpenRight {
+				return math.MaxFloat64
+			} else {
+				return obj.Float64Values[idx]
+			}
+		case reflect.String:
+			if obj.BucketOpenRight {
+				return "max"
+			} else {
+				return obj.StringValues[idx]
 			}
 		}
 	}
-	return result
+	return nil
+}
+
+// Index returns the index of the value for the selected feature
+func (obj Obj) Index(value interface{}) int {
+	if obj.Buckets {
+		switch obj.Type {
+		case reflect.Int64:
+			curVal := value.(int64)
+			for idx, val := range obj.Int64Values {
+				if curVal <= val {
+					return idx
+				}
+			}
+			if obj.BucketOpenRight {
+				return len(obj.Int64Values)
+			}
+		case reflect.Float64:
+			curVal := value.(float64)
+			for idx, val := range obj.Float64Values {
+				if curVal <= val {
+					return idx
+				}
+			}
+			if obj.BucketOpenRight {
+				return len(obj.Float64Values)
+			}
+		case reflect.String:
+			curVal := value.(string)
+			for idx, val := range obj.StringValues {
+				if curVal <= val {
+					return idx
+				}
+			}
+			if obj.BucketOpenRight {
+				return len(obj.StringValues)
+			}
+		}
+	}
+	return -1
 }
