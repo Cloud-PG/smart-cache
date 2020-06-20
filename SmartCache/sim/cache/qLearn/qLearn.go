@@ -1,11 +1,10 @@
 package qlearn
 
 import (
-	"fmt"
 	"math"
 	"math/rand"
+
 	"simulator/v2/cache/ai/featuremap"
-	"strings"
 
 	"go.uber.org/zap"
 )
@@ -16,108 +15,140 @@ type ActionType int
 // RLUpdateType are the possible update functions
 type RLUpdateType int
 
-// QTableRole are the possible table roles
-type QTableRole int
+// AgentRole are the possible table roles
+type AgentRole int
 
 const (
 	// ActionNotStore indicates to store an element in cache
-	ActionNotStore ActionType = iota - 7
+	ActionNotStore ActionType = iota - 4
 	// ActionStore indicates to not store an element in cache
 	ActionStore
-	// ActionRemoveWithLRU indicates to remove a file with LRU policy
-	ActionRemoveWithLRU
-	// ActionRemoveWithLFU indicates to remove a file with LFU policy
-	ActionRemoveWithLFU
-	// ActionRemoveWithSizeSmall indicates to remove a file with Size Small policy
-	ActionRemoveWithSizeSmall
-	// ActionRemoveWithSizeBig indicates to remove a file with Size Big policy
-	ActionRemoveWithSizeBig
-	// ActionRemoveWithWeight indicates to remove a file with Weight policy
-	ActionRemoveWithWeight
+	// ActionNotDelete indicates to not remove a category of files
+	ActionNotDelete
+	// ActionDelete indicates to remove a category of files
+	ActionDelete
 
 	// RLSARSA indicates the standard RL update algorithm SARSA
 	RLSARSA RLUpdateType = iota - 2
 	// RLQLearning indicates the Bellman equation
 	RLQLearning
 
-	// EvictionTable indicates the table to choose which files to delete
-	EvictionTable QTableRole = iota - 3
-	// EvictionTableExtended indicates the table to choose which files to delete version extended
-	EvictionTableExtended
-	// AdditionTable indicates the table to accept file requests
-	AdditionTable
+	// EvictionAgent indicates the table to choose which files to delete
+	EvictionAgent AgentRole = iota - 3
+	// EvictionAgentExtended indicates the table to choose which files to delete version extended
+	EvictionAgentExtended
+	// AdditionAgent indicates the table to accept file requests
+	AdditionAgent
 )
 
 var (
 	logger = zap.L()
 )
 
-// QTable used in Qlearning
+// QTable struct used by agents
 type QTable struct {
-	States           map[string][]float64 `json:"states"`
-	NumStates        int                  `json:"num_states"`
-	NumVars          int                  `json:"num_vars"`
-	LearningRate     float64              `json:"learning_rate"`
-	DiscountFactor   float64              `json:"discount_factor"`
-	DecayRateEpsilon float64              `json:"decay_rate_epsilon"`
-	Epsilon          float64              `json:"epsilon"`
-	MaxEpsilon       float64              `json:"max_epsilon"`
-	MinEpsilon       float64              `json:"min_epsilon"`
-	StepNum          int32                `json:"episode_counter"`
-	Actions          []ActionType         `json:"actions"`
-	ActionStrings    []string             `json:"actionStrings"`
-	RGenerator       *rand.Rand           `json:"r_generator"`
-	UpdateFunction   RLUpdateType         `json:"update_function"`
-	TrainingEnabled  bool                 `json:"training_enabled"`
-	ValueFunction    float64              `json:"value_function"`
+	States  [][]int     `json:"states"`
+	Actions [][]float64 `json:"actions"`
 }
 
-// Init initilizes the QTable struct
-func (table *QTable) Init(featureLenghts []int, role QTableRole, trainingEnabled bool, initEpsilon float64, decayRateEpsilon float64) {
+// Init prepare the QTable States and Actions
+func (table *QTable) Init(featureManager featuremap.FeatureManager, actions []ActionType) {
+	table.States = make([][]int, 0)
+	table.Actions = make([][]float64, 0)
+
+	counters := make([]int, len(featureManager.Features))
+	totStates := 1
+
+	for idx := range counters {
+		totStates *= featureManager.Features[idx].Size()
+	}
+
+	for stateIdx := 0; stateIdx < totStates; stateIdx++ {
+		curState := make([]int, len(featureManager.Features))
+		curActions := make([]float64, len(actions))
+
+		copy(curState, counters)
+		table.States = append(table.States, curState)
+		table.Actions = append(table.Actions, curActions)
+
+		curState[0]++
+		for idx, val := range counters {
+			if val == featureManager.Features[idx].Size() {
+				counters[idx] = 0
+				if idx < len(featureManager.Features) {
+					counters[idx+1]++
+				}
+			}
+		}
+	}
+}
+
+// Agent used in Qlearning
+type Agent struct {
+	Table            QTable       `json:"qtable"`
+	NumStates        int          `json:"num_states"`
+	NumVars          int          `json:"num_vars"`
+	LearningRate     float64      `json:"learning_rate"`
+	DiscountFactor   float64      `json:"discount_factor"`
+	DecayRateEpsilon float64      `json:"decay_rate_epsilon"`
+	Epsilon          float64      `json:"epsilon"`
+	MaxEpsilon       float64      `json:"max_epsilon"`
+	MinEpsilon       float64      `json:"min_epsilon"`
+	StepNum          int32        `json:"episode_counter"`
+	Actions          []ActionType `json:"actions"`
+	ActionStrings    []string     `json:"actionStrings"`
+	RGenerator       *rand.Rand   `json:"r_generator"`
+	UpdateFunction   RLUpdateType `json:"update_function"`
+	TrainingEnabled  bool         `json:"training_enabled"`
+	ValueFunction    float64      `json:"value_function"`
+}
+
+// Init initilizes the Agent struct
+func (agent *Agent) Init(featureLenghts []int, role AgentRole, trainingEnabled bool, initEpsilon float64, decayRateEpsilon float64) {
 	logger = zap.L()
 
-	table.TrainingEnabled = trainingEnabled
-	table.LearningRate = 0.5 // also named Alpha
-	table.DiscountFactor = 0.5
-	table.DecayRateEpsilon = decayRateEpsilon
-	table.Epsilon = initEpsilon
-	table.MaxEpsilon = 1.0
-	table.MinEpsilon = 0.1
+	agent.TrainingEnabled = trainingEnabled
+	agent.LearningRate = 0.5 // also named Alpha
+	agent.DiscountFactor = 0.5
+	agent.DecayRateEpsilon = decayRateEpsilon
+	agent.Epsilon = initEpsilon
+	agent.MaxEpsilon = 1.0
+	agent.MinEpsilon = 0.1
 	switch role {
-	case AdditionTable:
+	case AdditionAgent:
 		// With getArgMax the first action is the default choice
-		table.Actions = []ActionType{
+		agent.Actions = []ActionType{
 			ActionNotStore,
 			ActionStore,
 		}
-		table.ActionStrings = []string{
+		agent.ActionStrings = []string{
 			"ActionNotStore",
 			"ActionStore",
 		}
-	case EvictionTable:
+	case EvictionAgent:
 		// With getArgMax the first action is the default choice
-		table.Actions = []ActionType{
+		agent.Actions = []ActionType{
 			ActionRemoveWithLRU,
 			ActionRemoveWithLFU,
 			ActionRemoveWithSizeBig,
 			ActionRemoveWithSizeSmall,
 		}
-		table.ActionStrings = []string{
+		agent.ActionStrings = []string{
 			"ActionRemoveWithLRU",
 			"ActionRemoveWithLFU",
 			"ActionRemoveWithSizeBig",
 			"ActionRemoveWithSizeSmall",
 		}
-	case EvictionTableExtended:
+	case EvictionAgentExtended:
 		// With getArgMax the first action is the default choice
-		table.Actions = []ActionType{
+		agent.Actions = []ActionType{
 			ActionRemoveWithLRU,
 			ActionRemoveWithLFU,
 			ActionRemoveWithSizeBig,
 			ActionRemoveWithSizeSmall,
 			ActionRemoveWithWeight,
 		}
-		table.ActionStrings = []string{
+		agent.ActionStrings = []string{
 			"ActionRemoveWithLRU",
 			"ActionRemoveWithLFU",
 			"ActionRemoveWithSizeBig",
@@ -126,56 +157,59 @@ func (table *QTable) Init(featureLenghts []int, role QTableRole, trainingEnabled
 		}
 	}
 
-	table.UpdateFunction = RLQLearning
-	table.RGenerator = rand.New(rand.NewSource(42))
+	agent.UpdateFunction = RLQLearning
+	agent.RGenerator = rand.New(rand.NewSource(42))
 
 	numStates := 1
 	for _, featureLen := range featureLenghts {
 		numStates *= int(featureLen)
 	}
-	table.NumStates = numStates
+	agent.NumStates = numStates
 
 	logger.Info("Num generated states", zap.Int("numStates", numStates))
-	table.States = make(map[string][]float64, numStates)
+	agent.Table = QTable{
+		States:  []int{},
+		Actions: []float64{},
+	}
 
-	for state := range table.genAllStates(featureLenghts) {
+	for state := range agent.genAllStates(featureLenghts) {
 		stateString := State2String(state)
-		_, inMap := table.States[stateString]
+		_, inMap := agent.Table[stateString]
 		if !inMap {
-			table.States[stateString] = make([]float64, len(table.Actions))
+			agent.Table[stateString] = make([]float64, len(agent.Actions))
 		} else {
 			logger.Sugar().Errorf("State %v with idx %s already present...\n", state, stateString)
 			panic("Insert state error!!!")
 		}
 
 	}
-	table.NumVars = table.NumStates * len(table.Actions)
-	logger.Info("Num action values", zap.Int("numActionValues", table.NumVars))
+	agent.NumVars = agent.NumStates * len(agent.Actions)
+	logger.Info("Num action values", zap.Int("numActionValues", agent.NumVars))
 }
 
 // ResetParams resets the learning parameters
-func (table *QTable) ResetParams(trainingEnabled bool, initEpsilon float64, decayRateEpsilon float64) {
+func (agent *Agent) ResetParams(trainingEnabled bool, initEpsilon float64, decayRateEpsilon float64) {
 	logger = zap.L()
 
-	table.TrainingEnabled = trainingEnabled
-	table.LearningRate = 0.9 // also named Alpha
-	table.DiscountFactor = 0.5
-	table.DecayRateEpsilon = decayRateEpsilon
-	table.Epsilon = initEpsilon
-	table.MaxEpsilon = 1.0
-	table.MinEpsilon = 0.1
-	table.StepNum = 0
-	table.ValueFunction = 0.
+	agent.TrainingEnabled = trainingEnabled
+	agent.LearningRate = 0.9 // also named Alpha
+	agent.DiscountFactor = 0.5
+	agent.DecayRateEpsilon = decayRateEpsilon
+	agent.Epsilon = initEpsilon
+	agent.MaxEpsilon = 1.0
+	agent.MinEpsilon = 0.1
+	agent.StepNum = 0
+	agent.ValueFunction = 0.
 
 	logger.Info("Parameters restored as default...")
 }
 
 // ResetValueFunction clean the value function
-func (table *QTable) ResetValueFunction() {
-	table.ValueFunction = 0.
+func (agent *Agent) ResetValueFunction() {
+	agent.ValueFunction = 0.
 }
 
-func (table QTable) genAllStates(featureLenghts []int) chan []bool {
+func (agent Agent) genAllStates(featureLenghts []int) chan []bool {
 	genChan := make(chan []bool)
 	go func() {
 		defer close(genChan)
@@ -219,61 +253,61 @@ func (table QTable) genAllStates(featureLenghts []int) chan []bool {
 }
 
 // GetRandomFloat generates a random number
-func (table QTable) GetRandomFloat() float64 {
-	return table.RGenerator.Float64()
+func (agent Agent) GetRandomFloat() float64 {
+	return agent.RGenerator.Float64()
 }
 
 // ToString outputs the state values in a csv format string
-func (table QTable) ToString(featureMap map[string]featuremap.Obj, featureMapOrder []string) string {
-	var csvOutput []string
-	if featureMap != nil && featureMapOrder != nil {
-		csvOutput = append(csvOutput, strings.Join(
-			[]string{
-				strings.Join(table.ActionStrings, ","),
-				strings.Join(featureMapOrder, ","),
-			},
-			",",
-		))
-		csvOutput = append(csvOutput, "\n")
-	}
-	// counter := 0
-	for state, actions := range table.States {
-		for idx, action := range actions {
-			csvOutput = append(csvOutput, fmt.Sprintf("%09.2f", action))
-			if idx != len(actions)-1 {
-				csvOutput = append(csvOutput, fmt.Sprint(","))
-			}
-		}
-		if featureMap == nil && featureMapOrder == nil {
-			fmt.Printf(",%s", state)
-		} else {
-			stateRepr := String2StateRepr(state, featureMap, featureMapOrder)
-			csvOutput = append(csvOutput, fmt.Sprintf(",%s", stateRepr))
-		}
-		// counter++
-		// fmt.Println(counter, len(table.States))
-		csvOutput = append(csvOutput, "\n")
-	}
-	return strings.Join(csvOutput, "")
-}
+// func (agent Agent) ToString(featureMap map[string]featuremap.Obj, featureMapOrder []string) string {
+// 	var csvOutput []string
+// 	if featureMap != nil && featureMapOrder != nil {
+// 		csvOutput = append(csvOutput, strings.Join(
+// 			[]string{
+// 				strings.Join(agent.ActionStrings, ","),
+// 				strings.Join(featureMapOrder, ","),
+// 			},
+// 			",",
+// 		))
+// 		csvOutput = append(csvOutput, "\n")
+// 	}
+// 	// counter := 0
+// 	for state, actions := range agent.Table {
+// 		for idx, action := range actions {
+// 			csvOutput = append(csvOutput, fmt.Sprintf("%09.2f", action))
+// 			if idx != len(actions)-1 {
+// 				csvOutput = append(csvOutput, fmt.Sprint(","))
+// 			}
+// 		}
+// 		if featureMap == nil && featureMapOrder == nil {
+// 			fmt.Printf(",%s", state)
+// 		} else {
+// 			stateRepr := String2StateRepr(state, featureMap, featureMapOrder)
+// 			csvOutput = append(csvOutput, fmt.Sprintf(",%s", stateRepr))
+// 		}
+// 		// counter++
+// 		// fmt.Println(counter, len(agent.Table))
+// 		csvOutput = append(csvOutput, "\n")
+// 	}
+// 	return strings.Join(csvOutput, "")
+// }
 
-// GetActionCoverage returns the exploration result of the QTable Actions
-func (table QTable) GetActionCoverage() float64 {
+// GetActionCoverage returns the exploration result of the Agent Actions
+func (agent Agent) GetActionCoverage() float64 {
 	numSetVariables := 0
-	for _, actions := range table.States {
+	for _, actions := range agent.Table {
 		for _, action := range actions {
 			if action != 0.0 {
 				numSetVariables++
 			}
 		}
 	}
-	return (float64(numSetVariables) / float64(table.NumVars)) * 100.
+	return (float64(numSetVariables) / float64(agent.NumVars)) * 100.
 }
 
-// GetStateCoverage returns the exploration result of the QTable States
-func (table QTable) GetStateCoverage() float64 {
+// GetStateCoverage returns the exploration result of the Agent States
+func (agent Agent) GetStateCoverage() float64 {
 	numSetVariables := 0
-	for _, actions := range table.States {
+	for _, actions := range agent.Table {
 		for _, action := range actions {
 			if action != 0.0 {
 				numSetVariables++
@@ -281,15 +315,15 @@ func (table QTable) GetStateCoverage() float64 {
 			}
 		}
 	}
-	return (float64(numSetVariables) / float64(len(table.States))) * 100.
+	return (float64(numSetVariables) / float64(len(agent.Table))) * 100.
 }
 
 // GetAction returns the possible environment action from a state
-func (table QTable) GetAction(stateIdx string, action ActionType) float64 {
-	values := table.States[stateIdx]
+func (agent Agent) GetAction(stateIdx string, action ActionType) float64 {
+	values := agent.Table[stateIdx]
 	outIdx := 0
-	for idx := 0; idx < len(table.Actions); idx++ {
-		if table.Actions[idx] == action {
+	for idx := 0; idx < len(agent.Actions); idx++ {
+		if agent.Actions[idx] == action {
 			outIdx = idx
 			break
 		}
@@ -298,16 +332,16 @@ func (table QTable) GetAction(stateIdx string, action ActionType) float64 {
 }
 
 // GetBestAction returns the action of the best action for the given state
-func (table QTable) GetBestAction(state string) ActionType {
-	values := table.States[state]
+func (agent Agent) GetBestAction(state string) ActionType {
+	values := agent.Table[state]
 	maxValueIdx := getArgMax(values)
 	logger.Debug("Get best action", zap.Float64s("values", values), zap.Int("idx max value", maxValueIdx))
-	return table.Actions[maxValueIdx]
+	return agent.Actions[maxValueIdx]
 }
 
 // GetActionIndex returns the index of a given action
-func (table QTable) GetActionIndex(action ActionType) int {
-	for idx, value := range table.Actions {
+func (agent Agent) GetActionIndex(action ActionType) int {
+	for idx, value := range agent.Actions {
 		if value == action {
 			return idx
 		}
@@ -316,33 +350,33 @@ func (table QTable) GetActionIndex(action ActionType) int {
 }
 
 // Update change the Q-table values of the given action
-func (table *QTable) Update(state string, action ActionType, reward float64, newState string) {
-	table.ValueFunction += reward
-	curStateValue := table.GetAction(state, action)
-	actionIdx := table.GetActionIndex(action)
+func (agent *Agent) Update(state string, action ActionType, reward float64, newState string) {
+	agent.ValueFunction += reward
+	curStateValue := agent.GetAction(state, action)
+	actionIdx := agent.GetActionIndex(action)
 	if newState == "" {
 		newState = state
 	}
-	switch table.UpdateFunction {
+	switch agent.UpdateFunction {
 	case RLSARSA:
 		// TODO: fix next state with a proper one, not the maximum of the same state
-		nextStateIdx := getArgMax(table.States[newState]) // The next state is the same
-		table.States[state][actionIdx] = (1.0-table.LearningRate)*curStateValue + table.LearningRate*(reward+table.DiscountFactor*table.States[state][nextStateIdx])
+		nextStateIdx := getArgMax(agent.Table[newState]) // The next state is the same
+		agent.Table[state][actionIdx] = (1.0-agent.LearningRate)*curStateValue + agent.LearningRate*(reward+agent.DiscountFactor*agent.Table[state][nextStateIdx])
 	case RLQLearning:
-		nextStateIdx := getArgMax(table.States[newState]) // The next state is the max value
-		table.States[state][actionIdx] = curStateValue + table.LearningRate*(reward+table.DiscountFactor*table.States[state][nextStateIdx]-curStateValue)
+		nextStateIdx := getArgMax(agent.Table[newState]) // The next state is the max value
+		agent.Table[state][actionIdx] = curStateValue + agent.LearningRate*(reward+agent.DiscountFactor*agent.Table[state][nextStateIdx]-curStateValue)
 		// fmt.Printf(
 		// 	"OLD VALUE %0.2f | NEW VALUE %0.2f | CUR REW %0.2f\n",
-		// 	curStateValue, table.States[state][actionIdx], reward,
+		// 	curStateValue, agent.Table[state][actionIdx], reward,
 		// )
 	}
 }
 
 // UpdateEpsilon upgrades the epsilon variable
-func (table *QTable) UpdateEpsilon() {
-	if table.Epsilon > table.MinEpsilon {
-		table.StepNum++
-		table.Epsilon = table.MinEpsilon + (table.MaxEpsilon-table.MinEpsilon)*math.Exp(-table.DecayRateEpsilon*float64(table.StepNum))
+func (agent *Agent) UpdateEpsilon() {
+	if agent.Epsilon > agent.MinEpsilon {
+		agent.StepNum++
+		agent.Epsilon = agent.MinEpsilon + (agent.MaxEpsilon-agent.MinEpsilon)*math.Exp(-agent.DecayRateEpsilon*float64(agent.StepNum))
 	}
 }
 
@@ -385,33 +419,33 @@ func State2String(state []bool) string {
 }
 
 // String2StateRepr create a human representation of the state starting from the state string
-func String2StateRepr(state string, featureMap map[string]featuremap.Obj, featureMapOrder []string) string {
-	var (
-		result []string
-		curPos = 0
-	)
+// func String2StateRepr(state string, featureMap map[string]featuremap.Obj, featureMapOrder []string) string {
+// 	var (
+// 		result []string
+// 		curPos = 0
+// 	)
 
-	for _, featureName := range featureMapOrder {
-		curCategory := featureMap[featureName]
-		lenCategory := 0
-		if curCategory.UnknownValues == true || curCategory.BucketOpenRight == true {
-			lenCategory = curCategory.GetLenKeys() + 1
-		} else {
-			lenCategory = curCategory.GetLenKeys()
-		}
-		partialState := state[curPos : curPos+lenCategory]
-		keyIdx := int(strings.IndexRune(partialState, '1'))
-		for key, value := range curCategory.Values {
-			if value == keyIdx {
-				result = append(
-					result,
-					key,
-				)
-				break
-			}
-		}
-		curPos += lenCategory
-	}
+// 	for _, featureName := range featureMapOrder {
+// 		curCategory := featureMap[featureName]
+// 		lenCategory := 0
+// 		if curCategory.UnknownValues == true || curCategory.BucketOpenRight == true {
+// 			lenCategory = curCategory.GetLenKeys() + 1
+// 		} else {
+// 			lenCategory = curCategory.GetLenKeys()
+// 		}
+// 		partialState := state[curPos : curPos+lenCategory]
+// 		keyIdx := int(strings.IndexRune(partialState, '1'))
+// 		for key, value := range curCategory.Values {
+// 			if value == keyIdx {
+// 				result = append(
+// 					result,
+// 					key,
+// 				)
+// 				break
+// 			}
+// 		}
+// 		curPos += lenCategory
+// 	}
 
-	return strings.Join(result, ",")
-}
+// 	return strings.Join(result, ",")
+// }
