@@ -75,7 +75,7 @@ func (table *QTable) Init(featureManager featuremap.FeatureManager, actions []Ac
 	copy(table.ActionTypes, actions)
 
 	table.Populate(&table.FeatureTree, 0)
-	fmt.Println(table)
+	fmt.Println("TABLE", table.FeatureTree)
 	os.Exit(0)
 }
 
@@ -90,8 +90,8 @@ func (table *QTable) Populate(node *FeatureNode, featureIdx int) {
 				Value: featureVal.Val,
 				Leafs: []FeatureNode{},
 			}
-			node.Leafs = append(node.Leafs, newNode)
 			table.Populate(&newNode, featureIdx+1)
+			node.Leafs = append(node.Leafs, newNode)
 		}
 	}
 }
