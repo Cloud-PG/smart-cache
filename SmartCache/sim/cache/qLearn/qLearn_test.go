@@ -17,8 +17,8 @@ func TestQTable(t *testing.T) {
 		sizes = append(sizes, curNum)
 	}
 
-	agent := Agent{}
-	agent.Init(sizes, AdditionAgent, true, 1.0, 0.000001)
+	// agent := Agent{}
+	// agent.Init(nil, AdditionAgent, true, 1.0, 0.000001)
 	// coverP := agent.GetActionCoverage()
 
 	// if len(agent.Table) != numStates {
