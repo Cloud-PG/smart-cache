@@ -16,17 +16,23 @@ type mapType int
 
 // Obj represents a map object
 type Obj struct {
-	Name            string
-	Type            reflect.Kind
-	Int64Values     []int64
-	Float64Values   []float64
-	Buckets         bool
-	BucketOpenRight bool
+	Name            string       `json:"name"`
+	Type            reflect.Kind `json:"type"`
+	Int64Values     []int64      `json:"int64Values"`
+	Float64Values   []float64    `json:"float64Values"`
+	Buckets         bool         `json:"buckets"`
+	BucketOpenRight bool         `json:"bucketOpenRight"`
+}
+
+// ObjVal used in range cycles
+type ObjVal struct {
+	Idx int
+	Val interface{}
 }
 
 // FeatureManager collects and manages the features
 type FeatureManager struct {
-	Features []Obj
+	Features []Obj `json:"feature"`
 }
 
 // FeatureIter returns all the feature objects
@@ -105,10 +111,12 @@ func (manager *FeatureManager) Populate(featureMapFilePath string) {
 		mapIter := reflect.ValueOf(tmpMap).MapRange()
 		for mapIter.Next() {
 			feature := mapIter.Key().String()
-			curFeature := mapIter.Value().Interface().(map[string]interface{})
+			curFeature := mapIter.Value()
 
-			if featureType := reflect.TypeOf(curFeature).Kind(); featureType == reflect.Map {
-				featureIter := reflect.ValueOf(curFeature).MapRange()
+			fmt.Println("lvl0", feature, curFeature.Elem().Kind(), curFeature.Elem().Type())
+
+			if featureType := curFeature.Elem().Kind(); featureType == reflect.Map {
+				featureIter := curFeature.Elem().MapRange()
 				curStruct := Obj{
 					Name: feature,
 				}
@@ -119,16 +127,22 @@ func (manager *FeatureManager) Populate(featureMapFilePath string) {
 
 					switch curFeatureKey {
 					case "buckets":
-						if curFeatureValue.Kind() == reflect.Slice {
-							curSlice := curFeatureValue.Slice(0, curFeatureValue.Len())
+						if curFeatureValue.Elem().Kind() == reflect.Slice {
+							values := curFeatureValue.Elem().Interface().([]interface{})
 							curStruct.Buckets = true
-							switch curSlice.Type().Elem().Kind() {
+							switch reflect.TypeOf(values[0]).Kind() {
 							case reflect.Int64:
 								curStruct.Type = reflect.Int64
-								curStruct.Int64Values = curSlice.Interface().([]int64)
+								curStruct.Int64Values = make([]int64, len(values))
+								for idx, val := range values {
+									curStruct.Int64Values[idx] = val.(int64)
+								}
 							case reflect.Float64:
 								curStruct.Type = reflect.Float64
-								curStruct.Float64Values = curSlice.Interface().([]float64)
+								curStruct.Float64Values = make([]float64, len(values))
+								for idx, val := range values {
+									curStruct.Float64Values[idx] = val.(float64)
+								}
 							}
 						} else {
 							logger.Error(
@@ -143,14 +157,6 @@ func (manager *FeatureManager) Populate(featureMapFilePath string) {
 					case "openRight":
 						if curFeatureValue.Elem().Bool() {
 							curStruct.BucketOpenRight = true
-							switch curStruct.Type {
-							case reflect.Int64:
-								curStruct.Type = reflect.Int64
-								curStruct.Int64Values = append(curStruct.Int64Values, math.MaxInt64)
-							case reflect.Float64:
-								curStruct.Type = reflect.Float64
-								curStruct.Float64Values = append(curStruct.Float64Values, math.MaxFloat64)
-							}
 						}
 					default:
 						logger.Error(
@@ -165,6 +171,17 @@ func (manager *FeatureManager) Populate(featureMapFilePath string) {
 				}
 				// Output the structure
 				// fmt.Println(curStruct)
+
+				switch curStruct.Type {
+				case reflect.Int64:
+					curStruct.Type = reflect.Int64
+					curStruct.Int64Values = append(curStruct.Int64Values, math.MaxInt64)
+				case reflect.Float64:
+					curStruct.Type = reflect.Float64
+					curStruct.Float64Values = append(curStruct.Float64Values, math.MaxFloat64)
+				}
+
+				fmt.Println("struct", curStruct)
 
 				manager.Features = append(manager.Features, curStruct)
 
@@ -220,22 +237,28 @@ func (obj Obj) Value(idx int) interface{} {
 }
 
 // Values returns all the values (as interface generator) of the feature
-func (obj Obj) Values() chan interface{} {
-	outChan := make(chan interface{}, obj.Size())
+func (obj Obj) Values() chan ObjVal {
+	outChan := make(chan ObjVal, obj.Size())
 	if obj.Buckets {
 		switch obj.Type {
 		case reflect.Int64:
 			go func() {
 				defer close(outChan)
-				for _, elm := range obj.Int64Values {
-					outChan <- elm
+				for idx, elm := range obj.Int64Values {
+					outChan <- ObjVal{
+						Idx: idx,
+						Val: elm,
+					}
 				}
 			}()
 		case reflect.Float64:
 			go func() {
 				defer close(outChan)
-				for _, elm := range obj.Int64Values {
-					outChan <- elm
+				for idx, elm := range obj.Int64Values {
+					outChan <- ObjVal{
+						Idx: idx,
+						Val: elm,
+					}
 				}
 			}()
 		}
