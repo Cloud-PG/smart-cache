@@ -113,8 +113,6 @@ func (manager *FeatureManager) Populate(featureMapFilePath string) {
 			feature := mapIter.Key().String()
 			curFeature := mapIter.Value()
 
-			fmt.Println("lvl0", feature, curFeature.Elem().Kind(), curFeature.Elem().Type())
-
 			if featureType := curFeature.Elem().Kind(); featureType == reflect.Map {
 				featureIter := curFeature.Elem().MapRange()
 				curStruct := Obj{
@@ -169,8 +167,6 @@ func (manager *FeatureManager) Populate(featureMapFilePath string) {
 						os.Exit(-1)
 					}
 				}
-				// Output the structure
-				// fmt.Println(curStruct)
 
 				switch curStruct.Type {
 				case reflect.Int64:
@@ -181,7 +177,7 @@ func (manager *FeatureManager) Populate(featureMapFilePath string) {
 					curStruct.Float64Values = append(curStruct.Float64Values, math.MaxFloat64)
 				}
 
-				fmt.Println("struct", curStruct)
+				// fmt.Println("struct", curStruct)
 
 				manager.Features = append(manager.Features, curStruct)
 
@@ -254,7 +250,7 @@ func (obj Obj) Values() chan ObjVal {
 		case reflect.Float64:
 			go func() {
 				defer close(outChan)
-				for idx, elm := range obj.Int64Values {
+				for idx, elm := range obj.Float64Values {
 					outChan <- ObjVal{
 						Idx: idx,
 						Val: elm,
