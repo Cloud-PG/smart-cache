@@ -161,7 +161,7 @@ func (manager *FeatureManager) Populate(featureMapFilePath string) {
 
 				switch curStruct.Type {
 				case "int":
-					fmt.Println(reflect.TypeOf(bucketValues[0]).Kind())
+					// fmt.Println("int", reflect.TypeOf(bucketValues[0]).Kind())
 					curStruct.ReflectType = reflect.Int64
 					curStruct.Int64Values = make([]int64, len(bucketValues))
 					for idx, val := range bucketValues {
@@ -169,7 +169,7 @@ func (manager *FeatureManager) Populate(featureMapFilePath string) {
 					}
 					curStruct.Int64Values = append(curStruct.Int64Values, math.MaxInt64)
 				case "float":
-					fmt.Println(reflect.TypeOf(bucketValues[0]).Kind())
+					// fmt.Println("float", reflect.TypeOf(bucketValues[0]).Kind())
 					curStruct.ReflectType = reflect.Float64
 					curStruct.Float64Values = make([]float64, len(bucketValues))
 					for idx, val := range bucketValues {
