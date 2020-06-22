@@ -310,14 +310,16 @@ void env::update_windows_getting_eventual_rewards_accumulate(int curFilename, in
             else if (size >= it_limsup_size) coeff = 1;
             else coeff = (size - it_liminf_size)/it_delta_size;
         }
-
         unordered_map<int,vector<WindowElement>>::iterator it;
         it = _request_window_elements.find(curFilename);
         if(it != _request_window_elements.end()){  //is pending
-            for(int i=0; i < it->second.size(); i++){
+            //cout<<it->second.size()<<endl;
+            int len_ = it->second.size();
+            for(int i=0; i < len_; i++){
+                //cout<<it->second.size()<<endl;
                 WindowElement obj = (it->second)[i];
-                
                 if ((_curRequest_from_start - obj.counter) >= _time_span_add){ //is invalidated
+                    cout<<'hereeeeeeeeee'<<endl;
                     if (obj.reward != 0){   //some hits
                         if (obj.action == 0) obj.reward = + obj.reward * coeff;
                         else obj.reward = - obj.reward * coeff;
@@ -333,9 +335,10 @@ void env::update_windows_getting_eventual_rewards_accumulate(int curFilename, in
                 }
                 else{  //is not invalidated yet
                     obj.reward += 1;
-                    _request_window_elements[curFilename].push_back(WindowElement(_curRequest_from_start, _curValues, 0, action));
-                }
+                    //cout<<"eccomiiiiiii"<<endl;
+                }  
             }
+            _request_window_elements[curFilename].push_back(WindowElement(_curRequest_from_start, _curValues, 0, action));
         }
         
         else{ //is not in not pending
@@ -617,6 +620,8 @@ PYBIND11_MODULE(cache_env_cpp, m) {
         .def_readwrite("_curRequest_from_start", &env::_curRequest_from_start)
         .def_readwrite("_curDay", &env::_curDay) 
         .def_readwrite("_directory", &env::_directory)
+        .def_readwrite("_out_directory", &env::_out_directory)
+        .def_readwrite("_out_name", &env::_out_name)
         .def_readwrite("_df_length", &env::_df_length)
         .def_readwrite("_cached_files_index", &env::_cached_files_index); 
 }
