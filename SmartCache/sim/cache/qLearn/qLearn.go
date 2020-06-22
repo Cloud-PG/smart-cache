@@ -106,24 +106,24 @@ func (table *QTable) Init(featureManager featuremap.FeatureManager, actions []Ac
 	// for idx := 0; idx < len(table.States); idx++ {
 	// 	fmt.Println(idx, table.States[idx], table.FeatureIdxs2StateIdx(table.States[idx]...))
 	// }
-	// fmt.Println(table.getPrevIndexesLenProd(0), len(table.States))
+	// fmt.Println(table.getPrevIndexesSizeProd(0), len(table.States))
 
 	// testIdxs := table.Features2Idxs([]interface{}{float64(5000.0), int64(1), int64(500000)}...)
 	// fmt.Println(testIdxs, "->", table.FeatureIdxs2StateIdx(testIdxs...))
 
-	if table.getPrevIndexesLenProd(0) != len(table.States) {
+	if table.getPrevIndexesSizeProd(0) != len(table.States) {
 		logger.Error("State generation",
 			zap.String("error", "wrong number of states generated"),
 			zap.Int("numStates", len(table.States)),
-			zap.Int("expectedNumStates", table.getPrevIndexesLenProd(0)),
+			zap.Int("expectedNumStates", table.getPrevIndexesSizeProd(0)),
 		)
 		os.Exit(-1)
 	}
 }
 
-// getPrevIndexesLenProd returns the product of the feature lenghts starting from
+// getPrevIndexesSizeProd returns the product of the feature lenghts starting from
 // a specific index
-func (table QTable) getPrevIndexesLenProd(start int) int {
+func (table QTable) getPrevIndexesSizeProd(start int) int {
 	prod := 1
 	for idx := start; idx < len(table.FeatureManager.Features); idx++ {
 		prod *= table.FeatureManager.Features[idx].Size()
@@ -136,7 +136,7 @@ func (table QTable) FeatureIdxs2StateIdx(featureIdxs ...int) int {
 	index := 0
 	for idx, curIdx := range featureIdxs {
 		if idx != len(featureIdxs)-1 {
-			index += curIdx * table.getPrevIndexesLenProd(idx+1)
+			index += curIdx * table.getPrevIndexesSizeProd(idx+1)
 		} else {
 			index += curIdx
 		}
