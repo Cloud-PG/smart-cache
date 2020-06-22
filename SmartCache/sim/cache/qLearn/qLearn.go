@@ -102,7 +102,7 @@ func (table *QTable) Init(featureManager featuremap.FeatureManager, actions []Ac
 		}
 	}
 
-	// Output test
+	// ----- Output test -----
 	// for idx := 0; idx < len(table.States); idx++ {
 	// 	fmt.Println(idx, table.States[idx], table.FeatureIdxs2StateIdx(table.States[idx]...))
 	// }
@@ -162,26 +162,24 @@ func (table QTable) Features2Idxs(features ...interface{}) []int {
 // Agent used in Qlearning
 type Agent struct {
 	Table            QTable       `json:"qtable"`
-	NumStates        int          `json:"num_states"`
-	NumVars          int          `json:"num_vars"`
-	LearningRate     float64      `json:"learning_rate"`
-	DiscountFactor   float64      `json:"discount_factor"`
-	DecayRateEpsilon float64      `json:"decay_rate_epsilon"`
+	NumStates        int          `json:"numStates"`
+	NumVars          int          `json:"numVars"`
+	LearningRate     float64      `json:"learningRate"`
+	DiscountFactor   float64      `json:"discountFactor"`
+	DecayRateEpsilon float64      `json:"decayRateEpsilon"`
 	Epsilon          float64      `json:"epsilon"`
-	MaxEpsilon       float64      `json:"max_epsilon"`
-	MinEpsilon       float64      `json:"min_epsilon"`
-	StepNum          int32        `json:"episode_counter"`
-	RGenerator       *rand.Rand   `json:"r_generator"`
-	UpdateFunction   RLUpdateType `json:"update_function"`
-	TrainingEnabled  bool         `json:"training_enabled"`
-	ValueFunction    float64      `json:"value_function"`
+	MaxEpsilon       float64      `json:"maxEpsilon"`
+	MinEpsilon       float64      `json:"minEpsilon"`
+	StepNum          int32        `json:"episodeCounter"`
+	RGenerator       *rand.Rand   `json:"rGenerator"`
+	UpdateFunction   RLUpdateType `json:"updateFunction"`
+	ValueFunction    float64      `json:"valueFunction"`
 }
 
 // Init initilizes the Agent struct
-func (agent *Agent) Init(featureManager featuremap.FeatureManager, role AgentRole, trainingEnabled bool, initEpsilon float64, decayRateEpsilon float64) {
+func (agent *Agent) Init(featureManager featuremap.FeatureManager, role AgentRole, initEpsilon float64, decayRateEpsilon float64) {
 	logger = zap.L()
 
-	agent.TrainingEnabled = trainingEnabled
 	agent.LearningRate = 0.5 // also named Alpha
 	agent.DiscountFactor = 0.5
 	agent.DecayRateEpsilon = decayRateEpsilon
@@ -198,72 +196,33 @@ func (agent *Agent) Init(featureManager featuremap.FeatureManager, role AgentRol
 				ActionStore,
 			},
 		)
-		// case EvictionAgent:
-		// 	// With getArgMax the first action is the default choice
-		// 	agent.Actions = []ActionType{
-		// 		ActionRemoveWithLRU,
-		// 		ActionRemoveWithLFU,
-		// 		ActionRemoveWithSizeBig,
-		// 		ActionRemoveWithSizeSmall,
-		// 	}
-		// 	agent.ActionStrings = []string{
-		// 		"ActionRemoveWithLRU",
-		// 		"ActionRemoveWithLFU",
-		// 		"ActionRemoveWithSizeBig",
-		// 		"ActionRemoveWithSizeSmall",
-		// 	}
-		// case EvictionAgentExtended:
-		// 	// With getArgMax the first action is the default choice
-		// 	agent.Actions = []ActionType{
-		// 		ActionRemoveWithLRU,
-		// 		ActionRemoveWithLFU,
-		// 		ActionRemoveWithSizeBig,
-		// 		ActionRemoveWithSizeSmall,
-		// 		ActionRemoveWithWeight,
-		// 	}
-		// 	agent.ActionStrings = []string{
-		// 		"ActionRemoveWithLRU",
-		// 		"ActionRemoveWithLFU",
-		// 		"ActionRemoveWithSizeBig",
-		// 		"ActionRemoveWithSizeSmall",
-		// 		"ActionRemoveWithWeight",
-		// 	}
+	case EvictionAgent:
+		// With getArgMax the first action is the default choice
+		agent.Table.Init(
+			featureManager,
+			[]ActionType{
+				ActionNotDelete,
+				ActionDelete,
+			},
+		)
 	}
 
 	agent.UpdateFunction = RLQLearning
 	agent.RGenerator = rand.New(rand.NewSource(42))
 
-	// numStates := 1
-	// for _, featureLen := range featureLenghts {
-	// 	numStates *= int(featureLen)
-	// }
-	// agent.NumStates = numStates
+	agent.NumStates = len(agent.Table.States)
+	agent.NumVars = agent.NumStates * len(agent.Table.Actions[0])
 
-	// logger.Info("Num generated states", zap.Int("numStates", numStates))
-	// agent.Table = QTable{
-	// 	States:  []int{},
-	// 	Actions: []float64{},
-	// }
-
-	// for state := range agent.genAllStates(featureLenghts) {
-	// 	stateString := State2String(state)
-	// 	_, inMap := agent.Table[stateString]
-	// 	if !inMap {
-	// 		agent.Table[stateString] = make([]float64, len(agent.Actions))
-	// 	} else {
-	// 		logger.Sugar().Errorf("State %v with idx %s already present...\n", state, stateString)
-	// 		panic("Insert state error!!!")
-	// 	}
-	// }
-	// agent.NumVars = agent.NumStates * len(agent.Actions)
-	logger.Info("Num action values", zap.Int("numActionValues", agent.NumVars))
+	logger.Info("Agent",
+		zap.Int("numStates", agent.NumStates),
+		zap.Int("numVars", agent.NumVars),
+	)
 }
 
 // ResetParams resets the learning parameters
-func (agent *Agent) ResetParams(trainingEnabled bool, initEpsilon float64, decayRateEpsilon float64) {
+func (agent *Agent) ResetParams(initEpsilon float64, decayRateEpsilon float64) {
 	logger = zap.L()
 
-	agent.TrainingEnabled = trainingEnabled
 	agent.LearningRate = 0.9 // also named Alpha
 	agent.DiscountFactor = 0.5
 	agent.DecayRateEpsilon = decayRateEpsilon
@@ -279,49 +238,6 @@ func (agent *Agent) ResetParams(trainingEnabled bool, initEpsilon float64, decay
 // ResetValueFunction clean the value function
 func (agent *Agent) ResetValueFunction() {
 	agent.ValueFunction = 0.
-}
-
-func (agent Agent) genAllStates(featureLenghts []int) chan []bool {
-	genChan := make(chan []bool)
-	go func() {
-		defer close(genChan)
-		partials := make([][]bool, 0)
-
-		for _, featureLenght := range featureLenghts {
-			var newEntries [][]bool
-			for idx := 0; idx < featureLenght; idx++ {
-				oneHot := createOneHot(featureLenght, idx)
-				newEntries = append(newEntries, oneHot)
-			}
-			if len(partials) == 0 {
-				for idx := 0; idx < len(newEntries); idx++ {
-					partials = append(partials, make([]bool, len(newEntries[idx])))
-					copy(partials[idx], newEntries[idx])
-				}
-			} else {
-				curPartials := make([][]bool, len(partials))
-				copy(curPartials, partials)
-				for idx0 := 0; idx0 < len(newEntries)-1; idx0++ {
-					for idx1 := 0; idx1 < len(curPartials); idx1++ {
-						partials = append(partials, make([]bool, len(curPartials[idx1])))
-						copy(partials[len(partials)-1], curPartials[idx1])
-					}
-				}
-				for idx0 := 0; idx0 < len(newEntries); idx0++ {
-					startIdx := len(curPartials) * idx0
-					for idx1 := startIdx; idx1 < startIdx+len(curPartials); idx1++ {
-						partials[idx1] = append(partials[idx1], newEntries[idx0]...)
-					}
-					if len(partials) > 12 {
-					}
-				}
-			}
-		}
-		for _, partial := range partials {
-			genChan <- partial
-		}
-	}()
-	return genChan
 }
 
 // GetRandomFloat generates a random number
