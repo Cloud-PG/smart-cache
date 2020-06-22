@@ -5,6 +5,7 @@ import (
 	"math"
 	"math/rand"
 	"os"
+	"reflect"
 
 	"simulator/v2/cache/ai/featuremap"
 
@@ -45,55 +46,117 @@ var (
 	logger = zap.L()
 )
 
-// FeatureNode is used to reconstruct the state index
-type FeatureNode struct {
-	Idx   int
-	Value interface{}
-	Leafs []FeatureNode
-}
-
 // QTable struct used by agents
 type QTable struct {
 	States         [][]int                   `json:"states"`
 	Actions        [][]float64               `json:"actions"`
-	FeatureTree    FeatureNode               `json:"featureTree"`
 	FeatureManager featuremap.FeatureManager `json:"featureManager"`
 	ActionTypes    []ActionType              `json:"actionTypes"`
 }
 
 // Init prepare the QTable States and Actions
 func (table *QTable) Init(featureManager featuremap.FeatureManager, actions []ActionType) {
+	logger := zap.L()
+
 	table.States = make([][]int, 0)
 	table.Actions = make([][]float64, 0)
-	table.FeatureTree = FeatureNode{
-		Idx:   -1,
-		Value: "root",
-		Leafs: []FeatureNode{},
-	}
 	table.FeatureManager = featureManager
 	table.ActionTypes = make([]ActionType, len(actions))
 	copy(table.ActionTypes, actions)
 
-	table.Populate(&table.FeatureTree, 0)
-	fmt.Println("TABLE", table.FeatureTree)
-	os.Exit(0)
-}
+	counters := make([]int, len(table.FeatureManager.Features))
+	lenghts := make([]int, len(table.FeatureManager.Features))
 
-// Populate generates all states and indexes from features
-func (table *QTable) Populate(node *FeatureNode, featureIdx int) {
-	if featureIdx == len(table.FeatureManager.Features) {
-		return
-	} else {
-		for featureVal := range table.FeatureManager.Features[featureIdx].Values() {
-			newNode := FeatureNode{
-				Idx:   featureVal.Idx,
-				Value: featureVal.Val,
-				Leafs: []FeatureNode{},
+	for idx, feature := range table.FeatureManager.Features {
+		lenghts[idx] = feature.Size()
+	}
+
+	for {
+		curState := make([]int, len(table.FeatureManager.Features))
+		curActions := make([]float64, len(actions))
+
+		copy(curState, counters)
+
+		table.States = append(table.States, curState)
+		table.Actions = append(table.Actions, curActions)
+
+		allEqual := true
+		for idx := 0; idx < len(counters); idx++ {
+			if counters[idx]+1 != lenghts[idx] {
+				allEqual = false
+				break
 			}
-			table.Populate(&newNode, featureIdx+1)
-			node.Leafs = append(node.Leafs, newNode)
+		}
+		if allEqual {
+			break
+		}
+
+		counters[len(counters)-1]++
+		for idx := len(counters) - 1; idx > -1; idx-- {
+			if counters[idx] == lenghts[idx] {
+				counters[idx] = 0
+				if idx-1 > -1 {
+					counters[idx-1]++
+				}
+			}
 		}
 	}
+
+	// Output test
+	// for idx := 0; idx < len(table.States); idx++ {
+	// 	fmt.Println(idx, table.States[idx], table.FeatureIdxs2StateIdx(table.States[idx]...))
+	// }
+	// fmt.Println(table.getPrevIndexesLenProd(0), len(table.States))
+
+	// testIdxs := table.Features2Idxs([]interface{}{float64(5000.0), int64(1), int64(500000)}...)
+	// fmt.Println(testIdxs, "->", table.FeatureIdxs2StateIdx(testIdxs...))
+
+	if table.getPrevIndexesLenProd(0) != len(table.States) {
+		logger.Error("State generation",
+			zap.String("error", "wrong number of states generated"),
+			zap.Int("numStates", len(table.States)),
+			zap.Int("expectedNumStates", table.getPrevIndexesLenProd(0)),
+		)
+		os.Exit(-1)
+	}
+}
+
+// getPrevIndexesLenProd returns the product of the feature lenghts starting from
+// a specific index
+func (table QTable) getPrevIndexesLenProd(start int) int {
+	prod := 1
+	for idx := start; idx < len(table.FeatureManager.Features); idx++ {
+		prod *= table.FeatureManager.Features[idx].Size()
+	}
+	return prod
+}
+
+// FeatureIdxs2StateIdx returns the State index of the corresponding feature indexes
+func (table QTable) FeatureIdxs2StateIdx(featureIdxs ...int) int {
+	index := 0
+	for idx, curIdx := range featureIdxs {
+		if idx != len(featureIdxs)-1 {
+			index += curIdx * table.getPrevIndexesLenProd(idx+1)
+		} else {
+			index += curIdx
+		}
+	}
+	return index
+}
+
+// Features2Idxs transform a list of features in their indexes
+func (table QTable) Features2Idxs(features ...interface{}) []int {
+	featureIdxs := make([]int, len(features))
+	for idx, val := range features {
+		fmt.Println(idx, val, table.FeatureManager.Features[idx].Type)
+		switch table.FeatureManager.Features[idx].ReflectType {
+		case reflect.Int64:
+			featureIdxs[idx] = table.FeatureManager.Features[idx].Index(val.(int64))
+		case reflect.Float64:
+			featureIdxs[idx] = table.FeatureManager.Features[idx].Index(val.(float64))
+		}
+	}
+	return featureIdxs
 }
 
 // Agent used in Qlearning
