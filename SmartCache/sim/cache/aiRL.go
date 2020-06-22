@@ -91,17 +91,12 @@ type AIRL struct {
 	evictionAgent              qlearn.Agent
 	qAdditionPrevStates        Memory
 	qEvictionPrevState         PrevChoice
-	extendedEvictionTable      bool
 	evictionTableUpdateCounter int
 	points                     float64
 	prevPoints                 float64
 	bufferCategory             []bool
 	bufferInputVector          []string
 	chanCategory               chan bool
-	weightFunction             FunctionType
-	weightAlpha                float64
-	weightBeta                 float64
-	weightGamma                float64
 }
 
 // Init the AIRL struct
@@ -114,17 +109,9 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 
 	additionFeatureMap := args[0].(string)
 	evictionFeatureMap := args[1].(string)
-	trainingEnabled := args[2].(bool)
-	initEpsilon := args[3].(float64)
-	decayRateEpsilon := args[4].(float64)
-	cache.extendedEvictionTable = args[5].(bool)
+	initEpsilon := args[2].(float64)
+	decayRateEpsilon := args[3].(float64)
 
-	if cache.extendedEvictionTable {
-		cache.weightFunction = args[6].(FunctionType)
-		cache.weightAlpha = args[7].(float64)
-		cache.weightBeta = args[8].(float64)
-		cache.weightGamma = args[9].(float64)
-	}
 	cache.evictionTableUpdateCounter = 1000
 
 	logger.Info("Feature maps", zap.String("addition map", additionFeatureMap), zap.String("eviction map", evictionFeatureMap))
@@ -132,12 +119,10 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 	if additionFeatureMap != "" {
 		logger.Info("Create addition feature manager")
 		cache.additionFeatureManager = featuremap.Parse(additionFeatureMap)
-		fmt.Println(cache.additionFeatureManager)
 		logger.Info("Create addition agent")
 		cache.additionAgent.Init(
 			cache.additionFeatureManager,
 			qlearn.AdditionAgent,
-			trainingEnabled,
 			initEpsilon,
 			decayRateEpsilon,
 		)
@@ -146,47 +131,25 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 		cache.additionAgentOK = false
 	}
 
-	// if evictionFeatureMap != "" {
-	// 	cache.evictionFeatureMap = featuremap.Parse(evictionFeatureMap)
-	// 	for key := range cache.evictionFeatureMap {
-	// 		cache.evictionFeatureMapOrder = append(cache.evictionFeatureMapOrder, key)
-	// 	}
-	// 	sort.Strings(cache.evictionFeatureMapOrder)
-	// 	var evictionTable qlearn.QTableRole
-	// 	if cache.extendedEvictionTable {
-	// 		logger.Info("Create extended eviction map")
-	// 		evictionTable = qlearn.EvictionTableExtended
-	// 	} else {
-	// 		logger.Info("Create eviction map")
-	// 		evictionTable = qlearn.EvictionTable
-	// 	}
-	// 	cache.evictionTable = makeQtable(cache.evictionFeatureMap, cache.evictionFeatureMapOrder, evictionTable, trainingEnabled, initEpsilon, decayRateEpsilon)
-	// 	cache.evictionAgentOK = true
-	// } else {
-	// 	cache.evictionAgentOK = false
-	// }
+	if evictionFeatureMap != "" {
+		logger.Info("Create eviction feature manager")
+		cache.evictionFeatureManager = featuremap.Parse(evictionFeatureMap)
+		logger.Info("Create eviction agent")
+		cache.evictionAgent.Init(
+			cache.evictionFeatureManager,
+			qlearn.EvictionAgent,
+			initEpsilon,
+			decayRateEpsilon,
+		)
+		cache.evictionAgentOK = true
+	} else {
+		cache.evictionAgentOK = false
+	}
 
 	logger.Info("Table creation done")
 
 	return nil
 }
-
-// func makeQtable(featureMap map[string]featuremap.Obj, featureOrder []string, role qlearn.QTableRole, trainingEnabled bool, initEpsilon float64, decayRateEpsilon float64) qlearn.QTable {
-// 	curTable := qlearn.QTable{}
-// 	inputLengths := []int{}
-// 	for _, featureName := range featureOrder {
-// 		curFeature, _ := featureMap[featureName]
-// 		curLen := len(curFeature.Values)
-// 		if curFeature.UnknownValues {
-// 			curLen++
-// 		}
-// 		inputLengths = append(inputLengths, curLen)
-// 	}
-// 	logger.Info("[Generate QTable]")
-// 	curTable.Init(inputLengths, role, trainingEnabled, initEpsilon, decayRateEpsilon)
-// 	logger.Info("[Done]")
-// 	return curTable
-// }
 
 // Dumps the AIRL cache
 func (cache *AIRL) Dumps(fileAndStats bool) [][]byte {
@@ -287,9 +250,8 @@ func (cache *AIRL) Dump(filename string, fileAndStats bool) {
 // Loads the AIRL cache
 func (cache *AIRL) Loads(inputString [][]byte, vars ...interface{}) {
 	logger.Info("Loads cache dump string")
-	trainingEnabled := vars[0].(bool)
-	initEpsilon := vars[1].(float64)
-	decayRateEpsilon := vars[2].(float64)
+	initEpsilon := vars[0].(float64)
+	decayRateEpsilon := vars[1].(float64)
 	var (
 		curRecord     DumpRecord
 		curRecordInfo DumpInfo
@@ -317,13 +279,13 @@ func (cache *AIRL) Loads(inputString [][]byte, vars ...interface{}) {
 			cache.stats.fileStats[curRecord.Filename] = &curFileStats
 		case "ADDAGENT":
 			unmarshalErr = json.Unmarshal([]byte(curRecord.Data), &cache.additionAgent)
-			cache.additionAgent.ResetParams(trainingEnabled, initEpsilon, decayRateEpsilon)
+			cache.additionAgent.ResetParams(initEpsilon, decayRateEpsilon)
 			cache.additionAgentOK = true
 		case "ADDFEATUREMAPMANAGER":
 			unmarshalErr = json.Unmarshal([]byte(curRecord.Data), &cache.additionFeatureManager)
 		case "EVCAGENT":
 			unmarshalErr = json.Unmarshal([]byte(curRecord.Data), &cache.evictionAgent)
-			cache.evictionAgent.ResetParams(trainingEnabled, initEpsilon, decayRateEpsilon)
+			cache.evictionAgent.ResetParams(initEpsilon, decayRateEpsilon)
 			cache.evictionAgentOK = true
 		case "EVCFEATUREMAPMANAGER":
 			unmarshalErr = json.Unmarshal([]byte(curRecord.Data), &cache.evictionFeatureManager)
@@ -424,9 +386,6 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) *FileStats {
 	// }
 
 	fileStats.updateStats(hit, request.Size, request.UserID, request.SiteName, request.DayTime)
-	if cache.extendedEvictionTable {
-		fileStats.updateWeight(cache.weightFunction, cache.weightAlpha, cache.weightBeta, cache.weightGamma)
-	}
 
 	return fileStats
 }
@@ -470,7 +429,7 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) *FileStats {
 // 	// 	(cache.dataReadOnMiss/cache.bandwidth)*100.,
 // 	// )
 
-// 	if cache.evictionAgentOK && cache.evictionTable.TrainingEnabled {
+// 	if cache.evictionAgentOK {
 
 // 		logger.Debug("EVICTION TABLE OK")
 
@@ -542,191 +501,133 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) *FileStats {
 // 		// newState = ""  // FOR LOD AND ECML
 
 // 		// Check training
-// 		if cache.additionTable.TrainingEnabled {
 
-// 			// if expEvictionTradeoff := cache.additionTable.GetRandomFloat(); expEvictionTradeoff <= cache.additionTable.Epsilon {
-// 			for memory := range cache.qAdditionPrevStates.Remember() {
-// 				curHit := cache.Check(memory.Filename)
-// 				curFileStats := cache.stats.Get(memory.Filename)
-// 				newState = cache.getState(curFileStats, cache.additionFeatureMapOrder, cache.additionFeatureMap)
-// 				reward := 0.
-// 				// reward := memory.Size
-// 				if !curHit {
-// 					if cache.dataReadOnMiss/cache.dataRead > 0.5 {
-// 						reward -= memory.Size / 1024.
-// 					}
-// 					if reward == 0. {
-// 						reward += memory.Size / 1024.
-// 					}
-// 				} else {
-// 					if cache.dataReadOnHit/cache.dataRead < 0.3 {
-// 						reward -= memory.Size / 1024.
-// 					}
-// 					if cache.dataWritten/cache.dataRead > 0.3 {
-// 						reward -= memory.Size / 1024.
-// 					}
-// 					if reward == 0. {
-// 						reward += memory.Size / 1024.
-// 					}
-// 				}
-// 				// Update table
-// 				cache.additionTable.Update(memory.State, memory.Action, reward, newState)
-// 			}
-// 			// }
-
-// 			if !hit {
-// 				// Check learning phase or not
-// 				if expEvictionTradeoff := cache.additionTable.GetRandomFloat(); expEvictionTradeoff > cache.additionTable.Epsilon {
-// 					// ########################
-// 					// ##### Normal phase #####
-// 					// ########################
-// 					curAction = cache.additionTable.GetBestAction(curState)
-// 				} else {
-// 					// ##########################
-// 					// ##### Learning phase #####
-// 					// ##########################
-
-// 					// ----- Random choice -----
-// 					randomActionIdx := int(cache.additionTable.GetRandomFloat() * float64(len(cache.additionTable.Actions)))
-// 					curAction = cache.additionTable.Actions[randomActionIdx]
-// 				}
-
-// 				logger.Debug("Learning MISS branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
-
-// 				// -------------------------------------------------------------
-// 				//             QLearn - Take the action NOT STORE
-// 				// -------------------------------------------------------------
-// 				if curAction == qlearn.ActionNotStore {
-// 					reward := 0.
-// 					// reward := request.Size
-
-// 					if cache.dataReadOnMiss/cache.bandwidth < 0.5 || cache.dataWritten/cache.dataRead < 0.1 {
-// 						reward -= request.Size / 1024.
-// 					}
-// 					if reward == 0. {
-// 						reward += request.Size / 1024.
-// 					}
-
-// 					// Update table
-// 					cache.additionTable.Update(curState, curAction, reward, curState)
-
-// 					cache.qAdditionPrevStates.Insert(request.Filename, request.Size, curState, curAction)
-
-// 					// Update epsilon
-// 					cache.additionTable.UpdateEpsilon()
-
-// 					return added
-// 				}
-
-// 				// Insert with LRU mechanism
-// 				if cache.Size()+requestedFileSize > cache.MaxSize {
-// 					cache.Free(requestedFileSize, false)
-// 				}
-// 				if cache.Size()+requestedFileSize <= cache.MaxSize {
-// 					cache.files.Insert(FileSupportData{
-// 						Filename:  request.Filename,
-// 						Size:      request.Size,
-// 						Frequency: fileStats.FrequencyInCache,
-// 						Recency:   fileStats.Recency,
-// 						Weight:    fileStats.Weight,
-// 					})
-
-// 					cache.size += requestedFileSize
-// 					fileStats.addInCache(&request.DayTime)
-// 					added = true
-// 				}
-
-// 				// -------------------------------------------------------------
-// 				//               QLearn - Take the action STORE
-// 				// -------------------------------------------------------------
-// 				if curAction == qlearn.ActionStore {
-// 					reward := 0.
-// 					// reward := request.Size
-
-// 					if cache.dataReadOnMiss/cache.bandwidth > 0.75 || cache.dataWritten/cache.dataRead > 0.5 {
-// 						reward -= request.Size / 1024.
-// 					}
-// 					if reward == 0. {
-// 						reward += request.Size / 1024.
-// 					}
-// 					// Update table
-// 					cache.additionTable.Update(curState, curAction, reward, curState)
-
-// 					cache.qAdditionPrevStates.Insert(request.Filename, request.Size, curState, curAction)
-// 				}
-// 			} else {
-// 				// #######################
-// 				// ##### HIT branch  #####
-// 				// #######################
-// 				cache.files.Update(FileSupportData{
-// 					Filename:  request.Filename,
-// 					Size:      request.Size,
-// 					Frequency: fileStats.FrequencyInCache,
-// 					Recency:   fileStats.Recency,
-// 					Weight:    fileStats.Weight,
-// 				})
-// 			}
-
-// 			// Update epsilon
-// 			cache.additionTable.UpdateEpsilon()
-
-// 		} else {
-// 			// #########################
-// 			// #####  NO TRAINING  #####
-// 			// #########################
-// 			if !hit {
-// 				// ########################
-// 				// ##### MISS branch  #####
-// 				// ########################
-
-// 				curState = cache.getState(fileStats, cache.additionFeatureMapOrder, cache.additionFeatureMap)
-// 				curAction = cache.additionTable.GetBestAction(curState)
-// 				logger.Debug("Normal MISS branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
-// 				// ----------------------------------
-// 				// QLearn - Take the action NOT STORE
-// 				// ----------------------------------
-// 				if curAction == qlearn.ActionNotStore {
-// 					logger.Debug("Normal MISS branch NOT TO STORE ACTION")
-// 					return added
-// 				}
-// 				logger.Debug("Normal MISS branch STORE ACTION")
-// 				// ------------------------------
-// 				// QLearn - Take the action STORE
-// 				// ------------------------------
-// 				// Insert with LRU mechanism
-// 				if cache.Size()+requestedFileSize > cache.MaxSize {
-// 					cache.Free(requestedFileSize, false)
-// 				}
-// 				if cache.Size()+requestedFileSize <= cache.MaxSize {
-// 					cache.size += requestedFileSize
-// 					fileStats.addInCache(&request.DayTime)
-
-// 					cache.files.Insert(FileSupportData{
-// 						Filename:  request.Filename,
-// 						Size:      request.Size,
-// 						Frequency: fileStats.FrequencyInCache,
-// 						Recency:   fileStats.Recency,
-// 						Weight:    fileStats.Weight,
-// 					})
-
-// 					added = true
-// 					// fileStats.updateFilePoints(&cache.curTime)
-// 					// cache.points += fileStats.Points
-// 				}
-// 			} else {
-// 				// #######################
-// 				// ##### HIT branch  #####
-// 				// #######################
-// 				logger.Debug("Normal hit branch")
-// 				cache.files.Update(FileSupportData{
-// 					Filename:  request.Filename,
-// 					Size:      request.Size,
-// 					Frequency: fileStats.FrequencyInCache,
-// 					Recency:   fileStats.Recency,
-// 					Weight:    fileStats.Weight,
-// 				})
-// 			}
+// // if expEvictionTradeoff := cache.additionTable.GetRandomFloat(); expEvictionTradeoff <= cache.additionTable.Epsilon {
+// for memory := range cache.qAdditionPrevStates.Remember() {
+// 	curHit := cache.Check(memory.Filename)
+// 	curFileStats := cache.stats.Get(memory.Filename)
+// 	newState = cache.getState(curFileStats, cache.additionFeatureMapOrder, cache.additionFeatureMap)
+// 	reward := 0.
+// 	// reward := memory.Size
+// 	if !curHit {
+// 		if cache.dataReadOnMiss/cache.dataRead > 0.5 {
+// 			reward -= memory.Size / 1024.
 // 		}
+// 		if reward == 0. {
+// 			reward += memory.Size / 1024.
+// 		}
+// 	} else {
+// 		if cache.dataReadOnHit/cache.dataRead < 0.3 {
+// 			reward -= memory.Size / 1024.
+// 		}
+// 		if cache.dataWritten/cache.dataRead > 0.3 {
+// 			reward -= memory.Size / 1024.
+// 		}
+// 		if reward == 0. {
+// 			reward += memory.Size / 1024.
+// 		}
+// 	}
+// 	// Update table
+// 	cache.additionTable.Update(memory.State, memory.Action, reward, newState)
+// }
+// // }
+
+// if !hit {
+// 	// Check learning phase or not
+// 	if expEvictionTradeoff := cache.additionTable.GetRandomFloat(); expEvictionTradeoff > cache.additionTable.Epsilon {
+// 		// ########################
+// 		// ##### Normal phase #####
+// 		// ########################
+// 		curAction = cache.additionTable.GetBestAction(curState)
+// 	} else {
+// 		// ##########################
+// 		// ##### Learning phase #####
+// 		// ##########################
+
+// 		// ----- Random choice -----
+// 		randomActionIdx := int(cache.additionTable.GetRandomFloat() * float64(len(cache.additionTable.Actions)))
+// 		curAction = cache.additionTable.Actions[randomActionIdx]
+// 	}
+
+// 	logger.Debug("Learning MISS branch", zap.String("curState", curState), zap.Int("curAction", int(curAction)))
+
+// 	// -------------------------------------------------------------
+// 	//             QLearn - Take the action NOT STORE
+// 	// -------------------------------------------------------------
+// 	if curAction == qlearn.ActionNotStore {
+// 		reward := 0.
+// 		// reward := request.Size
+
+// 		if cache.dataReadOnMiss/cache.bandwidth < 0.5 || cache.dataWritten/cache.dataRead < 0.1 {
+// 			reward -= request.Size / 1024.
+// 		}
+// 		if reward == 0. {
+// 			reward += request.Size / 1024.
+// 		}
+
+// 		// Update table
+// 		cache.additionTable.Update(curState, curAction, reward, curState)
+
+// 		cache.qAdditionPrevStates.Insert(request.Filename, request.Size, curState, curAction)
+
+// 		// Update epsilon
+// 		cache.additionTable.UpdateEpsilon()
+
+// 		return added
+// 	}
+
+// 	// Insert with LRU mechanism
+// 	if cache.Size()+requestedFileSize > cache.MaxSize {
+// 		cache.Free(requestedFileSize, false)
+// 	}
+// 	if cache.Size()+requestedFileSize <= cache.MaxSize {
+// 		cache.files.Insert(FileSupportData{
+// 			Filename:  request.Filename,
+// 			Size:      request.Size,
+// 			Frequency: fileStats.FrequencyInCache,
+// 			Recency:   fileStats.Recency,
+// 			Weight:    fileStats.Weight,
+// 		})
+
+// 		cache.size += requestedFileSize
+// 		fileStats.addInCache(&request.DayTime)
+// 		added = true
+// 	}
+
+// 	// -------------------------------------------------------------
+// 	//               QLearn - Take the action STORE
+// 	// -------------------------------------------------------------
+// 	if curAction == qlearn.ActionStore {
+// 		reward := 0.
+// 		// reward := request.Size
+
+// 		if cache.dataReadOnMiss/cache.bandwidth > 0.75 || cache.dataWritten/cache.dataRead > 0.5 {
+// 			reward -= request.Size / 1024.
+// 		}
+// 		if reward == 0. {
+// 			reward += request.Size / 1024.
+// 		}
+// 		// Update table
+// 		cache.additionTable.Update(curState, curAction, reward, curState)
+
+// 		cache.qAdditionPrevStates.Insert(request.Filename, request.Size, curState, curAction)
+// 	}
+// } else {
+// 	// #######################
+// 	// ##### HIT branch  #####
+// 	// #######################
+// 	cache.files.Update(FileSupportData{
+// 		Filename:  request.Filename,
+// 		Size:      request.Size,
+// 		Frequency: fileStats.FrequencyInCache,
+// 		Recency:   fileStats.Recency,
+// 		Weight:    fileStats.Weight,
+// 	})
+// }
+
+// // Update epsilon
+// cache.additionTable.UpdateEpsilon()
+
 // 	} else {
 // 		// #####################################################################
 // 		// #                      NO ADDITION TABLE                            #
