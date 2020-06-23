@@ -811,20 +811,20 @@ func (cache *AIRL) ExtraStats() string {
 func (cache *AIRL) ExtraOutput(info string) string {
 	result := ""
 	switch info {
-	// case "additionQtable":
-	// 	result = cache.additionTable.ToString(cache.additionFeatureMap, cache.additionFeatureMapOrder)
-	// case "evictionQtable":
-	// 	result = cache.evictionTable.ToString(cache.evictionFeatureMap, cache.evictionFeatureMapOrder)
-	// case "valueFunctions":
-	// 	additionValueFunction := 0.
-	// 	evictionValueFunction := 0.
-	// 	if cache.additionAgentOK {
-	// 		additionValueFunction = cache.additionAgent.ValueFunction
-	// 	}
-	// 	if cache.evictionAgentOK {
-	// 		evictionValueFunction = cache.evictionAgent.ValueFunction
-	// 	}
-	// 	result = fmt.Sprintf("%0.2f,%0.2f", additionValueFunction, evictionValueFunction)
+	case "additionQtable":
+		result = cache.additionAgent.QTableToString()
+	case "evictionQtable":
+		result = cache.evictionAgent.QTableToString()
+	case "valueFunctions":
+		additionValueFunction := 0.
+		evictionValueFunction := 0.
+		if cache.additionAgentOK {
+			additionValueFunction = cache.additionAgent.ValueFunction
+		}
+		if cache.evictionAgentOK {
+			evictionValueFunction = cache.evictionAgent.ValueFunction
+		}
+		result = fmt.Sprintf("%0.2f,%0.2f", additionValueFunction, evictionValueFunction)
 	default:
 		result = "NONE"
 	}

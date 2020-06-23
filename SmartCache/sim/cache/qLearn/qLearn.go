@@ -252,8 +252,8 @@ func (agent Agent) GetRandomFloat() float64 {
 	return agent.RGenerator.Float64()
 }
 
-// ToString outputs the state values in a csv format string
-func (agent Agent) ToString(featureMap map[string]featuremap.Obj, featureMapOrder []string) string {
+// QTableToString outputs the state values in a csv format string
+func (agent Agent) QTableToString() string {
 	var csvOutput []string
 
 	var tmp []string
@@ -415,35 +415,3 @@ func State2String(state []bool) string {
 	}
 	return resIdx
 }
-
-// String2StateRepr create a human representation of the state starting from the state string
-// func String2StateRepr(state string, featureMap map[string]featuremap.Obj, featureMapOrder []string) string {
-// 	var (
-// 		result []string
-// 		curPos = 0
-// 	)
-
-// 	for _, featureName := range featureMapOrder {
-// 		curCategory := featureMap[featureName]
-// 		lenCategory := 0
-// 		if curCategory.UnknownValues == true || curCategory.BucketOpenRight == true {
-// 			lenCategory = curCategory.GetLenKeys() + 1
-// 		} else {
-// 			lenCategory = curCategory.GetLenKeys()
-// 		}
-// 		partialState := state[curPos : curPos+lenCategory]
-// 		keyIdx := int(strings.IndexRune(partialState, '1'))
-// 		for key, value := range curCategory.Values {
-// 			if value == keyIdx {
-// 				result = append(
-// 					result,
-// 					key,
-// 				)
-// 				break
-// 			}
-// 		}
-// 		curPos += lenCategory
-// 	}
-
-// 	return strings.Join(result, ",")
-// }
