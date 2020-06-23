@@ -74,7 +74,7 @@ func TestGetArgMax(t *testing.T) {
 		pos := rand.Intn(size - 1)
 		res := make([]float64, size)
 		res[pos] = 1.0
-		resIdx := getArgMax(res)
+		resIdx, _ := getArgMax(res)
 		if resIdx != pos {
 			t.Fatalf("Error: max value have to be in position %d and not in %d\nVector->%v", pos, resIdx, res)
 		}
