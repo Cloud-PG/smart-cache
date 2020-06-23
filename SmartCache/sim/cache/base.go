@@ -2,8 +2,6 @@ package cache
 
 import (
 	"time"
-
-	pb "simulator/v2/cache/simService"
 )
 
 // DumpRecord represents a record in the dump file
@@ -61,7 +59,7 @@ type Cache interface {
 	HitOverMiss() float64
 	WeightedHitRate() float64
 	Size() float64
-	Capacity() float64
+	Occupancy() float64
 	DataWritten() float64
 	DataRead() float64
 	DataReadOnHit() float64
@@ -82,22 +80,6 @@ type Cache interface {
 	BeforeRequest(request *Request, hit bool) *FileStats
 	UpdatePolicy(request *Request, fileStats *FileStats, hit bool) bool
 	AfterRequest(request *Request, hit bool, added bool)
-}
-
-// GetSimCacheStatus create a cache status message
-func GetSimCacheStatus(cache Cache) *pb.SimCacheStatus {
-	return &pb.SimCacheStatus{
-		HitRate:         HitRate(cache),
-		WeightedHitRate: WeightedHitRate(cache),
-		HitOverMiss:     HitOverMiss(cache),
-		Size:            Size(cache),
-		Capacity:        Capacity(cache),
-		DataWritten:     DataWritten(cache),
-		DataRead:        DataRead(cache),
-		DataReadOnHit:   DataReadOnHit(cache),
-		DataReadOnMiss:  DataReadOnMiss(cache),
-		DataDeleted:     DataDeleted(cache),
-	}
 }
 
 // GetFile requests a file to the cache
@@ -177,9 +159,9 @@ func Size(cache Cache) float64 {
 	return cache.Size()
 }
 
-// Capacity of the current cache instance
-func Capacity(cache Cache) float64 {
-	return cache.Capacity()
+// Occupancy of the current cache instance
+func Occupancy(cache Cache) float64 {
+	return cache.Occupancy()
 }
 
 // DataWritten of the current cache instance

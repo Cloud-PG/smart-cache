@@ -16,7 +16,7 @@ import (
 // ActionType are cache possible actions
 type ActionType int
 
-// RLUpdateType are the possible update functions
+// RLUpdateAlg are the possible update functions
 type RLUpdateAlg int
 
 // AgentRole are the possible table roles
@@ -49,15 +49,15 @@ var (
 
 // QTable struct used by agents
 type QTable struct {
-	States         [][]int                   `json:"states"`
-	Actions        [][]float64               `json:"actions"`
-	FeatureManager featuremap.FeatureManager `json:"featureManager"`
-	ActionTypeIdxs map[ActionType]int        `json:"actionTypeIdxs"`
-	ActionTypes    []ActionType              `json:"actionTypes"`
+	States         [][]int                    `json:"states"`
+	Actions        [][]float64                `json:"actions"`
+	FeatureManager *featuremap.FeatureManager `json:"featureManager"`
+	ActionTypeIdxs map[ActionType]int         `json:"actionTypeIdxs"`
+	ActionTypes    []ActionType               `json:"actionTypes"`
 }
 
 // Init prepare the QTable States and Actions
-func (table *QTable) Init(featureManager featuremap.FeatureManager, actions []ActionType) {
+func (table *QTable) Init(featureManager *featuremap.FeatureManager, actions []ActionType) {
 	logger := zap.L()
 
 	table.States = make([][]int, 0)
@@ -184,7 +184,7 @@ type Agent struct {
 }
 
 // Init initilizes the Agent struct
-func (agent *Agent) Init(featureManager featuremap.FeatureManager, role AgentRole, initEpsilon float64, decayRateEpsilon float64) {
+func (agent *Agent) Init(featureManager *featuremap.FeatureManager, role AgentRole, initEpsilon float64, decayRateEpsilon float64) {
 	logger = zap.L()
 
 	agent.LearningRate = 0.5 // also named Alpha

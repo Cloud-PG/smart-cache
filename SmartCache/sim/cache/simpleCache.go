@@ -42,6 +42,7 @@ type SimpleCache struct {
 	curTime                            time.Time
 	region                             string
 	bandwidth                          float64
+	tick                               int64
 }
 
 // Init the LRU struct
@@ -104,6 +105,7 @@ func (cache *SimpleCache) Clear() {
 	cache.lowerCPUEff = 0.
 	cache.numLocal = 0
 	cache.numRemote = 0
+	cache.tick = 0
 }
 
 // ClearHitMissStats the cache stats
@@ -244,7 +246,7 @@ func (cache *SimpleCache) BeforeRequest(request *Request, hit bool) *FileStats {
 		cache.numRemote = 0
 	}
 
-	curStats, _ := cache.stats.GetOrCreate(request.Filename, request.Size, request.DayTime)
+	curStats, _ := cache.stats.GetOrCreate(request.Filename, request.Size, request.DayTime, cache.tick)
 	curStats.updateStats(hit, request.Size, request.UserID, request.SiteName, request.DayTime)
 
 	return curStats
@@ -329,6 +331,8 @@ func (cache *SimpleCache) AfterRequest(request *Request, hit bool, added bool) {
 	if cache.stats.Dirty() {
 		cache.stats.Purge()
 	}
+
+	cache.tick++
 }
 
 // Free removes files from the cache
@@ -385,10 +389,10 @@ func (cache *SimpleCache) Free(amount float64, percentage bool) float64 {
 // CheckWatermark checks the watermark levels and resolve the situation
 func (cache *SimpleCache) CheckWatermark() bool {
 	ok := true
-	if cache.Capacity() >= cache.HighWaterMark {
+	if cache.Occupancy() >= cache.HighWaterMark {
 		ok = false
 		cache.Free(
-			cache.Capacity()-cache.LowWaterMark,
+			cache.Occupancy()-cache.LowWaterMark,
 			true,
 		)
 	}
@@ -422,8 +426,8 @@ func (cache *SimpleCache) Size() float64 {
 	return cache.size
 }
 
-// Capacity of the cache
-func (cache *SimpleCache) Capacity() float64 {
+// Occupancy of the cache
+func (cache *SimpleCache) Occupancy() float64 {
 	return (cache.Size() / cache.MaxSize) * 100.
 }
 
@@ -529,7 +533,7 @@ func (cache *SimpleCache) MeanFrequency() float64 {
 // MeanRecency returns the average recency of the files in cache
 func (cache *SimpleCache) MeanRecency() float64 {
 	totRecency := 0.0
-	curTick := float64(cache.stats.Tick)
+	curTick := float64(cache.tick)
 	for file := range cache.files.Get(NoQueue) {
 		totRecency += (curTick - float64(file.Recency))
 	}

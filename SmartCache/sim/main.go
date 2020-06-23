@@ -613,7 +613,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 							zap.Uint32("windowSize", simWindowSize),
 							zap.Int64("numDailyRecords", numDailyRecords),
 							zap.Float64("hitRate", cache.HitRate(curCacheInstance)),
-							zap.Float64("capacity", cache.Capacity(curCacheInstance)),
+							zap.Float64("capacity", cache.Occupancy(curCacheInstance)),
 							zap.Float64("redirectedData", redirectedData),
 							zap.Int64("numRedirected", numRedirected),
 							zap.String("extra", cache.ExtraStats(curCacheInstance)),
