@@ -48,11 +48,6 @@ func (manager FeatureManager) FeatureIter() chan Obj {
 	return outChan
 }
 
-// FeatureI returns the feature at requested position
-func (manager FeatureManager) FeatureI(idx int) Obj {
-	return manager.Features[idx]
-}
-
 // FeatureIdexes returns a map of the feature indexes
 func (manager FeatureManager) FeatureIdexes(idx int) map[string]int {
 	indexes := make(map[string]int, 0)

@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"os"
 	"reflect"
+	"strings"
 
 	"simulator/v2/cache/ai/featuremap"
 
@@ -252,38 +253,54 @@ func (agent Agent) GetRandomFloat() float64 {
 }
 
 // ToString outputs the state values in a csv format string
-// func (agent Agent) ToString(featureMap map[string]featuremap.Obj, featureMapOrder []string) string {
-// 	var csvOutput []string
-// 	if featureMap != nil && featureMapOrder != nil {
-// 		csvOutput = append(csvOutput, strings.Join(
-// 			[]string{
-// 				strings.Join(agent.ActionStrings, ","),
-// 				strings.Join(featureMapOrder, ","),
-// 			},
-// 			",",
-// 		))
-// 		csvOutput = append(csvOutput, "\n")
-// 	}
-// 	// counter := 0
-// 	for state, actions := range agent.Table {
-// 		for idx, action := range actions {
-// 			csvOutput = append(csvOutput, fmt.Sprintf("%09.2f", action))
-// 			if idx != len(actions)-1 {
-// 				csvOutput = append(csvOutput, fmt.Sprint(","))
-// 			}
-// 		}
-// 		if featureMap == nil && featureMapOrder == nil {
-// 			fmt.Printf(",%s", state)
-// 		} else {
-// 			stateRepr := String2StateRepr(state, featureMap, featureMapOrder)
-// 			csvOutput = append(csvOutput, fmt.Sprintf(",%s", stateRepr))
-// 		}
-// 		// counter++
-// 		// fmt.Println(counter, len(agent.Table))
-// 		csvOutput = append(csvOutput, "\n")
-// 	}
-// 	return strings.Join(csvOutput, "")
-// }
+func (agent Agent) ToString(featureMap map[string]featuremap.Obj, featureMapOrder []string) string {
+	var csvOutput []string
+
+	var tmp []string
+
+	for _, action := range agent.Table.ActionTypes {
+		switch action {
+		case ActionDelete:
+			tmp = append(tmp, "ActionDelete")
+		case ActionNotDelete:
+			tmp = append(tmp, "ActionNotDelete")
+		case ActionStore:
+			tmp = append(tmp, "ActionStore")
+		case ActionNotStore:
+			tmp = append(tmp, "ActionNotStore")
+		}
+	}
+	for _, feature := range agent.Table.FeatureManager.Features {
+		tmp = append(tmp, feature.Name)
+	}
+
+	csvOutput = append(csvOutput, strings.Join(tmp, ","))
+
+	// counter := 0
+	for idx, state := range agent.Table.States {
+		tmp = tmp[:0]
+
+		for _, value := range agent.Table.Actions[idx] {
+			tmp = append(tmp, fmt.Sprintf("%09.2f", value))
+		}
+
+		for featureIdx, featureValIdx := range state {
+			curFeature := agent.Table.FeatureManager.Features[featureIdx]
+			switch curFeature.ReflectType {
+			case reflect.Int64:
+				curFeatureVal := curFeature.Int64Values[featureValIdx]
+				tmp = append(tmp, fmt.Sprintf("%d", curFeatureVal))
+			case reflect.Float64:
+				curFeatureVal := curFeature.Float64Values[featureValIdx]
+				tmp = append(tmp, fmt.Sprintf("%09.2f", curFeatureVal))
+			}
+
+		}
+
+		csvOutput = append(csvOutput, strings.Join(tmp, ","))
+	}
+	return strings.Join(csvOutput, "\n")
+}
 
 // GetCoverage returns action and state coverage percentages
 func (agent Agent) GetCoverage() (float64, float64) {
