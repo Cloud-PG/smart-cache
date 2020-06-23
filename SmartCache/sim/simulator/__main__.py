@@ -5,6 +5,7 @@ import os
 import subprocess
 from datetime import datetime
 from os import path, walk
+from shlex import quote
 
 import pandas as pd
 from tqdm import tqdm
@@ -15,9 +16,9 @@ from DataManager.collector.dataset.reader import SimulatorDatasetReader
 from SmartCache.ai.models.generator import DonkeyModel
 from SmartCache.sim import get_simulator_exe
 
+from .dashboard import plot_results
 from .ga import compare_greedy_solution, get_best_configuration
 from .greedy import get2PTAS
-from .dashboard import plot_results
 from .utils import get_logger, load_results, str2bool, wait_jobs
 
 
@@ -34,16 +35,16 @@ def prepare_process_call(args, simulator_exe, cache_type, working_dir: str,
         simulator_exe,
         args.action,
         cache_type,
-        path.abspath(args.source),
-        f"--size={args.cache_size}",
-        f"--sizeUnit={args.cache_size_unit}",
-        f"--simBandwidth={args.cache_bandwidth}",
-        f"--simBandwidthManager={args.cache_bandwidth_redirect}",
-        f"--simRegion={args.region}",
-        f"--simFileType={args.file_type}",
-        f"--simWindowSize={args.window_size}",
-        f"--simStartFromWindow={start_window}",
-        f"--simStopWindow={stop_window}",
+        path.abspath(quote(args.source)),
+        f"--size={quote(args.cache_size)}",
+        f"--sizeUnit={quote(args.cache_size_unit)}",
+        f"--simBandwidth={quote(args.cache_bandwidth)}",
+        f"--simBandwidthManager={quote(args.cache_bandwidth_redirect)}",
+        f"--simRegion={quote(args.region)}",
+        f"--simFileType={quote(args.file_type)}",
+        f"--simWindowSize={quote(args.window_size)}",
+        f"--simStartFromWindow={quote(start_window)}",
+        f"--simStopWindow={quote(stop_window)}",
     ]
 
     if dump:
