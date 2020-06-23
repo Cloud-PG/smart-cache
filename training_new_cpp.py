@@ -430,7 +430,7 @@ environment.set_curValues(filestats._size/1000,filestats._hit + filestats._miss,
 
 random.seed(seed_)
 np.random.seed(seed_)
-adding_or_evicting = 0
+environment._adding_or_evicting = 0
 step_add = 0
 step_evict = 0
 
@@ -473,8 +473,8 @@ if timing == True:
 end_of_cache = False
 while end == False and test == False:
     #print(len(environment._cache._cached_files))
-    print(environment._curRequest_from_start)
-    print(step_add)
+    #print(environment._curRequest_from_start)
+    #print(step_add)
     ######## REPORT TIMING ##################################################################################################
     if timing == True:
         before = now
@@ -490,7 +490,7 @@ while end == False and test == False:
             len(environment._eviction_window_elements)])
 
     ######## ADDING ###########################################################################################################
-    if adding_or_evicting == 0:
+    if environment._adding_or_evicting == 0:
         end_of_cache = False
         if use_target_model == True:
             if step_add % target_update_frequency_add == 0:
@@ -635,12 +635,12 @@ while end == False and test == False:
             train_cur_vals ,train_actions, train_rewards, train_next_vals = np.split(batch, [input_len, input_len + 1, input_len + 2] , axis = 1)
             #train_cur_vals ,train_actions, train_rewards = np.split(batch, [input_len, input_len + 1] , axis = 1)
             target = model_add.predict_on_batch(train_cur_vals)
-            #if debug == True and step_add % 100 == 0:
+            if debug == True and step_add % 1 == 0:
             #if debug == True and step_add == warm_up_steps_add + 1:
-                #print('PREDICT ON BATCH')
-                #print(batch)
-                #print(target)
-                #print()
+                print('PREDICT ON BATCH')
+                print(batch)
+                print(target)
+                print()
             if use_target_model == False:
                 predictions = model_add.predict_on_batch(train_next_vals)
                 #predictions = model_add.predict_on_batch(train_cur_vals)
@@ -657,7 +657,7 @@ while end == False and test == False:
             model_add.train_on_batch(train_cur_vals, target)
 
     ### EVICTING #############################################################################################################
-    elif adding_or_evicting == 1: 
+    elif environment._adding_or_evicting == 1: 
         
         if use_target_model == True:
             if step_evict % target_update_frequency_evict == 0:
@@ -755,8 +755,8 @@ while end == False and test == False:
     #### STOP ADDING ##############################################################################################
     next_occupancy = (environment._cache._size + next_size) / environment._cache._max_size * 100
     current_occupancy = environment._cache.capacity()
-    if adding_or_evicting == 0 and (current_occupancy > environment._cache._h_watermark or next_occupancy > 100.):
-        adding_or_evicting = 1 
+    if environment._adding_or_evicting == 0 and (current_occupancy > environment._cache._h_watermark or next_occupancy > 100.):
+        environment._adding_or_evicting = 1 
         addition_counter += 1
         environment._cache._cached_files_keys = list(environment._cache._cached_files)
         random.shuffle(environment._cache._cached_files_keys)
@@ -765,14 +765,14 @@ while end == False and test == False:
         get_next_file_in_cache_values()
         
     ### STOP EVICTING ##########################################################################################
-    if adding_or_evicting == 1 and (end_of_cache == True or environment._cache.capacity() < low_watermark):
+    if environment._adding_or_evicting == 1 and (end_of_cache == True or environment._cache.capacity() < low_watermark):
         with open(out_directory + '/occupancy.csv', 'a') as file:
             writer = csv.writer(file)
             writer.writerow([environment._cache.capacity])
         next_size = get_next_size()
         next_occupancy = (environment._cache._size + next_size) / environment._cache._max_size * 100
         if environment._cache.capacity() < environment._cache._h_watermark and next_occupancy < 100.:
-            adding_or_evicting = 0
+            environment._adding_or_evicting = 0
             eviction_counter += 1
             get_next_request_values()
         else:
@@ -816,7 +816,7 @@ while end == False and test == True:
             len(environment._eviction_window_elements)])
 
     ######## ADDING ###########################################################################################################
-    if adding_or_evicting == 0:
+    if environment._adding_or_evicting == 0:
 
         cur_values = environment.curValues
         cur_values_ = np.reshape(cur_values, (1, input_len))
@@ -899,7 +899,7 @@ while end == False and test == True:
             next_values = environment.get_next_request_values()
     
     ### EVICTING #############################################################################################################
-    elif adding_or_evicting == 1: 
+    elif environment._adding_or_evicting == 1: 
         
         # GET ACTION
         rnd_eps = random.random()
@@ -953,8 +953,8 @@ while end == False and test == True:
     next_occupancy = (environment._cache._size + next_size) / environment._cache._max_size * 100
     current_occupancy = environment._cache.capacity
     
-    if adding_or_evicting == 0 and (current_occupancy > environment._cache._h_watermark or next_occupancy > 100.):
-        adding_or_evicting = 1 
+    if environment._adding_or_evicting == 0 and (current_occupancy > environment._cache._h_watermark or next_occupancy > 100.):
+        environment._adding_or_evicting = 1 
         addition_counter += 1
         environment._cache._cached_files_keys = list(environment._cache._cached_files)
         random.shuffle(environment._cache._cached_files_keys)
@@ -967,14 +967,14 @@ while end == False and test == True:
         
     ### STOP EVICTING ##########################################################################################
    #if adding_or_evicting == 1 and (environment._cached_files_index + 1 == len(environment._cache._cached_files_keys) or environment._cache.capacity < low_watermark):
-    if adding_or_evicting == 1 and (end_of_cache == True or environment._cache.capacity < low_watermark):
+    if environment._adding_or_evicting == 1 and (end_of_cache == True or environment._cache.capacity < low_watermark):
         with open(out_directory + '/occupancy.csv', 'a') as file:
             writer = csv.writer(file)
             writer.writerow([environment._cache.capacity])
         next_size = environment.get_next_size()
         next_occupancy = (environment._cache._size + next_size) / environment._cache._max_size * 100
         if environment._cache.capacity < environment._cache._h_watermark and next_occupancy < 100.:
-            adding_or_evicting = 0
+            environment._adding_or_evicting = 0
             eviction_counter += 1
             cur_values = environment.get_next_request_values()
         else:

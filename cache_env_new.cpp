@@ -301,6 +301,8 @@ class env{
 };
 
 void env::update_windows_getting_eventual_rewards_accumulate(int curFilename, int action){
+    //cout<<"request_window "<<_request_window_elements.size()<<endl;
+    //cout<<"eviction_window "<<_eviction_window_elements.size()<<endl;
     if (_adding_or_evicting == 0){
         float size = _curValues[0];
         float coeff;
@@ -312,14 +314,19 @@ void env::update_windows_getting_eventual_rewards_accumulate(int curFilename, in
         }
         unordered_map<int,vector<WindowElement>>::iterator it;
         it = _request_window_elements.find(curFilename);
+        //cout<<"step0"<<endl;
         if(it != _request_window_elements.end()){  //is pending
             //cout<<it->second.size()<<endl;
             int len_ = it->second.size();
+            vector<int> toDelete;
+            //cout<<"step1"<<endl;
+            //for (auto it_vec = it->second.begin(); it_vec != it->second.end();){
             for(int i=0; i < len_; i++){
                 //cout<<it->second.size()<<endl;
                 WindowElement obj = (it->second)[i];
                 if ((_curRequest_from_start - obj.counter) >= _time_span_add){ //is invalidated
-                    cout<<'hereeeeeeeeee'<<endl;
+                    //cout<<"step2"<<endl;
+                    //cout<<"hereeeeeeeeee"<<endl;
                     if (obj.reward != 0){   //some hits
                         if (obj.action == 0) obj.reward = + obj.reward * coeff;
                         else obj.reward = - obj.reward * coeff;
@@ -328,17 +335,30 @@ void env::update_windows_getting_eventual_rewards_accumulate(int curFilename, in
                         if (obj.action == 0) obj.reward = - 1 * coeff;
                         else obj.reward = + 1 * coeff;
                     }
+                    //cout<<"step3"<<endl;
                     _cache._daily_rewards_add.push_back(obj.reward);
+                    //cout<<"step4"<<endl;
                     vector<float> to_add = obj.concat_with_next_values(_cache.capacity(), _cache.hit_rate());
+                    //cout<<"step5"<<endl;
                     _add_memory_vector.push_back(to_add);
-                    _request_window_elements[curFilename].erase(_request_window_elements[curFilename].begin() + i);
+                    //cout<<"step6"<<endl;
+                    toDelete.push_back(i);
+                    //_request_window_elements[curFilename].erase(_request_window_elements[curFilename].begin() + i);
+                    //it_vec = _request_window_elements[curFilename].erase(it_vec);
+                    //cout<<"step7"<<endl;
                 }
                 else{  //is not invalidated yet
                     obj.reward += 1;
                     //cout<<"eccomiiiiiii"<<endl;
+                    //++it_vec;
                 }  
             }
-            _request_window_elements[curFilename].push_back(WindowElement(_curRequest_from_start, _curValues, 0, action));
+            for(int j = 0; j < toDelete.size(); j++){
+                //cout<<"deleting"<<endl;
+                it->second.erase(it->second.begin() + toDelete[toDelete.size() - j - 1]);
+            }
+            //_request_window_elements[curFilename].push_back(WindowElement(_curRequest_from_start, _curValues, 0, action));
+            it->second.push_back(WindowElement(_curRequest_from_start, _curValues, 0, action));
         }
         
         else{ //is not in not pending
@@ -352,9 +372,9 @@ void env::update_windows_getting_eventual_rewards_accumulate(int curFilename, in
         //unordered_map<int,vector<WindowElement>>::iterator it;
         it = _eviction_window_elements.find(curFilename);
         if(it != _eviction_window_elements.end()){  //is pending
+            vector<int> toDelete;
             for(int i=0; i < it->second.size(); i++){
                 WindowElement obj = it->second[i];
-
                 if ((_curRequest_from_start - obj.counter) >= _time_span_evict){ //is invalidated
                     if (obj.reward != 0){   //some hits
                         if (obj.action == 0) obj.reward = + obj.reward * coeff;
@@ -364,36 +384,47 @@ void env::update_windows_getting_eventual_rewards_accumulate(int curFilename, in
                         if (obj.action == 0) obj.reward = - 1 * coeff;
                         else obj.reward = + 1 * coeff;
                     }
+                    toDelete.push_back(i);
+                    //cout<<"step33333333"<<endl;
                     _cache._daily_rewards_evict.push_back(obj.reward);
                     vector<float> to_add = obj.concat_with_next_values(_cache.capacity(), _cache.hit_rate());
                     _evict_memory_vector.push_back(to_add);
-                    _eviction_window_elements[curFilename].erase(_request_window_elements[curFilename].begin() + i);
+                    //_eviction_window_elements[curFilename].erase(_request_window_elements[curFilename].begin() + i);
+                    //it->second.erase(it->second.begin() + i);
                 }
 
                 else  //is not invalidated yet
                     obj.reward += 1;
             } 
+            for(int j = 0; j < toDelete.size(); j++){
+                //cout<<"deleting"<<endl;
+                it->second.erase(it->second.begin() + toDelete[toDelete.size() - j - 1]);
+            }
         }
     }
 
     else if (_adding_or_evicting == 1){
             WindowElement to_add(_curRequest_from_start, _curValues, 0, action);
             unordered_map<int,vector<WindowElement>>::iterator it;
+            //cout<<"step0"<<endl;
             it = _eviction_window_elements.find(curFilename);
-
-            if (it != _eviction_window_elements.end()){
+            //cout<<"ashaisuhiauschacsu"<<endl;
+            if (it != _eviction_window_elements.end()){ //there is
+                    (it->second).push_back(to_add);
+            }
+            else{ //there isnt
                 vector<WindowElement> to_add_vector; 
                 to_add_vector.push_back(to_add);
                 _eviction_window_elements[curFilename] = to_add_vector;
             }
-            else (it->second).push_back(to_add);
         }
 };
 
 void env::look_for_invalidated_add_evict_accumulate(){
-    unordered_set<int> toDelete;
+    unordered_set<int> toDelete_filenames;
     float coeff;
     for (auto const& elem: _request_window_elements){
+        vector<int> toDelete_vector;
         for(int i=0; i < elem.second.size(); i++){
             int curFilename = elem.first;
             WindowElement obj = elem.second[i];
@@ -417,18 +448,24 @@ void env::look_for_invalidated_add_evict_accumulate(){
                 _cache._daily_rewards_add.push_back(obj.reward);
                 vector<float> to_add = obj.concat_with_next_values(_cache.capacity(), _cache.hit_rate());
                 _add_memory_vector.push_back(to_add);
-                _request_window_elements[curFilename].erase(_request_window_elements[curFilename].begin() + i);
+                toDelete_vector.push_back(i);
+                //_request_window_elements[curFilename].erase(_request_window_elements[curFilename].begin() + i);
                 if (elem.second.size() == 0)
                 //elem.second.erase(elem.second.begin() + i);
-                    toDelete.insert(elem.first);
+                    toDelete_filenames.insert(elem.first);
             }
-        };
+        }
+        for(int j = 0; j < toDelete_vector.size(); j++){
+            _request_window_elements[elem.first].erase(_request_window_elements[elem.first].begin() + toDelete_vector[toDelete_vector.size() - j - 1]);
+        }
     }
-    for (auto const& filename: toDelete)
+
+    for (auto const& filename: toDelete_filenames)
         _request_window_elements.erase(filename);
     
-    //unordered_set<int> toDelete;
+    toDelete_filenames.clear();
     for (auto const& elem: _eviction_window_elements){
+        vector<int> toDelete_vector;
         for(int i=0; i < elem.second.size(); i++){
             int curFilename = elem.first;
             WindowElement obj = elem.second[i];
@@ -452,15 +489,19 @@ void env::look_for_invalidated_add_evict_accumulate(){
                 _cache._daily_rewards_evict.push_back(obj.reward);
                 vector<float> to_add = obj.concat_with_next_values(_cache.capacity(), _cache.hit_rate());
                 _evict_memory_vector.push_back(to_add);
-                _eviction_window_elements[curFilename].erase(_eviction_window_elements[curFilename].begin() + i);
+                toDelete_vector.push_back(i);
+                //_eviction_window_elements[curFilename].erase(_eviction_window_elements[curFilename].begin() + i);
                 if (elem.second.size() == 0)
                 //elem.second.erase(elem.second.begin() + i);
-                    toDelete.insert(elem.first);
+                    toDelete_filenames.insert(elem.first);
                 //toDelete.insert(curFilename);
             }
         }
+        for(int j = 0; j < toDelete_vector.size(); j++){
+            _eviction_window_elements[elem.first].erase(_eviction_window_elements[elem.first].begin() + toDelete_vector[toDelete_vector.size() - j - 1]);
+        }
     }
-    for (auto const& filename: toDelete)
+    for (auto const& filename: toDelete_filenames)
         _eviction_window_elements.erase(filename);
     //    }
 };  
