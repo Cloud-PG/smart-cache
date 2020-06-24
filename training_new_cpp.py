@@ -321,7 +321,8 @@ def get_next_file_in_cache_values():
     (SIZE - TOT REQUESTS - LAST REQUEST - DATATYPE - MEAN RECENCY - MEAN FREQUENCY - MEAN SIZE)
     '''
     environment._cached_files_index += 1
-    filename = environment._cache._cached_files_keys[environment._cached_files_index]
+    #filename = environment._cache._cached_files_keys[environment._cached_files_index]
+    filename = environment.get_filename_from_cache(environment._cached_files_index)
     filestats = environment.get_stats(filename)
     #filestats = environment._cache._stats._files[filename]
     
@@ -337,7 +338,8 @@ def get_filename_and_size_of_current_request():
 
 def get_filename_and_size_of_current_cache_file():
     ''' returns filename and size of current file in cache '''
-    filename = environment._cache._cached_files_keys[environment._cached_files_index]
+    #filename = environment._cache._cached_files_keys[environment._cached_files_index]
+    filename = environment.get_filename_from_cache(environment._cached_files_index)
     #filestats = environment._cache._stats._files[filename]
     filestats = environment.get_stats(filename)
     return filename, filestats._size
@@ -629,7 +631,7 @@ while end == False and test == False:
     
         # TRAIN NETWORK
         if step_add > warm_up_steps_add and test == False:
-            print('started training')
+            #print('started training')
             batch = np.asarray(environment.get_random_batch(BATCH_SIZE))    
             #batch = environment.add_memory_vector[np.random.randint(0, environment.add_memory_vector.shape[0], BATCH_SIZE), :]
             train_cur_vals ,train_actions, train_rewards, train_next_vals = np.split(batch, [input_len, input_len + 1, input_len + 2] , axis = 1)
@@ -692,7 +694,8 @@ while end == False and test == False:
         # IF ADDING IS NOT OVER, GET NEXT VALUES AND PREPARE ACTION TO BE REWARDED, GIVING EVENTUAL REWARD
         curFilename, curSize = get_filename_and_size_of_current_cache_file()
         if action == 1:
-            environment._cache._cached_files.remove(curFilename)
+            #environment._cache._cached_files.remove(curFilename)
+            environment.remove_from_cache(curFilename)
             environment._cache._size -= curSize
             environment._cache._deleted_data += curSize
         
@@ -727,7 +730,8 @@ while end == False and test == False:
         
         # TRAIN NETWORK
         if step_evict > warm_up_steps_evict and test == False:
-            batch = environment.evict_memory_vector[np.random.randint(0, environment.evict_memory_vector.shape[0], BATCH_SIZE), :]
+            batch = np.asarray(environment.get_random_batch(BATCH_SIZE))
+            #batch = environment.evict_memory_vector[np.random.randint(0, environment.evict_memory_vector.shape[0], BATCH_SIZE), :]
             train_cur_vals ,train_actions, train_rewards, train_next_vals = np.split(batch, [input_len, input_len+1, input_len+2] , axis = 1)
             #train_cur_vals ,train_actions, train_rewards = np.split(batch, [input_len, input_len+1] , axis = 1)
             target = model_evict.predict_on_batch(train_cur_vals)
@@ -756,16 +760,19 @@ while end == False and test == False:
     next_occupancy = (environment._cache._size + next_size) / environment._cache._max_size * 100
     current_occupancy = environment._cache.capacity()
     if environment._adding_or_evicting == 0 and (current_occupancy > environment._cache._h_watermark or next_occupancy > 100.):
+        print('START EVICTION')
         environment._adding_or_evicting = 1 
         addition_counter += 1
-        environment._cache._cached_files_keys = list(environment._cache._cached_files)
-        random.shuffle(environment._cache._cached_files_keys)
-        to_print = np.asarray(environment._cache._cached_files_keys)
+        environment.create_cached_files_keys_list()
+        #environment._cache._cached_files_keys = list(environment._cache._cached_files)
+        #random.shuffle(environment._cache._cached_files_keys)
+        #to_print = np.asarray(environment._cache._cached_files_keys)
         environment._cached_files_index = -1
         get_next_file_in_cache_values()
         
     ### STOP EVICTING ##########################################################################################
     if environment._adding_or_evicting == 1 and (end_of_cache == True or environment._cache.capacity() < low_watermark):
+        print('STOP EVICTION')
         with open(out_directory + '/occupancy.csv', 'a') as file:
             writer = csv.writer(file)
             writer.writerow([environment._cache.capacity])
@@ -968,6 +975,7 @@ while end == False and test == True:
     ### STOP EVICTING ##########################################################################################
    #if adding_or_evicting == 1 and (environment._cached_files_index + 1 == len(environment._cache._cached_files_keys) or environment._cache.capacity < low_watermark):
     if environment._adding_or_evicting == 1 and (end_of_cache == True or environment._cache.capacity < low_watermark):
+        
         with open(out_directory + '/occupancy.csv', 'a') as file:
             writer = csv.writer(file)
             writer.writerow([environment._cache.capacity])

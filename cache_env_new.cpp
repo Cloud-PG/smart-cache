@@ -9,6 +9,8 @@
 #include <pybind11/numpy.h>
 #include <pybind11/stl.h>
 #include <Python.h>
+#include <algorithm>
+#include <random>
 
 namespace py = pybind11;
 
@@ -298,6 +300,10 @@ class env{
         int get_add_memory_size();
         int get_evict_memory_size();
         bool check_in_cache(int);
+        void remove_from_cache(int);
+        int get_filename_from_cache(int);
+        void create_cached_files_keys_list();
+        void delete_first_element_in_memory();
 };
 
 void env::update_windows_getting_eventual_rewards_accumulate(int curFilename, int action){
@@ -593,6 +599,24 @@ int env::get_evict_memory_size(){
     return _evict_memory_vector.size();
 }
 
+void env::remove_from_cache(int filename){
+    _cache._cached_files.erase(filename);
+}
+
+int env::get_filename_from_cache(int index){
+    return _cache._cached_files_keys[index];
+}
+
+void env::create_cached_files_keys_list(){
+    _cache._cached_files_keys.clear();
+    _cache._cached_files_keys.reserve(_cache._cached_files.size());
+    _cache._cached_files_keys.insert(_cache._cached_files_keys.end(), _cache._cached_files.begin(), _cache._cached_files.end());
+    //for (auto it = _cache._cached_files.begin(); it != _cache._cached_files.end(); ) {
+        //_cache._cached_files_keys.push_back(move(_cache._cached_files.extract(it++).value()));
+    auto rng = default_random_engine {};
+    std::shuffle(begin(_cache._cached_files_keys), end(_cache._cached_files_keys), rng);
+}
+
 
 PYBIND11_MODULE(cache_env_cpp, m) {
     // optional module docstring
@@ -647,6 +671,9 @@ PYBIND11_MODULE(cache_env_cpp, m) {
         .def("get_random_batch", &env::get_random_batch)
         .def("check", &env::check)
         .def("check_in_cache", &env::check_in_cache)
+        .def("remove_from_cache", &env::remove_from_cache)
+        .def("get_filename_from_cache", &env::get_filename_from_cache)
+        .def("create_cached_files_keys_list", &env::create_cached_files_keys_list)
         .def("get_stats", &env::get_stats)
         .def("get_add_memory_size", &env::get_add_memory_size)
         .def("get_evict_memory_size", &env::get_evict_memory_size)
