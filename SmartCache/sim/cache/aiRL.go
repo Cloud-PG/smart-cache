@@ -254,6 +254,11 @@ func (cache *AIRL) getState4AddAgent(curFileStats *FileStats) int {
 
 func (cache *AIRL) callEvictionAgent(forced bool) float64 {
 	var totalDeleted float64
+
+	// TODO: create file category index similare to state index
+	// TODO: insert category in queue files
+	// TODO: create a function to calculate category occupancies
+
 	return totalDeleted
 }
 
