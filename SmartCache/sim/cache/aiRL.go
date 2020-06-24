@@ -6,8 +6,7 @@ import (
 	"fmt"
 	"os"
 	"simulator/v2/cache/ai/featuremap"
-	"simulator/v2/cache/ai/queue"
-	qlearn "simulator/v2/cache/qLearn"
+	"simulator/v2/cache/ai/qLearn"
 
 	"go.uber.org/zap"
 )
@@ -17,7 +16,7 @@ type PrevChoice struct {
 	Filename    int64
 	Size        float64
 	State       string
-	Action      qlearn.ActionType
+	Action      qLearn.ActionType
 	GoodStrikes int
 	BadStrikes  int
 }
@@ -29,8 +28,8 @@ type AIRL struct {
 	evictionAgentOK        bool
 	additionFeatureManager featuremap.FeatureManager
 	evictionFeatureManager featuremap.FeatureManager
-	additionAgent          qlearn.Agent
-	evictionAgent          qlearn.Agent
+	additionAgent          qLearn.Agent
+	evictionAgent          qLearn.Agent
 	evictionAgentStep      int64
 	bufferCategory         []bool
 	bufferIdxVector        []int
@@ -41,7 +40,7 @@ type AIRL struct {
 func (cache *AIRL) Init(args ...interface{}) interface{} {
 	logger = zap.L()
 
-	cache.SimpleCache.Init(queue.NoQueue)
+	cache.SimpleCache.Init(NoQueue)
 
 	additionFeatureMap := args[0].(string)
 	evictionFeatureMap := args[1].(string)
@@ -58,7 +57,7 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 		logger.Info("Create addition agent")
 		cache.additionAgent.Init(
 			&cache.additionFeatureManager,
-			qlearn.AdditionAgent,
+			qLearn.AdditionAgent,
 			initEpsilon,
 			decayRateEpsilon,
 		)
@@ -73,7 +72,7 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 		logger.Info("Create eviction agent")
 		cache.evictionAgent.Init(
 			&cache.evictionFeatureManager,
-			qlearn.EvictionAgent,
+			qLearn.EvictionAgent,
 			initEpsilon,
 			decayRateEpsilon,
 		)
@@ -292,7 +291,7 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) *FileStats {
 func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool) bool {
 	var (
 		added = false
-		// curAction         qlearn.ActionType
+		// curAction         qLearn.ActionType
 		curState int
 		// newState          string
 		requestedFileSize = request.Size
@@ -391,7 +390,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 		// 	// -------------------------------------------------------------
 		// 	//             QLearn - Take the action NOT STORE
 		// 	// -------------------------------------------------------------
-		// 	if curAction == qlearn.ActionNotStore {
+		// 	if curAction == qLearn.ActionNotStore {
 		// 		reward := 0.
 		// 		// reward := request.Size
 
@@ -434,7 +433,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 		// 	// -------------------------------------------------------------
 		// 	//               QLearn - Take the action STORE
 		// 	// -------------------------------------------------------------
-		// 	if curAction == qlearn.ActionStore {
+		// 	if curAction == qLearn.ActionStore {
 		// 		reward := 0.
 		// 		// reward := request.Size
 

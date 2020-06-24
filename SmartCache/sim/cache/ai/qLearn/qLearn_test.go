@@ -1,4 +1,4 @@
-package qlearn
+package qLearn
 
 import (
 	"fmt"
