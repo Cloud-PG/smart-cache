@@ -8,7 +8,8 @@
       4000.0
     ],
     "openRight": true,
-    "type": "float"
+    "type": "float",
+    "fileFeature": true
   },
   "numReq": {
     "buckets": [
@@ -16,7 +17,8 @@
       4
     ],
     "openRight": true,
-    "type": "int"
+    "type": "int",
+    "fileFeature": true
   },
   "deltaLastRequest": {
     "buckets": [
@@ -25,7 +27,8 @@
       200000
     ],
     "openRight": true,
-    "type": "int"
+    "type": "int",
+    "fileFeature": true
   },
   "percOcc": {
     "buckets": [

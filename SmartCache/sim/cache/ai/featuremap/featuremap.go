@@ -23,6 +23,7 @@ type Obj struct {
 	Float64Values   []float64    `json:"float64Values"`
 	Buckets         bool         `json:"buckets"`
 	BucketOpenRight bool         `json:"bucketOpenRight"`
+	FileFeature     bool         `json:"fileFeature"`
 }
 
 // ObjVal used in range cycles
@@ -33,7 +34,20 @@ type ObjVal struct {
 
 // FeatureManager collects and manages the features
 type FeatureManager struct {
-	Features []Obj `json:"feature"`
+	Features        []Obj `json:"feature"`
+	FileFeatureIdxs []int `json:"fileFeatureIdxs"`
+}
+
+// FileFeatureIter returns all the file feature objects
+func (manager FeatureManager) FileFeatureIter() chan Obj {
+	outChan := make(chan Obj, len(manager.FileFeatureIdxs))
+	go func() {
+		defer close(outChan)
+		for idx := range manager.FileFeatureIdxs {
+			outChan <- manager.Features[idx]
+		}
+	}()
+	return outChan
 }
 
 // FeatureIter returns all the feature objects
@@ -140,6 +154,10 @@ func (manager *FeatureManager) Populate(featureMapFilePath string) {
 						if curFeatureValue.Elem().Bool() {
 							curStruct.BucketOpenRight = true
 						}
+					case "fileFeature":
+						if curFeatureValue.Elem().Bool() {
+							curStruct.FileFeature = true
+						}
 					case "type":
 						curStruct.Type = curFeatureValue.Elem().String()
 					default:
@@ -176,6 +194,10 @@ func (manager *FeatureManager) Populate(featureMapFilePath string) {
 				// fmt.Println("struct", curStruct)
 
 				manager.Features = append(manager.Features, curStruct)
+
+				if curStruct.FileFeature {
+					manager.FileFeatureIdxs = append(manager.FileFeatureIdxs, len(manager.Features)-1)
+				}
 
 			} else {
 				logger.Error(
