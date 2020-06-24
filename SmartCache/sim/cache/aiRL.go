@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"simulator/v2/cache/ai/featuremap"
+	"simulator/v2/cache/ai/queue"
 	qlearn "simulator/v2/cache/qLearn"
 
 	"go.uber.org/zap"
@@ -30,7 +31,7 @@ type AIRL struct {
 	evictionFeatureManager featuremap.FeatureManager
 	additionAgent          qlearn.Agent
 	evictionAgent          qlearn.Agent
-	evictionAgentStep      int
+	evictionAgentStep      int64
 	bufferCategory         []bool
 	bufferIdxVector        []int
 	chanCategory           chan bool
@@ -40,7 +41,7 @@ type AIRL struct {
 func (cache *AIRL) Init(args ...interface{}) interface{} {
 	logger = zap.L()
 
-	cache.SimpleCache.Init()
+	cache.SimpleCache.Init(queue.NoQueue)
 
 	additionFeatureMap := args[0].(string)
 	evictionFeatureMap := args[1].(string)
@@ -252,8 +253,20 @@ func (cache *AIRL) getState4AddAgent(curFileStats *FileStats) int {
 	return cache.additionAgent.Table.FeatureIdxs2StateIdx(cache.bufferIdxVector...)
 }
 
+func (cache *AIRL) callEvictionAgent(forced bool) float64 {
+	var totalDeleted float64
+	return totalDeleted
+}
+
 // BeforeRequest of LRU cache
 func (cache *AIRL) BeforeRequest(request *Request, hit bool) *FileStats {
+
+	if cache.tick%cache.evictionAgentStep == 0 {
+		if cache.evictionAgentOK {
+			cache.callEvictionAgent(true)
+		}
+	}
+
 	fileStats, _ := cache.stats.GetOrCreate(request.Filename, request.Size, request.DayTime, cache.tick)
 
 	cache.prevTime = cache.curTime
@@ -502,108 +515,16 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 }
 
 // Free removes files from the cache
-// func (cache *AIRL) Free(amount float64, percentage bool) float64 {
-// 	logger.Debug(
-// 		"Cache free",
-// 		zap.Float64("mean size", cache.MeanSize()),
-// 		zap.Float64("mean frequency", cache.MeanFrequency()),
-// 		zap.Float64("mean recency", cache.MeanRecency()),
-// 		zap.Int("num. files", cache.NumFiles()),
-// 		zap.Float64("std.dev. freq.", cache.StdDevFreq()),
-// 		zap.Float64("std.dev. rec.", cache.StdDevRec()),
-// 		zap.Float64("std.dev. size", cache.StdDevSize()),
-// 	)
-// 	var (
-// 		totalDeleted float64
-// 		sizeToDelete float64
-// 		curAction    qlearn.ActionType
-// 		curState     string
-// 	)
-// 	if percentage {
-// 		sizeToDelete = amount * (cache.MaxSize / 100.)
-// 	} else {
-// 		sizeToDelete = amount
-// 	}
-
-// 	if sizeToDelete > 0. {
-// 		if cache.evictionAgentOK {
-// 			curState = cache.getState(nil, cache.evictionFeatureMapOrder, cache.evictionFeatureMap)
-// 			// Check training
-// 			if cache.evictionTable.TrainingEnabled {
-// 				// Check learning phase or not
-// 				if expEvictionTradeoff := cache.evictionTable.GetRandomFloat(); expEvictionTradeoff > cache.evictionTable.Epsilon {
-// 					// ########################
-// 					// ##### Normal phase #####
-// 					// ########################
-// 					curAction = cache.evictionTable.GetBestAction(curState)
-// 				} else {
-// 					// ##########################
-// 					// ##### Learning phase #####
-// 					// ##########################
-
-// 					// ----- Random choice -----
-// 					randomActionIdx := int(cache.evictionTable.GetRandomFloat() * float64(len(cache.evictionTable.Actions)))
-// 					curAction = cache.evictionTable.Actions[randomActionIdx]
-// 				}
-
-// 				cache.qEvictionPrevState = PrevChoice{
-// 					State:  curState,
-// 					Action: curAction,
-// 				}
-
-// 			} else {
-// 				// #########################
-// 				// #####  NO TRAINING  #####
-// 				// #########################
-// 				curAction = cache.evictionTable.GetBestAction(curState)
-// 			}
-// 		} else {
-// 			curAction = qlearn.ActionRemoveWithLRU
-// 		}
-
-// 		var curPolicy queueType
-// 		switch curAction {
-// 		case qlearn.ActionRemoveWithLRU:
-// 			curPolicy = LRUQueue
-// 		case qlearn.ActionRemoveWithLFU:
-// 			curPolicy = LFUQueue
-// 		case qlearn.ActionRemoveWithSizeBig:
-// 			curPolicy = SizeBigQueue
-// 		case qlearn.ActionRemoveWithSizeSmall:
-// 			curPolicy = SizeSmallQueue
-// 		case qlearn.ActionRemoveWithWeight:
-// 			curPolicy = WeightQueue
-// 		}
-
-// 		deletedFiles := make([]int64, 0)
-// 		for curFile := range cache.files.Get(curPolicy) {
-// 			logger.Debug("delete",
-// 				zap.Int64("filename", curFile.Filename),
-// 				zap.Float64("fileSize", curFile.Size),
-// 				zap.Int64("frequency", curFile.Frequency),
-// 				zap.Int64("recency", curFile.Recency),
-// 				zap.Float64("cacheSize", cache.Size()),
-// 			)
-
-// 			curFileStats := cache.stats.Get(curFile.Filename)
-// 			curFileStats.removeFromCache()
-
-// 			// Update sizes
-// 			cache.size -= curFile.Size
-// 			cache.dataDeleted += curFile.Size
-// 			totalDeleted += curFile.Size
-
-// 			deletedFiles = append(deletedFiles, curFile.Filename)
-
-// 			if totalDeleted >= sizeToDelete {
-// 				break
-// 			}
-// 		}
-// 		cache.files.Remove(deletedFiles)
-// 	}
-
-// 	return totalDeleted
-// }
+func (cache *AIRL) Free(amount float64, percentage bool) float64 {
+	var totalDeleted float64
+	if cache.evictionAgentOK {
+		// TODO: manage the penalities before call eviction agent
+		totalDeleted = cache.callEvictionAgent(true)
+	} else {
+		totalDeleted = cache.SimpleCache.Free(amount, percentage)
+	}
+	return totalDeleted
+}
 
 // CheckWatermark checks the watermark levels and resolve the situation
 func (cache *AIRL) CheckWatermark() bool {
