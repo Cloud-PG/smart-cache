@@ -280,5 +280,9 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False,
                         csv_dest_folder.joinpath(f"top_{top}_results.tex"), 
                         index=False, float_format='%.2f'
                     )
+                    cur_output.to_html(
+                        csv_dest_folder.joinpath(f"top_{top}_results.html"), 
+                        index=False, float_format='%.2f'
+                    )
 
     return results
