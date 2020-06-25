@@ -113,7 +113,9 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False,
     for root, _, files in tqdm(walk(folder), desc="Search and open files"):
         for file_ in files:
             cur_path = Path(path.join(root, file_))
-            if cur_path.suffix == ".csv" and cur_path.name.find("_results") != -1:
+            if cur_path.suffix == ".csv" and \
+                cur_path.name.find("_results") != -1 and \
+                    cur_path.name.find("top_") == -1:
                 section = cur_path.parent.parent.name
                 target = cur_path.parent.name
                 file_path = path.join(cur_path.resolve().as_posix())
