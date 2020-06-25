@@ -85,6 +85,7 @@ parser.add_argument('--timing', type = bool, default = False)
 parser.add_argument('--invalidated_search_frequency', type = int, default = 30000)
 parser.add_argument('--test', type = bool, default = False)
 parser.add_argument('--seed', type = int, default = 2019)
+parser.add_argument('--eviction_frequency', type = int, default = 50000)
 
 
 args = parser.parse_args()
@@ -141,6 +142,7 @@ bandwidth = args.bandwidth
 write_everything = args.write_everything
 timing = args.timing
 test = args.test
+eviction_frequency = args.eviction_frequency
 
 out_name = out_directory.split("/")[1] + '_results.csv'
 
@@ -484,12 +486,12 @@ while end == False and test == False:
         with open(out_directory + '/timing.csv', 'a') as f:
             writer = csv.writer(f)
             writer.writerow([now - before, 
-            len(environment._cache._stats._files),
-            len(environment._cache._cached_files), 
-            environment.add_memory_vector.shape[0],
-            len(environment._request_window_elements),
-            environment.evict_memory_vector.shape[0],
-            len(environment._eviction_window_elements)])
+            environment.get_stats_len,
+            environment.get_num_files_in_cache(),
+            environment.get_add_memory_size(),
+            environment.get_add_window_size(),
+            environment.get_evict_memory_size(),
+            environment.get_evict_window_size()])
 
     ######## ADDING ###########################################################################################################
     if environment._adding_or_evicting == 0:
@@ -759,7 +761,7 @@ while end == False and test == False:
     #### STOP ADDING ##############################################################################################
     next_occupancy = (environment._cache._size + next_size) / environment._cache._max_size * 100
     current_occupancy = environment._cache.capacity()
-    if environment._adding_or_evicting == 0 and (current_occupancy > environment._cache._h_watermark or next_occupancy > 100.):
+    if environment._adding_or_evicting == 0 and (current_occupancy > environment._cache._h_watermark or next_occupancy > 100. or (step_add % eviction_frequency == 0 and step_add != 0)):
         print('START EVICTION')
         environment._adding_or_evicting = 1 
         addition_counter += 1

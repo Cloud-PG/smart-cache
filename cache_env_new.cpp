@@ -304,6 +304,10 @@ class env{
         int get_filename_from_cache(int);
         void create_cached_files_keys_list();
         void delete_first_element_in_memory();
+        int get_stats_len();
+        int get_add_window_size();
+        int get_evict_window_size();
+        int get_num_files_in_cache();
 };
 
 void env::update_windows_getting_eventual_rewards_accumulate(int curFilename, int action){
@@ -617,6 +621,22 @@ void env::create_cached_files_keys_list(){
     std::shuffle(begin(_cache._cached_files_keys), end(_cache._cached_files_keys), rng);
 }
 
+int env::get_stats_len(){
+    _cache._stats._files.size();
+}
+
+int env::get_add_window_size(){
+    return _request_window_elements.size();
+}
+
+int env::get_evict_window_size(){
+    return _eviction_window_elements.size();
+}
+
+int env::get_num_files_in_cache(){
+    return _cache._cached_files.size();
+}
+
 
 PYBIND11_MODULE(cache_env_cpp, m) {
     // optional module docstring
@@ -675,6 +695,10 @@ PYBIND11_MODULE(cache_env_cpp, m) {
         .def("get_filename_from_cache", &env::get_filename_from_cache)
         .def("create_cached_files_keys_list", &env::create_cached_files_keys_list)
         .def("get_stats", &env::get_stats)
+        .def("get_stats_len", &env::get_stats_len)
+        .def("get_num_files_in_cache", &env::get_num_files_in_cache)
+        .def("get_add_window_size", &env::get_add_window_size)
+        .def("get_evict_window_size", &env::get_evict_window_size)
         .def("get_add_memory_size", &env::get_add_memory_size)
         .def("get_evict_memory_size", &env::get_evict_memory_size)
         .def("delete_first_add_memory", &env::delete_first_add_memory)
