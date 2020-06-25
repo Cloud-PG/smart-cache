@@ -104,16 +104,6 @@ def get_cache_size(cache_name):
             f"Error: '{cache_name}' cache name with unspecified size...")
 
 
-def get_result_section(cur_path: str, source_folder: str):
-    section = []
-    target = path.dirname(source_folder) or path.basename(source_folder)
-    head = cur_path
-    while head != target:
-        head, tail = path.split(head)
-        section.append(tail)
-    return section
-
-
 def load_results(folder: str, top: int = 0, top_table_output: bool = False,
                  group_by: str = "family", table_type: str = "leaderboard",
                  bandwidth: float = 10.
@@ -122,19 +112,11 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False,
     res_len = -1
     for root, _, files in tqdm(walk(folder), desc="Search and open files"):
         for file_ in files:
-            head, ext = path.splitext(file_)
-            if ext == ".csv" and head.find("_results") != -1:
-                section = get_result_section(root, folder)
-                cur_section = results
-                while len(section) > 1:
-                    part = section.pop()
-                    if part not in cur_section:
-                        cur_section[part] = {}
-                    cur_section = cur_section[part]
-                if not section:
-                    continue
-                last_section = section.pop()
-                file_path = path.join(root, file_)
+            cur_path = Path(path.join(root, file_))
+            if cur_path.suffix == ".csv" and cur_path.name.find("_results") != -1:
+                section = cur_path.parent.parent.name
+                target = cur_path.parent.name
+                file_path = path.join(cur_path.resolve().as_posix())
                 df = pd.read_csv(
                     file_path
                 )
@@ -145,7 +127,9 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False,
                         f"Warning: '{path.abspath(file_)}' has a different number of results ad will not be counted..."
                     )
                 else:
-                    cur_section[last_section] = df
+                    if section not in results:
+                        results[section] = {}
+                    results[section][target] = df
 
     if top != 0:
         if 'run_full_normal' in results:
