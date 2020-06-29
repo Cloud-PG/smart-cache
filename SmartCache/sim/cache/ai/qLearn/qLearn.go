@@ -166,21 +166,28 @@ func (table QTable) Features2Idxs(features ...interface{}) []int {
 	return featureIdxs
 }
 
+// Choice of an agent
+type Choice struct {
+	State  int        `json:"state"`
+	Action ActionType `json:"action"`
+}
+
 // Agent used in Qlearning
 type Agent struct {
-	Table            QTable      `json:"qtable"`
-	NumStates        int         `json:"numStates"`
-	NumVars          int         `json:"numVars"`
-	LearningRate     float64     `json:"learningRate"`
-	DiscountFactor   float64     `json:"discountFactor"`
-	DecayRateEpsilon float64     `json:"decayRateEpsilon"`
-	Epsilon          float64     `json:"epsilon"`
-	MaxEpsilon       float64     `json:"maxEpsilon"`
-	MinEpsilon       float64     `json:"minEpsilon"`
-	StepNum          int32       `json:"episodeCounter"`
-	RGenerator       *rand.Rand  `json:"rGenerator"`
-	UpdateAlgorithm  RLUpdateAlg `json:"updateAlgorithm"`
-	ValueFunction    float64     `json:"valueFunction"`
+	Memory           map[interface{}]*[]Choice `json:"choices"`
+	Table            QTable                    `json:"qtable"`
+	NumStates        int                       `json:"numStates"`
+	NumVars          int                       `json:"numVars"`
+	LearningRate     float64                   `json:"learningRate"`
+	DiscountFactor   float64                   `json:"discountFactor"`
+	DecayRateEpsilon float64                   `json:"decayRateEpsilon"`
+	Epsilon          float64                   `json:"epsilon"`
+	MaxEpsilon       float64                   `json:"maxEpsilon"`
+	MinEpsilon       float64                   `json:"minEpsilon"`
+	StepNum          int32                     `json:"episodeCounter"`
+	RGenerator       *rand.Rand                `json:"rGenerator"`
+	UpdateAlgorithm  RLUpdateAlg               `json:"updateAlgorithm"`
+	ValueFunction    float64                   `json:"valueFunction"`
 }
 
 // Init initilizes the Agent struct
@@ -193,6 +200,8 @@ func (agent *Agent) Init(featureManager *featuremap.FeatureManager, role AgentRo
 	agent.Epsilon = initEpsilon
 	agent.MaxEpsilon = 1.0
 	agent.MinEpsilon = 0.1
+	agent.Memory = make(map[interface{}]*[]Choice, 0)
+
 	switch role {
 	case AdditionAgent:
 		// With getArgMax the first action is the default choice
@@ -352,8 +361,8 @@ func (agent Agent) GetBestAction(stateIdx int) ActionType {
 	return bestAction
 }
 
-// Update change the Q-table values of the given action
-func (agent *Agent) Update(stateIdx int, action ActionType, reward float64, newStateIdx int) {
+// UpdateTable change the table values of the given action
+func (agent *Agent) UpdateTable(stateIdx int, newStateIdx int, action ActionType, reward float64) {
 	agent.ValueFunction += reward
 
 	curStateValue := agent.GetActionValue(stateIdx, action)
@@ -379,6 +388,19 @@ func (agent *Agent) UpdateEpsilon() {
 		agent.StepNum++
 		agent.Epsilon = agent.MinEpsilon + (agent.MaxEpsilon-agent.MinEpsilon)*math.Exp(-agent.DecayRateEpsilon*float64(agent.StepNum))
 	}
+}
+
+// UpdateMemory insert made actions in memory
+func (agent *Agent) UpdateMemory(key interface{}, choices ...Choice) {
+	prevChoices, inMemory := agent.Memory[key]
+	if inMemory {
+		*prevChoices = append(*prevChoices, choices...)
+	} else {
+		newChoices := make([]Choice, 0)
+		newChoices = append(newChoices, choices...)
+		agent.Memory[key] = &newChoices
+	}
+
 }
 
 //##############################################################################
