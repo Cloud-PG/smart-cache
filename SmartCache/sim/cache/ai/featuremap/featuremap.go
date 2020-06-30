@@ -43,11 +43,35 @@ func (manager FeatureManager) FileFeatureIter() chan Obj {
 	outChan := make(chan Obj, len(manager.FileFeatureIdxs))
 	go func() {
 		defer close(outChan)
-		for idx := range manager.FileFeatureIdxs {
-			outChan <- manager.Features[idx]
+		for _, objIdx := range manager.FileFeatureIdxs {
+			outChan <- manager.Features[objIdx]
 		}
 	}()
 	return outChan
+}
+
+// FileFeatureIdxWeights returns the weight for each index of file features
+func (manager FeatureManager) FileFeatureIdxWeights() []int {
+	weights := make([]int, len(manager.FileFeatureIdxs))
+	for idx := 0; idx < len(weights); idx++ {
+		weights[idx] = 1
+		for inIdx := idx + 1; inIdx < len(weights); inIdx++ {
+			weights[idx] *= manager.Features[manager.FileFeatureIdxs[inIdx]].Size()
+		}
+	}
+	return weights
+}
+
+// FeatureIdxWeights returns the weight for each index of the features
+func (manager FeatureManager) FeatureIdxWeights() []int {
+	weights := make([]int, len(manager.Features))
+	for idx := 0; idx < len(weights); idx++ {
+		weights[idx] = 1
+		for inIdx := idx + 1; inIdx < len(weights); inIdx++ {
+			weights[idx] *= manager.Features[inIdx].Size()
+		}
+	}
+	return weights
 }
 
 // FeatureIter returns all the feature objects
@@ -62,11 +86,20 @@ func (manager FeatureManager) FeatureIter() chan Obj {
 	return outChan
 }
 
-// FeatureIdexes returns a map of the feature indexes
-func (manager FeatureManager) FeatureIdexes(idx int) map[string]int {
+// FeatureIdexMap returns a map of the feature indexes
+func (manager FeatureManager) FeatureIdexMap() map[string]int {
 	indexes := make(map[string]int, 0)
 	for idx, curObj := range manager.Features {
 		indexes[curObj.Name] = idx
+	}
+	return indexes
+}
+
+// FileFeatureIdexMap returns a map of the file feature indexes
+func (manager FeatureManager) FileFeatureIdexMap() map[string]int {
+	indexes := make(map[string]int, 0)
+	for idx, curObjIdx := range manager.FileFeatureIdxs {
+		indexes[manager.Features[curObjIdx].Name] = idx
 	}
 	return indexes
 }

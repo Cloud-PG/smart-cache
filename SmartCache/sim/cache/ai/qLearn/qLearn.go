@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
-	"os"
 	"reflect"
 	"strings"
 
@@ -54,11 +53,12 @@ type QTable struct {
 	FeatureManager *featuremap.FeatureManager `json:"featureManager"`
 	ActionTypeIdxs map[ActionType]int         `json:"actionTypeIdxs"`
 	ActionTypes    []ActionType               `json:"actionTypes"`
+	IndexWeights   []int                      `json:"indexWeights"`
 }
 
 // Init prepare the QTable States and Actions
 func (table *QTable) Init(featureManager *featuremap.FeatureManager, actions []ActionType) {
-	logger := zap.L()
+	// logger := zap.L()
 
 	table.States = make([][]int, 0)
 	table.Actions = make([][]float64, 0)
@@ -109,33 +109,18 @@ func (table *QTable) Init(featureManager *featuremap.FeatureManager, actions []A
 		}
 	}
 
+	table.IndexWeights = table.FeatureManager.FeatureIdxWeights()
+
 	// ----- Output test -----
+	// fmt.Println("Index weights", table.IndexWeights)
+
 	// for idx := 0; idx < len(table.States); idx++ {
 	// 	fmt.Println(idx, table.States[idx], table.FeatureIdxs2StateIdx(table.States[idx]...))
 	// }
-	// fmt.Println(table.getPrevIndexesSizeProd(0), len(table.States))
 
 	// testIdxs := table.Features2Idxs([]interface{}{float64(5000.0), int64(1), int64(500000)}...)
 	// fmt.Println(testIdxs, "->", table.FeatureIdxs2StateIdx(testIdxs...))
 
-	if table.getPrevIndexesSizeProd(0) != len(table.States) {
-		logger.Error("State generation",
-			zap.String("error", "wrong number of states generated"),
-			zap.Int("numStates", len(table.States)),
-			zap.Int("expectedNumStates", table.getPrevIndexesSizeProd(0)),
-		)
-		os.Exit(-1)
-	}
-}
-
-// getPrevIndexesSizeProd returns the product of the feature lenghts starting from
-// a specific index
-func (table QTable) getPrevIndexesSizeProd(start int) int {
-	prod := 1
-	for idx := start; idx < len(table.FeatureManager.Features); idx++ {
-		prod *= table.FeatureManager.Features[idx].Size()
-	}
-	return prod
 }
 
 // FeatureIdxs2StateIdx returns the State index of the corresponding feature indexes
@@ -143,7 +128,7 @@ func (table QTable) FeatureIdxs2StateIdx(featureIdxs ...int) int {
 	index := 0
 	for idx, curIdx := range featureIdxs {
 		if idx != len(featureIdxs)-1 {
-			index += curIdx * table.getPrevIndexesSizeProd(idx+1)
+			index += curIdx * table.IndexWeights[idx]
 		} else {
 			index += curIdx
 		}

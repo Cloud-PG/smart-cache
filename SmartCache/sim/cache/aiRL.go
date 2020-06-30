@@ -255,9 +255,83 @@ func (cache *AIRL) getState4AddAgent(curFileStats *FileStats) int {
 func (cache *AIRL) callEvictionAgent(forced bool) float64 {
 	var totalDeleted float64
 
-	// TODO: create file category index similare to state index
-	// TODO: insert category in queue files
-	// TODO: create a function to calculate category occupancies
+	fmt.Println("----- EVICTION -----")
+
+	catPercOcc := make(map[int]float64)
+	catIdxMap := make(map[int][]int)
+	idxWeights := cache.evictionFeatureManager.FileFeatureIdxWeights()
+	fileFeatureIndexes := cache.evictionFeatureManager.FileFeatureIdexMap()
+
+	for file := range cache.files.Get(NoQueue) {
+		fmt.Println(file.Filename)
+		cache.bufferIdxVector = cache.bufferIdxVector[:0]
+		for feature := range cache.evictionFeatureManager.FileFeatureIter() {
+			fmt.Println(feature.Name)
+			switch feature.Name {
+			case "catSize":
+				cache.bufferIdxVector = append(cache.bufferIdxVector, feature.Index(file.Size))
+			case "catNumReq":
+				cache.bufferIdxVector = append(cache.bufferIdxVector, feature.Index(file.Frequency))
+			case "catDeltaLastRequest":
+				cache.bufferIdxVector = append(cache.bufferIdxVector, feature.Index(file.Recency))
+			}
+		}
+		curCatIdx := 0
+		for idx, value := range cache.bufferIdxVector {
+			curCatIdx += value * idxWeights[idx]
+		}
+		catSize, inCounters := catPercOcc[curCatIdx]
+		if !inCounters {
+			catPercOcc[curCatIdx] = file.Size
+			newSlice := make([]int, len(cache.bufferIdxVector))
+			copy(newSlice, cache.bufferIdxVector)
+			catIdxMap[curCatIdx] = newSlice
+		} else {
+			catPercOcc[curCatIdx] = catSize + file.Size
+		}
+		fmt.Println(file, cache.bufferIdxVector, curCatIdx)
+	}
+
+	fmt.Println(idxWeights)
+	fmt.Println(catPercOcc)
+	fmt.Println(catIdxMap)
+
+	for catIdx, size := range catPercOcc {
+		curCatPercOcc := (size / cache.MaxSize) * 100.
+		catPercOcc[catIdx] = curCatPercOcc
+	}
+
+	fmt.Println(catPercOcc)
+	fmt.Println(catIdxMap)
+
+	curCacheStates := make(map[int]qLearn.ActionType)
+
+	for catIdx, curCat := range catIdxMap {
+		cache.bufferIdxVector = cache.bufferIdxVector[:0]
+		for _, feature := range cache.evictionFeatureManager.Features {
+			switch feature.Name {
+			case "catSize":
+				cache.bufferIdxVector = append(cache.bufferIdxVector, curCat[fileFeatureIndexes["catSize"]])
+			case "catNumReq":
+				cache.bufferIdxVector = append(cache.bufferIdxVector, curCat[fileFeatureIndexes["catNumReq"]])
+			case "catDeltaLastRequest":
+				cache.bufferIdxVector = append(cache.bufferIdxVector, curCat[fileFeatureIndexes["catDeltaLastRequest"]])
+			case "catPercOcc":
+				cache.bufferIdxVector = append(cache.bufferIdxVector, feature.Index(catPercOcc[catIdx]))
+			case "percOcc":
+				cache.bufferIdxVector = append(cache.bufferIdxVector, feature.Index(cache.SimpleCache.Occupancy()))
+			}
+		}
+		fmt.Println(cache.bufferIdxVector)
+		curCatState := cache.evictionAgent.Table.FeatureIdxs2StateIdx(cache.bufferIdxVector...)
+		curCacheStates[curCatState] = qLearn.ActionNotDelete
+	}
+
+	fmt.Println(curCacheStates)
+
+	// TODO: choose action for each category and apply delete
+	// TODO: add in agent memory the categories and their actions
+	// NOTE: the cat state are equal if the index values are equal
 
 	return totalDeleted
 }
