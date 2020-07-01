@@ -365,6 +365,7 @@ func (cache *AIRL) updateCategoryStates() {
 }
 
 func (cache *AIRL) callEvictionAgent(forced bool) float64 {
+	// TODO: add penalities when forced call (took all files in cache to get next states)
 	var (
 		totalDeleted float64
 	)
@@ -437,7 +438,68 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) *FileStats {
 	return fileStats
 }
 
-func (cache *AIRL) delayedRewardAdditionAgent(hit bool, filename int64, curState int) {
+func (cache *AIRL) checkEvictionNextState(oldStateIdx int, newStateIdx int) bool {
+	oldState := cache.evictionAgent.Table.States[oldStateIdx]
+	newState := cache.evictionAgent.Table.States[newStateIdx]
+	catSizeIdx := cache.evictionFeatureManager.FeatureIdexMap()["catSize"]
+	for idx, value := range oldState {
+		if idx != catSizeIdx && value < newState[idx] {
+			return false
+		}
+	}
+	return true
+}
+
+func (cache *AIRL) delayedRewardEvictionAgent(hit bool, filename int64, storeTick int64) {
+	if storeTick == -1 {
+		return
+	}
+	prevChoices, inMemory := cache.evictionAgent.Memory[filename]
+	if hit {
+		if inMemory {
+			cache.updateCategoryStates()
+			curChoices := *prevChoices
+			for idx := 0; idx < len(curChoices); idx++ {
+				curMemory := curChoices[idx]
+				if curMemory.Tick > storeTick && curMemory.Action == qLearn.ActionNotDelete {
+					for catStateIdx := range cache.curCacheStates {
+						if cache.checkEvictionNextState(curMemory.State, catStateIdx) {
+							// Update table
+							cache.evictionAgent.UpdateTable(curMemory.State, catStateIdx, curMemory.Action, 1.0)
+							// Update epsilon
+							cache.evictionAgent.UpdateEpsilon()
+						}
+					}
+					return
+				}
+			}
+		}
+	} else {
+		if inMemory {
+			cache.updateCategoryStates()
+			curChoices := *prevChoices
+			for idx := 0; idx < len(curChoices); idx++ {
+				curMemory := curChoices[idx]
+				if curMemory.Tick > storeTick && curMemory.Action == qLearn.ActionDelete {
+					for catStateIdx := range cache.curCacheStates {
+						if cache.checkEvictionNextState(curMemory.State, catStateIdx) {
+							// Update table
+							cache.evictionAgent.UpdateTable(curMemory.State, catStateIdx, curMemory.Action, -1.0)
+							// Update epsilon
+							cache.evictionAgent.UpdateEpsilon()
+						}
+					}
+					return
+				}
+			}
+		}
+	}
+}
+
+func (cache *AIRL) delayedRewardAdditionAgent(hit bool, filename int64, curState int) (int64, int64) {
+	var storeTick int64 = -1
+	var notStoreTick int64 = -1
+
 	prevChoices, inMemory := cache.additionAgent.Memory[filename]
 	if hit {
 		if inMemory {
@@ -450,7 +512,8 @@ func (cache *AIRL) delayedRewardAdditionAgent(hit bool, filename int64, curState
 					cache.additionAgent.UpdateTable(curMemory.State, curState, curMemory.Action, 1.0)
 					// Update epsilon
 					cache.additionAgent.UpdateEpsilon()
-					return
+					storeTick = curMemory.Tick
+					break
 				}
 			}
 		}
@@ -465,12 +528,13 @@ func (cache *AIRL) delayedRewardAdditionAgent(hit bool, filename int64, curState
 					cache.additionAgent.UpdateTable(curMemory.State, curState, curMemory.Action, -1.0)
 					// Update epsilon
 					cache.additionAgent.UpdateEpsilon()
-					return
+					notStoreTick = curMemory.Tick
+					break
 				}
 			}
 		}
 	}
-
+	return storeTick, notStoreTick
 }
 
 // UpdatePolicy of AIRL cache
@@ -519,7 +583,8 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 		logger.Debug("cache", zap.Int("current state", curState))
 
-		cache.delayedRewardAdditionAgent(hit, request.Filename, curState)
+		storeTick, _ := cache.delayedRewardAdditionAgent(hit, request.Filename, curState)
+		cache.delayedRewardEvictionAgent(hit, request.Filename, storeTick)
 
 		if !hit {
 
