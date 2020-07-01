@@ -83,7 +83,7 @@ type Cache interface {
 }
 
 // GetFile requests a file to the cache
-func GetFile(bandwidthManager bool, cache Cache, vars ...interface{}) (bool, bool) {
+func GetFile(checkWatermarks bool, bandwidthManager bool, cache Cache, vars ...interface{}) (bool, bool) {
 	/* vars:
 	[0] -> filename int64
 	[1] -> size     float64
@@ -130,7 +130,9 @@ func GetFile(bandwidthManager bool, cache Cache, vars ...interface{}) (bool, boo
 	fileStats := BeforeRequest(cache, &cacheRequest, hit)
 	added := UpdatePolicy(cache, &cacheRequest, fileStats, hit)
 	AfterRequest(cache, &cacheRequest, hit, added)
-	CheckWatermark(cache)
+	if checkWatermarks {
+		CheckWatermark(cache)
+	}
 	return added, false
 }
 

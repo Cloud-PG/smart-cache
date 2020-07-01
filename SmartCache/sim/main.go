@@ -38,33 +38,35 @@ var (
 	aiRLEpsilonDecay       float64
 	buildstamp             string
 	cacheSize              float64
-	cacheSizeUnit          string
-	cpuprofile             string
-	dataset2TestPath       string
-	githash                string
-	logger                 = log.New(os.Stderr, color.MagentaString("[SIM] "), log.Lshortfile|log.LstdFlags)
-	logLevel               string
-	memprofile             string
-	outputUpdateDelay      float64
-	simColdStart           bool
-	simColdStartNoStats    bool
-	simDump                bool
-	simDumpFilesAndStats   bool
-	simDumpFileName        string
-	simFileType            string
-	simLoadDump            bool
-	simLoadDumpFileName    string
-	simOutFile             string
-	simRegion              string
-	simStartFromWindow     uint32
-	simStopWindow          uint32
-	simWindowSize          uint32
-	simBandwidth           float64
-	simBandwidthManager    bool
-	weightAlpha            float64
-	weightBeta             float64
-	weightFunc             string
-	weightGamma            float64
+
+	cacheSizeUnit        string
+	cpuprofile           string
+	dataset2TestPath     string
+	githash              string
+	logger               = log.New(os.Stderr, color.MagentaString("[SIM] "), log.Lshortfile|log.LstdFlags)
+	logLevel             string
+	memprofile           string
+	outputUpdateDelay    float64
+	simCacheWatermarks   bool
+	simColdStart         bool
+	simColdStartNoStats  bool
+	simDump              bool
+	simDumpFilesAndStats bool
+	simDumpFileName      string
+	simFileType          string
+	simLoadDump          bool
+	simLoadDumpFileName  string
+	simOutFile           string
+	simRegion            string
+	simStartFromWindow   uint32
+	simStopWindow        uint32
+	simWindowSize        uint32
+	simBandwidth         float64
+	simBandwidthManager  bool
+	weightAlpha          float64
+	weightBeta           float64
+	weightFunc           string
+	weightGamma          float64
 )
 
 type simDetailCmd int
@@ -180,6 +182,10 @@ func addSimFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().Uint32Var(
 		&simStopWindow, "simStopWindow", 0,
 		"number of the window to stop with the simulation",
+	)
+	cmd.PersistentFlags().BoolVar(
+		&simCacheWatermarks, "simCacheWatermarks", false,
+		"indicates if the cache have to use the watermarks",
 	)
 	cmd.PersistentFlags().BoolVar(
 		&simColdStart, "simColdStart", false,
@@ -579,6 +585,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 					}
 
 					_, redirected := cache.GetFile(
+						simCacheWatermarks,
 						simBandwidthManager,
 						curCacheInstance,
 						record.Filename,

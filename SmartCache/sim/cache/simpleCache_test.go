@@ -20,11 +20,11 @@ func TestSimpleCacheBaseMultipleInsert(t *testing.T) {
 	}
 	testCache.Init()
 
-	res, _ := GetFile(false, testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
+	res, _ := GetFile(false, false, testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
 
-	GetFile(false, testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
-	GetFile(false, testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
-	GetFile(false, testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(false, false, testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(false, false, testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(false, false, testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
 
 	if !res {
 		t.Fatalf("First insert error -> Expected %t but got %t", true, res)
@@ -47,10 +47,10 @@ func TestSimpleCacheClear(t *testing.T) {
 	}
 	testCache.Init()
 
-	GetFile(false, testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
-	GetFile(false, testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
-	GetFile(false, testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
-	GetFile(false, testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(false, false, testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(false, false, testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(false, false, testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(false, false, testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
 
 	testCache.Clear()
 
@@ -77,16 +77,16 @@ func TestSimpleCacheInsert(t *testing.T) {
 	}
 	testCache.Init()
 
-	GetFile(false, testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
-	GetFile(false, testCache, int64(1), size2, floatZero, floatZero, time.Now().Unix())
-	GetFile(false, testCache, int64(2), size1, floatZero, floatZero, time.Now().Unix())
-	GetFile(false, testCache, int64(3), size1, floatZero, floatZero, time.Now().Unix())
-	GetFile(false, testCache, int64(1), size2, floatZero, floatZero, time.Now().Unix())
-	GetFile(false, testCache, int64(1), size2, floatZero, floatZero, time.Now().Unix())
-	GetFile(false, testCache, int64(1), size2, floatZero, floatZero, time.Now().Unix())
-	GetFile(false, testCache, int64(4), size1, floatZero, floatZero, time.Now().Unix())
-	GetFile(false, testCache, int64(3), size1, floatZero, floatZero, time.Now().Unix())
-	GetFile(false, testCache, int64(4), size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(false, false, testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(false, false, testCache, int64(1), size2, floatZero, floatZero, time.Now().Unix())
+	GetFile(false, false, testCache, int64(2), size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(false, false, testCache, int64(3), size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(false, false, testCache, int64(1), size2, floatZero, floatZero, time.Now().Unix())
+	GetFile(false, false, testCache, int64(1), size2, floatZero, floatZero, time.Now().Unix())
+	GetFile(false, false, testCache, int64(1), size2, floatZero, floatZero, time.Now().Unix())
+	GetFile(false, false, testCache, int64(4), size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(false, false, testCache, int64(3), size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(false, false, testCache, int64(4), size1, floatZero, floatZero, time.Now().Unix())
 
 	// for tmpVal := testCache.policyLRU.Front(); tmpVal != nil; tmpVal = tmpVal.Next() {
 	// 	println(tmpVal.Value.(string))
@@ -122,6 +122,6 @@ func TestSimpleCacheInsert(t *testing.T) {
 // 	testCache.Init()
 
 // 	for n := 0; n < b.N; n++ {
-// 		GetFile(false, testCache, genRandomFilePath(5), rand.Float64()*maxSize, 0.0, 0.0, time.Now().Unix())
+// 		GetFile(false, false, testCache, genRandomFilePath(5), rand.Float64()*maxSize, 0.0, 0.0, time.Now().Unix())
 // 	}
 // }
