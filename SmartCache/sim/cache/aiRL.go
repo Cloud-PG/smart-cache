@@ -34,11 +34,16 @@ type AIRL struct {
 	bufferCategory         []bool
 	bufferIdxVector        []int
 	chanCategory           chan bool
+	curCacheStates         map[int]qLearn.ActionType
+	curCacheStatesFiles    map[int][]int64
 }
 
 // Init the AIRL struct
 func (cache *AIRL) Init(args ...interface{}) interface{} {
 	logger = zap.L()
+
+	cache.curCacheStates = make(map[int]qLearn.ActionType)
+	cache.curCacheStatesFiles = make(map[int][]int64)
 
 	cache.SimpleCache.Init(NoQueue)
 
@@ -252,21 +257,30 @@ func (cache *AIRL) getState4AddAgent(curFileStats *FileStats) int {
 	return cache.additionAgent.Table.FeatureIdxs2StateIdx(cache.bufferIdxVector...)
 }
 
-func (cache *AIRL) callEvictionAgent(forced bool) float64 {
-	var totalDeleted float64
+func (cache *AIRL) updateCategoryStates() {
 
-	fmt.Println("----- EVICTION -----")
+	// Remove previous content
+	for key := range cache.curCacheStates {
+		delete(cache.curCacheStates, key)
+	}
+	for key, value := range cache.curCacheStatesFiles {
+		value = value[:0]
+		delete(cache.curCacheStatesFiles, key)
+	}
 
+	var curAction qLearn.ActionType
 	catPercOcc := make(map[int]float64)
+	catFiles := make(map[int][]int64)
 	catIdxMap := make(map[int][]int)
+
 	idxWeights := cache.evictionFeatureManager.FileFeatureIdxWeights()
 	fileFeatureIndexes := cache.evictionFeatureManager.FileFeatureIdexMap()
 
 	for file := range cache.files.Get(NoQueue) {
-		fmt.Println(file.Filename)
+		// fmt.Println(file.Filename)
 		cache.bufferIdxVector = cache.bufferIdxVector[:0]
 		for feature := range cache.evictionFeatureManager.FileFeatureIter() {
-			fmt.Println(feature.Name)
+			// fmt.Println(feature.Name)
 			switch feature.Name {
 			case "catSize":
 				cache.bufferIdxVector = append(cache.bufferIdxVector, feature.Index(file.Size))
@@ -280,31 +294,34 @@ func (cache *AIRL) callEvictionAgent(forced bool) float64 {
 		for idx, value := range cache.bufferIdxVector {
 			curCatIdx += value * idxWeights[idx]
 		}
-		catSize, inCounters := catPercOcc[curCatIdx]
-		if !inCounters {
+		catSize, inPercOcc := catPercOcc[curCatIdx]
+		if !inPercOcc {
 			catPercOcc[curCatIdx] = file.Size
 			newSlice := make([]int, len(cache.bufferIdxVector))
 			copy(newSlice, cache.bufferIdxVector)
 			catIdxMap[curCatIdx] = newSlice
+			// Create catFiles list
+			catFiles[curCatIdx] = make([]int64, 0)
 		} else {
 			catPercOcc[curCatIdx] = catSize + file.Size
 		}
-		fmt.Println(file, cache.bufferIdxVector, curCatIdx)
+
+		catFiles[curCatIdx] = append(catFiles[curCatIdx], file.Filename)
+
+		// fmt.Println(file, cache.bufferIdxVector, curCatIdx)
 	}
 
-	fmt.Println(idxWeights)
-	fmt.Println(catPercOcc)
-	fmt.Println(catIdxMap)
+	// fmt.Println(idxWeights)
+	// fmt.Println(catPercOcc)
+	// fmt.Println(catIdxMap)
 
 	for catIdx, size := range catPercOcc {
 		curCatPercOcc := (size / cache.MaxSize) * 100.
 		catPercOcc[catIdx] = curCatPercOcc
 	}
 
-	fmt.Println(catPercOcc)
-	fmt.Println(catIdxMap)
-
-	curCacheStates := make(map[int]qLearn.ActionType)
+	// fmt.Println(catPercOcc)
+	// fmt.Println(catIdxMap)
 
 	for catIdx, curCat := range catIdxMap {
 		cache.bufferIdxVector = cache.bufferIdxVector[:0]
@@ -322,16 +339,70 @@ func (cache *AIRL) callEvictionAgent(forced bool) float64 {
 				cache.bufferIdxVector = append(cache.bufferIdxVector, feature.Index(cache.SimpleCache.Occupancy()))
 			}
 		}
-		fmt.Println(cache.bufferIdxVector)
+		// fmt.Println(cache.bufferIdxVector)
 		curCatState := cache.evictionAgent.Table.FeatureIdxs2StateIdx(cache.bufferIdxVector...)
-		curCacheStates[curCatState] = qLearn.ActionNotDelete
+
+		if expEvictionTradeoff := cache.evictionAgent.GetRandomFloat(); expEvictionTradeoff > cache.evictionAgent.Epsilon {
+			// ########################
+			// ### Exploiting phase ###
+			// ########################
+			curAction = cache.evictionAgent.GetBestAction(curCatState)
+		} else {
+			// ##########################
+			// #### Exploring phase #####
+			// ##########################
+
+			// ----- Random choice -----
+			randomActionIdx := int(cache.evictionAgent.GetRandomFloat() * float64(len(cache.evictionAgent.Table.ActionTypes)))
+			curAction = cache.evictionAgent.Table.ActionTypes[randomActionIdx]
+		}
+
+		cache.curCacheStates[curCatState] = curAction
+
+		cache.curCacheStatesFiles[curCatState] = make([]int64, len(catFiles[catIdx]))
+		copy(cache.curCacheStatesFiles[curCatState], catFiles[catIdx])
 	}
+}
 
-	fmt.Println(curCacheStates)
+func (cache *AIRL) callEvictionAgent(forced bool) float64 {
+	var (
+		totalDeleted float64
+	)
 
-	// TODO: choose action for each category and apply delete
-	// TODO: add in agent memory the categories and their actions
-	// NOTE: the cat state are equal if the index values are equal
+	// fmt.Println("----- EVICTION -----")
+
+	// fmt.Println("----- Update Category States -----")
+	cache.updateCategoryStates()
+
+	// fmt.Println(cache.curCacheStates)
+
+	deletedFiles := make([]int64, 0)
+	for catIdx, catAction := range cache.curCacheStates {
+		// fmt.Println("files", curCacheStatesFiles[catIdx])
+		for _, filename := range cache.curCacheStatesFiles[catIdx] {
+			// fmt.Println("Filename", filename)
+			if catAction == qLearn.ActionDelete {
+				curFileStats := cache.stats.Get(filename)
+				// fmt.Println("Stats Filename", curFileStats.Filename)
+				// fmt.Println(curFileStats)
+				curFileStats.removeFromCache()
+
+				// Update sizes
+				cache.size -= curFileStats.Size
+				cache.dataDeleted += curFileStats.Size
+				totalDeleted += curFileStats.Size
+
+				deletedFiles = append(deletedFiles, curFileStats.Filename)
+			}
+			cache.evictionAgent.UpdateMemory(filename, qLearn.Choice{
+				State:  catIdx,
+				Action: catAction,
+				Tick:   cache.tick,
+			})
+		}
+	}
+	// fmt.Println("deleted", deletedFiles)
+	cache.files.Remove(deletedFiles)
 
 	return totalDeleted
 }
@@ -452,15 +523,14 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 		if !hit {
 
-			// Check learning phase or not
-			if expEvictionTradeoff := cache.additionAgent.GetRandomFloat(); expEvictionTradeoff > cache.additionAgent.Epsilon {
+			if expAdditionTradeoff := cache.additionAgent.GetRandomFloat(); expAdditionTradeoff > cache.additionAgent.Epsilon {
 				// ########################
-				// ##### Normal phase #####
+				// ### Exploiting phase ###
 				// ########################
 				curAction = cache.additionAgent.GetBestAction(curState)
 			} else {
 				// ##########################
-				// ##### Learning phase #####
+				// #### Exploring phase #####
 				// ##########################
 
 				// ----- Random choice -----
@@ -468,7 +538,11 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				curAction = cache.additionAgent.Table.ActionTypes[randomActionIdx]
 			}
 
-			cache.additionAgent.UpdateMemory(request.Filename, qLearn.Choice{State: curState, Action: curAction})
+			cache.additionAgent.UpdateMemory(request.Filename, qLearn.Choice{
+				State:  curState,
+				Action: curAction,
+				Tick:   cache.tick,
+			})
 
 			switch curAction {
 			case qLearn.ActionNotStore:

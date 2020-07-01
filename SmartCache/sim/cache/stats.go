@@ -105,6 +105,7 @@ func (statStruct *Stats) GetOrCreate(filename int64, vars ...interface{}) (*File
 
 	if !inStats {
 		curStats = &FileStats{
+			Filename:         filename,
 			Size:             size,
 			FirstTime:        reqTime,
 			DeltaLastRequest: 0,

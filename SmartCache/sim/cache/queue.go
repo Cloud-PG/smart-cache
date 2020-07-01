@@ -118,6 +118,11 @@ func (man Manager) Len() int {
 	return len(man.files)
 }
 
+// GetFile returns a specific file support data
+func (man Manager) GetFile(id int64) *FileSupportData {
+	return man.files[id]
+}
+
 // Get values from a queue
 func (man Manager) Get(queue queueType) chan *FileSupportData {
 	ch := make(chan *FileSupportData)
