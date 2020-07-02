@@ -146,20 +146,28 @@ func (man Manager) Get() chan *FileSupportData {
 
 // Remove a file already in queue
 func (man *Manager) Remove(files []int64) {
-	for _, file := range files {
-		removeIdx := sort.Search(len(man.queue), func(idx int) bool { return man.queue[idx].Filename > file })
-		// Delete trick
-		// https://github.com/golang/go/wiki/SliceTricks#delete
-		copy(man.queue[removeIdx:], man.queue[removeIdx+1:])
+	indexToRemove := make([]int, 0)
+	for idx, queueFile := range man.queue {
+		for _, file := range files {
+			if queueFile.Filename == file {
+				indexToRemove = append(indexToRemove, idx)
+				// Remove and update from manager
+				curFile := man.files[file]
+				man.SizeSum -= curFile.Size
+				man.SizeSumSquare -= (curFile.Size * curFile.Size)
+				man.FrequencySum -= float64(curFile.Frequency)
+				man.FrequencySumSquare -= float64(curFile.Frequency * curFile.Frequency)
+				delete(man.files, file)
+				break
+			}
+		}
+	}
+	sort.Sort(sort.Reverse(sort.IntSlice(indexToRemove)))
+	for _, idxValue := range indexToRemove {
+		// Remove from queue
+		copy(man.queue[idxValue:], man.queue[idxValue+1:])
 		man.queue[len(man.queue)-1] = nil // or the zero value of T
 		man.queue = man.queue[:len(man.queue)-1]
-
-		curFile := man.files[file]
-		man.SizeSum -= curFile.Size
-		man.SizeSumSquare -= (curFile.Size * curFile.Size)
-		man.FrequencySum -= float64(curFile.Frequency)
-		man.FrequencySumSquare -= float64(curFile.Frequency * curFile.Frequency)
-		delete(man.files, file)
 	}
 }
 
@@ -183,7 +191,7 @@ func (man *Manager) Insert(file FileSupportData) {
 	case WeightQueue:
 		insertIdx = sort.Search(len(man.queue), func(idx int) bool { return man.queue[idx].Recency > file.Recency })
 	}
-	if insertIdx == len(man.queue) {
+	if insertIdx == len(man.queue) || insertIdx == -1 {
 		man.queue = append(man.queue, &file)
 	} else {
 		// Trick
