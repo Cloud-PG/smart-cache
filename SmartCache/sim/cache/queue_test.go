@@ -18,7 +18,7 @@ func BenchmarkQueue(b *testing.B) {
 			r := rand.New(rand.NewSource(42))
 
 			man := Manager{}
-			man.Init()
+			man.Init(LRUQueue)
 
 			for idx := 0; idx < numTests; idx++ {
 				man.Insert(
@@ -47,7 +47,7 @@ func BenchmarkQueue(b *testing.B) {
 func TestLRUQueue(t *testing.T) {
 	r := rand.New(rand.NewSource(42))
 	man := Manager{}
-	man.Init()
+	man.Init(LRUQueue)
 
 	insertedFiles := []int64{}
 
@@ -72,7 +72,7 @@ func TestLRUQueue(t *testing.T) {
 	})
 
 	prevRecency := int64(numTests + 1)
-	for file := range man.Get(LRUQueue) {
+	for file := range man.Get() {
 		// fmt.Println(file.Filename, file.Recency, prevRecency)
 		if prevRecency < file.Recency {
 			t.Log("LRU order not valid")
@@ -93,7 +93,7 @@ func TestLRUQueue(t *testing.T) {
 func TestLFUQueue(t *testing.T) {
 	r := rand.New(rand.NewSource(42))
 	man := Manager{}
-	man.Init()
+	man.Init(LFUQueue)
 
 	insertedFiles := []int64{}
 
@@ -118,7 +118,7 @@ func TestLFUQueue(t *testing.T) {
 	})
 
 	prevFrequency := int64(-1)
-	for file := range man.Get(LFUQueue) {
+	for file := range man.Get() {
 		// fmt.Println(file.Filename, file.Frequency, prevFrequency)
 		if prevFrequency > file.Frequency {
 			t.Log("LFU order not valid")
@@ -139,7 +139,7 @@ func TestLFUQueue(t *testing.T) {
 func TestSizeQueue(t *testing.T) {
 	r := rand.New(rand.NewSource(42))
 	man := Manager{}
-	man.Init()
+	man.Init(SizeBigQueue)
 
 	insertedFiles := []int64{}
 
@@ -164,18 +164,10 @@ func TestSizeQueue(t *testing.T) {
 	})
 
 	prevSize := float64(-1.0)
-	for file := range man.Get(SizeBigQueue) {
+	for file := range man.Get() {
 		// fmt.Println(file.Filename, file.Size, prevSize)
 		if prevSize > file.Size {
 			t.Log("Big size order not valid")
-			t.Fatal()
-		}
-		prevSize = file.Size
-	}
-	for file := range man.Get(SizeSmallQueue) {
-		// fmt.Println(file.Filename, file.Size, prevSize)
-		if prevSize < file.Size {
-			t.Log("Small size order not valid")
 			t.Fatal()
 		}
 		prevSize = file.Size

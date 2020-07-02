@@ -54,7 +54,7 @@ func (cache *SimpleCache) Init(vars ...interface{}) interface{} {
 	}
 
 	cache.stats.Init()
-	cache.files.Init()
+	cache.files.Init(cache.ordType)
 
 	if cache.HighWaterMark == 0.0 {
 		cache.HighWaterMark = 95.0
@@ -82,7 +82,7 @@ func (cache *SimpleCache) SetBandwidth(bandwidth float64) {
 
 // ClearFiles remove the cache files
 func (cache *SimpleCache) ClearFiles() {
-	cache.files.Init()
+	cache.files.Init(cache.ordType)
 	cache.stats.Clear()
 	cache.size = 0.
 }
@@ -134,7 +134,7 @@ func (cache *SimpleCache) Dumps(fileAndStats bool) [][]byte {
 	if fileAndStats {
 		// ----- Files -----
 		logger.Info("Dump cache files")
-		for file := range cache.files.Get(LRUQueue) {
+		for file := range cache.files.Get() {
 			dumpInfo, _ := json.Marshal(DumpInfo{Type: "FILES"})
 			dumpFile, _ := json.Marshal(file)
 			record, _ := json.Marshal(DumpRecord{
@@ -358,7 +358,7 @@ func (cache *SimpleCache) Free(amount float64, percentage bool) float64 {
 	}
 	if sizeToDelete > 0. {
 		deletedFiles := make([]int64, 0)
-		for curFile := range cache.files.Get(cache.ordType) {
+		for curFile := range cache.files.Get() {
 			logger.Debug("delete",
 				zap.Int64("filename", curFile.Filename),
 				zap.Float64("fileSize", curFile.Size),
@@ -534,7 +534,7 @@ func (cache *SimpleCache) MeanFrequency() float64 {
 func (cache *SimpleCache) MeanRecency() float64 {
 	totRecency := 0.0
 	curTick := float64(cache.tick)
-	for file := range cache.files.Get(NoQueue) {
+	for file := range cache.files.Get() {
 		totRecency += (curTick - float64(file.Recency))
 	}
 	return totRecency / float64(cache.files.Len())
@@ -557,7 +557,7 @@ func (cache *SimpleCache) StdDevFreq() float64 {
 func (cache *SimpleCache) StdDevRec() float64 {
 	mean := cache.MeanRecency()
 	sum := 0.0
-	for file := range cache.files.Get(NoQueue) {
+	for file := range cache.files.Get() {
 		sum += math.Pow(float64(file.Recency)-mean, 2)
 	}
 	return math.Sqrt(sum / (float64(cache.files.Len()) - 1.0))

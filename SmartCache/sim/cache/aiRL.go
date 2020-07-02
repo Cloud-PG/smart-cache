@@ -100,7 +100,7 @@ func (cache *AIRL) Dumps(fileAndStats bool) [][]byte {
 	if fileAndStats {
 		// ----- Files -----
 		logger.Info("Dump cache files")
-		for file := range cache.files.Get(LRUQueue) {
+		for file := range cache.files.Get() {
 			dumpInfo, _ := json.Marshal(DumpInfo{Type: "FILES"})
 			dumpFile, _ := json.Marshal(file)
 			record, _ := json.Marshal(DumpRecord{
@@ -276,7 +276,7 @@ func (cache *AIRL) updateCategoryStates() {
 	idxWeights := cache.evictionFeatureManager.FileFeatureIdxWeights()
 	fileFeatureIndexes := cache.evictionFeatureManager.FileFeatureIdexMap()
 
-	for file := range cache.files.Get(NoQueue) {
+	for file := range cache.files.Get() {
 		// fmt.Println(file.Filename)
 		cache.bufferIdxVector = cache.bufferIdxVector[:0]
 		for feature := range cache.evictionFeatureManager.FileFeatureIter() {

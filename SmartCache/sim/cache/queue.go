@@ -95,6 +95,7 @@ const (
 type Manager struct {
 	files              map[int64]*FileSupportData
 	queue              []*FileSupportData
+	qType              queueType
 	FrequencySum       float64
 	FrequencySumSquare float64
 	SizeSum            float64
@@ -102,7 +103,7 @@ type Manager struct {
 }
 
 // Init initialize the struct
-func (man *Manager) Init() {
+func (man *Manager) Init(qType queueType) {
 	man.files = make(map[int64]*FileSupportData, 0)
 	man.queue = make([]*FileSupportData, 0)
 }
@@ -124,55 +125,17 @@ func (man Manager) GetFile(id int64) *FileSupportData {
 }
 
 // Get values from a queue
-func (man Manager) Get(queue queueType) chan *FileSupportData {
+func (man Manager) Get() chan *FileSupportData {
 	ch := make(chan *FileSupportData)
 	go func() {
 		defer close(ch)
 		// Filtering trick
 		// https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
-		switch queue {
-		case LRUQueue:
-			var curQueue ByRecency = man.queue
-			if !sort.IsSorted(curQueue) {
-				sort.Sort(curQueue)
-			}
-			for _, file := range curQueue {
+		if man.qType != NoQueue {
+			for _, file := range man.queue {
 				ch <- file
 			}
-		case LFUQueue:
-			var curQueue ByFrequency = man.queue
-			if !sort.IsSorted(curQueue) {
-				sort.Sort(curQueue)
-			}
-			for _, file := range curQueue {
-				ch <- file
-			}
-		case SizeBigQueue:
-			var curQueue ByBigSize = man.queue
-			if !sort.IsSorted(curQueue) {
-				sort.Sort(curQueue)
-			}
-			for _, file := range curQueue {
-				ch <- file
-			}
-		case SizeSmallQueue:
-			var curQueue BySmallSize = man.queue
-			if !sort.IsSorted(curQueue) {
-				sort.Sort(curQueue)
-			}
-			for _, file := range curQueue {
-				ch <- file
-			}
-		case WeightQueue:
-			var curQueue ByWeight = man.queue
-			if !sort.IsSorted(curQueue) {
-				sort.Sort(curQueue)
-			}
-			for _, file := range curQueue {
-				ch <- file
-			}
-		default:
-			logger.Debug("No queue requested, only files...")
+		} else {
 			for _, file := range man.files {
 				ch <- file
 			}
@@ -184,15 +147,13 @@ func (man Manager) Get(queue queueType) chan *FileSupportData {
 // Remove a file already in queue
 func (man *Manager) Remove(files []int64) {
 	for _, file := range files {
-		for idx := len(man.queue) - 1; idx > -1; idx-- {
-			// https://github.com/golang/go/wiki/SliceTricks#delete
-			if man.queue[idx].Filename == file {
-				copy(man.queue[idx:], man.queue[idx+1:])
-				man.queue[len(man.queue)-1] = nil // or the zero value of T
-				man.queue = man.queue[:len(man.queue)-1]
-				break
-			}
-		}
+		removeIdx := sort.Search(len(man.queue), func(idx int) bool { return man.queue[idx].Filename > file })
+		// Delete trick
+		// https://github.com/golang/go/wiki/SliceTricks#delete
+		copy(man.queue[removeIdx:], man.queue[removeIdx+1:])
+		man.queue[len(man.queue)-1] = nil // or the zero value of T
+		man.queue = man.queue[:len(man.queue)-1]
+
 		curFile := man.files[file]
 		man.SizeSum -= curFile.Size
 		man.SizeSumSquare -= (curFile.Size * curFile.Size)
@@ -205,11 +166,32 @@ func (man *Manager) Remove(files []int64) {
 // Insert a file into the queue manager
 func (man *Manager) Insert(file FileSupportData) {
 	man.files[file.Filename] = &file
-	man.queue = append(man.queue, &file)
 	man.SizeSum += file.Size
 	man.SizeSumSquare += (file.Size * file.Size)
 	man.FrequencySum += float64(file.Frequency)
 	man.FrequencySumSquare += float64(file.Frequency * file.Frequency)
+	var insertIdx = -1
+	switch man.qType {
+	case LRUQueue:
+		insertIdx = sort.Search(len(man.queue), func(idx int) bool { return man.queue[idx].Recency > file.Recency })
+	case LFUQueue:
+		insertIdx = sort.Search(len(man.queue), func(idx int) bool { return man.queue[idx].Frequency > file.Frequency })
+	case SizeBigQueue:
+		insertIdx = sort.Search(len(man.queue), func(idx int) bool { return man.queue[idx].Size > file.Size || man.queue[idx].Recency > file.Recency })
+	case SizeSmallQueue:
+		insertIdx = sort.Search(len(man.queue), func(idx int) bool { return man.queue[idx].Size < file.Size || man.queue[idx].Recency > file.Recency })
+	case WeightQueue:
+		insertIdx = sort.Search(len(man.queue), func(idx int) bool { return man.queue[idx].Recency > file.Recency })
+	}
+	if insertIdx == len(man.queue) {
+		man.queue = append(man.queue, &file)
+	} else {
+		// Trick
+		// https://github.com/golang/go/wiki/SliceTricks#insert
+		man.queue = append(man.queue, nil)
+		copy(man.queue[insertIdx+1:], man.queue[insertIdx:])
+		man.queue[insertIdx] = &file
+	}
 }
 
 // Update a file into the queue manager
