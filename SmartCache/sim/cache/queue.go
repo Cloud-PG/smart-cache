@@ -134,7 +134,7 @@ func (man Manager) Get(queue queueType) chan *FileSupportData {
 		case LRUQueue:
 			var curQueue ByRecency = man.queue
 			if !sort.IsSorted(curQueue) {
-				sort.Stable(curQueue)
+				sort.Sort(curQueue)
 			}
 			for _, file := range curQueue {
 				ch <- file
@@ -142,7 +142,7 @@ func (man Manager) Get(queue queueType) chan *FileSupportData {
 		case LFUQueue:
 			var curQueue ByFrequency = man.queue
 			if !sort.IsSorted(curQueue) {
-				sort.Stable(curQueue)
+				sort.Sort(curQueue)
 			}
 			for _, file := range curQueue {
 				ch <- file
@@ -150,7 +150,7 @@ func (man Manager) Get(queue queueType) chan *FileSupportData {
 		case SizeBigQueue:
 			var curQueue ByBigSize = man.queue
 			if !sort.IsSorted(curQueue) {
-				sort.Stable(curQueue)
+				sort.Sort(curQueue)
 			}
 			for _, file := range curQueue {
 				ch <- file
@@ -158,7 +158,7 @@ func (man Manager) Get(queue queueType) chan *FileSupportData {
 		case SizeSmallQueue:
 			var curQueue BySmallSize = man.queue
 			if !sort.IsSorted(curQueue) {
-				sort.Stable(curQueue)
+				sort.Sort(curQueue)
 			}
 			for _, file := range curQueue {
 				ch <- file
@@ -166,7 +166,7 @@ func (man Manager) Get(queue queueType) chan *FileSupportData {
 		case WeightQueue:
 			var curQueue ByWeight = man.queue
 			if !sort.IsSorted(curQueue) {
-				sort.Stable(curQueue)
+				sort.Sort(curQueue)
 			}
 			for _, file := range curQueue {
 				ch <- file
