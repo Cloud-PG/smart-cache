@@ -132,47 +132,42 @@ func (man Manager) Get(queue queueType) chan *FileSupportData {
 		// https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
 		switch queue {
 		case LRUQueue:
-			var curQueue ByRecency = man.queue[:0]
-			for _, file := range man.files {
-				curQueue = append(curQueue, file)
+			var curQueue ByRecency = man.queue
+			if !sort.IsSorted(curQueue) {
+				sort.Stable(curQueue)
 			}
-			sort.Sort(curQueue)
 			for _, file := range curQueue {
 				ch <- file
 			}
 		case LFUQueue:
-			var curQueue ByFrequency = man.queue[:0]
-			for _, file := range man.files {
-				curQueue = append(curQueue, file)
+			var curQueue ByFrequency = man.queue
+			if !sort.IsSorted(curQueue) {
+				sort.Stable(curQueue)
 			}
-			sort.Sort(curQueue)
 			for _, file := range curQueue {
 				ch <- file
 			}
 		case SizeBigQueue:
-			var curQueue ByBigSize = man.queue[:0]
-			for _, file := range man.files {
-				curQueue = append(curQueue, file)
+			var curQueue ByBigSize = man.queue
+			if !sort.IsSorted(curQueue) {
+				sort.Stable(curQueue)
 			}
-			sort.Sort(curQueue)
 			for _, file := range curQueue {
 				ch <- file
 			}
 		case SizeSmallQueue:
-			var curQueue BySmallSize = man.queue[:0]
-			for _, file := range man.files {
-				curQueue = append(curQueue, file)
+			var curQueue BySmallSize = man.queue
+			if !sort.IsSorted(curQueue) {
+				sort.Stable(curQueue)
 			}
-			sort.Sort(curQueue)
 			for _, file := range curQueue {
 				ch <- file
 			}
 		case WeightQueue:
-			var curQueue ByWeight = man.queue[:0]
-			for _, file := range man.files {
-				curQueue = append(curQueue, file)
+			var curQueue ByWeight = man.queue
+			if !sort.IsSorted(curQueue) {
+				sort.Stable(curQueue)
 			}
-			sort.Sort(curQueue)
 			for _, file := range curQueue {
 				ch <- file
 			}
@@ -189,6 +184,15 @@ func (man Manager) Get(queue queueType) chan *FileSupportData {
 // Remove a file already in queue
 func (man *Manager) Remove(files []int64) {
 	for _, file := range files {
+		for idx := len(man.queue) - 1; idx > -1; idx-- {
+			// https://github.com/golang/go/wiki/SliceTricks#delete
+			if man.queue[idx].Filename == file {
+				copy(man.queue[idx:], man.queue[idx+1:])
+				man.queue[len(man.queue)-1] = nil // or the zero value of T
+				man.queue = man.queue[:len(man.queue)-1]
+				break
+			}
+		}
 		curFile := man.files[file]
 		man.SizeSum -= curFile.Size
 		man.SizeSumSquare -= (curFile.Size * curFile.Size)
@@ -196,13 +200,12 @@ func (man *Manager) Remove(files []int64) {
 		man.FrequencySumSquare -= float64(curFile.Frequency * curFile.Frequency)
 		delete(man.files, file)
 	}
-	man.queue = man.queue[:len(man.files)]
 }
 
 // Insert a file into the queue manager
 func (man *Manager) Insert(file FileSupportData) {
 	man.files[file.Filename] = &file
-	man.queue = append(man.queue, make([]*FileSupportData, 1)...)
+	man.queue = append(man.queue, &file)
 	man.SizeSum += file.Size
 	man.SizeSumSquare += (file.Size * file.Size)
 	man.FrequencySum += float64(file.Frequency)
