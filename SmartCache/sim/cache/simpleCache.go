@@ -337,16 +337,17 @@ func (cache *SimpleCache) AfterRequest(request *Request, hit bool, added bool) {
 
 // Free removes files from the cache
 func (cache *SimpleCache) Free(amount float64, percentage bool) float64 {
-	logger.Debug(
-		"Cache free",
-		zap.Float64("mean size", cache.MeanSize()),
-		zap.Float64("mean frequency", cache.MeanFrequency()),
-		zap.Float64("mean recency", cache.MeanRecency()),
-		zap.Int("num. files", cache.NumFiles()),
-		zap.Float64("std.dev. freq.", cache.StdDevFreq()),
-		zap.Float64("std.dev. rec.", cache.StdDevRec()),
-		zap.Float64("std.dev. size", cache.StdDevSize()),
-	)
+	// TODO: remove all means and StdDev
+	// logger.Debug(
+	// 	"Cache free",
+	// 	zap.Float64("mean size", cache.MeanSize()),
+	// 	zap.Float64("mean frequency", cache.MeanFrequency()),
+	// 	zap.Float64("mean recency", cache.MeanRecency()),
+	// 	zap.Int("num. files", cache.NumFiles()),
+	// 	zap.Float64("std.dev. freq.", cache.StdDevFreq()),
+	// 	zap.Float64("std.dev. rec.", cache.StdDevRec()),
+	// 	zap.Float64("std.dev. size", cache.StdDevSize()),
+	// )
 	var (
 		totalDeleted float64
 		sizeToDelete float64
