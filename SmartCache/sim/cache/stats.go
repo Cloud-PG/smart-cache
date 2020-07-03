@@ -32,6 +32,8 @@ func (statStruct *Stats) Init() {
 func (statStruct *Stats) Clear() {
 	for _, fileStats := range statStruct.fileStats {
 		fileStats.InCache = false
+		fileStats.InCacheSince = time.Time{}
+		fileStats.InCacheTick = -1
 		fileStats.Recency = 0
 	}
 	statStruct.weightSum = 0.0
@@ -110,6 +112,7 @@ func (statStruct *Stats) GetOrCreate(filename int64, vars ...interface{}) (*File
 			FirstTime:        reqTime,
 			DeltaLastRequest: 0,
 			Recency:          curTick,
+			InCacheTick:      -1,
 		}
 		statStruct.fileStats[filename] = curStats
 	} else {
@@ -158,6 +161,7 @@ type FileStats struct {
 	NMiss             int64       `json:"nMiss"`
 	FirstTime         time.Time   `json:"firstTime"`
 	InCacheSince      time.Time   `json:"inCacheSince"`
+	InCacheTick       int64       `json:"inCacheTick"`
 	InCache           bool        `json:"inCache"`
 	LastTimeRequested time.Time   `json:"lastTimeRequested"`
 	RequestTicksMean  float64     `json:"requestTicksMean"`
@@ -184,16 +188,18 @@ func (stats *FileStats) loads(inString string) *FileStats {
 	return stats
 }
 
-func (stats *FileStats) addInCache(curTime *time.Time) {
+func (stats *FileStats) addInCache(tick int64, curTime *time.Time) {
 	if curTime != nil {
 		stats.InCacheSince = *curTime
 	}
+	stats.InCacheTick = tick
 	stats.InCache = true
 }
 
 func (stats *FileStats) removeFromCache() {
 	stats.InCacheSince = time.Time{}
 	stats.InCache = false
+	stats.InCacheTick = -1
 	stats.FrequencyInCache = 0
 }
 

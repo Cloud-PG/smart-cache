@@ -35,13 +35,11 @@ const (
 
 // Manager manages the files in cache
 type Manager struct {
-	files              map[int64]*FileSupportData
-	queue              []*FileSupportData
-	qType              queueType
-	FrequencySum       float64
-	FrequencySumSquare float64
-	SizeSum            float64
-	SizeSumSquare      float64
+	files        map[int64]*FileSupportData
+	queue        []*FileSupportData
+	qType        queueType
+	FrequencySum float64
+	SizeSum      float64
 }
 
 // Init initialize the struct
@@ -92,9 +90,7 @@ func (man *Manager) Remove(files []int64) {
 	for _, file := range files {
 		curFile := man.files[file]
 		man.SizeSum -= curFile.Size
-		man.SizeSumSquare -= (curFile.Size * curFile.Size)
 		man.FrequencySum -= float64(curFile.Frequency)
-		man.FrequencySumSquare -= float64(curFile.Frequency * curFile.Frequency)
 		delete(man.files, file)
 	}
 	if man.qType != NoQueue {
@@ -121,9 +117,7 @@ func (man *Manager) Remove(files []int64) {
 func (man *Manager) Insert(file FileSupportData) {
 	man.files[file.Filename] = &file
 	man.SizeSum += file.Size
-	man.SizeSumSquare += (file.Size * file.Size)
 	man.FrequencySum += float64(file.Frequency)
-	man.FrequencySumSquare += float64(file.Frequency * file.Frequency)
 
 	if man.qType != NoQueue {
 		var insertIdx = -1

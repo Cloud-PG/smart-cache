@@ -584,7 +584,10 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 		logger.Debug("cache", zap.Int("current state", curState))
 
 		storeTick, _ := cache.delayedRewardAdditionAgent(hit, request.Filename, curState)
-		cache.delayedRewardEvictionAgent(hit, request.Filename, storeTick)
+
+		if cache.evictionAgentOK {
+			cache.delayedRewardEvictionAgent(hit, request.Filename, storeTick)
+		}
 
 		if !hit {
 
@@ -628,7 +631,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				})
 
 				cache.size += requestedFileSize
-				fileStats.addInCache(&request.DayTime)
+				fileStats.addInCache(cache.tick, &request.DayTime)
 				added = true
 
 			}
@@ -651,6 +654,9 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 		// #                      NO ADDITION TABLE                            #
 		// #####################################################################
 
+		storeTick := fileStats.InCacheTick
+		cache.delayedRewardEvictionAgent(hit, request.Filename, storeTick)
+
 		if !hit {
 			// ########################
 			// ##### MISS branch  #####
@@ -672,7 +678,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				})
 
 				cache.size += requestedFileSize
-				fileStats.addInCache(&request.DayTime)
+				fileStats.addInCache(cache.tick, &request.DayTime)
 				added = true
 				// fileStats.updateFilePoints(&cache.curTime)
 				// cache.points += fileStats.Points
