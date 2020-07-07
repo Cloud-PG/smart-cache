@@ -460,8 +460,7 @@ func (cache *AIRL) checkEvictionNextState(oldStateIdx int, newStateIdx int) bool
 	newState := cache.evictionAgent.Table.States[newStateIdx]
 	catSizeIdx := cache.evictionFeatureManager.FeatureIdexMap()["catSize"]
 	for idx, value := range oldState {
-		// TODO: test if it is better strictly less or less equal (< || <=)
-		if idx != catSizeIdx && value <= newState[idx] {
+		if idx != catSizeIdx && value > newState[idx] {
 			return false
 		}
 	}
@@ -707,8 +706,10 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 		// #                      NO ADDITION TABLE                            #
 		// #####################################################################
 
-		storeTick := fileStats.InCacheTick
-		cache.delayedRewardEvictionAgent(hit, request.Filename, storeTick)
+		if cache.evictionAgentOK {
+			storeTick := fileStats.InCacheTick
+			cache.delayedRewardEvictionAgent(hit, request.Filename, storeTick)
+		}
 
 		if !hit {
 			// ########################
