@@ -284,10 +284,18 @@ func (agent Agent) QTableToString() string {
 			switch curFeature.ReflectType {
 			case reflect.Int64:
 				curFeatureVal := curFeature.Int64Values[featureValIdx]
-				tmp = append(tmp, fmt.Sprintf("%d", curFeatureVal))
+				if curFeatureVal == math.MaxInt64 {
+					tmp = append(tmp, "max")
+				} else {
+					tmp = append(tmp, fmt.Sprintf("%d", curFeatureVal))
+				}
 			case reflect.Float64:
 				curFeatureVal := curFeature.Float64Values[featureValIdx]
-				tmp = append(tmp, fmt.Sprintf("%09.2f", curFeatureVal))
+				if curFeatureVal == math.MaxFloat64 {
+					tmp = append(tmp, "max")
+				} else {
+					tmp = append(tmp, fmt.Sprintf("%09.2f", curFeatureVal))
+				}
 			}
 
 		}
