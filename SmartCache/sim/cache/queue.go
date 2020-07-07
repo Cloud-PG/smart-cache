@@ -80,11 +80,13 @@ func (man Manager) Get(vars ...interface{}) chan *FileSupportData {
 	case len(vars) > 0:
 		totSize = vars[0].(float64)
 	}
-	if totSize == 0. {
-		man.dataCh = make(chan *FileSupportData, 128)
+
+	if totSize == 0. || man.qType == NoQueue {
+		man.dataCh = make(chan *FileSupportData, len(man.queue))
 	} else {
 		man.dataCh = make(chan *FileSupportData, 2)
 	}
+
 	go func() {
 		defer close(man.dataCh)
 		// Filtering trick
@@ -103,12 +105,6 @@ func (man Manager) Get(vars ...interface{}) chan *FileSupportData {
 		} else {
 			for _, fileSupportData := range man.files {
 				man.dataCh <- fileSupportData
-				if totSize != 0. {
-					sended += fileSupportData.Size
-					if sended >= totSize {
-						break
-					}
-				}
 			}
 		}
 	}()
