@@ -31,6 +31,7 @@ type AIRL struct {
 	additionAgent          qLearn.Agent
 	evictionAgent          qLearn.Agent
 	evictionAgentStep      int64
+	evictionRO             float64
 	bufferCategory         []bool
 	bufferIdxVector        []int
 	chanCategory           chan bool
@@ -53,6 +54,7 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 	decayRateEpsilon := args[3].(float64)
 
 	cache.evictionAgentStep = 100
+	cache.evictionRO = 0.1
 
 	logger.Info("Feature maps", zap.String("addition map", additionFeatureMap), zap.String("eviction map", evictionFeatureMap))
 
@@ -537,6 +539,22 @@ func (cache *AIRL) delayedRewardAdditionAgent(hit bool, filename int64, curState
 	return storeTick, notStoreTick
 }
 
+func (cache *AIRL) rewardEvictionAfterForcedCall(added bool) {
+	for state, action := range cache.curCacheStates {
+		if !added && action == qLearn.ActionNotDelete {
+			// Update table
+			cache.evictionAgent.UpdateTable(state, state, action, -cache.evictionRO)
+			// Update epsilon
+			cache.evictionAgent.UpdateEpsilon()
+		} else if added && action == qLearn.ActionDelete {
+			// Update table
+			cache.evictionAgent.UpdateTable(state, state, action, cache.evictionRO)
+			// Update epsilon
+			cache.evictionAgent.UpdateEpsilon()
+		}
+	}
+}
+
 // UpdatePolicy of AIRL cache
 func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool) bool {
 	var (
@@ -616,10 +634,19 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			case qLearn.ActionNotStore:
 				return added
 			case qLearn.ActionStore:
+				forced := false
 				if cache.Size()+requestedFileSize > cache.MaxSize {
-					cache.callEvictionAgent(true)
+					if cache.evictionAgentOK {
+						forced = true
+						cache.callEvictionAgent(forced)
+					} else {
+						cache.Free(requestedFileSize, false)
+					}
 				}
 				if cache.Size()+requestedFileSize > cache.MaxSize {
+					if cache.evictionAgentOK && forced {
+						cache.rewardEvictionAfterForcedCall(added)
+					}
 					return added
 				}
 				cache.files.Insert(&FileSupportData{
@@ -633,7 +660,9 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				cache.size += requestedFileSize
 				fileStats.addInCache(cache.tick, &request.DayTime)
 				added = true
-
+				if cache.evictionAgentOK && forced {
+					cache.rewardEvictionAfterForcedCall(added)
+				}
 			}
 
 		} else {
@@ -664,9 +693,16 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 			logger.Debug("NO ADDITION TABLE - Normal miss branch")
 
+			forced := false
+
 			// Insert with LRU mechanism
 			if cache.Size()+requestedFileSize > cache.MaxSize {
-				cache.Free(requestedFileSize, false)
+				if cache.evictionAgentOK {
+					forced = true
+					cache.callEvictionAgent(true)
+				} else {
+					cache.Free(requestedFileSize, false)
+				}
 			}
 			if cache.Size()+requestedFileSize <= cache.MaxSize {
 				cache.files.Insert(&FileSupportData{
@@ -679,9 +715,13 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 				cache.size += requestedFileSize
 				fileStats.addInCache(cache.tick, &request.DayTime)
+				if cache.evictionAgentOK && forced {
+					cache.rewardEvictionAfterForcedCall(added)
+				}
 				added = true
-				// fileStats.updateFilePoints(&cache.curTime)
-				// cache.points += fileStats.Points
+				if cache.evictionAgentOK && forced {
+					cache.rewardEvictionAfterForcedCall(added)
+				}
 			}
 		} else {
 			// #######################
@@ -703,13 +743,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 // Free removes files from the cache
 func (cache *AIRL) Free(amount float64, percentage bool) float64 {
-	var totalDeleted float64
-	if cache.evictionAgentOK {
-		// TODO: manage the penalities before call eviction agent
-		totalDeleted = cache.callEvictionAgent(true)
-	} else {
-		totalDeleted = cache.SimpleCache.Free(amount, percentage)
-	}
+	var totalDeleted float64 = cache.SimpleCache.Free(amount, percentage)
 	return totalDeleted
 }
 
