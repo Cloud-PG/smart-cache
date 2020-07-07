@@ -187,7 +187,9 @@ func (man *Manager) Update(file *FileSupportData) error {
 			curQueueIdx := man.files[curFile.Filename].QueueIdx
 			// Delete trick
 			// -> https://github.com/golang/go/wiki/SliceTricks#delete
-			man.queue = append(man.queue[:curQueueIdx], man.queue[curQueueIdx+1:]...)
+			copy(man.queue[curQueueIdx:], man.queue[curQueueIdx+1:])
+			man.queue[len(man.queue)-1] = nil // or the zero value of T
+			man.queue = man.queue[:len(man.queue)-1]
 		}
 		man.SizeSum -= curFile.Size
 		man.FrequencySum -= float64(curFile.Frequency)
