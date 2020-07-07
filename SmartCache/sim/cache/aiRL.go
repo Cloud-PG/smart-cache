@@ -810,10 +810,10 @@ func (cache *AIRL) ExtraOutput(info string) string {
 		additionValueFunction := 0.
 		evictionValueFunction := 0.
 		if cache.additionAgentOK {
-			additionValueFunction = cache.additionAgent.ValueFunction
+			additionValueFunction = cache.additionAgent.QValue
 		}
 		if cache.evictionAgentOK {
-			evictionValueFunction = cache.evictionAgent.ValueFunction
+			evictionValueFunction = cache.evictionAgent.QValue
 		}
 		result = fmt.Sprintf("%0.2f,%0.2f", additionValueFunction, evictionValueFunction)
 	default:

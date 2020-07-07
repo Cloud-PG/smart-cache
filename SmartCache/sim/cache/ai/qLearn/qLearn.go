@@ -173,7 +173,7 @@ type Agent struct {
 	StepNum          int32                     `json:"episodeCounter"`
 	RGenerator       *rand.Rand                `json:"rGenerator"`
 	UpdateAlgorithm  RLUpdateAlg               `json:"updateAlgorithm"`
-	ValueFunction    float64                   `json:"valueFunction"`
+	QValue           float64                   `json:"qValue"`
 }
 
 // Init initilizes the Agent struct
@@ -232,14 +232,14 @@ func (agent *Agent) ResetParams(initEpsilon float64, decayRateEpsilon float64) {
 	agent.MaxEpsilon = 1.0
 	agent.MinEpsilon = 0.1
 	agent.StepNum = 0
-	agent.ValueFunction = 0.
+	agent.QValue = 0.
 
 	logger.Info("Parameters restored as default...")
 }
 
-// ResetValueFunction clean the value function
-func (agent *Agent) ResetValueFunction() {
-	agent.ValueFunction = 0.
+// QesetqValue clean the value function
+func (agent *Agent) QesetqValue() {
+	agent.QValue = 0.
 }
 
 // GetRandomFloat generates a random number
@@ -357,7 +357,7 @@ func (agent Agent) GetBestAction(stateIdx int) ActionType {
 
 // UpdateTable change the table values of the given action
 func (agent *Agent) UpdateTable(stateIdx int, newStateIdx int, action ActionType, reward float64) {
-	agent.ValueFunction += reward
+	agent.QValue += reward
 
 	curStateValue := agent.GetActionValue(stateIdx, action)
 	nextStateBestValue := agent.GetBestActionValue(newStateIdx)
