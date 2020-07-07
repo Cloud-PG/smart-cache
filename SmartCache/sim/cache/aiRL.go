@@ -11,16 +11,6 @@ import (
 	"go.uber.org/zap"
 )
 
-// PrevChoice represents a choice in the past
-type PrevChoice struct {
-	Filename    int64
-	Size        float64
-	State       string
-	Action      qLearn.ActionType
-	GoodStrikes int
-	BadStrikes  int
-}
-
 // AIRL cache
 type AIRL struct {
 	SimpleCache
@@ -377,6 +367,24 @@ func (cache *AIRL) callEvictionAgent(forced bool) float64 {
 	// fmt.Println("----- Update Category States -----")
 	cache.updateCategoryStates()
 
+	// Forced event rewards
+	if forced {
+		choicesList, inMemory := cache.evictionAgent.Memory["NotDelete"]
+		if inMemory {
+			for _, choice := range *choicesList {
+				for catStateIdx := range cache.curCacheStates {
+					if cache.checkEvictionNextState(choice.State, catStateIdx) {
+						// Update table
+						cache.evictionAgent.UpdateTable(choice.State, choice.State, choice.Action, cache.evictionRO)
+						// Update epsilon
+						cache.evictionAgent.UpdateEpsilon()
+					}
+				}
+			}
+			*choicesList = (*choicesList)[:0]
+		}
+	}
+
 	// fmt.Println(cache.curCacheStates)
 
 	deletedFiles := make([]int64, 0)
@@ -402,6 +410,13 @@ func (cache *AIRL) callEvictionAgent(forced bool) float64 {
 				Action: catAction,
 				Tick:   cache.tick,
 			})
+			if catAction == qLearn.ActionNotDelete {
+				cache.evictionAgent.UpdateMemory("NotDelete", qLearn.Choice{
+					State:  catIdx,
+					Action: catAction,
+					Tick:   cache.tick,
+				})
+			}
 		}
 	}
 	// fmt.Println("deleted", deletedFiles)
@@ -445,7 +460,8 @@ func (cache *AIRL) checkEvictionNextState(oldStateIdx int, newStateIdx int) bool
 	newState := cache.evictionAgent.Table.States[newStateIdx]
 	catSizeIdx := cache.evictionFeatureManager.FeatureIdexMap()["catSize"]
 	for idx, value := range oldState {
-		if idx != catSizeIdx && value < newState[idx] {
+		// TODO: test if it is better strictly less or less equal (< || <=)
+		if idx != catSizeIdx && value <= newState[idx] {
 			return false
 		}
 	}
@@ -542,15 +558,23 @@ func (cache *AIRL) delayedRewardAdditionAgent(hit bool, filename int64, curState
 func (cache *AIRL) rewardEvictionAfterForcedCall(added bool) {
 	for state, action := range cache.curCacheStates {
 		if !added && action == qLearn.ActionNotDelete {
-			// Update table
-			cache.evictionAgent.UpdateTable(state, state, action, -cache.evictionRO)
-			// Update epsilon
-			cache.evictionAgent.UpdateEpsilon()
+			for catStateIdx := range cache.curCacheStates {
+				if cache.checkEvictionNextState(state, catStateIdx) {
+					// Update table
+					cache.evictionAgent.UpdateTable(state, catStateIdx, action, -cache.evictionRO)
+					// Update epsilon
+					cache.evictionAgent.UpdateEpsilon()
+				}
+			}
 		} else if added && action == qLearn.ActionDelete {
-			// Update table
-			cache.evictionAgent.UpdateTable(state, state, action, cache.evictionRO)
-			// Update epsilon
-			cache.evictionAgent.UpdateEpsilon()
+			for catStateIdx := range cache.curCacheStates {
+				if cache.checkEvictionNextState(state, catStateIdx) {
+					// Update table
+					cache.evictionAgent.UpdateTable(state, catStateIdx, action, cache.evictionRO)
+					// Update epsilon
+					cache.evictionAgent.UpdateEpsilon()
+				}
+			}
 		}
 	}
 }
