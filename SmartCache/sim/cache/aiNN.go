@@ -118,7 +118,7 @@ func (cache *AINN) Loads(inputString [][]byte, _ ...interface{}) {
 		case "FILES":
 			var curFile FileSupportData
 			json.Unmarshal([]byte(curRecord.Data), &curFile)
-			cache.files.Insert(curFile)
+			cache.files.Insert(&curFile)
 			cache.size += curFile.Size
 		case "STATS":
 			json.Unmarshal([]byte(curRecord.Data), &cache.stats.fileStats)

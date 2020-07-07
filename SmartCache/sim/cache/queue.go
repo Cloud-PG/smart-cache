@@ -14,6 +14,7 @@ type FileSupportData struct {
 	Size      float64 `json:"size"`
 	Recency   int64   `json:"recency"`
 	Weight    float64 `json:"weight"`
+	QueueIdx  int     `json:"queueIdx"`
 }
 
 type queueType int
@@ -36,16 +37,18 @@ const (
 // Manager manages the files in cache
 type Manager struct {
 	files        map[int64]*FileSupportData
-	queue        []*FileSupportData
+	queue        []int64
 	qType        queueType
 	FrequencySum float64
 	SizeSum      float64
+	dataCh       chan *FileSupportData
+	stopCh       chan bool
 }
 
 // Init initialize the struct
 func (man *Manager) Init(qType queueType) {
 	man.files = make(map[int64]*FileSupportData, 0)
-	man.queue = make([]*FileSupportData, 0)
+	man.queue = make([]int64, 0)
 	man.qType = qType
 }
 
@@ -66,23 +69,47 @@ func (man Manager) GetFile(id int64) *FileSupportData {
 }
 
 // Get values from a queue
-func (man Manager) Get() chan *FileSupportData {
-	ch := make(chan *FileSupportData)
+func (man Manager) Get(vars ...interface{}) chan *FileSupportData {
+	var (
+		totSize float64
+		sended  float64
+	)
+	switch {
+	case len(vars) > 1:
+		panic("ERROR: too many passed arguments...")
+	case len(vars) > 0:
+		totSize = vars[0].(float64)
+	}
+	man.dataCh = make(chan *FileSupportData)
 	go func() {
-		defer close(ch)
+		defer close(man.dataCh)
 		// Filtering trick
 		// https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
 		if man.qType != NoQueue {
-			for _, file := range man.queue {
-				ch <- file
+			for idx := len(man.queue) - 1; idx > -1; idx-- {
+				filename := man.queue[idx]
+				curFile := man.files[filename]
+				man.dataCh <- curFile
+				if totSize != 0. {
+					sended += curFile.Size
+					if sended >= totSize {
+						break
+					}
+				}
 			}
 		} else {
-			for _, file := range man.files {
-				ch <- file
+			for _, fileSupportData := range man.files {
+				man.dataCh <- fileSupportData
+				if totSize != 0. {
+					sended += fileSupportData.Size
+					if sended >= totSize {
+						break
+					}
+				}
 			}
 		}
 	}()
-	return ch
+	return man.dataCh
 }
 
 // Remove a file already in queue
@@ -94,28 +121,15 @@ func (man *Manager) Remove(files []int64) {
 		delete(man.files, file)
 	}
 	if man.qType != NoQueue {
-		indexToRemove := make([]int, 0)
-		for idx, queueFile := range man.queue {
-			for _, file := range files {
-				if queueFile.Filename == file {
-					indexToRemove = append(indexToRemove, idx)
-					break
-				}
-			}
-		}
-		sort.Sort(sort.Reverse(sort.IntSlice(indexToRemove)))
-		for _, idxValue := range indexToRemove {
-			// Remove from queue
-			copy(man.queue[idxValue:], man.queue[idxValue+1:])
-			man.queue[len(man.queue)-1] = nil // or the zero value of T
-			man.queue = man.queue[:len(man.queue)-1]
-		}
+		targetIdx := len(man.queue) - len(files)
+		man.queue = man.queue[:targetIdx]
 	}
 }
 
 // Insert a file into the queue manager
-func (man *Manager) Insert(file FileSupportData) {
-	man.files[file.Filename] = &file
+func (man *Manager) Insert(file *FileSupportData) {
+	file.QueueIdx = -1
+	man.files[file.Filename] = file
 	man.SizeSum += file.Size
 	man.FrequencySum += float64(file.Frequency)
 
@@ -123,36 +137,59 @@ func (man *Manager) Insert(file FileSupportData) {
 		var insertIdx = -1
 		switch man.qType {
 		case LRUQueue:
-			insertIdx = sort.Search(len(man.queue), func(idx int) bool { return man.queue[idx].Recency > file.Recency })
+			insertIdx = sort.Search(len(man.queue), func(idx int) bool { return man.files[man.queue[idx]].Recency < file.Recency })
 		case LFUQueue:
-			insertIdx = sort.Search(len(man.queue), func(idx int) bool { return man.queue[idx].Frequency > file.Frequency })
+			insertIdx = sort.Search(len(man.queue), func(idx int) bool { return man.files[man.queue[idx]].Frequency < file.Frequency })
 		case SizeBigQueue:
-			insertIdx = sort.Search(len(man.queue), func(idx int) bool { return man.queue[idx].Size > file.Size || man.queue[idx].Recency > file.Recency })
+			insertIdx = sort.Search(len(man.queue), func(idx int) bool {
+				curFile := man.files[man.queue[idx]]
+				if curFile.Size == file.Size {
+					return curFile.Recency < file.Recency
+				}
+				return curFile.Size > file.Size
+
+			})
 		case SizeSmallQueue:
-			insertIdx = sort.Search(len(man.queue), func(idx int) bool { return man.queue[idx].Size < file.Size || man.queue[idx].Recency > file.Recency })
+			insertIdx = sort.Search(len(man.queue), func(idx int) bool {
+				curFile := man.files[man.queue[idx]]
+				if curFile.Size == file.Size {
+					return curFile.Recency < file.Recency
+				}
+				return curFile.Size < file.Size
+			})
 		case WeightQueue:
-			insertIdx = sort.Search(len(man.queue), func(idx int) bool { return man.queue[idx].Recency > file.Recency })
+			insertIdx = sort.Search(len(man.queue), func(idx int) bool { return man.files[man.queue[idx]].Weight < file.Weight })
 		}
 		if insertIdx == len(man.queue) {
-			man.queue = append(man.queue, &file)
+			file.QueueIdx = len(man.queue)
+			man.queue = append(man.queue, file.Filename)
 		} else {
 			// Trick
 			// https://github.com/golang/go/wiki/SliceTricks#insert
-			man.queue = append(man.queue, nil)
+			man.queue = append(man.queue, -1)
 			copy(man.queue[insertIdx+1:], man.queue[insertIdx:])
-			man.queue[insertIdx] = &file
+			man.queue[insertIdx] = file.Filename
+			for idx := insertIdx; idx < len(man.queue); idx++ {
+				man.files[man.queue[idx]].QueueIdx = idx
+			}
 		}
 	}
 }
 
 // Update a file into the queue manager
-func (man *Manager) Update(file FileSupportData) error {
-	// TODO: update performances
+func (man *Manager) Update(file *FileSupportData) error {
 	curFile, inCache := man.files[file.Filename]
-	fileValues := *curFile
 	if inCache {
-		man.Remove([]int64{curFile.Filename})
-		man.Insert(fileValues)
+		if man.qType != NoQueue {
+			curQueueIdx := man.files[curFile.Filename].QueueIdx
+			// Delete trick
+			// -> https://github.com/golang/go/wiki/SliceTricks#delete
+			man.queue = append(man.queue[:curQueueIdx], man.queue[curQueueIdx+1:]...)
+		}
+		man.SizeSum -= curFile.Size
+		man.FrequencySum -= float64(curFile.Frequency)
+		delete(man.files, curFile.Filename)
+		man.Insert(file)
 		return nil
 	}
 	return errors.New("File not in manager")

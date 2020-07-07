@@ -176,7 +176,7 @@ func (cache *SimpleCache) Loads(inputString [][]byte, _ ...interface{}) {
 		case "FILES":
 			var curFile FileSupportData
 			json.Unmarshal([]byte(curRecord.Data), &curFile)
-			cache.files.Insert(curFile)
+			cache.files.Insert(&curFile)
 			cache.size += curFile.Size
 		}
 	}
@@ -267,7 +267,7 @@ func (cache *SimpleCache) UpdatePolicy(request *Request, fileStats *FileStats, h
 			cache.size += requestedFileSize
 			fileStats.addInCache(cache.tick, nil)
 
-			cache.files.Insert(FileSupportData{
+			cache.files.Insert(&FileSupportData{
 				Filename:  request.Filename,
 				Size:      request.Size,
 				Frequency: fileStats.FrequencyInCache,
@@ -277,7 +277,7 @@ func (cache *SimpleCache) UpdatePolicy(request *Request, fileStats *FileStats, h
 			added = true
 		}
 	} else {
-		cache.files.Update(FileSupportData{
+		cache.files.Update(&FileSupportData{
 			Filename:  request.Filename,
 			Size:      request.Size,
 			Frequency: fileStats.FrequencyInCache,
@@ -356,14 +356,14 @@ func (cache *SimpleCache) Free(amount float64, percentage bool) float64 {
 	}
 	if sizeToDelete > 0. {
 		deletedFiles := make([]int64, 0)
-		for curFile := range cache.files.Get() {
-			// logger.Debug("delete",
-			// 	zap.Int64("filename", curFile.Filename),
-			// 	zap.Float64("fileSize", curFile.Size),
-			// 	zap.Int64("frequency", curFile.Frequency),
-			// 	zap.Int64("recency", curFile.Recency),
-			// 	zap.Float64("cacheSize", cache.Size()),
-			// )
+		for curFile := range cache.files.Get(sizeToDelete) {
+			logger.Debug("delete",
+				zap.Int64("filename", curFile.Filename),
+				zap.Float64("fileSize", curFile.Size),
+				zap.Int64("frequency", curFile.Frequency),
+				zap.Int64("recency", curFile.Recency),
+				zap.Float64("cacheSize", cache.Size()),
+			)
 
 			curFileStats := cache.stats.Get(curFile.Filename)
 			curFileStats.removeFromCache()
@@ -374,10 +374,6 @@ func (cache *SimpleCache) Free(amount float64, percentage bool) float64 {
 			totalDeleted += curFile.Size
 
 			deletedFiles = append(deletedFiles, curFile.Filename)
-
-			if totalDeleted >= sizeToDelete {
-				break
-			}
 		}
 		cache.files.Remove(deletedFiles)
 	}

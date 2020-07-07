@@ -74,7 +74,7 @@ func (cache *WeightFunLRU) Loads(inputString [][]byte, _ ...interface{}) {
 		case "FILES":
 			var curFile FileSupportData
 			json.Unmarshal([]byte(curRecord.Data), &curFile)
-			cache.files.Insert(curFile)
+			cache.files.Insert(&curFile)
 			cache.size += curFile.Size
 		case "STATS":
 			json.Unmarshal([]byte(curRecord.Data), &cache.stats.fileStats)
@@ -125,7 +125,7 @@ func (cache *WeightFunLRU) UpdatePolicy(request *Request, fileStats *FileStats, 
 			cache.size += requestedFileSize
 			fileStats.addInCache(cache.tick, nil)
 
-			cache.files.Insert(FileSupportData{
+			cache.files.Insert(&FileSupportData{
 				Filename:  request.Filename,
 				Size:      request.Size,
 				Frequency: fileStats.FrequencyInCache,
@@ -135,7 +135,7 @@ func (cache *WeightFunLRU) UpdatePolicy(request *Request, fileStats *FileStats, 
 			added = true
 		}
 	} else {
-		cache.files.Update(FileSupportData{
+		cache.files.Update(&FileSupportData{
 			Filename:  request.Filename,
 			Size:      request.Size,
 			Frequency: fileStats.FrequencyInCache,

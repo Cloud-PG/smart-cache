@@ -211,7 +211,7 @@ func (cache *AIRL) Loads(inputString [][]byte, vars ...interface{}) {
 		case "FILES":
 			var curFile FileSupportData
 			json.Unmarshal([]byte(curRecord.Data), &curFile)
-			cache.files.Insert(curFile)
+			cache.files.Insert(&curFile)
 			cache.size += curFile.Size
 		case "STATS":
 			var curFileStats FileStats
@@ -622,7 +622,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				if cache.Size()+requestedFileSize > cache.MaxSize {
 					return added
 				}
-				cache.files.Insert(FileSupportData{
+				cache.files.Insert(&FileSupportData{
 					Filename:  request.Filename,
 					Size:      request.Size,
 					Frequency: fileStats.FrequencyInCache,
@@ -640,7 +640,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			// #######################
 			// ##### HIT branch  #####
 			// #######################
-			cache.files.Update(FileSupportData{
+			cache.files.Update(&FileSupportData{
 				Filename:  request.Filename,
 				Size:      request.Size,
 				Frequency: fileStats.FrequencyInCache,
@@ -669,7 +669,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				cache.Free(requestedFileSize, false)
 			}
 			if cache.Size()+requestedFileSize <= cache.MaxSize {
-				cache.files.Insert(FileSupportData{
+				cache.files.Insert(&FileSupportData{
 					Filename:  request.Filename,
 					Size:      request.Size,
 					Frequency: fileStats.FrequencyInCache,
@@ -688,7 +688,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			// ##### HIT branch  #####
 			// #######################
 			logger.Debug("NO ADDITION TABLE - Normal hit branch")
-			cache.files.Update(FileSupportData{
+			cache.files.Update(&FileSupportData{
 				Filename:  request.Filename,
 				Size:      request.Size,
 				Frequency: fileStats.FrequencyInCache,
