@@ -34,6 +34,8 @@ type SimpleCache struct {
 	numLocal, numRemote                int64
 	dataWritten, dataRead, dataDeleted float64
 	dataReadOnHit, dataReadOnMiss      float64
+	dailyfreeSpace                     []float64
+	sumDailyFreeSpace                  float64
 	HighWaterMark                      float64
 	LowWaterMark                       float64
 	numDailyHit                        int64
@@ -55,6 +57,8 @@ func (cache *SimpleCache) Init(vars ...interface{}) interface{} {
 
 	cache.stats.Init()
 	cache.files.Init(cache.ordType)
+
+	cache.dailyfreeSpace = make([]float64, 0)
 
 	if cache.HighWaterMark == 0.0 {
 		cache.HighWaterMark = 95.0
@@ -99,6 +103,8 @@ func (cache *SimpleCache) Clear() {
 	cache.dataReadOnHit = 0.
 	cache.dataReadOnMiss = 0.
 	cache.dataDeleted = 0.
+	cache.dailyfreeSpace = cache.dailyfreeSpace[:0]
+	cache.sumDailyFreeSpace = 0.
 	cache.hitCPUEff = 0.
 	cache.missCPUEff = 0.
 	cache.upperCPUEff = 0.
@@ -117,6 +123,8 @@ func (cache *SimpleCache) ClearHitMissStats() {
 	cache.dataReadOnHit = 0.
 	cache.dataReadOnMiss = 0.
 	cache.dataDeleted = 0.
+	cache.dailyfreeSpace = cache.dailyfreeSpace[:0]
+	cache.sumDailyFreeSpace = 0.
 	cache.hitCPUEff = 0.
 	cache.missCPUEff = 0.
 	cache.upperCPUEff = 0.
@@ -328,6 +336,9 @@ func (cache *SimpleCache) AfterRequest(request *Request, hit bool, added bool) {
 	}
 	cache.dataRead += request.Size
 
+	cache.dailyfreeSpace = append(cache.dailyfreeSpace, cache.MaxSize-cache.size)
+	cache.sumDailyFreeSpace += cache.size
+
 	if cache.stats.Dirty() {
 		cache.stats.Purge()
 	}
@@ -537,4 +548,20 @@ func (cache *SimpleCache) MeanRecency() float64 {
 // NumFiles returns the number of files in cache
 func (cache *SimpleCache) NumFiles() int {
 	return cache.files.Len()
+}
+
+// AvgFreeSpace returns the average free space of the cache
+func (cache *SimpleCache) AvgFreeSpace() float64 {
+	return cache.sumDailyFreeSpace / float64(len(cache.dailyfreeSpace))
+}
+
+// StdDevFreeSpace returns the standard deviation of the free space of the cache
+func (cache *SimpleCache) StdDevFreeSpace() float64 {
+	mean := cache.AvgFreeSpace()
+	var sum float64
+	for _, value := range cache.dailyfreeSpace {
+		curDiff := value - mean
+		sum += (curDiff * curDiff)
+	}
+	return math.Sqrt(sum / float64(len(cache.dailyfreeSpace)-1))
 }

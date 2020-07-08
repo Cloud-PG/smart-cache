@@ -60,6 +60,8 @@ type Cache interface {
 	WeightedHitRate() float64
 	Size() float64
 	Occupancy() float64
+	AvgFreeSpace() float64
+	StdDevFreeSpace() float64
 	DataWritten() float64
 	DataRead() float64
 	DataReadOnHit() float64
@@ -309,4 +311,14 @@ func UpdatePolicy(cache Cache, request *Request, fileStats *FileStats, hit bool)
 // AfterRequest of the current cache instance
 func AfterRequest(cache Cache, request *Request, hit bool, added bool) {
 	cache.AfterRequest(request, hit, added)
+}
+
+// AvgFreeSpace of the current cache instance
+func AvgFreeSpace(cache Cache) float64 {
+	return cache.AvgFreeSpace()
+}
+
+// StdDevFreeSpace of the current cache instance
+func StdDevFreeSpace(cache Cache) float64 {
+	return cache.StdDevFreeSpace()
 }
