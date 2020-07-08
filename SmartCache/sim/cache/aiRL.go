@@ -675,7 +675,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				cache.files.Insert(&FileSupportData{
 					Filename:  request.Filename,
 					Size:      request.Size,
-					Frequency: fileStats.FrequencyInCache,
+					Frequency: fileStats.Frequency,
 					Recency:   fileStats.Recency,
 					Weight:    fileStats.Weight,
 				})
@@ -695,7 +695,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			cache.files.Update(&FileSupportData{
 				Filename:  request.Filename,
 				Size:      request.Size,
-				Frequency: fileStats.FrequencyInCache,
+				Frequency: fileStats.Frequency,
 				Recency:   fileStats.Recency,
 				Weight:    fileStats.Weight,
 			})
@@ -733,7 +733,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				cache.files.Insert(&FileSupportData{
 					Filename:  request.Filename,
 					Size:      request.Size,
-					Frequency: fileStats.FrequencyInCache,
+					Frequency: fileStats.Frequency,
 					Recency:   fileStats.Recency,
 					Weight:    fileStats.Weight,
 				})
@@ -756,7 +756,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			cache.files.Update(&FileSupportData{
 				Filename:  request.Filename,
 				Size:      request.Size,
-				Frequency: fileStats.FrequencyInCache,
+				Frequency: fileStats.Frequency,
 				Recency:   fileStats.Recency,
 				Weight:    fileStats.Weight,
 			})
