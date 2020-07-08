@@ -336,8 +336,9 @@ func (cache *SimpleCache) AfterRequest(request *Request, hit bool, added bool) {
 	}
 	cache.dataRead += request.Size
 
-	cache.dailyfreeSpace = append(cache.dailyfreeSpace, cache.MaxSize-cache.size)
-	cache.sumDailyFreeSpace += cache.size
+	freeSpace := cache.MaxSize - cache.size
+	cache.dailyfreeSpace = append(cache.dailyfreeSpace, freeSpace)
+	cache.sumDailyFreeSpace += freeSpace
 
 	if cache.stats.Dirty() {
 		cache.stats.Purge()
