@@ -17,10 +17,10 @@ python -m SmartCache.sim.simulator simAI ../../datasets/RecencyFocusedDataset --
 
 # ### ----- Plot results -----
 
-python -m SmartCache.sim.simulator plot simulation_HighFrequencyDataset --plot-resolution 1280,800 --cache-bandwidth 1 --export-table 'true' &&
+python -m SmartCache.sim.simulator plot ../../results/sim_syntethic_dataset/HighFrequencyDataset --plot-resolution 1280,800 --cache-bandwidth 1 --export-table 'true' &&
 
-python -m SmartCache.sim.simulator plot simulation_SizeFocusedDataset --plot-resolution 1280,800 --cache-bandwidth 1 --export-table 'true' &&
+python -m SmartCache.sim.simulator plot ../../results/sim_syntethic_dataset/SizeFocusedDataset --plot-resolution 1280,800 --cache-bandwidth 1 --export-table 'true' &&
 
-python -m SmartCache.sim.simulator plot simulation_RecencyFocusedDataset --plot-resolution 1280,800 --cache-bandwidth 1 --export-table 'true'
+python -m SmartCache.sim.simulator plot ../../results/sim_syntethic_dataset/RecencyFocusedDataset --plot-resolution 1280,800 --cache-bandwidth 1 --export-table 'true'
 
 ###
