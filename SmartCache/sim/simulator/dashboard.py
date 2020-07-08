@@ -146,10 +146,10 @@ def plot_results(folder: str, results: dict, cache_size: float,
     pbar.update(1)
 
     ###########################################################################
-    # Free space percentage
+    # Avg Free space percentage
     ###########################################################################
     with ignored(Exception):
-        free_space_fig = plot_measure(
+        avg_free_space_fig = plot_measure(
             tools,
             results,
             dates,
@@ -158,15 +158,39 @@ def plot_results(folder: str, results: dict, cache_size: float,
             window_size,
             x_range=size_fig.x_range,
             y_axis_type="log",
-            title="Free space percentage",
+            title="Avg. Free space percentage",
             plot_width=plot_width,
             plot_height=plot_height,
-            target="freeSizePerc",
+            target="avgFreeSpacePerc",
             y_axis_label="%",
             outer_legend=outer_legend,
             num_points=num_points,
         )
-        run_full_normal_size_figs.append(free_space_fig)
+        run_full_normal_size_figs.append(avg_free_space_fig)
+    pbar.update(1)
+
+    ###########################################################################
+    # Std Dev Free space
+    ###########################################################################
+    with ignored(Exception):
+        std_dev_free_space_fig = plot_measure(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            x_range=size_fig.x_range,
+            y_axis_type="log",
+            title="Std. Dev. Free space",
+            plot_width=plot_width,
+            plot_height=plot_height,
+            target="stdDevFreeSpace",
+            y_axis_label="MB",
+            outer_legend=outer_legend,
+            num_points=num_points,
+        )
+        run_full_normal_size_figs.append(std_dev_free_space_fig)
     pbar.update(1)
 
     ###########################################################################

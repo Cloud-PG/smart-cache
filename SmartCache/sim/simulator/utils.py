@@ -167,10 +167,13 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False,
                     # Bandwidth
                     values.append(
                         ((df['read on miss data'] / ((1000. / 8.) * 60. * 60. * 24. * bandwidth)) * 100.).mean())
-                    # Free Space
+                    # AvgFreeSpace
                     values.append(
-                        (((df['size'].apply(
-                            lambda elm: cache_size-elm)) / cache_size) * 100.).mean()
+                        df['avg free space'].mean(),
+                    )
+                    # StdDevFreeSpace
+                    values.append(
+                        df['std dev free space'].mean(),
                     )
                     # Hit Rate
                     values.append(df['hit rate'].mean())
@@ -201,7 +204,8 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False,
                     leaderboard,
                     columns=[
                         "cacheName", "throughput", "cacheCost",
-                        "readOnHitRatio", "bandSaturation", "freeSpace",
+                        "readOnHitRatio", "bandSaturation",
+                        "avgFreeSpace", "stdDevFreeSpace",
                         "hitRate",
                     ]
                 )
