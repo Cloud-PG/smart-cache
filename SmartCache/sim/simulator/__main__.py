@@ -47,6 +47,9 @@ def prepare_process_call(args, simulator_exe, cache_type, working_dir: str,
         f"--simStopWindow={stop_window}",
     ]
 
+    if args.watermarks:
+        exe_args.append("--simCacheWatermarks=true")
+
     if dump:
         exe_args.append("--simDump=true")
         exe_args.append(
@@ -260,6 +263,9 @@ def main():
                         default="",
                         help='Ai feature map file for the eviction table in Q-Learning [DEFAULT: ""]')
     parser.add_argument('--ai-rl-eviction-extended', type='bool',
+                        default=False,
+                        help='Use eviction extended feature map [DEFAULT: False]')
+    parser.add_argument('--watermarks', type='bool',
                         default=False,
                         help='Use eviction extended feature map [DEFAULT: False]')
     parser.add_argument('--init-epsilon', type=float,
