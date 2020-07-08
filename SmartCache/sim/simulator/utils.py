@@ -169,7 +169,7 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False,
                         ((df['read on miss data'] / ((1000. / 8.) * 60. * 60. * 24. * bandwidth)) * 100.).mean())
                     # AvgFreeSpace
                     values.append(
-                        df['avg free space'].mean(),
+                        (df['avg free space'].mean() / cache_size) * 100.,
                     )
                     # StdDevFreeSpace
                     values.append(
