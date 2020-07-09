@@ -369,7 +369,7 @@ func (cache *AIRL) callEvictionAgent(forced bool) float64 {
 
 	// Forced event rewards
 	if forced {
-		cache.evictionAgentStep /= 2 + 1
+		cache.evictionAgentStep = cache.evictionAgentStep>>1 + 1
 		choicesList, inMemory := cache.evictionAgent.Memory["NotDelete"]
 		if inMemory {
 			for _, choice := range *choicesList {
@@ -385,7 +385,7 @@ func (cache *AIRL) callEvictionAgent(forced bool) float64 {
 			*choicesList = (*choicesList)[:0]
 		}
 	} else {
-		cache.evictionAgentStep *= 2
+		cache.evictionAgentStep = cache.evictionAgentStep << 1
 	}
 
 	// fmt.Println(cache.curCacheStates)
