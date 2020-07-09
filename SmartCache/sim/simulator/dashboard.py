@@ -186,7 +186,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
             plot_width=plot_width,
             plot_height=plot_height,
             target="stdDevFreeSpace",
-            y_axis_label="MB",
+            y_axis_label="",
             outer_legend=outer_legend,
             num_points=num_points,
         )

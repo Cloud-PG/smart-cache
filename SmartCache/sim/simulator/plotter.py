@@ -470,7 +470,7 @@ def plot_measure(tools: list,
                 cache_size = get_cache_size(cache_name)
                 points = (values['avg free space'] / cache_size) * 100.
             elif target == "stdDevFreeSpace":
-                points = (values['std dev free space']) * 100.
+                points = values['std dev free space']
             elif target == "costFunction":
                 cache_size = get_cache_size(cache_name)
                 points = ((values['written data'] +
