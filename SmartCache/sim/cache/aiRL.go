@@ -43,7 +43,7 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 	initEpsilon := args[2].(float64)
 	decayRateEpsilon := args[3].(float64)
 
-	cache.evictionAgentStep = 100
+	cache.evictionAgentStep = 32
 	cache.evictionRO = 0.1
 
 	logger.Info("Feature maps", zap.String("addition map", additionFeatureMap), zap.String("eviction map", evictionFeatureMap))
@@ -369,6 +369,7 @@ func (cache *AIRL) callEvictionAgent(forced bool) float64 {
 
 	// Forced event rewards
 	if forced {
+		cache.evictionAgentStep /= 2 + 1
 		choicesList, inMemory := cache.evictionAgent.Memory["NotDelete"]
 		if inMemory {
 			for _, choice := range *choicesList {
@@ -383,6 +384,8 @@ func (cache *AIRL) callEvictionAgent(forced bool) float64 {
 			}
 			*choicesList = (*choicesList)[:0]
 		}
+	} else {
+		cache.evictionAgentStep *= 2
 	}
 
 	// fmt.Println(cache.curCacheStates)
@@ -430,7 +433,7 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) *FileStats {
 
 	if cache.tick%cache.evictionAgentStep == 0 {
 		if cache.evictionAgentOK {
-			cache.callEvictionAgent(true)
+			cache.callEvictionAgent(false)
 		}
 	}
 
