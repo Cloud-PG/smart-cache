@@ -80,7 +80,7 @@ def job_run(processes: list) -> bool:
             if process.returncode != 0:
                 print(
                     f"[{process.pid}][DONE][{task_name}][Return code -> {process.returncode}]", flush=True)
-                print(f"{process.stdout.read().decode('ascii')}", flush=True)
+                print(f"{process.stdout.read().decode('utf-8')}", flush=True)
                 exit(process.returncode)
 
     return len(running_processes) > 0
