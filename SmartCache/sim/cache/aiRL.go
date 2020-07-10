@@ -267,7 +267,7 @@ func (cache *AIRL) updateCategoryStates() {
 
 	idxWeights := cache.evictionFeatureManager.FileFeatureIdxWeights
 
-	for file := range cache.files.Get() {
+	for _, file := range cache.files.Get() {
 		// fmt.Println(file.Filename)
 		cache.bufferIdxVector = cache.bufferIdxVector[:0]
 		for _, feature := range cache.evictionFeatureManager.FileFeatures {

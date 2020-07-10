@@ -41,14 +41,14 @@ type Manager struct {
 	qType        queueType
 	FrequencySum float64
 	SizeSum      float64
-	dataCh       chan *FileSupportData
-	stopCh       chan bool
+	buffer       []*FileSupportData
 }
 
 // Init initialize the struct
 func (man *Manager) Init(qType queueType) {
 	man.files = make(map[int64]*FileSupportData, 0)
 	man.queue = make([]*FileSupportData, 0)
+	man.buffer = make([]*FileSupportData, 0)
 	man.qType = qType
 }
 
@@ -69,7 +69,7 @@ func (man Manager) GetFile(id int64) *FileSupportData {
 }
 
 // Get values from a queue
-func (man Manager) Get(vars ...interface{}) chan *FileSupportData {
+func (man Manager) Get(vars ...interface{}) []*FileSupportData {
 	var (
 		totSize float64
 		sended  float64
@@ -81,34 +81,27 @@ func (man Manager) Get(vars ...interface{}) chan *FileSupportData {
 		totSize = vars[0].(float64)
 	}
 
-	if totSize == 0. || man.qType == NoQueue {
-		man.dataCh = make(chan *FileSupportData, len(man.queue))
-	} else {
-		man.dataCh = make(chan *FileSupportData, 2)
-	}
-
-	go func() {
-		defer close(man.dataCh)
-		// Filtering trick
-		// https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
-		if man.qType != NoQueue {
-			for idx := len(man.queue) - 1; idx > -1; idx-- {
-				curFile := man.queue[idx]
-				man.dataCh <- curFile
-				if totSize != 0. {
-					sended += curFile.Size
-					if sended >= totSize {
-						break
-					}
+	// Filtering trick
+	// https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
+	man.buffer = man.buffer[:0]
+	if man.qType != NoQueue {
+		for idx := len(man.queue) - 1; idx > -1; idx-- {
+			curFile := man.queue[idx]
+			man.buffer = append(man.buffer, man.queue[idx])
+			if totSize != 0. {
+				sended += curFile.Size
+				if sended >= totSize {
+					break
 				}
 			}
-		} else {
-			for _, fileSupportData := range man.files {
-				man.dataCh <- fileSupportData
-			}
 		}
-	}()
-	return man.dataCh
+	} else {
+		for _, fileSupportData := range man.files {
+			man.buffer = append(man.buffer, fileSupportData)
+		}
+	}
+
+	return man.buffer
 }
 
 // Remove a file already in queue

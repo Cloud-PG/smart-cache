@@ -64,7 +64,7 @@ func TestLRUQueueBehavior(t *testing.T) {
 
 	toRemove := []int64{}
 
-	for curFile := range man.Get() {
+	for _, curFile := range man.Get() {
 		// fmt.Println(curFile.Filename, curFile.Recency)
 		inserted := false
 		for _, filename := range files {
@@ -85,7 +85,7 @@ func TestLRUQueueBehavior(t *testing.T) {
 	man.Remove(toRemove)
 
 	toUpdate := []int64{}
-	for curFile := range man.Get() {
+	for _, curFile := range man.Get() {
 		// fmt.Println(curFile.Filename, curFile.Recency)
 		inserted := false
 		for _, filename := range files {
@@ -116,7 +116,7 @@ func TestLRUQueueBehavior(t *testing.T) {
 	}
 
 	var prevRecency int64 = -1
-	for curFile := range man.Get() {
+	for _, curFile := range man.Get() {
 		// fmt.Println(curFile.Filename, curFile.Recency)
 		inserted := false
 		for _, filename := range files {
@@ -166,7 +166,7 @@ func TestLRUQueue(t *testing.T) {
 	})
 
 	prevRecency := int64(-1)
-	for curFile := range man.Get() {
+	for _, curFile := range man.Get() {
 		// fmt.Println(curFile.Filename, curFile.Recency, prevRecency)
 		if prevRecency != -1 && prevRecency > curFile.Recency {
 			t.Log("LRU order not valid")
@@ -212,7 +212,7 @@ func TestLFUQueue(t *testing.T) {
 	})
 
 	prevFrequency := int64(-1)
-	for file := range man.Get() {
+	for _, file := range man.Get() {
 		// fmt.Println(file.Filename, file.Frequency, prevFrequency)
 		if prevFrequency > file.Frequency {
 			t.Log("LFU order not valid")
@@ -258,7 +258,7 @@ func TestSizeQueue(t *testing.T) {
 	})
 
 	prevSize := float64(-1.0)
-	for curFile := range man.Get() {
+	for _, curFile := range man.Get() {
 		// fmt.Println(curFile.Filename, curFile.Size, prevSize)
 		if prevSize != -1.0 && prevSize < curFile.Size {
 			t.Log("LRU order not valid")

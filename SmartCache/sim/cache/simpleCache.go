@@ -368,7 +368,7 @@ func (cache *SimpleCache) Free(amount float64, percentage bool) float64 {
 	}
 	if sizeToDelete > 0. {
 		deletedFiles := make([]int64, 0)
-		for curFile := range cache.files.Get(sizeToDelete) {
+		for _, curFile := range cache.files.Get(sizeToDelete) {
 			logger.Debug("delete",
 				zap.Int64("filename", curFile.Filename),
 				zap.Float64("fileSize", curFile.Size),
@@ -540,7 +540,7 @@ func (cache *SimpleCache) MeanFrequency() float64 {
 func (cache *SimpleCache) MeanRecency() float64 {
 	totRecency := 0.0
 	curTick := float64(cache.tick)
-	for file := range cache.files.Get() {
+	for _, file := range cache.files.Get() {
 		totRecency += (curTick - float64(file.Recency))
 	}
 	return totRecency / float64(cache.files.Len())
