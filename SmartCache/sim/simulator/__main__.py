@@ -45,6 +45,10 @@ def prepare_process_call(args, simulator_exe, cache_type, working_dir: str,
         f"--simWindowSize={args.window_size}",
         f"--simStartFromWindow={start_window}",
         f"--simStopWindow={stop_window}",
+        # Enable CPU profiling
+        # "--cpuprofile=simulationCPU.prof",
+        # Enable Memory profiling
+        # "--memprofile=simulationMEM.prof",
     ]
 
     if args.watermarks:
