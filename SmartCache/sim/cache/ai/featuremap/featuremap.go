@@ -34,74 +34,32 @@ type ObjVal struct {
 
 // FeatureManager collects and manages the features
 type FeatureManager struct {
-	Features        []Obj `json:"feature"`
-	FileFeatureIdxs []int `json:"fileFeatureIdxs"`
+	Features              []Obj          `json:"feature"`
+	FileFeatures          []Obj          `json:"fileFeature"`
+	FeatureIdxMap         map[string]int `json:"featureIdxMap"`
+	FileFeatureIdxMap     map[string]int `json:"fileFeatureIdxMap"`
+	FeatureIdxWeights     []int          `json:"featureIdxWeights"`
+	FileFeatureIdxWeights []int          `json:"fileFeatureIdxWeights"`
 }
 
-// FileFeatureIter returns all the file feature objects
-func (manager FeatureManager) FileFeatureIter() chan Obj {
-	outChan := make(chan Obj, len(manager.FileFeatureIdxs))
-	go func() {
-		defer close(outChan)
-		for _, objIdx := range manager.FileFeatureIdxs {
-			outChan <- manager.Features[objIdx]
-		}
-	}()
-	return outChan
-}
-
-// FileFeatureIdxWeights returns the weight for each index of file features
-func (manager FeatureManager) FileFeatureIdxWeights() []int {
-	weights := make([]int, len(manager.FileFeatureIdxs))
-	for idx := 0; idx < len(weights); idx++ {
-		weights[idx] = 1
-		for inIdx := idx + 1; inIdx < len(weights); inIdx++ {
-			weights[idx] *= manager.Features[manager.FileFeatureIdxs[inIdx]].Size()
+func (manager *FeatureManager) makeFileFeatureIdxWeights() {
+	manager.FileFeatureIdxWeights = make([]int, len(manager.FileFeatures))
+	for idx := 0; idx < len(manager.FileFeatureIdxWeights); idx++ {
+		manager.FileFeatureIdxWeights[idx] = 1
+		for inIdx := idx + 1; inIdx < len(manager.FileFeatureIdxWeights); inIdx++ {
+			manager.FileFeatureIdxWeights[idx] *= manager.FileFeatures[inIdx].Size()
 		}
 	}
-	return weights
 }
 
-// FeatureIdxWeights returns the weight for each index of the features
-func (manager FeatureManager) FeatureIdxWeights() []int {
-	weights := make([]int, len(manager.Features))
-	for idx := 0; idx < len(weights); idx++ {
-		weights[idx] = 1
-		for inIdx := idx + 1; inIdx < len(weights); inIdx++ {
-			weights[idx] *= manager.Features[inIdx].Size()
+func (manager *FeatureManager) makeFeatureIdxWeights() {
+	manager.FeatureIdxWeights = make([]int, len(manager.Features))
+	for idx := 0; idx < len(manager.FeatureIdxWeights); idx++ {
+		manager.FeatureIdxWeights[idx] = 1
+		for inIdx := idx + 1; inIdx < len(manager.FeatureIdxWeights); inIdx++ {
+			manager.FeatureIdxWeights[idx] *= manager.Features[inIdx].Size()
 		}
 	}
-	return weights
-}
-
-// FeatureIter returns all the feature objects
-func (manager FeatureManager) FeatureIter() chan Obj {
-	outChan := make(chan Obj, len(manager.Features))
-	go func() {
-		defer close(outChan)
-		for _, curObj := range manager.Features {
-			outChan <- curObj
-		}
-	}()
-	return outChan
-}
-
-// FeatureIdexMap returns a map of the feature indexes
-func (manager FeatureManager) FeatureIdexMap() map[string]int {
-	indexes := make(map[string]int, 0)
-	for idx, curObj := range manager.Features {
-		indexes[curObj.Name] = idx
-	}
-	return indexes
-}
-
-// FileFeatureIdexMap returns a map of the file feature indexes
-func (manager FeatureManager) FileFeatureIdexMap() map[string]int {
-	indexes := make(map[string]int, 0)
-	for idx, curObjIdx := range manager.FileFeatureIdxs {
-		indexes[manager.Features[curObjIdx].Name] = idx
-	}
-	return indexes
 }
 
 // Parse a feature map file and returns the map of keys and objects
@@ -149,6 +107,11 @@ func (manager *FeatureManager) Populate(featureMapFilePath string) {
 	}
 
 	defer featureMapFile.Close()
+
+	manager.Features = make([]Obj, 0)
+	manager.FileFeatures = make([]Obj, 0)
+	manager.FeatureIdxMap = make(map[string]int)
+	manager.FileFeatureIdxMap = make(map[string]int)
 
 	if mainType := reflect.TypeOf(tmpMap).Kind(); mainType == reflect.Map {
 		mapIter := reflect.ValueOf(tmpMap).MapRange()
@@ -226,10 +189,14 @@ func (manager *FeatureManager) Populate(featureMapFilePath string) {
 
 				// fmt.Println("struct", curStruct)
 
+				curFeatureIdx := len(manager.Features)
+				manager.FeatureIdxMap[curStruct.Name] = curFeatureIdx
 				manager.Features = append(manager.Features, curStruct)
 
 				if curStruct.FileFeature {
-					manager.FileFeatureIdxs = append(manager.FileFeatureIdxs, len(manager.Features)-1)
+					curFileFeatureIdx := len(manager.FileFeatures)
+					manager.FileFeatureIdxMap[curStruct.Name] = curFileFeatureIdx
+					manager.FileFeatures = append(manager.FileFeatures, curStruct)
 				}
 
 			} else {
@@ -247,6 +214,9 @@ func (manager *FeatureManager) Populate(featureMapFilePath string) {
 		logger.Error("Feature entries", zap.String("error", "Not a valid feature JSON"))
 		os.Exit(-1)
 	}
+
+	manager.makeFeatureIdxWeights()
+	manager.makeFileFeatureIdxWeights()
 }
 
 // Size returns the number of possible elements

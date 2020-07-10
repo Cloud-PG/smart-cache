@@ -109,7 +109,7 @@ func (table *QTable) Init(featureManager *featuremap.FeatureManager, actions []A
 		}
 	}
 
-	table.IndexWeights = table.FeatureManager.FeatureIdxWeights()
+	table.IndexWeights = table.FeatureManager.FeatureIdxWeights
 
 	// ----- Output test -----
 	// fmt.Println("Index weights", table.IndexWeights)

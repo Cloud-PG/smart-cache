@@ -265,13 +265,12 @@ func (cache *AIRL) updateCategoryStates() {
 	catFiles := make(map[int][]int64)
 	catIdxMap := make(map[int][]int)
 
-	idxWeights := cache.evictionFeatureManager.FileFeatureIdxWeights()
-	fileFeatureIndexes := cache.evictionFeatureManager.FileFeatureIdexMap()
+	idxWeights := cache.evictionFeatureManager.FileFeatureIdxWeights
 
 	for file := range cache.files.Get() {
 		// fmt.Println(file.Filename)
 		cache.bufferIdxVector = cache.bufferIdxVector[:0]
-		for feature := range cache.evictionFeatureManager.FileFeatureIter() {
+		for _, feature := range cache.evictionFeatureManager.FileFeatures {
 			// fmt.Println(feature.Name)
 			switch feature.Name {
 			case "catSize":
@@ -320,11 +319,11 @@ func (cache *AIRL) updateCategoryStates() {
 		for _, feature := range cache.evictionFeatureManager.Features {
 			switch feature.Name {
 			case "catSize":
-				cache.bufferIdxVector = append(cache.bufferIdxVector, curCat[fileFeatureIndexes["catSize"]])
+				cache.bufferIdxVector = append(cache.bufferIdxVector, curCat[cache.evictionFeatureManager.FileFeatureIdxMap["catSize"]])
 			case "catNumReq":
-				cache.bufferIdxVector = append(cache.bufferIdxVector, curCat[fileFeatureIndexes["catNumReq"]])
+				cache.bufferIdxVector = append(cache.bufferIdxVector, curCat[cache.evictionFeatureManager.FileFeatureIdxMap["catNumReq"]])
 			case "catDeltaLastRequest":
-				cache.bufferIdxVector = append(cache.bufferIdxVector, curCat[fileFeatureIndexes["catDeltaLastRequest"]])
+				cache.bufferIdxVector = append(cache.bufferIdxVector, curCat[cache.evictionFeatureManager.FileFeatureIdxMap["catDeltaLastRequest"]])
 			case "catPercOcc":
 				cache.bufferIdxVector = append(cache.bufferIdxVector, feature.Index(catPercOcc[catIdx]))
 			case "percOcc":
@@ -461,7 +460,7 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) *FileStats {
 func (cache *AIRL) checkEvictionNextState(oldStateIdx int, newStateIdx int) bool {
 	oldState := cache.evictionAgent.Table.States[oldStateIdx]
 	newState := cache.evictionAgent.Table.States[newStateIdx]
-	catSizeIdx := cache.evictionFeatureManager.FeatureIdexMap()["catSize"]
+	catSizeIdx := cache.evictionFeatureManager.FeatureIdxMap["catSize"]
 	for idx, value := range oldState {
 		if idx != catSizeIdx && value > newState[idx] {
 			return false
