@@ -107,8 +107,15 @@ func (man Manager) Get(vars ...interface{}) []*FileSupportData {
 func (man *Manager) Remove(files []int64) {
 	// fmt.Println("REMOVE: ", files)
 	if len(files) > 0 {
-		if man.qType == NoQueue && man.noQueueUpdateIdx != -1 {
+		if man.qType != NoQueue {
+			targetIdx := len(man.queue) - len(files)
+			for idx := targetIdx; idx < len(man.queue); idx++ {
+				man.queue[idx] = nil
+			}
+			man.queue = man.queue[:targetIdx]
+		} else if man.qType == NoQueue && man.noQueueUpdateIdx != -1 {
 			copy(man.queue[man.noQueueUpdateIdx:], man.queue[man.noQueueUpdateIdx+1:])
+			man.queue[len(man.queue)-1] = nil // or the zero value of T
 			man.queue = man.queue[:len(man.queue)-1]
 			man.noQueueUpdateIdx = -1
 			// fmt.Println("NOQUEUE --- ")
@@ -120,12 +127,13 @@ func (man *Manager) Remove(files []int64) {
 			}
 			sort.Sort(sort.Reverse(sort.IntSlice(index2Remove)))
 			// fmt.Println(index2Remove)
-			for idx := 0; idx < len(man.queue); idx++ {
-				// fmt.Println(man.queue[idx])
-			}
+			// for idx := 0; idx < len(man.queue); idx++ {
+			// 	fmt.Println(man.queue[idx])
+			// }
 			// fmt.Println("---")
 			for _, curIdx := range index2Remove {
 				copy(man.queue[curIdx:], man.queue[curIdx+1:])
+				man.queue[len(man.queue)-1] = nil // or the zero value of T
 				man.queue = man.queue[:len(man.queue)-1]
 			}
 			if len(man.queue) != 0 {
