@@ -83,7 +83,7 @@ func (cache *WeightFunLRU) Loads(inputString [][]byte, _ ...interface{}) {
 }
 
 // BeforeRequest of LRU cache
-func (cache *WeightFunLRU) BeforeRequest(request *Request, hit bool) *FileStats {
+func (cache *WeightFunLRU) BeforeRequest(request *Request, hit bool) (*FileStats, bool) {
 	cache.prevTime = cache.curTime
 	cache.curTime = request.DayTime
 
@@ -101,7 +101,7 @@ func (cache *WeightFunLRU) BeforeRequest(request *Request, hit bool) *FileStats 
 	curStats, newFile := cache.stats.GetOrCreate(request.Filename, request.Size, request.DayTime)
 	curStats.updateStats(hit, request.Size, request.UserID, request.SiteName, request.DayTime)
 	cache.stats.updateWeight(curStats, newFile, cache.SelFunctionType, cache.Parameters.Alpha, cache.Parameters.Beta, cache.Parameters.Gamma)
-	return curStats
+	return curStats, hit
 }
 
 // UpdatePolicy of WeightFunLRU cache

@@ -38,8 +38,6 @@ type Manager struct {
 	files            map[int64]*FileSupportData
 	queue            []*FileSupportData
 	qType            queueType
-	FrequencySum     float64
-	SizeSum          float64
 	buffer           []*FileSupportData
 	noQueueUpdateIdx int
 }
@@ -107,31 +105,40 @@ func (man Manager) Get(vars ...interface{}) []*FileSupportData {
 
 // Remove a file already in queue
 func (man *Manager) Remove(files []int64) {
+	// fmt.Println("REMOVE: ", files)
 	if len(files) > 0 {
 		if man.qType == NoQueue && man.noQueueUpdateIdx != -1 {
 			copy(man.queue[man.noQueueUpdateIdx:], man.queue[man.noQueueUpdateIdx+1:])
-			man.queue[len(man.queue)-1] = nil // or the zero value of T
 			man.queue = man.queue[:len(man.queue)-1]
 			man.noQueueUpdateIdx = -1
+			// fmt.Println("NOQUEUE --- ")
 		} else {
 			index2Remove := make([]int, len(files))
 			for idx, filename := range files {
+				// fmt.Println(man.files[filename].QueueIdx)
 				index2Remove[idx] = man.files[filename].QueueIdx
 			}
 			sort.Sort(sort.Reverse(sort.IntSlice(index2Remove)))
+			// fmt.Println(index2Remove)
+			for idx := 0; idx < len(man.queue); idx++ {
+				// fmt.Println(man.queue[idx])
+			}
+			// fmt.Println("---")
 			for _, curIdx := range index2Remove {
 				copy(man.queue[curIdx:], man.queue[curIdx+1:])
-				man.queue[len(man.queue)-1] = nil // or the zero value of T
 				man.queue = man.queue[:len(man.queue)-1]
 			}
-			for idx := index2Remove[len(index2Remove)-1]; idx < len(man.queue); idx++ {
-				man.queue[idx].QueueIdx = idx
+			if len(man.queue) != 0 {
+				// fmt.Println("START UPDATE IDX")
+				for idx := index2Remove[len(index2Remove)-1]; idx < len(man.queue); idx++ {
+					// fmt.Println(man.queue[idx].Filename, "from:", man.queue[idx].QueueIdx, "->", idx)
+					man.queue[idx].QueueIdx = idx
+				}
+				// fmt.Println("END UPDATE IDX")
 			}
 		}
 		for _, file := range files {
-			curFile := man.files[file]
-			man.SizeSum -= curFile.Size
-			man.FrequencySum -= float64(curFile.Frequency)
+			// fmt.Println("REMOVE MAP: ", file)
 			delete(man.files, file)
 		}
 	}
@@ -144,9 +151,9 @@ func (man *Manager) Insert(file *FileSupportData) {
 	// if inCache {
 	// 	panic("ERROR: File already in manager...")
 	// }
+	// fmt.Println("INSERT: ", file.Filename)
+
 	man.files[file.Filename] = file
-	man.SizeSum += file.Size
-	man.FrequencySum += float64(file.Frequency)
 
 	var insertIdx = -1
 	switch man.qType {
@@ -201,6 +208,7 @@ func (man *Manager) Insert(file *FileSupportData) {
 
 // Update a file into the queue manager
 func (man *Manager) Update(file *FileSupportData) {
+	// fmt.Println("UPDATE: ", file.Filename)
 	if man.qType == NoQueue {
 		man.noQueueUpdateIdx = man.files[file.Filename].QueueIdx
 	}

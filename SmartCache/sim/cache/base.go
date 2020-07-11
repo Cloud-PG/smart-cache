@@ -72,14 +72,11 @@ type Cache interface {
 	CPUMissEff() float64
 	CPUEffUpperBound() float64
 	CPUEffLowerBound() float64
-	MeanSize() float64
-	MeanFrequency() float64
-	MeanRecency() float64
 	BandwidthUsage() float64
 
 	Check(int64) bool
 	CheckWatermark() bool
-	BeforeRequest(request *Request, hit bool) *FileStats
+	BeforeRequest(request *Request, hit bool) (*FileStats, bool)
 	UpdatePolicy(request *Request, fileStats *FileStats, hit bool) bool
 	AfterRequest(request *Request, hit bool, added bool)
 }
@@ -129,7 +126,7 @@ func GetFile(checkWatermarks bool, bandwidthManager bool, cache Cache, vars ...i
 	if bandwidthManager && !hit && BandwidthUsage(cache) >= 95.0 {
 		return false, true
 	}
-	fileStats := BeforeRequest(cache, &cacheRequest, hit)
+	fileStats, hit := BeforeRequest(cache, &cacheRequest, hit)
 	added := UpdatePolicy(cache, &cacheRequest, fileStats, hit)
 	AfterRequest(cache, &cacheRequest, hit, added)
 	if checkWatermarks {
@@ -218,21 +215,6 @@ func CPUEffLowerBound(cache Cache) float64 {
 	return cache.CPUEffLowerBound()
 }
 
-// MeanSize of the current cache instance
-func MeanSize(cache Cache) float64 {
-	return cache.MeanSize()
-}
-
-// MeanFrequency of the current cache instance
-func MeanFrequency(cache Cache) float64 {
-	return cache.MeanFrequency()
-}
-
-// MeanRecency of the current cache instance
-func MeanRecency(cache Cache) float64 {
-	return cache.MeanRecency()
-}
-
 // BandwidthUsage of the current cache instance
 func BandwidthUsage(cache Cache) float64 {
 	return cache.BandwidthUsage()
@@ -299,7 +281,7 @@ func CheckWatermark(cache Cache) bool {
 }
 
 // BeforeRequest of the current cache instance
-func BeforeRequest(cache Cache, request *Request, hit bool) *FileStats {
+func BeforeRequest(cache Cache, request *Request, hit bool) (*FileStats, bool) {
 	return cache.BeforeRequest(request, hit)
 }
 

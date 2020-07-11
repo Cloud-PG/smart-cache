@@ -239,7 +239,7 @@ func (cache *SimpleCache) Load(filename string) [][]byte {
 }
 
 // BeforeRequest of LRU cache
-func (cache *SimpleCache) BeforeRequest(request *Request, hit bool) *FileStats {
+func (cache *SimpleCache) BeforeRequest(request *Request, hit bool) (*FileStats, bool) {
 	cache.prevTime = cache.curTime
 	cache.curTime = request.DayTime
 
@@ -257,7 +257,7 @@ func (cache *SimpleCache) BeforeRequest(request *Request, hit bool) *FileStats {
 	curStats, _ := cache.stats.GetOrCreate(request.Filename, request.Size, request.DayTime, cache.tick)
 	curStats.updateStats(hit, request.Size, request.UserID, request.SiteName, request.DayTime)
 
-	return curStats
+	return curStats, hit
 }
 
 // UpdatePolicy of LRU cache
@@ -524,26 +524,6 @@ func (cache *SimpleCache) CPUEffBoundDiff() float64 {
 		}
 	}
 	return diffValue
-}
-
-// MeanSize returns the average size of the files in cache
-func (cache *SimpleCache) MeanSize() float64 {
-	return cache.files.SizeSum / float64(cache.files.Len())
-}
-
-// MeanFrequency returns the average frequency of the files in cache
-func (cache *SimpleCache) MeanFrequency() float64 {
-	return cache.files.FrequencySum / float64(cache.files.Len())
-}
-
-// MeanRecency returns the average recency of the files in cache
-func (cache *SimpleCache) MeanRecency() float64 {
-	totRecency := 0.0
-	curTick := float64(cache.tick)
-	for _, file := range cache.files.Get() {
-		totRecency += (curTick - float64(file.Recency))
-	}
-	return totRecency / float64(cache.files.Len())
 }
 
 // NumFiles returns the number of files in cache

@@ -355,7 +355,7 @@ func (cache *AIRL) updateCategoryStates() {
 	}
 }
 
-func (cache *AIRL) callEvictionAgent(forced bool) float64 {
+func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 	// TODO: add penalities when forced call (took all files in cache to get next states)
 	var (
 		totalDeleted float64
@@ -391,7 +391,8 @@ func (cache *AIRL) callEvictionAgent(forced bool) float64 {
 
 	deletedFiles := make([]int64, 0)
 	for catIdx, catAction := range cache.curCacheStates {
-		// fmt.Println("files", curCacheStatesFiles[catIdx])
+		// fmt.Println("files", cache.curCacheStatesFiles[catIdx])
+		newFileList := make([]int64, 0)
 		for _, filename := range cache.curCacheStatesFiles[catIdx] {
 			// fmt.Println("Filename", filename)
 			if catAction == qLearn.ActionDelete {
@@ -405,7 +406,9 @@ func (cache *AIRL) callEvictionAgent(forced bool) float64 {
 				cache.dataDeleted += curFileStats.Size
 				totalDeleted += curFileStats.Size
 
-				deletedFiles = append(deletedFiles, curFileStats.Filename)
+				deletedFiles = append(deletedFiles, filename)
+			} else {
+				newFileList = append(newFileList, filename)
 			}
 			cache.evictionAgent.UpdateMemory(filename, qLearn.Choice{
 				State:  catIdx,
@@ -420,41 +423,12 @@ func (cache *AIRL) callEvictionAgent(forced bool) float64 {
 				})
 			}
 		}
+		cache.curCacheStatesFiles[catIdx] = newFileList
 	}
 	// fmt.Println("deleted", deletedFiles)
 	cache.files.Remove(deletedFiles)
 
-	return totalDeleted
-}
-
-// BeforeRequest of LRU cache
-func (cache *AIRL) BeforeRequest(request *Request, hit bool) *FileStats {
-
-	if cache.tick%cache.evictionAgentStep == 0 {
-		if cache.evictionAgentOK {
-			cache.callEvictionAgent(false)
-		}
-	}
-
-	fileStats, _ := cache.stats.GetOrCreate(request.Filename, request.Size, request.DayTime, cache.tick)
-
-	cache.prevTime = cache.curTime
-	cache.curTime = request.DayTime
-
-	if !cache.curTime.Equal(cache.prevTime) {
-		cache.numDailyHit = 0
-		cache.numDailyMiss = 0
-		cache.hitCPUEff = 0.
-		cache.missCPUEff = 0.
-		cache.upperCPUEff = 0.
-		cache.lowerCPUEff = 0.
-		cache.numLocal = 0
-		cache.numRemote = 0
-	}
-
-	fileStats.updateStats(hit, request.Size, request.UserID, request.SiteName, request.DayTime)
-
-	return fileStats
+	return totalDeleted, deletedFiles
 }
 
 func (cache *AIRL) checkEvictionNextState(oldStateIdx int, newStateIdx int) bool {
@@ -578,6 +552,44 @@ func (cache *AIRL) rewardEvictionAfterForcedCall(added bool) {
 			}
 		}
 	}
+}
+
+// BeforeRequest of LRU cache
+func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) {
+
+	if cache.tick%cache.evictionAgentStep == 0 {
+		if cache.evictionAgentOK {
+			_, deletedFiles := cache.callEvictionAgent(false)
+			if hit {
+				for _, filename := range deletedFiles {
+					if filename == request.Filename {
+						hit = false
+						break
+					}
+				}
+			}
+		}
+	}
+
+	fileStats, _ := cache.stats.GetOrCreate(request.Filename, request.Size, request.DayTime, cache.tick)
+
+	cache.prevTime = cache.curTime
+	cache.curTime = request.DayTime
+
+	if !cache.curTime.Equal(cache.prevTime) {
+		cache.numDailyHit = 0
+		cache.numDailyMiss = 0
+		cache.hitCPUEff = 0.
+		cache.missCPUEff = 0.
+		cache.upperCPUEff = 0.
+		cache.lowerCPUEff = 0.
+		cache.numLocal = 0
+		cache.numRemote = 0
+	}
+
+	fileStats.updateStats(hit, request.Size, request.UserID, request.SiteName, request.DayTime)
+
+	return fileStats, hit
 }
 
 // UpdatePolicy of AIRL cache
@@ -772,19 +784,6 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 func (cache *AIRL) Free(amount float64, percentage bool) float64 {
 	var totalDeleted float64 = cache.SimpleCache.Free(amount, percentage)
 	return totalDeleted
-}
-
-// CheckWatermark checks the watermark levels and resolve the situation
-func (cache *AIRL) CheckWatermark() bool {
-	ok := true
-	if cache.SimpleCache.Occupancy() >= cache.HighWaterMark {
-		ok = false
-		cache.Free(
-			cache.SimpleCache.Occupancy()-cache.LowWaterMark,
-			true,
-		)
-	}
-	return ok
 }
 
 // ExtraStats for output
