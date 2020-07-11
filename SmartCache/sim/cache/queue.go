@@ -104,10 +104,10 @@ func (man Manager) Get(vars ...interface{}) []*FileSupportData {
 }
 
 // Remove a file already in queue
-func (man *Manager) Remove(files []int64) {
+func (man *Manager) Remove(files []int64, onUpdate bool) {
 	// fmt.Println("REMOVE: ", files)
 	if len(files) > 0 {
-		if man.qType != NoQueue {
+		if man.qType != NoQueue && !onUpdate {
 			targetIdx := len(man.queue) - len(files)
 			for idx := targetIdx; idx < len(man.queue); idx++ {
 				man.queue[idx] = nil
@@ -220,6 +220,6 @@ func (man *Manager) Update(file *FileSupportData) {
 	if man.qType == NoQueue {
 		man.noQueueUpdateIdx = man.files[file.Filename].QueueIdx
 	}
-	man.Remove([]int64{file.Filename})
+	man.Remove([]int64{file.Filename}, true)
 	man.Insert(file)
 }

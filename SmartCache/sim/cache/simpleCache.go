@@ -387,7 +387,7 @@ func (cache *SimpleCache) Free(amount float64, percentage bool) float64 {
 
 			deletedFiles = append(deletedFiles, curFile.Filename)
 		}
-		cache.files.Remove(deletedFiles)
+		cache.files.Remove(deletedFiles, false)
 	}
 	return totalDeleted
 }

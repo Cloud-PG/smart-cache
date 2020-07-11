@@ -426,7 +426,7 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 		cache.curCacheStatesFiles[catIdx] = newFileList
 	}
 	// fmt.Println("deleted", deletedFiles)
-	cache.files.Remove(deletedFiles)
+	cache.files.Remove(deletedFiles, false)
 
 	return totalDeleted, deletedFiles
 }

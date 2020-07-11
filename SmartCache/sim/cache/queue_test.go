@@ -82,7 +82,7 @@ func TestLRUQueueBehavior(t *testing.T) {
 		}
 	}
 
-	man.Remove(toRemove)
+	man.Remove(toRemove, false)
 
 	toUpdate := []int64{}
 	for _, curFile := range man.Get() {
@@ -175,7 +175,7 @@ func TestLRUQueue(t *testing.T) {
 		prevRecency = curFile.Recency
 	}
 
-	man.Remove(insertedFiles)
+	man.Remove(insertedFiles, false)
 
 	if man.Len() != 0 {
 		t.Log("Manager didn't remove all the files")
@@ -221,7 +221,7 @@ func TestLFUQueue(t *testing.T) {
 		prevFrequency = file.Frequency
 	}
 
-	man.Remove(insertedFiles)
+	man.Remove(insertedFiles, false)
 
 	if man.Len() != 0 {
 		t.Log("Manager didn't remove all the files")
@@ -267,7 +267,7 @@ func TestSizeQueue(t *testing.T) {
 		prevSize = curFile.Size
 	}
 
-	man.Remove(insertedFiles)
+	man.Remove(insertedFiles, false)
 
 	if man.Len() != 0 {
 		t.Log("Manager didn't remove all the files")
