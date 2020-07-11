@@ -113,7 +113,7 @@ func (man *Manager) Remove(files []int64, onUpdate bool) {
 				man.queue[idx] = nil
 			}
 			man.queue = man.queue[:targetIdx]
-		} else if man.qType == NoQueue && man.noQueueUpdateIdx != -1 {
+		} else if man.qType == NoQueue && onUpdate && man.noQueueUpdateIdx != -1 {
 			copy(man.queue[man.noQueueUpdateIdx:], man.queue[man.noQueueUpdateIdx+1:])
 			man.queue[len(man.queue)-1] = nil // or the zero value of T
 			man.queue = man.queue[:len(man.queue)-1]
