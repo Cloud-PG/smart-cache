@@ -108,29 +108,24 @@ func (man Manager) Get(vars ...interface{}) []*FileSupportData {
 // Remove a file already in queue
 func (man *Manager) Remove(files []int64) {
 	if len(files) > 0 {
-		if man.qType != NoQueue {
-			targetIdx := len(man.queue) - len(files)
-			man.queue = man.queue[:targetIdx]
-		} else { // NoQueue type
-			if man.noQueueUpdateIdx != -1 {
-				copy(man.queue[man.noQueueUpdateIdx:], man.queue[man.noQueueUpdateIdx+1:])
+		if man.qType == NoQueue && man.noQueueUpdateIdx != -1 {
+			copy(man.queue[man.noQueueUpdateIdx:], man.queue[man.noQueueUpdateIdx+1:])
+			man.queue[len(man.queue)-1] = nil // or the zero value of T
+			man.queue = man.queue[:len(man.queue)-1]
+			man.noQueueUpdateIdx = -1
+		} else {
+			index2Remove := make([]int, len(files))
+			for idx, filename := range files {
+				index2Remove[idx] = man.files[filename].QueueIdx
+			}
+			sort.Sort(sort.Reverse(sort.IntSlice(index2Remove)))
+			for _, curIdx := range index2Remove {
+				copy(man.queue[curIdx:], man.queue[curIdx+1:])
 				man.queue[len(man.queue)-1] = nil // or the zero value of T
 				man.queue = man.queue[:len(man.queue)-1]
-				man.noQueueUpdateIdx = -1
-			} else {
-				index2Remove := make([]int, len(files))
-				for idx, filename := range files {
-					index2Remove[idx] = man.files[filename].QueueIdx
-				}
-				sort.Sort(sort.Reverse(sort.IntSlice(index2Remove)))
-				for _, curIdx := range index2Remove {
-					copy(man.queue[curIdx:], man.queue[curIdx+1:])
-					man.queue[len(man.queue)-1] = nil // or the zero value of T
-					man.queue = man.queue[:len(man.queue)-1]
-				}
-				for idx := index2Remove[len(index2Remove)-1]; idx < len(man.queue); idx++ {
-					man.queue[idx].QueueIdx = idx
-				}
+			}
+			for idx := index2Remove[len(index2Remove)-1]; idx < len(man.queue); idx++ {
+				man.queue[idx].QueueIdx = idx
 			}
 		}
 		for _, file := range files {
@@ -149,7 +144,6 @@ func (man *Manager) Insert(file *FileSupportData) {
 	// if inCache {
 	// 	panic("ERROR: File already in manager...")
 	// }
-
 	man.files[file.Filename] = file
 	man.SizeSum += file.Size
 	man.FrequencySum += float64(file.Frequency)
