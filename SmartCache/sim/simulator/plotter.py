@@ -453,7 +453,55 @@ def plot_measure(tools: list,
         results, run_type, filters
     ):
         if run_type == "run_full_normal":
-            if target == "sizePerc":
+            if target == "additionActions":
+                store_points = values['Action store']
+                cur_line = cur_fig.line(
+                    dates if num_points == -
+                    1 else collapse2numpoints(num_points, x=dates),
+                    store_points if num_points == -
+                    1 else collapse2numpoints(num_points, y=store_points),
+                    color="blue",
+                    line_width=_LINE_WIDTH,
+                )
+                legend_items.append(
+                    ("Action store", [cur_line]))
+                not_store_points = values['Action not store']
+                cur_line = cur_fig.line(
+                    dates if num_points == -
+                    1 else collapse2numpoints(num_points, x=dates),
+                    not_store_points if num_points == -
+                    1 else collapse2numpoints(num_points, y=not_store_points),
+                    color="red",
+                    line_width=_LINE_WIDTH,
+                )
+                legend_items.append(
+                    ("Action not store", [cur_line]))
+                continue
+            elif target == "evictionActions":
+                delete_points = values['Action delete']
+                cur_line = cur_fig.line(
+                    dates if num_points == -
+                    1 else collapse2numpoints(num_points, x=dates),
+                    delete_points if num_points == -
+                    1 else collapse2numpoints(num_points, y=delete_points),
+                    color="blue",
+                    line_width=_LINE_WIDTH,
+                )
+                legend_items.append(
+                    ("Action delete", [cur_line]))
+                not_delete_points = values['Action not delete']
+                cur_line = cur_fig.line(
+                    dates if num_points == -
+                    1 else collapse2numpoints(num_points, x=dates),
+                    not_delete_points if num_points == -
+                    1 else collapse2numpoints(num_points, y=not_delete_points),
+                    color="red",
+                    line_width=_LINE_WIDTH,
+                )
+                legend_items.append(
+                    ("Action not delete", [cur_line]))
+                continue
+            elif target == "sizePerc":
                 cache_size = get_cache_size(cache_name)
                 points = (values['size'] / cache_size) * 100.
             elif target == "avgFreeSpacePerc":

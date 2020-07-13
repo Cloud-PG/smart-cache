@@ -470,6 +470,10 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				csvHeaderColumns = append(csvHeaderColumns, "Eviction calls")
 				csvHeaderColumns = append(csvHeaderColumns, "Eviction forced calls")
 				csvHeaderColumns = append(csvHeaderColumns, "Eviction step")
+				csvHeaderColumns = append(csvHeaderColumns, "Action store")
+				csvHeaderColumns = append(csvHeaderColumns, "Action not store")
+				csvHeaderColumns = append(csvHeaderColumns, "Action delete")
+				csvHeaderColumns = append(csvHeaderColumns, "Action not delete")
 			}
 			csvSimOutput.Write(csvHeaderColumns)
 
@@ -539,6 +543,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 							csvRow = append(csvRow, strings.Split(cache.ExtraOutput(curCacheInstance, "epsilonStats"), ",")...)
 							csvRow = append(csvRow, strings.Split(cache.ExtraOutput(curCacheInstance, "valueFunctions"), ",")...)
 							csvRow = append(csvRow, strings.Split(cache.ExtraOutput(curCacheInstance, "evictionStats"), ",")...)
+							csvRow = append(csvRow, strings.Split(cache.ExtraOutput(curCacheInstance, "actionStats"), ",")...)
 						}
 						csvSimOutput.Write(csvRow)
 					}

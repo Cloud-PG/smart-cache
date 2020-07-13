@@ -24,6 +24,7 @@ type AIRL struct {
 	evictionAgentNumCalls       int64
 	evictionAgentNumForcedCalls int64
 	evictionRO                  float64
+	actionCounters              map[qlearn.ActionType]int
 	bufferCategory              []bool
 	bufferIdxVector             []int
 	chanCategory                chan bool
@@ -47,6 +48,13 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 
 	cache.evictionAgentStep = 32
 	cache.evictionRO = 0.1
+
+	cache.actionCounters = make(map[qlearn.ActionType]int)
+
+	cache.actionCounters[qlearn.ActionStore] = 0
+	cache.actionCounters[qlearn.ActionNotStore] = 0
+	cache.actionCounters[qlearn.ActionDelete] = 0
+	cache.actionCounters[qlearn.ActionNotDelete] = 0
 
 	logger.Info("Feature maps", zap.String("addition map", additionFeatureMap), zap.String("eviction map", evictionFeatureMap))
 
@@ -90,6 +98,10 @@ func (cache *AIRL) ClearHitMissStats() {
 	cache.SimpleCache.ClearHitMissStats()
 	cache.evictionAgentNumCalls = 0
 	cache.evictionAgentNumForcedCalls = 0
+	cache.actionCounters[qlearn.ActionStore] = 0
+	cache.actionCounters[qlearn.ActionNotStore] = 0
+	cache.actionCounters[qlearn.ActionDelete] = 0
+	cache.actionCounters[qlearn.ActionNotDelete] = 0
 }
 
 // Dumps the AIRL cache
@@ -357,6 +369,7 @@ func (cache *AIRL) updateCategoryStates() {
 			curAction = cache.evictionAgent.Table.ActionTypes[randomActionIdx]
 		}
 
+		cache.actionCounters[curAction]++
 		cache.curCacheStates[curCatState] = curAction
 
 		cache.curCacheStatesFiles[curCatState] = make([]int64, len(catFiles[catIdx]))
@@ -671,6 +684,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				randomActionIdx := int(cache.additionAgent.GetRandomFloat() * float64(len(cache.additionAgent.Table.ActionTypes)))
 				curAction = cache.additionAgent.Table.ActionTypes[randomActionIdx]
 			}
+			cache.actionCounters[curAction]++
 
 			cache.additionAgent.UpdateMemory(request.Filename, qlearn.Choice{
 				State:  curState,
@@ -827,11 +841,27 @@ func (cache *AIRL) ExtraOutput(info string) string {
 		if cache.evictionAgentOK {
 			evictionValueFunction = cache.evictionAgent.QValue
 		}
-		result = fmt.Sprintf("%0.2f,%0.2f", additionValueFunction, evictionValueFunction)
+		result = fmt.Sprintf("%0.2f,%0.2f",
+			additionValueFunction,
+			evictionValueFunction,
+		)
 	case "evictionStats":
-		result = fmt.Sprintf("%d,%d,%d", cache.evictionAgentNumCalls, cache.evictionAgentNumForcedCalls, cache.evictionAgentStep)
+		result = fmt.Sprintf("%d,%d,%d",
+			cache.evictionAgentNumCalls,
+			cache.evictionAgentNumForcedCalls,
+			cache.evictionAgentStep,
+		)
 	case "epsilonStats":
-		result = fmt.Sprintf("%0.6f,%0.6f", cache.additionAgent.Epsilon, cache.evictionAgent.Epsilon)
+		result = fmt.Sprintf("%0.6f,%0.6f",
+			cache.additionAgent.Epsilon, cache.evictionAgent.Epsilon,
+		)
+	case "actionStats":
+		result = fmt.Sprintf("%d,%d,%d,%d",
+			cache.actionCounters[qlearn.ActionStore],
+			cache.actionCounters[qlearn.ActionNotStore],
+			cache.actionCounters[qlearn.ActionDelete],
+			cache.actionCounters[qlearn.ActionNotDelete],
+		)
 	default:
 		result = "NONE"
 	}

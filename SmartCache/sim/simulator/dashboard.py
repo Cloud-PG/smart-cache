@@ -71,13 +71,14 @@ def plot_results(folder: str, results: dict, cache_size: float,
     run_full_normal_epsilon_figs = []
     run_full_normal_value_functions_figs = []
     run_full_normal_eviction_stat_figs = []
+    run_full_normal_agent_action_figs = []
     run_full_normal_data_rw_figs = []
     run_full_normal_data_read_stats_figs = []
     run_full_normal_cpu_eff_figs = []
     run_single_window_figs = []
     run_next_period_figs = []
 
-    pbar = tqdm(total=27, desc="Plot results", ascii=True)
+    pbar = tqdm(total=32, desc="Plot results", ascii=True)
 
     ###########################################################################
     # Size plot of full normal run
@@ -521,7 +522,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
         )
         run_full_normal_eviction_stat_figs.append(evc_calls_fig)
     pbar.update(1)
-    
+
     ###########################################################################
     # Eviction num. forced calls
     ###########################################################################
@@ -544,7 +545,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
         )
         run_full_normal_eviction_stat_figs.append(evc_fcalls_fig)
     pbar.update(1)
-    
+
     ###########################################################################
     # Eviction step
     ###########################################################################
@@ -566,6 +567,52 @@ def plot_results(folder: str, results: dict, cache_size: float,
             num_points=num_points,
         )
         run_full_normal_eviction_stat_figs.append(evc_step_fig)
+    pbar.update(1)
+
+    ###########################################################################
+    # Addition actions
+    ###########################################################################
+    with ignored(Exception):
+        addition_action_fig = plot_measure(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            x_range=size_fig.x_range,
+            title="Addition actions",
+            plot_width=plot_width,
+            plot_height=plot_height,
+            target="additionActions",
+            y_axis_label="#",
+            outer_legend=outer_legend,
+            num_points=num_points,
+        )
+        run_full_normal_agent_action_figs.append(addition_action_fig)
+    pbar.update(1)
+
+    ###########################################################################
+    # eviction actions
+    ###########################################################################
+    with ignored(Exception):
+        eviction_action_fig = plot_measure(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            x_range=size_fig.x_range,
+            title="Eviction actions",
+            plot_width=plot_width,
+            plot_height=plot_height,
+            target="evictionActions",
+            y_axis_label="#",
+            outer_legend=outer_legend,
+            num_points=num_points,
+        )
+        run_full_normal_agent_action_figs.append(eviction_action_fig)
     pbar.update(1)
 
     ###########################################################################
@@ -1009,6 +1056,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
         row(*run_full_normal_net_figs),
         row(*run_full_normal_epsilon_figs),
         row(*run_full_normal_value_functions_figs),
+        row(*run_full_normal_agent_action_figs),
         row(*run_full_normal_eviction_stat_figs),
         row(*run_full_normal_data_rw_figs),
         row(*run_full_normal_data_read_stats_figs),
