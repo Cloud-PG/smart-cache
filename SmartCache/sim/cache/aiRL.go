@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 	"simulator/v2/cache/ai/featuremap"
-	"simulator/v2/cache/ai/qlearn"
+	qLearn "simulator/v2/cache/ai/qlearn"
 
 	"go.uber.org/zap"
 )
@@ -18,17 +18,17 @@ type AIRL struct {
 	evictionAgentOK             bool
 	additionFeatureManager      featuremap.FeatureManager
 	evictionFeatureManager      featuremap.FeatureManager
-	additionAgent               qlearn.Agent
-	evictionAgent               qlearn.Agent
+	additionAgent               qLearn.Agent
+	evictionAgent               qLearn.Agent
 	evictionAgentStep           int64
 	evictionAgentNumCalls       int64
 	evictionAgentNumForcedCalls int64
 	evictionRO                  float64
-	actionCounters              map[qlearn.ActionType]int
+	actionCounters              map[qLearn.ActionType]int
 	bufferCategory              []bool
 	bufferIdxVector             []int
 	chanCategory                chan bool
-	curCacheStates              map[int]qlearn.ActionType
+	curCacheStates              map[int]qLearn.ActionType
 	curCacheStatesFiles         map[int][]int64
 }
 
@@ -36,7 +36,7 @@ type AIRL struct {
 func (cache *AIRL) Init(args ...interface{}) interface{} {
 	logger = zap.L()
 
-	cache.curCacheStates = make(map[int]qlearn.ActionType)
+	cache.curCacheStates = make(map[int]qLearn.ActionType)
 	cache.curCacheStatesFiles = make(map[int][]int64)
 
 	cache.SimpleCache.Init(NoQueue)
@@ -49,12 +49,12 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 	cache.evictionAgentStep = 32
 	cache.evictionRO = 0.1
 
-	cache.actionCounters = make(map[qlearn.ActionType]int)
+	cache.actionCounters = make(map[qLearn.ActionType]int)
 
-	cache.actionCounters[qlearn.ActionStore] = 0
-	cache.actionCounters[qlearn.ActionNotStore] = 0
-	cache.actionCounters[qlearn.ActionDelete] = 0
-	cache.actionCounters[qlearn.ActionNotDelete] = 0
+	cache.actionCounters[qLearn.ActionStore] = 0
+	cache.actionCounters[qLearn.ActionNotStore] = 0
+	cache.actionCounters[qLearn.ActionDelete] = 0
+	cache.actionCounters[qLearn.ActionNotDelete] = 0
 
 	logger.Info("Feature maps", zap.String("addition map", additionFeatureMap), zap.String("eviction map", evictionFeatureMap))
 
@@ -64,7 +64,7 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 		logger.Info("Create addition agent")
 		cache.additionAgent.Init(
 			&cache.additionFeatureManager,
-			qlearn.AdditionAgent,
+			qLearn.AdditionAgent,
 			initEpsilon,
 			decayRateEpsilon,
 		)
@@ -79,7 +79,7 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 		logger.Info("Create eviction agent")
 		cache.evictionAgent.Init(
 			&cache.evictionFeatureManager,
-			qlearn.EvictionAgent,
+			qLearn.EvictionAgent,
 			initEpsilon,
 			decayRateEpsilon,
 		)
@@ -98,10 +98,10 @@ func (cache *AIRL) ClearHitMissStats() {
 	cache.SimpleCache.ClearHitMissStats()
 	cache.evictionAgentNumCalls = 0
 	cache.evictionAgentNumForcedCalls = 0
-	cache.actionCounters[qlearn.ActionStore] = 0
-	cache.actionCounters[qlearn.ActionNotStore] = 0
-	cache.actionCounters[qlearn.ActionDelete] = 0
-	cache.actionCounters[qlearn.ActionNotDelete] = 0
+	cache.actionCounters[qLearn.ActionStore] = 0
+	cache.actionCounters[qLearn.ActionNotStore] = 0
+	cache.actionCounters[qLearn.ActionDelete] = 0
+	cache.actionCounters[qLearn.ActionNotDelete] = 0
 }
 
 // Dumps the AIRL cache
@@ -281,7 +281,7 @@ func (cache *AIRL) updateCategoryStates() {
 		delete(cache.curCacheStatesFiles, key)
 	}
 
-	var curAction qlearn.ActionType
+	var curAction qLearn.ActionType
 	catPercOcc := make(map[int]float64)
 	catFiles := make(map[int][]int64)
 	catIdxMap := make(map[int][]int)
@@ -419,7 +419,7 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 		newFileList := make([]int64, 0)
 		for _, filename := range cache.curCacheStatesFiles[catIdx] {
 			// fmt.Println("Filename", filename)
-			if catAction == qlearn.ActionDelete {
+			if catAction == qLearn.ActionDelete {
 				curFileStats := cache.stats.Get(filename)
 				// fmt.Println("Stats Filename", curFileStats.Filename)
 				// fmt.Println(curFileStats)
@@ -434,13 +434,13 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 			} else {
 				newFileList = append(newFileList, filename)
 			}
-			cache.evictionAgent.UpdateMemory(filename, qlearn.Choice{
+			cache.evictionAgent.UpdateMemory(filename, qLearn.Choice{
 				State:  catIdx,
 				Action: catAction,
 				Tick:   cache.tick,
 			})
-			if catAction == qlearn.ActionNotDelete {
-				cache.evictionAgent.UpdateMemory("NotDelete", qlearn.Choice{
+			if catAction == qLearn.ActionNotDelete {
+				cache.evictionAgent.UpdateMemory("NotDelete", qLearn.Choice{
 					State:  catIdx,
 					Action: catAction,
 					Tick:   cache.tick,
@@ -478,7 +478,7 @@ func (cache *AIRL) delayedRewardEvictionAgent(hit bool, filename int64, storeTic
 			curChoices := *prevChoices
 			for idx := 0; idx < len(curChoices); idx++ {
 				curMemory := curChoices[idx]
-				if curMemory.Tick > storeTick && curMemory.Action == qlearn.ActionNotDelete {
+				if curMemory.Tick > storeTick && curMemory.Action == qLearn.ActionNotDelete {
 					for catStateIdx := range cache.curCacheStates {
 						if cache.checkEvictionNextState(curMemory.State, catStateIdx) {
 							// Update table
@@ -497,7 +497,7 @@ func (cache *AIRL) delayedRewardEvictionAgent(hit bool, filename int64, storeTic
 			curChoices := *prevChoices
 			for idx := 0; idx < len(curChoices); idx++ {
 				curMemory := curChoices[idx]
-				if curMemory.Tick > storeTick && curMemory.Action == qlearn.ActionDelete {
+				if curMemory.Tick > storeTick && curMemory.Action == qLearn.ActionDelete {
 					for catStateIdx := range cache.curCacheStates {
 						if cache.checkEvictionNextState(curMemory.State, catStateIdx) {
 							// Update table
@@ -524,7 +524,7 @@ func (cache *AIRL) delayedRewardAdditionAgent(hit bool, filename int64, curState
 			// fmt.Println("HIT", filename, curChoices)
 			for idx := len(curChoices) - 1; idx > -1; idx-- {
 				curMemory := curChoices[idx]
-				if curMemory.Action == qlearn.ActionStore {
+				if curMemory.Action == qLearn.ActionStore {
 					// Update table
 					cache.additionAgent.UpdateTable(curMemory.State, curState, curMemory.Action, 1.0)
 					// Update epsilon
@@ -540,7 +540,7 @@ func (cache *AIRL) delayedRewardAdditionAgent(hit bool, filename int64, curState
 			// fmt.Println("MISS", filename, curChoices)
 			for idx := len(curChoices) - 1; idx > -1; idx-- {
 				curMemory := curChoices[idx]
-				if curMemory.Action == qlearn.ActionNotStore {
+				if curMemory.Action == qLearn.ActionNotStore {
 					// Update table
 					cache.additionAgent.UpdateTable(curMemory.State, curState, curMemory.Action, -1.0)
 					// Update epsilon
@@ -556,7 +556,7 @@ func (cache *AIRL) delayedRewardAdditionAgent(hit bool, filename int64, curState
 
 func (cache *AIRL) rewardEvictionAfterForcedCall(added bool) {
 	for state, action := range cache.curCacheStates {
-		if !added && action == qlearn.ActionNotDelete {
+		if !added && action == qLearn.ActionNotDelete {
 			for catStateIdx := range cache.curCacheStates {
 				if cache.checkEvictionNextState(state, catStateIdx) {
 					// Update table
@@ -565,7 +565,7 @@ func (cache *AIRL) rewardEvictionAfterForcedCall(added bool) {
 					cache.evictionAgent.UpdateEpsilon()
 				}
 			}
-		} else if added && action == qlearn.ActionDelete {
+		} else if added && action == qLearn.ActionDelete {
 			for catStateIdx := range cache.curCacheStates {
 				if cache.checkEvictionNextState(state, catStateIdx) {
 					// Update table
@@ -620,7 +620,7 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) 
 func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool) bool {
 	var (
 		added             = false
-		curAction         qlearn.ActionType
+		curAction         qLearn.ActionType
 		curState          int
 		requestedFileSize = request.Size
 	)
@@ -686,16 +686,16 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			}
 			cache.actionCounters[curAction]++
 
-			cache.additionAgent.UpdateMemory(request.Filename, qlearn.Choice{
+			cache.additionAgent.UpdateMemory(request.Filename, qLearn.Choice{
 				State:  curState,
 				Action: curAction,
 				Tick:   cache.tick,
 			})
 
 			switch curAction {
-			case qlearn.ActionNotStore:
+			case qLearn.ActionNotStore:
 				return added
-			case qlearn.ActionStore:
+			case qLearn.ActionStore:
 				forced := false
 				if cache.Size()+requestedFileSize > cache.MaxSize {
 					if cache.evictionAgentOK {
@@ -857,10 +857,10 @@ func (cache *AIRL) ExtraOutput(info string) string {
 		)
 	case "actionStats":
 		result = fmt.Sprintf("%d,%d,%d,%d",
-			cache.actionCounters[qlearn.ActionStore],
-			cache.actionCounters[qlearn.ActionNotStore],
-			cache.actionCounters[qlearn.ActionDelete],
-			cache.actionCounters[qlearn.ActionNotDelete],
+			cache.actionCounters[qLearn.ActionStore],
+			cache.actionCounters[qLearn.ActionNotStore],
+			cache.actionCounters[qLearn.ActionDelete],
+			cache.actionCounters[qLearn.ActionNotDelete],
 		)
 	default:
 		result = "NONE"
