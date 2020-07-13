@@ -463,8 +463,13 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				"CPU efficiency lower bound",
 			}
 			if cacheType == "aiRL" {
-				csvHeaderColumns = append(csvHeaderColumns, "Addition value function")
-				csvHeaderColumns = append(csvHeaderColumns, "Eviction value function")
+				csvHeaderColumns = append(csvHeaderColumns, "Addition epsilon")
+				csvHeaderColumns = append(csvHeaderColumns, "Eviction epsilon")
+				csvHeaderColumns = append(csvHeaderColumns, "Addition qvalue function")
+				csvHeaderColumns = append(csvHeaderColumns, "Eviction qvalue function")
+				csvHeaderColumns = append(csvHeaderColumns, "Eviction calls")
+				csvHeaderColumns = append(csvHeaderColumns, "Eviction forced calls")
+				csvHeaderColumns = append(csvHeaderColumns, "Eviction step")
 			}
 			csvSimOutput.Write(csvHeaderColumns)
 
@@ -531,7 +536,9 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 							fmt.Sprintf("%f", cache.CPUEffLowerBound(curCacheInstance)),
 						}
 						if cacheType == "aiRL" {
+							csvRow = append(csvRow, strings.Split(cache.ExtraOutput(curCacheInstance, "epsilonStats"), ",")...)
 							csvRow = append(csvRow, strings.Split(cache.ExtraOutput(curCacheInstance, "valueFunctions"), ",")...)
+							csvRow = append(csvRow, strings.Split(cache.ExtraOutput(curCacheInstance, "evictionStats"), ",")...)
 						}
 						csvSimOutput.Write(csvRow)
 					}

@@ -68,7 +68,9 @@ def plot_results(folder: str, results: dict, cache_size: float,
     run_full_normal_throughput_figs = []
     run_full_normal_cost_figs = []
     run_full_normal_net_figs = []
+    run_full_normal_epsilon_figs = []
     run_full_normal_value_functions_figs = []
+    run_full_normal_eviction_stat_figs = []
     run_full_normal_data_rw_figs = []
     run_full_normal_data_read_stats_figs = []
     run_full_normal_cpu_eff_figs = []
@@ -408,10 +410,54 @@ def plot_results(folder: str, results: dict, cache_size: float,
     pbar.update(1)
 
     ###########################################################################
+    # Addition Agent Epsilon
+    ###########################################################################
+    with ignored(Exception):
+        add_epsilon_fig = plot_column(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            column="Addition epsilon",
+            title="Addition Agent Epsilon",
+            plot_width=plot_width,
+            plot_height=plot_height,
+            y_axis_label="",
+            outer_legend=outer_legend,
+            num_points=num_points,
+        )
+        run_full_normal_epsilon_figs.append(add_epsilon_fig)
+    pbar.update(1)
+
+    ###########################################################################
+    # Eviction Agent Epsilon
+    ###########################################################################
+    with ignored(Exception):
+        evc_epsilon_fig = plot_column(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            column="Eviction epsilon",
+            title="Eviction Agent Epsilon",
+            plot_width=plot_width,
+            plot_height=plot_height,
+            y_axis_label="",
+            outer_legend=outer_legend,
+            num_points=num_points,
+        )
+        run_full_normal_epsilon_figs.append(evc_epsilon_fig)
+    pbar.update(1)
+
+    ###########################################################################
     # Addition value function
     ###########################################################################
     with ignored(Exception):
-        net_in = plot_measure(
+        net_in = plot_column(
             tools,
             results,
             dates,
@@ -420,8 +466,8 @@ def plot_results(folder: str, results: dict, cache_size: float,
             window_size,
             x_range=size_fig.x_range,
             y_axis_label="rewards",
-            title=f"Addition value function",
-            target="additionValueFunction",
+            title=f"Addition qvalue function",
+            column="Addition qvalue function",
             plot_width=plot_width,
             plot_height=plot_height,
             outer_legend=outer_legend,
@@ -434,7 +480,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
     # Eviction value function
     ###########################################################################
     with ignored(Exception):
-        net_in = plot_measure(
+        net_in = plot_column(
             tools,
             results,
             dates,
@@ -443,14 +489,83 @@ def plot_results(folder: str, results: dict, cache_size: float,
             window_size,
             x_range=size_fig.x_range,
             y_axis_label="rewards",
-            title=f"Eviction value function",
-            target="evictionValueFunction",
+            title=f"Eviction qvalue function",
+            column="Eviction qvalue function",
             plot_width=plot_width,
             plot_height=plot_height,
             outer_legend=outer_legend,
             num_points=num_points,
         )
         run_full_normal_value_functions_figs.append(net_in)
+    pbar.update(1)
+
+    ###########################################################################
+    # Eviction num. calls
+    ###########################################################################
+    with ignored(Exception):
+        evc_calls_fig = plot_column(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            x_range=size_fig.x_range,
+            y_axis_label="rewards",
+            title=f"Eviction # calls",
+            column="Eviction calls",
+            plot_width=plot_width,
+            plot_height=plot_height,
+            outer_legend=outer_legend,
+            num_points=num_points,
+        )
+        run_full_normal_eviction_stat_figs.append(evc_calls_fig)
+    pbar.update(1)
+    
+    ###########################################################################
+    # Eviction num. forced calls
+    ###########################################################################
+    with ignored(Exception):
+        evc_fcalls_fig = plot_column(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            x_range=size_fig.x_range,
+            y_axis_label="rewards",
+            title=f"Eviction # forced calls",
+            column="Eviction forced calls",
+            plot_width=plot_width,
+            plot_height=plot_height,
+            outer_legend=outer_legend,
+            num_points=num_points,
+        )
+        run_full_normal_eviction_stat_figs.append(evc_fcalls_fig)
+    pbar.update(1)
+    
+    ###########################################################################
+    # Eviction step
+    ###########################################################################
+    with ignored(Exception):
+        evc_step_fig = plot_column(
+            tools,
+            results,
+            dates,
+            filters,
+            color_table,
+            window_size,
+            x_range=size_fig.x_range,
+            y_axis_label="rewards",
+            title=f"Eviction step (k)",
+            column="Eviction step",
+            plot_width=plot_width,
+            plot_height=plot_height,
+            outer_legend=outer_legend,
+            num_points=num_points,
+        )
+        run_full_normal_eviction_stat_figs.append(evc_step_fig)
     pbar.update(1)
 
     ###########################################################################
@@ -892,7 +1007,9 @@ def plot_results(folder: str, results: dict, cache_size: float,
         row(*run_full_normal_throughput_figs),
         row(*run_full_normal_cost_figs),
         row(*run_full_normal_net_figs),
+        row(*run_full_normal_epsilon_figs),
         row(*run_full_normal_value_functions_figs),
+        row(*run_full_normal_eviction_stat_figs),
         row(*run_full_normal_data_rw_figs),
         row(*run_full_normal_data_read_stats_figs),
         row(*run_full_normal_cpu_eff_figs),

@@ -1,4 +1,4 @@
-package qLearn
+package qlearn
 
 import (
 	"fmt"
@@ -43,7 +43,8 @@ const (
 )
 
 var (
-	logger = zap.L()
+	logger          = zap.L()
+	randomGenerator = rand.New(rand.NewSource(42))
 )
 
 // QTable struct used by agents
@@ -180,7 +181,7 @@ type Agent struct {
 func (agent *Agent) Init(featureManager *featuremap.FeatureManager, role AgentRole, initEpsilon float64, decayRateEpsilon float64) {
 	logger = zap.L()
 
-	agent.LearningRate = 0.5 // also named Alpha
+	agent.LearningRate = 0.9 // also named Alpha
 	agent.DiscountFactor = 0.5
 	agent.DecayRateEpsilon = decayRateEpsilon
 	agent.Epsilon = initEpsilon
@@ -210,7 +211,7 @@ func (agent *Agent) Init(featureManager *featuremap.FeatureManager, role AgentRo
 	}
 
 	agent.UpdateAlgorithm = RLQLearning
-	agent.RGenerator = rand.New(rand.NewSource(42))
+	agent.RGenerator = randomGenerator
 
 	agent.NumStates = len(agent.Table.States)
 	agent.NumVars = agent.NumStates * len(agent.Table.Actions[0])
@@ -404,11 +405,18 @@ func (agent *Agent) UpdateMemory(key interface{}, choices ...Choice) {
 func getArgMax(array []float64) (int, float64) {
 	maxIdx := 0
 	maxElm := array[maxIdx]
+	allEqual := true
 	for idx := 1; idx < len(array); idx++ {
 		if array[idx] > maxElm {
 			maxElm = array[idx]
 			maxIdx = idx
+			allEqual = false
 		}
+		allEqual = allEqual && (array[idx] == maxElm)
+	}
+	if allEqual {
+		maxIdx = randomGenerator.Intn(len(array))
+		maxElm = array[maxIdx]
 	}
 	return maxIdx, maxElm
 }

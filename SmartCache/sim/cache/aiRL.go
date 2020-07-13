@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 	"simulator/v2/cache/ai/featuremap"
-	"simulator/v2/cache/ai/qLearn"
+	"simulator/v2/cache/ai/qlearn"
 
 	"go.uber.org/zap"
 )
@@ -14,26 +14,28 @@ import (
 // AIRL cache
 type AIRL struct {
 	SimpleCache
-	additionAgentOK        bool
-	evictionAgentOK        bool
-	additionFeatureManager featuremap.FeatureManager
-	evictionFeatureManager featuremap.FeatureManager
-	additionAgent          qLearn.Agent
-	evictionAgent          qLearn.Agent
-	evictionAgentStep      int64
-	evictionRO             float64
-	bufferCategory         []bool
-	bufferIdxVector        []int
-	chanCategory           chan bool
-	curCacheStates         map[int]qLearn.ActionType
-	curCacheStatesFiles    map[int][]int64
+	additionAgentOK             bool
+	evictionAgentOK             bool
+	additionFeatureManager      featuremap.FeatureManager
+	evictionFeatureManager      featuremap.FeatureManager
+	additionAgent               qlearn.Agent
+	evictionAgent               qlearn.Agent
+	evictionAgentStep           int64
+	evictionAgentNumCalls       int64
+	evictionAgentNumForcedCalls int64
+	evictionRO                  float64
+	bufferCategory              []bool
+	bufferIdxVector             []int
+	chanCategory                chan bool
+	curCacheStates              map[int]qlearn.ActionType
+	curCacheStatesFiles         map[int][]int64
 }
 
 // Init the AIRL struct
 func (cache *AIRL) Init(args ...interface{}) interface{} {
 	logger = zap.L()
 
-	cache.curCacheStates = make(map[int]qLearn.ActionType)
+	cache.curCacheStates = make(map[int]qlearn.ActionType)
 	cache.curCacheStatesFiles = make(map[int][]int64)
 
 	cache.SimpleCache.Init(NoQueue)
@@ -54,7 +56,7 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 		logger.Info("Create addition agent")
 		cache.additionAgent.Init(
 			&cache.additionFeatureManager,
-			qLearn.AdditionAgent,
+			qlearn.AdditionAgent,
 			initEpsilon,
 			decayRateEpsilon,
 		)
@@ -69,7 +71,7 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 		logger.Info("Create eviction agent")
 		cache.evictionAgent.Init(
 			&cache.evictionFeatureManager,
-			qLearn.EvictionAgent,
+			qlearn.EvictionAgent,
 			initEpsilon,
 			decayRateEpsilon,
 		)
@@ -81,6 +83,13 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 	logger.Info("Table creation done")
 
 	return nil
+}
+
+// ClearHitMissStats the cache stats
+func (cache *AIRL) ClearHitMissStats() {
+	cache.SimpleCache.ClearHitMissStats()
+	cache.evictionAgentNumCalls = 0
+	cache.evictionAgentNumForcedCalls = 0
 }
 
 // Dumps the AIRL cache
@@ -229,7 +238,7 @@ func (cache *AIRL) Loads(inputString [][]byte, vars ...interface{}) {
 
 }
 
-func (cache *AIRL) getState4AddAgent(curFileStats *FileStats) int {
+func (cache *AIRL) getState4AdditionAgent(curFileStats *FileStats) int {
 
 	cache.bufferIdxVector = cache.bufferIdxVector[:0]
 
@@ -260,7 +269,7 @@ func (cache *AIRL) updateCategoryStates() {
 		delete(cache.curCacheStatesFiles, key)
 	}
 
-	var curAction qLearn.ActionType
+	var curAction qlearn.ActionType
 	catPercOcc := make(map[int]float64)
 	catFiles := make(map[int][]int64)
 	catIdxMap := make(map[int][]int)
@@ -356,10 +365,11 @@ func (cache *AIRL) updateCategoryStates() {
 }
 
 func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
-	// TODO: add penalities when forced call (took all files in cache to get next states)
 	var (
 		totalDeleted float64
 	)
+
+	cache.evictionAgentNumCalls++
 
 	// fmt.Println("----- EVICTION -----")
 
@@ -375,7 +385,7 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 				for catStateIdx := range cache.curCacheStates {
 					if cache.checkEvictionNextState(choice.State, catStateIdx) {
 						// Update table
-						cache.evictionAgent.UpdateTable(choice.State, choice.State, choice.Action, cache.evictionRO)
+						cache.evictionAgent.UpdateTable(choice.State, choice.State, choice.Action, -cache.evictionRO)
 						// Update epsilon
 						cache.evictionAgent.UpdateEpsilon()
 					}
@@ -383,6 +393,7 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 			}
 			*choicesList = (*choicesList)[:0]
 		}
+		cache.evictionAgentNumForcedCalls++
 	} else {
 		cache.evictionAgentStep = cache.evictionAgentStep << 1
 	}
@@ -395,7 +406,7 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 		newFileList := make([]int64, 0)
 		for _, filename := range cache.curCacheStatesFiles[catIdx] {
 			// fmt.Println("Filename", filename)
-			if catAction == qLearn.ActionDelete {
+			if catAction == qlearn.ActionDelete {
 				curFileStats := cache.stats.Get(filename)
 				// fmt.Println("Stats Filename", curFileStats.Filename)
 				// fmt.Println(curFileStats)
@@ -410,13 +421,13 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 			} else {
 				newFileList = append(newFileList, filename)
 			}
-			cache.evictionAgent.UpdateMemory(filename, qLearn.Choice{
+			cache.evictionAgent.UpdateMemory(filename, qlearn.Choice{
 				State:  catIdx,
 				Action: catAction,
 				Tick:   cache.tick,
 			})
-			if catAction == qLearn.ActionNotDelete {
-				cache.evictionAgent.UpdateMemory("NotDelete", qLearn.Choice{
+			if catAction == qlearn.ActionNotDelete {
+				cache.evictionAgent.UpdateMemory("NotDelete", qlearn.Choice{
 					State:  catIdx,
 					Action: catAction,
 					Tick:   cache.tick,
@@ -454,7 +465,7 @@ func (cache *AIRL) delayedRewardEvictionAgent(hit bool, filename int64, storeTic
 			curChoices := *prevChoices
 			for idx := 0; idx < len(curChoices); idx++ {
 				curMemory := curChoices[idx]
-				if curMemory.Tick > storeTick && curMemory.Action == qLearn.ActionNotDelete {
+				if curMemory.Tick > storeTick && curMemory.Action == qlearn.ActionNotDelete {
 					for catStateIdx := range cache.curCacheStates {
 						if cache.checkEvictionNextState(curMemory.State, catStateIdx) {
 							// Update table
@@ -473,7 +484,7 @@ func (cache *AIRL) delayedRewardEvictionAgent(hit bool, filename int64, storeTic
 			curChoices := *prevChoices
 			for idx := 0; idx < len(curChoices); idx++ {
 				curMemory := curChoices[idx]
-				if curMemory.Tick > storeTick && curMemory.Action == qLearn.ActionDelete {
+				if curMemory.Tick > storeTick && curMemory.Action == qlearn.ActionDelete {
 					for catStateIdx := range cache.curCacheStates {
 						if cache.checkEvictionNextState(curMemory.State, catStateIdx) {
 							// Update table
@@ -500,7 +511,7 @@ func (cache *AIRL) delayedRewardAdditionAgent(hit bool, filename int64, curState
 			// fmt.Println("HIT", filename, curChoices)
 			for idx := len(curChoices) - 1; idx > -1; idx-- {
 				curMemory := curChoices[idx]
-				if curMemory.Action == qLearn.ActionStore {
+				if curMemory.Action == qlearn.ActionStore {
 					// Update table
 					cache.additionAgent.UpdateTable(curMemory.State, curState, curMemory.Action, 1.0)
 					// Update epsilon
@@ -516,7 +527,7 @@ func (cache *AIRL) delayedRewardAdditionAgent(hit bool, filename int64, curState
 			// fmt.Println("MISS", filename, curChoices)
 			for idx := len(curChoices) - 1; idx > -1; idx-- {
 				curMemory := curChoices[idx]
-				if curMemory.Action == qLearn.ActionNotStore {
+				if curMemory.Action == qlearn.ActionNotStore {
 					// Update table
 					cache.additionAgent.UpdateTable(curMemory.State, curState, curMemory.Action, -1.0)
 					// Update epsilon
@@ -532,7 +543,7 @@ func (cache *AIRL) delayedRewardAdditionAgent(hit bool, filename int64, curState
 
 func (cache *AIRL) rewardEvictionAfterForcedCall(added bool) {
 	for state, action := range cache.curCacheStates {
-		if !added && action == qLearn.ActionNotDelete {
+		if !added && action == qlearn.ActionNotDelete {
 			for catStateIdx := range cache.curCacheStates {
 				if cache.checkEvictionNextState(state, catStateIdx) {
 					// Update table
@@ -541,7 +552,7 @@ func (cache *AIRL) rewardEvictionAfterForcedCall(added bool) {
 					cache.evictionAgent.UpdateEpsilon()
 				}
 			}
-		} else if added && action == qLearn.ActionDelete {
+		} else if added && action == qlearn.ActionDelete {
 			for catStateIdx := range cache.curCacheStates {
 				if cache.checkEvictionNextState(state, catStateIdx) {
 					// Update table
@@ -596,7 +607,7 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) 
 func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool) bool {
 	var (
 		added             = false
-		curAction         qLearn.ActionType
+		curAction         qlearn.ActionType
 		curState          int
 		requestedFileSize = request.Size
 	)
@@ -634,7 +645,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 		logger.Debug("ADDITION TABLE OK")
 
-		curState = cache.getState4AddAgent(fileStats)
+		curState = cache.getState4AdditionAgent(fileStats)
 
 		logger.Debug("cache", zap.Int("current state", curState))
 
@@ -661,16 +672,16 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				curAction = cache.additionAgent.Table.ActionTypes[randomActionIdx]
 			}
 
-			cache.additionAgent.UpdateMemory(request.Filename, qLearn.Choice{
+			cache.additionAgent.UpdateMemory(request.Filename, qlearn.Choice{
 				State:  curState,
 				Action: curAction,
 				Tick:   cache.tick,
 			})
 
 			switch curAction {
-			case qLearn.ActionNotStore:
+			case qlearn.ActionNotStore:
 				return added
-			case qLearn.ActionStore:
+			case qlearn.ActionStore:
 				forced := false
 				if cache.Size()+requestedFileSize > cache.MaxSize {
 					if cache.evictionAgentOK {
@@ -793,7 +804,7 @@ func (cache *AIRL) ExtraStats() string {
 	return fmt.Sprintf(
 		"SCov:%0.2f%%|ACov:%0.2f%%|Eps:%0.5f||SCov:%0.2f%%|ACov:%0.2f%%|Eps:%0.5f",
 		addStateCov, addActionCov, cache.additionAgent.Epsilon,
-		evcStateCov, evcActionCov, cache.additionAgent.Epsilon,
+		evcStateCov, evcActionCov, cache.evictionAgent.Epsilon,
 		// "%0.2f | %0.2f | %0.2f",
 		// cache.StdDevSize(), cache.StdDevRec(), cache.StdDevFreq(),
 	)
@@ -817,6 +828,10 @@ func (cache *AIRL) ExtraOutput(info string) string {
 			evictionValueFunction = cache.evictionAgent.QValue
 		}
 		result = fmt.Sprintf("%0.2f,%0.2f", additionValueFunction, evictionValueFunction)
+	case "evictionStats":
+		result = fmt.Sprintf("%d,%d,%d", cache.evictionAgentNumCalls, cache.evictionAgentNumForcedCalls, cache.evictionAgentStep)
+	case "epsilonStats":
+		result = fmt.Sprintf("%0.6f,%0.6f", cache.additionAgent.Epsilon, cache.evictionAgent.Epsilon)
 	default:
 		result = "NONE"
 	}
