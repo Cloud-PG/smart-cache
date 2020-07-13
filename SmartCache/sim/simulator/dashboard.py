@@ -78,7 +78,7 @@ def plot_results(folder: str, results: dict, cache_size: float,
     run_single_window_figs = []
     run_next_period_figs = []
 
-    pbar = tqdm(total=32, desc="Plot results", ascii=True)
+    pbar = tqdm(total=35, desc="Plot results", ascii=True)
 
     ###########################################################################
     # Size plot of full normal run

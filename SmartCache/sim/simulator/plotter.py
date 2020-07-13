@@ -122,6 +122,8 @@ def plot_column(tools: list,
     for cache_name, values in filter_results(
         results, run_type, filters
     ):
+        if column not in values.columns:
+            continue
         if run_type == "run_full_normal":
             if normalize:
                 points = (values[column] / values[normalize]) * 100.
@@ -454,6 +456,8 @@ def plot_measure(tools: list,
     ):
         if run_type == "run_full_normal":
             if target == "additionActions":
+                if "Action store" not in values.columns:
+                    continue
                 store_points = values['Action store']
                 cur_line = cur_fig.line(
                     dates if num_points == -
@@ -478,6 +482,8 @@ def plot_measure(tools: list,
                     ("Action not store", [cur_line]))
                 continue
             elif target == "evictionActions":
+                if "Action delete" not in values.columns:
+                    continue
                 delete_points = values['Action delete']
                 cur_line = cur_fig.line(
                     dates if num_points == -
