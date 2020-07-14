@@ -490,7 +490,7 @@ def plot_measure(tools: list,
                     1 else collapse2numpoints(num_points, x=dates),
                     delete_points if num_points == -
                     1 else collapse2numpoints(num_points, y=delete_points),
-                    color="blue",
+                    color="red",
                     line_width=_LINE_WIDTH,
                 )
                 legend_items.append(
@@ -501,7 +501,7 @@ def plot_measure(tools: list,
                     1 else collapse2numpoints(num_points, x=dates),
                     not_delete_points if num_points == -
                     1 else collapse2numpoints(num_points, y=not_delete_points),
-                    color="red",
+                    color="blue",
                     line_width=_LINE_WIDTH,
                 )
                 legend_items.append(
