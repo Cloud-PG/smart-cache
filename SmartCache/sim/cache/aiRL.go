@@ -11,25 +11,33 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	maxBadQValueInARow = 7
+)
+
 // AIRL cache
 type AIRL struct {
 	SimpleCache
-	additionAgentOK             bool
-	evictionAgentOK             bool
-	additionFeatureManager      featuremap.FeatureManager
-	evictionFeatureManager      featuremap.FeatureManager
-	additionAgent               qlearn.Agent
-	evictionAgent               qlearn.Agent
-	evictionAgentStep           int64
-	evictionAgentNumCalls       int64
-	evictionAgentNumForcedCalls int64
-	evictionRO                  float64
-	actionCounters              map[qlearn.ActionType]int
-	bufferCategory              []bool
-	bufferIdxVector             []int
-	chanCategory                chan bool
-	curCacheStates              map[int]qlearn.ActionType
-	curCacheStatesFiles         map[int][]int64
+	additionAgentOK              bool
+	evictionAgentOK              bool
+	additionAgentBadQValueInARow int
+	evictionAgentBadQValueInARow int
+	additionAgentPrevQValue      float64
+	evictionAgentPrevQValue      float64
+	additionFeatureManager       featuremap.FeatureManager
+	evictionFeatureManager       featuremap.FeatureManager
+	additionAgent                qlearn.Agent
+	evictionAgent                qlearn.Agent
+	evictionAgentStep            int64
+	evictionAgentNumCalls        int64
+	evictionAgentNumForcedCalls  int64
+	evictionRO                   float64
+	actionCounters               map[qlearn.ActionType]int
+	bufferCategory               []bool
+	bufferIdxVector              []int
+	chanCategory                 chan bool
+	curCacheStates               map[int]qlearn.ActionType
+	curCacheStatesFiles          map[int][]int64
 }
 
 // Init the AIRL struct
@@ -609,6 +617,36 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) 
 		cache.lowerCPUEff = 0.
 		cache.numLocal = 0
 		cache.numRemote = 0
+
+		if cache.additionAgentPrevQValue == 0. {
+			cache.additionAgentPrevQValue = cache.additionAgent.QValue
+		} else {
+			if cache.additionAgentPrevQValue > cache.additionAgent.QValue {
+				cache.additionAgentBadQValueInARow++
+			} else {
+				cache.additionAgentBadQValueInARow = 0
+			}
+			cache.additionAgentPrevQValue = cache.additionAgent.QValue
+		}
+		if cache.evictionAgentPrevQValue == 0. {
+			cache.evictionAgentPrevQValue = cache.evictionAgent.QValue
+		} else {
+			if cache.evictionAgentPrevQValue > cache.evictionAgent.QValue {
+				cache.evictionAgentBadQValueInARow++
+			} else {
+				cache.evictionAgentBadQValueInARow = 0
+			}
+			cache.evictionAgentPrevQValue = cache.evictionAgent.QValue
+		}
+
+		if cache.additionAgentBadQValueInARow >= maxBadQValueInARow {
+			cache.additionAgentBadQValueInARow = 0
+			cache.additionAgent.UnleashEpsilon()
+		}
+		if cache.evictionAgentBadQValueInARow >= maxBadQValueInARow {
+			cache.evictionAgentBadQValueInARow = 0
+			cache.evictionAgent.UnleashEpsilon()
+		}
 	}
 
 	fileStats.updateStats(hit, request.Size, request.UserID, request.SiteName, request.DayTime)

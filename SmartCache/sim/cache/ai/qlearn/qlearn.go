@@ -238,9 +238,14 @@ func (agent *Agent) ResetParams(initEpsilon float64, decayRateEpsilon float64) {
 	logger.Info("Parameters restored as default...")
 }
 
-// QesetqValue clean the value function
-func (agent *Agent) QesetqValue() {
+// ResetQValue clean the value function
+func (agent *Agent) ResetQValue() {
 	agent.QValue = 0.
+}
+
+// UnleashEpsilon set Epsilon to 1.0
+func (agent *Agent) UnleashEpsilon() {
+	agent.Epsilon = 1.0
 }
 
 // GetRandomFloat generates a random number
