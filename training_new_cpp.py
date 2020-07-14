@@ -14,6 +14,7 @@ import time
 import sys
 import gzip
 from datetime import datetime, timedelta
+from statistics import mean 
 #import cacheenvnewcython as cache_env_new
 np.set_printoptions(threshold=sys.maxsize)
 
@@ -86,6 +87,7 @@ parser.add_argument('--invalidated_search_frequency', type = int, default = 3000
 parser.add_argument('--test', type = bool, default = False)
 parser.add_argument('--seed', type = int, default = 2019)
 parser.add_argument('--eviction_frequency', type = int, default = 50000)
+parser.add_argument('--check_next_size', type = bool, default = False)
 
 
 args = parser.parse_args()
@@ -143,6 +145,7 @@ write_everything = args.write_everything
 timing = args.timing
 test = args.test
 eviction_frequency = args.eviction_frequency
+check_next_size = args.check_next_size
 
 out_name = out_directory.split("/")[1] + '_results.csv'
 
@@ -199,6 +202,7 @@ def write_stats():
                     'read on miss data',
                     'deleted data',
                     'CPU efficiency',
+                    'mean occupancy',
                     'CPU hit efficiency',
                     'CPU miss efficiency',
                     'CPU efficiency upper bound',
@@ -220,6 +224,7 @@ def write_stats():
                 environment._cache._deleted_data,
                 environment._cache._CPUeff /
                 (environment._df_length-environment._cache._daily_anomalous_CPUeff_counter),
+                Average(occupancies),
                 0,
                 0,
                 0,
@@ -244,7 +249,14 @@ def reset_stats():
 
     environment._cache._daily_anomalous_CPUeff_counter = 0
 
+    occupancies = []
+
     return
+
+from functools import reduce
+  
+def Average(lst): 
+    return reduce(lambda a, b: a + b, lst) / len(lst) 
 
 class dfWrapper(object):
     
@@ -399,13 +411,6 @@ def current_cpueff_is_anomalous():
 #def check_if_current_is_hit(self):
 #   return environment._cache.check(self.df.Filename[self.curRequest])
 
-
-
-
-
-
-
-
 environment._adding_or_evicting = 0
 environment._curRequest = -1
 environment._curRequest_from_start = -1
@@ -461,6 +466,15 @@ with open(out_directory + '/occupancy.csv', 'w') as file:
     writer = csv.writer(file)
     writer.writerow(['occupancy'])
 
+with open(out_directory + '/rewards_add.csv', 'w') as file:
+    writer = csv.writer(file)
+    writer.writerow(['len_actions','mean_action', 'cumulative_reward', 'epsilon'])
+with open(out_directory + '/rewards_evict.csv', 'w') as file:
+    writer = csv.writer(file)
+    writer.writerow(['len_actions','mean_action', 'cumulative_reward', 'epsilon'])
+
+
+
 end = False
 if timing == True:
         now = time.time()
@@ -474,11 +488,20 @@ if timing == True:
             'evict_memory_length', 
             'evict_pending_length'])
 
+occupancies = []
+
 end_of_cache = False
 while end == False and test == False:
     #print(len(environment._cache._cached_files))
-    #print(environment._curRequest_from_start)
-    #print(step_add)
+    #print(environment.get_stats_len())
+    #print(environment.get_num_files_in_cache())
+    #print(environment.get_add_memory_size())
+    #print(environment.get_add_window_size())
+    #print(environment.get_evict_memory_size())
+    #print(environment.get_evict_window_size())
+    #print(environment._cache.hit_rate() * 100.0)
+    #print(environment._cache._hit)
+    #print(environment._cache._miss)
     ######## REPORT TIMING ##################################################################################################
     if timing == True:
         before = now
@@ -486,7 +509,7 @@ while end == False and test == False:
         with open(out_directory + '/timing.csv', 'a') as f:
             writer = csv.writer(f)
             writer.writerow([now - before, 
-            environment.get_stats_len,
+            environment.get_stats_len(),
             environment.get_num_files_in_cache(),
             environment.get_add_memory_size(),
             environment.get_add_window_size(),
@@ -525,12 +548,12 @@ while end == False and test == False:
         else:
             cur_values_ = np.reshape(cur_values, (1, input_len))
             action = np.argmax(model_add.predict(cur_values_))
+            #print(action)
         if write_everything == True:
             action = 0
 
         hit = environment.check_in_cache(dataframe_.df.Filename[environment._curRequest])
         anomalous = current_cpueff_is_anomalous()
-
 
         # GET THIS REQUEST
         if anomalous == False:
@@ -546,6 +569,18 @@ while end == False and test == False:
                 daily_notres_add_actions.append(action) 
             #if environment.curRequest == 0 and environment.curDay > 0:
             if environment._curRequest + 1 == environment._df_length  and environment._curDay > 0:      
+                with open(out_directory + '/rewards_add.csv', 'a') as file:
+                    writer = csv.writer(file)
+                    #print(daily_add_actions)
+                    writer.writerow([len(daily_add_actions),Average(daily_add_actions),environment._cache._cumulative_reward_add, eps_add])
+                with open(out_directory + '/rewards_evict.csv', 'a') as file:
+                    if len(daily_evict_actions)!=0:
+                        evict_mean =  Average(daily_evict_actions)
+                    else:
+                        evict_mean = 0.
+                    writer = csv.writer(file)
+                    writer.writerow([len(daily_evict_actions), evict_mean,environment._cache._cumulative_reward_evict, eps_evict])
+                '''
                 with open(out_directory + '/rewards_add_{}.csv'.format(environment._curDay), 'w') as file:
                     writer = csv.writer(file)
                     writer.writerow(['reward','eps_add'])
@@ -587,12 +622,13 @@ while end == False and test == False:
                         writer.writerow(['eviction_choice'])
                         for i in range(0,len(daily_notres_evict_actions)):
                             writer.writerow([daily_notres_evict_actions[i]])
+                    '''
                 daily_add_actions.clear()
                 daily_evict_actions.clear()
                 daily_res_add_actions.clear()
                 daily_notres_add_actions.clear()                
                 daily_res_evict_actions.clear()
-                daily_notres_evict_actions.clear()
+                daily_notres_evict_actions.clear()      
         
         if debug == True and step_add % 1 == 0 and hit == False:
             print('Request: ' + str(environment._curRequest) + ' / ' + str(environment._df_length) + ' - ACTION: ' +  str(action) + '  -  Occupancy: ' + str(round(environment._cache.capacity(),2)) 
@@ -609,12 +645,17 @@ while end == False and test == False:
             environment.purge()
         if anomalous == False:
             if environment._cache._dailyReadOnMiss / DailyBandwidth1Gbit * 100 < 95. or hit == True:
+                #print('oooooooooooooo')
                 environment.update_windows_getting_eventual_rewards_accumulate(curFilename, action)
         
         # IF ADDING IS NOT OVER, GET NEXT VALUES AND PREPARE ACTION TO BE REWARDED, GIVING EVENTUAL REWARD
-        next_size = get_next_size()
+        if check_next_size == True:
+            next_size = get_next_size()
+        else:
+            next_size = 0
         next_occupancy = (environment._cache._size + next_size) / environment._cache._max_size * 100
         current_occupancy = environment._cache.capacity()
+        occupancies.append(current_occupancy)
         if current_occupancy <= environment._cache._h_watermark and next_occupancy < 100.:
             get_next_request_values()
         
@@ -624,7 +665,7 @@ while end == False and test == False:
 
         # LOOK PERIODICALLY FOR INVALIDATED PENDING ADDING AND EVICTING ACTIONS
         if step_add % args.invalidated_search_frequency == 0:
-            print('LOOKING FOR INVALIDATED FILES')
+            #print('LOOKING FOR INVALIDATED FILES')
             environment.look_for_invalidated_add_evict_accumulate()
 
         # KEEP MEMORY LENGTH LESS THAN LIMIT
@@ -634,16 +675,18 @@ while end == False and test == False:
         # TRAIN NETWORK
         if step_add > warm_up_steps_add and test == False:
             #print('started training')
-            batch = np.asarray(environment.get_random_batch(BATCH_SIZE))    
+            batch = np.asarray(environment.get_random_batch(BATCH_SIZE))
+            #print('BATCH')
+            #print(batch)    
             #batch = environment.add_memory_vector[np.random.randint(0, environment.add_memory_vector.shape[0], BATCH_SIZE), :]
             train_cur_vals ,train_actions, train_rewards, train_next_vals = np.split(batch, [input_len, input_len + 1, input_len + 2] , axis = 1)
             #train_cur_vals ,train_actions, train_rewards = np.split(batch, [input_len, input_len + 1] , axis = 1)
             target = model_add.predict_on_batch(train_cur_vals)
             if debug == True and step_add % 1 == 0:
             #if debug == True and step_add == warm_up_steps_add + 1:
-                print('PREDICT ON BATCH')
-                print(batch)
-                print(target)
+                #print('PREDICT ON BATCH')
+                #print(batch)
+                #print(target)
                 print()
             if use_target_model == False:
                 predictions = model_add.predict_on_batch(train_next_vals)
@@ -733,16 +776,18 @@ while end == False and test == False:
         # TRAIN NETWORK
         if step_evict > warm_up_steps_evict and test == False:
             batch = np.asarray(environment.get_random_batch(BATCH_SIZE))
+            #print('BATCH')
+            #print(batch)    
             #batch = environment.evict_memory_vector[np.random.randint(0, environment.evict_memory_vector.shape[0], BATCH_SIZE), :]
             train_cur_vals ,train_actions, train_rewards, train_next_vals = np.split(batch, [input_len, input_len+1, input_len+2] , axis = 1)
             #train_cur_vals ,train_actions, train_rewards = np.split(batch, [input_len, input_len+1] , axis = 1)
             target = model_evict.predict_on_batch(train_cur_vals)
             
-            if debug == True and step_evict % 100 == 0:
-                print('PREDICT ON BATCH')
-                print(batch)
-                print(target)
-                print()
+            #if debug == True and step_evict % 100 == 0:
+                #print('PREDICT ON BATCH')
+                #print(batch)
+                #print(target)
+                #print()
             if use_target_model == False:
                 predictions = model_evict.predict_on_batch(train_next_vals)
                 #predictions = model_evict.predict_on_batch(train_cur_vals)
@@ -759,10 +804,11 @@ while end == False and test == False:
             model_evict.train_on_batch(train_cur_vals, target)
 
     #### STOP ADDING ##############################################################################################
+    
     next_occupancy = (environment._cache._size + next_size) / environment._cache._max_size * 100
     current_occupancy = environment._cache.capacity()
     if environment._adding_or_evicting == 0 and (current_occupancy > environment._cache._h_watermark or next_occupancy > 100. or (step_add % eviction_frequency == 0 and step_add != 0)):
-        print('START EVICTION')
+        #print('START EVICTION')
         environment._adding_or_evicting = 1 
         addition_counter += 1
         environment.create_cached_files_keys_list()
@@ -774,20 +820,28 @@ while end == False and test == False:
         
     ### STOP EVICTING ##########################################################################################
     if environment._adding_or_evicting == 1 and (end_of_cache == True or environment._cache.capacity() < low_watermark):
-        print('STOP EVICTION')
+        #print('STOP EVICTION')
         with open(out_directory + '/occupancy.csv', 'a') as file:
             writer = csv.writer(file)
             writer.writerow([environment._cache.capacity])
-        next_size = get_next_size()
-        next_occupancy = (environment._cache._size + next_size) / environment._cache._max_size * 100
+        if check_next_size == True:
+            next_size = get_next_size()
+            next_occupancy = (environment._cache._size + next_size) / environment._cache._max_size * 100
+        else:
+            next_size = 0
+            next_occupancy = 0
         if environment._cache.capacity() < environment._cache._h_watermark and next_occupancy < 100.:
             environment._adding_or_evicting = 0
             eviction_counter += 1
             get_next_request_values()
         else:
-            environment._cache._cached_files_keys = list(environment._cache._cached_files)
-            random.shuffle(environment._cache._cached_files_keys)
-            to_print = np.asarray(environment._cache._cached_files_keys)
+            #print('START EVICTION')
+            environment._adding_or_evicting = 1 
+            addition_counter += 1
+            environment.create_cached_files_keys_list()
+            #environment._cache._cached_files_keys = list(environment._cache._cached_files)
+            #random.shuffle(environment._cache._cached_files_keys)
+            #to_print = np.asarray(environment._cache._cached_files_keys)
             environment._cached_files_index = -1
             get_next_file_in_cache_values()
 
