@@ -173,7 +173,7 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False,
                     )
                     # StdDevFreeSpace
                     values.append(
-                        df['std dev free space'].mean(),
+                        (df['std dev free space'].mean() / cache_size) * 100.,
                     )
                     # Hit Rate
                     values.append(df['hit rate'].mean())
