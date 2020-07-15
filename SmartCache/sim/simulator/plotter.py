@@ -27,20 +27,21 @@ def update_colors(new_names: str, color_table: dict):
 
 
 def add_window_lines(cur_fig, dates: list, window_size: int):
-    cur_fig.renderers.extend([
-        Span(
-            location=idx-0.5, dimension='height',
-            line_color='black', line_width=0.42
-        )
-        for idx in range(0, len(dates), window_size)
-    ])
-    cur_fig.renderers.extend([
-        Span(
-            location=idx-0.5, dimension='height',
-            line_color='gray', line_width=3.42
-        )
-        for idx in range(0, len(dates), window_size*4)
-    ])
+    # cur_fig.renderers.extend([
+    #     Span(
+    #         location=idx-0.5, dimension='height',
+    #         line_color='black', line_width=0.42
+    #     )
+    #     for idx in range(0, len(dates), window_size)
+    # ])
+    # cur_fig.renderers.extend([
+    #     Span(
+    #         location=idx-0.5, dimension='height',
+    #         line_color='gray', line_width=3.42
+    #     )
+    #     for idx in range(0, len(dates), window_size*4)
+    # ])
+    pass
 
 
 def filter_results(results: dict, key: str, filters: list):
