@@ -246,6 +246,7 @@ func (agent *Agent) ResetQValue() {
 // UnleashEpsilon set Epsilon to 1.0
 func (agent *Agent) UnleashEpsilon() {
 	agent.Epsilon = 1.0
+	agent.StepNum = 0
 }
 
 // GetRandomFloat generates a random number
