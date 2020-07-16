@@ -249,22 +249,20 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				loggerMgr := initZapLog(zap.InfoLevel)
 				zap.ReplaceGlobals(loggerMgr)
 				defer func() {
-					syncErr := loggerMgr.Sync() // flushes buffer, if any
-					// Reference to Mac and Linux different behavior:
+					// TODO: fix error
+					// -> https://github.com/uber-go/zap/issues/772
 					// -> https://github.com/uber-go/zap/issues/328
-					if syncErr != nil && syncErr != os.ErrInvalid {
-						panic(syncErr)
-					}
+					_ = loggerMgr.Sync() // flushes buffer, if any
 				}()
 			case "DEBUG", "debug":
 				logger.Info("ENABLE DEBUG LOG")
 				loggerMgr := initZapLog(zap.DebugLevel)
 				zap.ReplaceGlobals(loggerMgr)
 				defer func() {
-					syncErr := loggerMgr.Sync() // flushes buffer, if any
-					if syncErr != nil && syncErr != os.ErrInvalid {
-						panic(syncErr)
-					}
+					// TODO: fix error
+					// -> https://github.com/uber-go/zap/issues/772
+					// -> https://github.com/uber-go/zap/issues/328
+					_ = loggerMgr.Sync() // flushes buffer, if any
 				}()
 			}
 			// Update logger
@@ -762,10 +760,10 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			}
 
 			logger.Info("Simulation DONE!")
-			syncErr := logger.Sync()
-			if syncErr != nil && syncErr != os.ErrInvalid {
-				panic(syncErr)
-			}
+			_ = logger.Sync()
+			// TODO: fix error
+			// -> https://github.com/uber-go/zap/issues/772
+			// -> https://github.com/uber-go/zap/issues/328
 		},
 		Use:   useDesc,
 		Short: shortDesc,
