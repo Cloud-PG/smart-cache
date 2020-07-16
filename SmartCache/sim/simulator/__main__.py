@@ -355,7 +355,7 @@ def main():
                         cwd=working_dir,
                         stdin=subprocess.PIPE,
                         stdout=subprocess.PIPE,
-                        stderr=subprocess.STDOUT,
+                        stderr=subprocess.PIPE,
                     )
                     processes.append(("Single Window", cur_process))
 
@@ -410,7 +410,7 @@ def main():
                     cwd=working_dir,
                     stdin=subprocess.PIPE,
                     stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
+                    stderr=subprocess.PIPE,
                 )
                 processes.append(("Full Run", cur_process))
 
@@ -458,7 +458,7 @@ def main():
                         cwd=working_dir,
                         stdin=subprocess.PIPE,
                         stdout=subprocess.PIPE,
-                        stderr=subprocess.STDOUT,
+                        stderr=subprocess.PIPE,
                     )
                     processes.append(("Next Window", cur_process))
 
@@ -506,7 +506,7 @@ def main():
                         cwd=working_dir,
                         stdin=subprocess.PIPE,
                         stdout=subprocess.PIPE,
-                        stderr=subprocess.STDOUT,
+                        stderr=subprocess.PIPE,
                     )
                     processes.append(("Next Period", cur_process))
 

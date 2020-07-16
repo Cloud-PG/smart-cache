@@ -46,14 +46,14 @@ def wait_jobs(processes):
                 pass
 
 
-def read_output_last_line(output):
+def read_output_last_line(stdout, stderr):
     buffer = ""
-    read_list, _, _ = select.select([output], [], [], 600.0)
-    if output in read_list:
-        cur_char = output.read(1).decode("ascii")
+    read_list, _, _ = select.select([stdout, stderr], [], [], 600.0)
+    for descriptor in read_list:
+        cur_char = descriptor.read(1).decode("utf-8")
         while cur_char not in ["\r", "\n", '']:
             buffer += cur_char
-            cur_char = output.read(1).decode("ascii")
+            cur_char = descriptor.read(1).decode("utf-8")
     return buffer
 
 
@@ -66,7 +66,7 @@ def job_run(processes: list) -> bool:
             pass
         running = process.poll() is None
         if running:
-            current_output = read_output_last_line(process.stdout)
+            current_output = read_output_last_line(process.stdout, process.stderr)
             if current_output:
                 cur_output_string = f"[{process.pid}][RUNNING][{task_name}]{current_output}"
                 print(
