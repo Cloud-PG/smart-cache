@@ -250,7 +250,9 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				zap.ReplaceGlobals(loggerMgr)
 				defer func() {
 					syncErr := loggerMgr.Sync() // flushes buffer, if any
-					if syncErr != nil {
+					// Reference to Mac and Linux different behavior:
+					// -> https://github.com/uber-go/zap/issues/328
+					if syncErr != nil && syncErr != os.ErrInvalid {
 						panic(syncErr)
 					}
 				}()
@@ -260,7 +262,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				zap.ReplaceGlobals(loggerMgr)
 				defer func() {
 					syncErr := loggerMgr.Sync() // flushes buffer, if any
-					if syncErr != nil {
+					if syncErr != nil && syncErr != os.ErrInvalid {
 						panic(syncErr)
 					}
 				}()
@@ -761,7 +763,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 
 			logger.Info("Simulation DONE!")
 			syncErr := logger.Sync()
-			if syncErr != nil {
+			if syncErr != nil && syncErr != os.ErrInvalid {
 				panic(syncErr)
 			}
 		},
