@@ -22,7 +22,10 @@ var (
 // HashHexDigest convert to a string into an hash string
 func HashHexDigest(input string) string {
 	curHash, _ := blake2b.New(hashSize, nil)
-	curHash.Write([]byte(input))
+	_, writeErr := curHash.Write([]byte(input))
+	if writeErr != nil {
+		panic(writeErr)
+	}
 	return fmt.Sprintf("%x", curHash.Sum(nil))
 }
 
@@ -41,7 +44,7 @@ func GetSimulationRunNum(folder string) int {
 
 	run := 0
 	for _, f := range files {
-		if strings.Index(f.Name(), "_run-") != -1 {
+		if strings.Contains(f.Name(), "_run-") {
 			run++
 		}
 	}

@@ -148,8 +148,6 @@ const (
 	NumDaysPointsDecay = 3.0
 )
 
-type cacheEmptyMsg struct{}
-
 // FileStats contains file statistics collected by weight function caches
 type FileStats struct {
 	Filename          int64       `json:"filename"`
@@ -184,7 +182,10 @@ func (stats FileStats) dumps() []byte {
 }
 
 func (stats *FileStats) loads(inString string) *FileStats {
-	json.Unmarshal([]byte(inString), &stats)
+	unmarshalErr := json.Unmarshal([]byte(inString), &stats)
+	if unmarshalErr != nil {
+		panic(unmarshalErr)
+	}
 	return stats
 }
 

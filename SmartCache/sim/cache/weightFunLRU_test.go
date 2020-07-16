@@ -6,11 +6,6 @@ import (
 	// "fmt"
 )
 
-const (
-	WeightFunLRUEXP  float64 = 2.0
-	WeightedCacheEXP float64 = 2.0
-)
-
 func TestWeightFunLRUBaseMultipleInsert(t *testing.T) {
 	testCache := &WeightFunLRU{
 		SimpleCache: SimpleCache{

@@ -43,7 +43,7 @@ var (
 	cpuprofile           string
 	dataset2TestPath     string
 	githash              string
-	logger               = log.New(os.Stderr, color.MagentaString("[SIM] "), log.Lshortfile|log.LstdFlags)
+	_                    = log.New(os.Stderr, color.MagentaString("[SIM] "), log.Lshortfile|log.LstdFlags)
 	logLevel             string
 	memprofile           string
 	outputUpdateDelay    float64
@@ -248,12 +248,22 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				logger.Info("ENABLE INFO LOG")
 				loggerMgr := initZapLog(zap.InfoLevel)
 				zap.ReplaceGlobals(loggerMgr)
-				defer loggerMgr.Sync() // flushes buffer, if any
+				defer func() {
+					syncErr := loggerMgr.Sync() // flushes buffer, if any
+					if syncErr != nil {
+						panic(syncErr)
+					}
+				}()
 			case "DEBUG", "debug":
 				logger.Info("ENABLE DEBUG LOG")
 				loggerMgr := initZapLog(zap.DebugLevel)
 				zap.ReplaceGlobals(loggerMgr)
-				defer loggerMgr.Sync() // flushes buffer, if any
+				defer func() {
+					syncErr := loggerMgr.Sync() // flushes buffer, if any
+					if syncErr != nil {
+						panic(syncErr)
+					}
+				}()
 			}
 			// Update logger
 			logger = zap.L()
@@ -392,13 +402,16 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 
 				latestCacheRun := cache.GetSimulationRunNum(filepath.Dir(simLoadDumpFileName))
 
-				os.Rename(
+				renameErr := os.Rename(
 					simOutFile,
 					fmt.Sprintf("%s_run-%02d.csv",
 						strings.Split(simOutFile, ".")[0],
 						latestCacheRun,
 					),
 				)
+				if renameErr != nil {
+					panic(renameErr)
+				}
 
 				loadedDump := cache.Load(curCacheInstance, simLoadDumpFileName)
 
@@ -436,7 +449,12 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				iterator = cache.OpenSimFile(pathString)
 			case mode.IsDir():
 				curFolder, _ := os.Open(pathString)
-				defer curFolder.Close()
+				defer func() {
+					closeErr := curFolder.Close()
+					if closeErr != nil {
+						panic(closeErr)
+					}
+				}()
 				iterator = cache.OpenSimFolder(curFolder)
 			}
 
@@ -501,7 +519,10 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 					os.Exit(-1)
 				}
 				logger.Info("Enable CPU profiliing", zap.String("filename", cpuprofile))
-				pprof.StartCPUProfile(profileOut)
+				startProfileErr := pprof.StartCPUProfile(profileOut)
+				if startProfileErr != nil {
+					panic(startProfileErr)
+				}
 				defer pprof.StopCPUProfile()
 			}
 
@@ -672,8 +693,14 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 					os.Exit(-1)
 				}
 				logger.Info("Write memprofile", zap.String("filename", memprofile))
-				pprof.WriteHeapProfile(profileOut)
-				profileOut.Close()
+				profileWriteErr := pprof.WriteHeapProfile(profileOut)
+				if profileWriteErr != nil {
+					panic(profileWriteErr)
+				}
+				profileCloseErr := profileOut.Close()
+				if profileCloseErr != nil {
+					panic(profileCloseErr)
+				}
 				return
 			}
 
@@ -692,7 +719,12 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			)
 			// Save run statistics
 			statFile, errCreateStat := os.Create(resultRunStatsName)
-			defer statFile.Close()
+			defer func() {
+				closeErr := statFile.Close()
+				if closeErr != nil {
+					panic(closeErr)
+				}
+			}()
 			if errCreateStat != nil {
 				panic(errCreateStat)
 			}
@@ -710,7 +742,10 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			if errMarshal != nil {
 				panic(errMarshal)
 			}
-			statFile.Write(jsonBytes)
+			_, statFileWriteErr := statFile.Write(jsonBytes)
+			if statFileWriteErr != nil {
+				panic(statFileWriteErr)
+			}
 
 			if simDump {
 				cache.Dump(curCacheInstance, simDumpFileName, simDumpFilesAndStats)
@@ -725,7 +760,10 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 			}
 
 			logger.Info("Simulation DONE!")
-			logger.Sync()
+			syncErr := logger.Sync()
+			if syncErr != nil {
+				panic(syncErr)
+			}
 		},
 		Use:   useDesc,
 		Short: shortDesc,
@@ -766,11 +804,19 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 
 func writeQTable(outFilename string, data string) {
 	qtableAdditionFile, errCreateQTablecsv := os.Create(outFilename)
-	defer qtableAdditionFile.Close()
+	defer func() {
+		closeErr := qtableAdditionFile.Close()
+		if closeErr != nil {
+			panic(closeErr)
+		}
+	}()
 	if errCreateQTablecsv != nil {
 		panic(errCreateQTablecsv)
 	}
-	qtableAdditionFile.WriteString(data)
+	_, writeErr := qtableAdditionFile.WriteString(data)
+	if writeErr != nil {
+		panic(writeErr)
+	}
 }
 
 func commandSimulate() *cobra.Command {

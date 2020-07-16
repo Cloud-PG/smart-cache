@@ -166,24 +166,42 @@ func (cache *SimpleCache) Dump(filename string, fileAndStats bool) {
 	gwriter := gzip.NewWriter(outFile)
 
 	for _, record := range cache.Dumps(fileAndStats) {
-		gwriter.Write(record)
+		_, writeErr := gwriter.Write(record)
+		if writeErr != nil {
+			panic(writeErr)
+		}
 	}
 
-	gwriter.Close()
+	closeDumpErr := gwriter.Close()
+	if closeDumpErr != nil {
+		panic(closeDumpErr)
+	}
 }
 
 // Loads the SimpleCache cache
 func (cache *SimpleCache) Loads(inputString [][]byte, _ ...interface{}) {
 	logger.Info("Load cache dump string")
-	var curRecord DumpRecord
-	var curRecordInfo DumpInfo
+	var (
+		curRecord     DumpRecord
+		curRecordInfo DumpInfo
+		unmarshalErr  error
+	)
 	for _, record := range inputString {
-		json.Unmarshal(record, &curRecord)
-		json.Unmarshal([]byte(curRecord.Info), &curRecordInfo)
+		unmarshalErr = json.Unmarshal(record, &curRecord)
+		if unmarshalErr != nil {
+			panic(unmarshalErr)
+		}
+		unmarshalErr = json.Unmarshal([]byte(curRecord.Info), &curRecordInfo)
+		if unmarshalErr != nil {
+			panic(unmarshalErr)
+		}
 		switch curRecordInfo.Type {
 		case "FILES":
 			var curFile FileSupportData
-			json.Unmarshal([]byte(curRecord.Data), &curFile)
+			unmarshalErr = json.Unmarshal([]byte(curRecord.Data), &curFile)
+			if unmarshalErr != nil {
+				panic(unmarshalErr)
+			}
 			cache.files.Insert(&curFile)
 			cache.size += curFile.Size
 		}
@@ -218,7 +236,8 @@ func (cache *SimpleCache) Load(filename string) [][]byte {
 					newRecord := make([]byte, len(buffer))
 					copy(newRecord, buffer)
 					records = append(records, newRecord)
-					buffer = buffer[:0]
+					buffer = nil
+					buffer = make([]byte, 0)
 				}
 				break
 			}
@@ -228,12 +247,16 @@ func (cache *SimpleCache) Load(filename string) [][]byte {
 			newRecord := make([]byte, len(buffer))
 			copy(newRecord, buffer)
 			records = append(records, newRecord)
-			buffer = buffer[:0]
+			buffer = nil
+			buffer = make([]byte, 0)
 		} else {
 			buffer = append(buffer, charBuffer...)
 		}
 	}
-	greader.Close()
+	closeErr := greader.Close()
+	if closeErr != nil {
+		panic(closeErr)
+	}
 
 	return records
 }
@@ -408,7 +431,7 @@ func (cache *SimpleCache) CheckWatermark() bool {
 // HitRate of the cache
 func (cache *SimpleCache) HitRate() float64 {
 	perc := (cache.hit / (cache.hit + cache.miss)) * 100.
-	if math.IsNaN(float64(perc)) {
+	if math.IsNaN(perc) {
 		return 0.0
 	}
 	return perc
@@ -542,7 +565,7 @@ func (cache *SimpleCache) StdDevFreeSpace() float64 {
 	var sum float64
 	for _, value := range cache.dailyfreeSpace {
 		curDiff := value - mean
-		sum += (curDiff * curDiff)
+		sum += curDiff * curDiff
 	}
 	return math.Sqrt(sum / float64(len(cache.dailyfreeSpace)-1))
 }

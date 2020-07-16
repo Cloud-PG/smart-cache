@@ -328,7 +328,7 @@ type SuccessJob struct {
 
 // Check if the record is with a success or not
 func (filter SuccessJob) Check(record CSVRecord) bool {
-	if record.JobSuccess == true && record.JobExecExitCode == 0 {
+	if record.JobSuccess && record.JobExecExitCode == 0 {
 		return true
 	}
 	return false

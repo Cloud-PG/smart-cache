@@ -209,7 +209,7 @@ func (model AIModel) Predict(input *mat.Dense) *mat.Dense {
 func GetPredictionArgMax(input *mat.Dense) int {
 	_, d1 := input.Dims()
 	maxIdx := 0
-	var maxVal float64 = input.At(0, 0)
+	maxVal := input.At(0, 0)
 	for idx := 1; idx < d1; idx++ {
 		curVal := input.At(0, idx)
 		if curVal > maxVal {

@@ -12,8 +12,6 @@ import (
 	"go.uber.org/zap"
 )
 
-type mapType int
-
 // Obj represents a map object
 type Obj struct {
 	Name            string       `json:"name"`
@@ -106,7 +104,12 @@ func (manager *FeatureManager) Populate(featureMapFilePath string) {
 		os.Exit(-1)
 	}
 
-	defer featureMapFile.Close()
+	defer func() {
+		closeErr := featureMapFile.Close()
+		if closeErr != nil {
+			panic(closeErr)
+		}
+	}()
 
 	manager.Features = make([]Obj, 0)
 	manager.FileFeatures = make([]Obj, 0)

@@ -33,9 +33,7 @@ type AIRL struct {
 	evictionAgentNumForcedCalls  int64
 	evictionRO                   float64
 	actionCounters               map[qlearn.ActionType]int
-	bufferCategory               []bool
 	bufferIdxVector              []int
-	chanCategory                 chan bool
 	curCacheStates               map[int]qlearn.ActionType
 	curCacheStatesFiles          map[int][]int64
 }
@@ -202,7 +200,10 @@ func (cache *AIRL) Dump(filename string, fileAndStats bool) {
 	gwriter := gzip.NewWriter(outFile)
 
 	for _, record := range cache.Dumps(fileAndStats) {
-		gwriter.Write(record)
+		_, writeErr := gwriter.Write(record)
+		if writeErr != nil {
+			panic(writeErr)
+		}
 	}
 
 	gwriter.Close()
@@ -284,8 +285,7 @@ func (cache *AIRL) updateCategoryStates() {
 	for key := range cache.curCacheStates {
 		delete(cache.curCacheStates, key)
 	}
-	for key, value := range cache.curCacheStatesFiles {
-		value = value[:0]
+	for key := range cache.curCacheStatesFiles {
 		delete(cache.curCacheStatesFiles, key)
 	}
 

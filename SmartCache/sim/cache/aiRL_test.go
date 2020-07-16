@@ -115,7 +115,10 @@ func TestAIRLInit(t *testing.T) {
 		log.Fatal(err)
 	}
 	defer os.Remove(tmpFile.Name())
-	tmpFile.WriteString(featureMapStringRL)
+	_, writeErr := tmpFile.WriteString(featureMapStringRL)
+	if writeErr != nil {
+		panic(writeErr)
+	}
 
 	ai := AIRL{
 		SimpleCache: SimpleCache{

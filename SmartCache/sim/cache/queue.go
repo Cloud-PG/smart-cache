@@ -44,7 +44,7 @@ type Manager struct {
 
 // Init initialize the struct
 func (man *Manager) Init(qType queueType) {
-	man.files = make(map[int64]*FileSupportData, 0)
+	man.files = make(map[int64]*FileSupportData)
 	man.queue = make([]*FileSupportData, 0)
 	man.buffer = make([]*FileSupportData, 0)
 	man.qType = qType

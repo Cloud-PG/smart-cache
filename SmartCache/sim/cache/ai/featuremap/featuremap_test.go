@@ -45,8 +45,16 @@ func TestFeatureMapParse(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer os.Remove(tmpFile.Name())
-	tmpFile.WriteString(featureMapString)
+	defer func() {
+		removeErr := os.Remove(tmpFile.Name())
+		if removeErr != nil {
+			panic(removeErr)
+		}
+	}()
+	_, writeErr := tmpFile.WriteString(featureMapString)
+	if writeErr != nil {
+		panic(writeErr)
+	}
 
 	Parse(tmpFile.Name())
 
