@@ -486,7 +486,7 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 		}
 	}
 
-	if !forced && deletedSomething {
+	if !forced && deletedSomething && cache.Occupancy() < 89. {
 		cache.evictionAgentStep = cache.evictionAgentStep << 1
 	}
 
