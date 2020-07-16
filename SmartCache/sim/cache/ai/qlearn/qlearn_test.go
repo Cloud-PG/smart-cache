@@ -9,7 +9,7 @@ import (
 )
 
 func TestQTable(t *testing.T) {
-	sizes := []int{}
+	var sizes []int
 	numStates := 1
 	for idx := 0; idx < 5; idx++ {
 		curNum := rand.Intn(10) + 1

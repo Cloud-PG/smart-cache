@@ -206,7 +206,10 @@ func (cache *AIRL) Dump(filename string, fileAndStats bool) {
 		}
 	}
 
-	gwriter.Close()
+	writeErr := gwriter.Close()
+	if writeErr != nil {
+		panic(writeErr)
+	}
 }
 
 // Loads the AIRL cache
@@ -232,7 +235,7 @@ func (cache *AIRL) Loads(inputString [][]byte, vars ...interface{}) {
 		switch curRecordInfo.Type {
 		case "FILES":
 			var curFile FileSupportData
-			json.Unmarshal([]byte(curRecord.Data), &curFile)
+			unmarshalErr = json.Unmarshal([]byte(curRecord.Data), &curFile)
 			cache.files.Insert(&curFile)
 			cache.size += curFile.Size
 		case "STATS":
@@ -756,7 +759,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 			switch curAction {
 			case qlearn.ActionNotStore:
-				return added
+				return false
 			case qlearn.ActionStore:
 				forced := false
 				if cache.Size()+requestedFileSize > cache.MaxSize {
@@ -769,9 +772,9 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				}
 				if cache.Size()+requestedFileSize > cache.MaxSize {
 					if cache.evictionAgentOK && forced {
-						cache.rewardEvictionAfterForcedCall(added)
+						cache.rewardEvictionAfterForcedCall(false)
 					}
-					return added
+					return false
 				}
 				cache.files.Insert(&FileSupportData{
 					Filename:  request.Filename,
@@ -869,8 +872,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 // Free removes files from the cache
 func (cache *AIRL) Free(amount float64, percentage bool) float64 {
-	var totalDeleted float64 = cache.SimpleCache.Free(amount, percentage)
-	return totalDeleted
+	return cache.SimpleCache.Free(amount, percentage)
 }
 
 // ExtraStats for output
