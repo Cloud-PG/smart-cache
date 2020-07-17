@@ -126,7 +126,7 @@ func (cache *AIRL) Dumps(fileAndStats bool) [][]byte {
 	if fileAndStats {
 		// ----- Files -----
 		logger.Info("Dump cache files")
-		for file := range cache.files.Get() {
+		for _, file := range cache.files.Get() {
 			dumpInfo, _ := json.Marshal(DumpInfo{Type: "FILES"})
 			dumpFile, _ := json.Marshal(file)
 			record, _ := json.Marshal(DumpRecord{
@@ -409,6 +409,7 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 
 	// Forced event rewards
 	if forced {
+		cache.evictionAgentNumForcedCalls++
 		cache.evictionAgentStep = cache.evictionAgentStep>>1 + 1
 		choicesList, inMemory := cache.evictionAgent.Memory["NotDelete"]
 		if inMemory {
@@ -424,13 +425,11 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 			}
 			*choicesList = (*choicesList)[:0]
 		}
-		cache.evictionAgentNumForcedCalls++
 	}
 
 	// fmt.Println(cache.curCacheStates)
 
 	deletedFiles := make([]int64, 0)
-	deletedSomething := false
 	for catIdx, catAction := range cache.curCacheStates {
 		switch catAction {
 		case qlearn.ActionDelete:
@@ -444,7 +443,6 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 			// fmt.Println("REMOVE: ", maxDeleteNum, " OF ", len(curFileList), "|")
 			for _, curFile := range cache.curCacheStatesFiles[catIdx] {
 				if maxDeleteNum > 0 {
-					deletedSomething = true
 					maxDeleteNum--
 					curFileStats := cache.stats.Get(curFile.Filename)
 					// fmt.Println("REMOVE FREQ:", curFile.Frequency)
@@ -486,8 +484,15 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 		}
 	}
 
-	if !forced && deletedSomething && cache.Occupancy() < 89. {
-		cache.evictionAgentStep = cache.evictionAgentStep << 1
+	if !forced {
+		curCacheOccupancy := cache.Occupancy()
+		if curCacheOccupancy < 25. {
+			cache.evictionAgentStep = cache.evictionAgentStep << 1
+		} else if curCacheOccupancy < 50. {
+			cache.evictionAgentStep += cache.evictionAgentStep >> 2
+		} else if curCacheOccupancy < 75. {
+			cache.evictionAgentStep += cache.evictionAgentStep >> 1
+		}
 	}
 
 	// fmt.Println("deleted", deletedFiles)
