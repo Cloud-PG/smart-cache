@@ -142,7 +142,7 @@ func (cache *SimpleCache) Dumps(fileAndStats bool) [][]byte {
 	if fileAndStats {
 		// ----- Files -----
 		logger.Info("Dump cache files")
-		for file := range cache.files.Get() {
+		for _, file := range cache.files.Get() {
 			dumpInfo, _ := json.Marshal(DumpInfo{Type: "FILES"})
 			dumpFile, _ := json.Marshal(file)
 			record, _ := json.Marshal(DumpRecord{
@@ -236,8 +236,6 @@ func (cache *SimpleCache) Load(filename string) [][]byte {
 					newRecord := make([]byte, len(buffer))
 					copy(newRecord, buffer)
 					records = append(records, newRecord)
-					buffer = nil
-					buffer = make([]byte, 0)
 				}
 				break
 			}
@@ -247,7 +245,6 @@ func (cache *SimpleCache) Load(filename string) [][]byte {
 			newRecord := make([]byte, len(buffer))
 			copy(newRecord, buffer)
 			records = append(records, newRecord)
-			buffer = nil
 			buffer = make([]byte, 0)
 		} else {
 			buffer = append(buffer, charBuffer...)

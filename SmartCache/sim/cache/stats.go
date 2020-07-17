@@ -1,7 +1,6 @@
 package cache
 
 import (
-	"encoding/json"
 	"time"
 
 	"go.uber.org/zap"
@@ -174,19 +173,6 @@ type FileStats struct {
 // DiffLastUpdate returns the number of days from the last update stats
 func (stats FileStats) DiffLastUpdate() float64 {
 	return stats.LastTimeRequested.Sub(stats.FirstTime).Hours() / 24.
-}
-
-func (stats FileStats) dumps() []byte {
-	dumpStats, _ := json.Marshal(stats)
-	return dumpStats
-}
-
-func (stats *FileStats) loads(inString string) *FileStats {
-	unmarshalErr := json.Unmarshal([]byte(inString), &stats)
-	if unmarshalErr != nil {
-		panic(unmarshalErr)
-	}
-	return stats
 }
 
 func (stats *FileStats) addInCache(tick int64, curTime *time.Time) {
