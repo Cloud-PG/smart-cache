@@ -418,11 +418,11 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 					if cache.checkEvictionNextState(choice.State, catStateIdx) {
 						// Update table
 						cache.evictionAgent.UpdateTable(choice.State, choice.State, choice.Action, -cache.evictionRO)
+						// Update epsilon
+						cache.evictionAgent.UpdateEpsilon()
 					}
 				}
 			}
-			// Update epsilon
-			cache.evictionAgent.UpdateEpsilon()
 			*choicesList = (*choicesList)[:0]
 		}
 	}
