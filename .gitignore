@@ -283,3 +283,9 @@ training_new_domain_eod.py
 cache_env_new_linear.py
 training_new_domain.py
 training.py
+*/*/*_choices_*
+*/*/*rewards_*
+*.pstats
+*.csv
+*.h5
+*.sh
