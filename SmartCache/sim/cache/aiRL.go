@@ -559,12 +559,12 @@ func (cache *AIRL) delayedRewardEvictionAgent(hit bool, hitGtMiss bool, filename
 						}
 						// Update table
 						cache.evictionAgent.UpdateTable(curMemory.State, catStateIdx, curMemory.Action, reward)
+						// Update epsilon
+						cache.evictionAgent.UpdateEpsilon()
 					}
 				}
 			}
 		}
-		// Update epsilon
-		cache.evictionAgent.UpdateEpsilon()
 	}
 }
 
@@ -616,9 +616,9 @@ func (cache *AIRL) delayedRewardAdditionAgent(hit bool, hitGtMiss bool, filename
 			}
 			// Update table
 			cache.additionAgent.UpdateTable(curMemory.State, curState, curMemory.Action, reward)
+			// Update epsilon
+			cache.additionAgent.UpdateEpsilon()
 		}
-		// Update epsilon
-		cache.additionAgent.UpdateEpsilon()
 	}
 
 	return storeTick, notStoreTick
