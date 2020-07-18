@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	maxBadQValueInARow = 14
+	maxBadQValueInARow = 8
 )
 
 type BetterFile []*FileSupportData
