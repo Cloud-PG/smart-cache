@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	maxBadQValueInARow = 14
+	maxBadQValueInARow = 7
 )
 
 type BetterFile []*FileSupportData
@@ -492,6 +492,9 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 			cache.evictionAgentStep += cache.evictionAgentStep >> 2
 		} else if curCacheOccupancy < 75. {
 			cache.evictionAgentStep += cache.evictionAgentStep >> 1
+		}
+		if cache.evictionAgentStep > 64000 {
+			cache.evictionAgentStep = 64000
 		}
 	}
 
