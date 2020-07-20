@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	maxBadQValueInARow = 7
+	maxBadQValueInARow = 28
 )
 
 type BetterFile []*FileSupportData
@@ -493,9 +493,6 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 		} else if curCacheOccupancy < 75. {
 			cache.evictionAgentStep += cache.evictionAgentStep >> 1
 		}
-		if cache.evictionAgentStep > 64000 {
-			cache.evictionAgentStep = 64000
-		}
 	}
 
 	// fmt.Println("deleted", deletedFiles)
@@ -527,36 +524,36 @@ func (cache *AIRL) delayedRewardEvictionAgent(hit bool, hitGtMiss bool, filename
 		curChoices := *prevChoices
 		for idx := 0; idx < len(curChoices); idx++ {
 			curMemory := curChoices[idx]
-			if curMemory.Tick > storeTick && curMemory.Action == qlearn.ActionNotDelete {
+			if curMemory.Tick >= storeTick {
 				for catStateIdx := range cache.curCacheStates {
 					if cache.checkEvictionNextState(curMemory.State, catStateIdx) {
 						reward := 0.0
 						if hit {
 							if hitGtMiss {
 								if curMemory.Action == qlearn.ActionNotDelete { // Action NOT DELETE
-									reward = 3.0
-								} else { // Action DELETE
-									reward = -3.0
-								}
-							} else {
-								if curMemory.Action == qlearn.ActionNotDelete { // Action NOT DELETE
 									reward = 1.0
 								} else { // Action DELETE
 									reward = -1.0
+								}
+							} else {
+								if curMemory.Action == qlearn.ActionNotDelete { // Action NOT DELETE
+									reward = -.5
+								} else { // Action DELETE
+									reward = .5
 								}
 							}
 						} else {
 							if hitGtMiss {
 								if curMemory.Action == qlearn.ActionNotDelete { // Action NOT DELETE
-									reward = 1.0
+									reward = -.5
 								} else { // Action DELETE
-									reward = -2.0
+									reward = .5
 								}
 							} else {
 								if curMemory.Action == qlearn.ActionNotDelete { // Action NOT DELETE
-									reward = -3.0
+									reward = -1.0
 								} else { // Action DELETE
-									reward = 2.0
+									reward = 1.0
 								}
 							}
 						}
@@ -588,15 +585,15 @@ func (cache *AIRL) delayedRewardAdditionAgent(hit bool, hitGtMiss bool, filename
 						storeTick = curMemory.Tick
 					}
 					if curMemory.Action == qlearn.ActionStore { // Action STORE
-						reward = 3.0
+						reward = 1.0
 					} else { // Action NOT STORE
 						reward = -1.0
 					}
 				} else {
 					if curMemory.Action == qlearn.ActionStore { // Action STORE
-						reward = 1.0
+						reward = .75
 					} else { // Action NOT STORE
-						reward = -2.0
+						reward = .5
 					}
 				}
 			} else {
@@ -605,15 +602,15 @@ func (cache *AIRL) delayedRewardAdditionAgent(hit bool, hitGtMiss bool, filename
 						notStoreTick = curMemory.Tick
 					}
 					if curMemory.Action == qlearn.ActionStore { // Action STORE
-						reward = 1.0
+						reward = .5
 					} else { // Action NOT STORE
-						reward = -3.0
+						reward = .75
 					}
 				} else {
 					if curMemory.Action == qlearn.ActionStore { // Action STORE
 						reward = -1.0
 					} else { // Action NOT STORE
-						reward = 2.0
+						reward = 1.0
 					}
 				}
 			}
@@ -686,7 +683,7 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) 
 		if cache.additionAgentPrevQValue == 0. {
 			cache.additionAgentPrevQValue = cache.additionAgent.QValue
 		} else {
-			if cache.additionAgentPrevQValue > cache.additionAgent.QValue {
+			if cache.additionAgentPrevQValue > cache.additionAgent.QValue || cache.additionAgent.QValue < 0. {
 				cache.additionAgentBadQValueInARow++
 			} else {
 				cache.additionAgentBadQValueInARow = 0
@@ -696,7 +693,7 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) 
 		if cache.evictionAgentPrevQValue == 0. {
 			cache.evictionAgentPrevQValue = cache.evictionAgent.QValue
 		} else {
-			if cache.evictionAgentPrevQValue > cache.evictionAgent.QValue {
+			if cache.evictionAgentPrevQValue > cache.evictionAgent.QValue || cache.evictionAgent.QValue < 0. {
 				cache.evictionAgentBadQValueInARow++
 			} else {
 				cache.evictionAgentBadQValueInARow = 0
