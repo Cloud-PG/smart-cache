@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	maxBadQValueInARow = 28
+	maxBadQValueInARow = 14
 )
 
 type BetterFile []*FileSupportData
@@ -529,32 +529,22 @@ func (cache *AIRL) delayedRewardEvictionAgent(hit bool, hitGtMiss bool, filename
 					if cache.checkEvictionNextState(curMemory.State, catStateIdx) {
 						reward := 0.0
 						if hit {
+							if curMemory.Action == qlearn.ActionNotDelete { // Action NOT DELETE
+								reward = 1.0
+							} else { // Action DELETE
+								reward = -1.0
+							}
 							if hitGtMiss {
-								if curMemory.Action == qlearn.ActionNotDelete { // Action NOT DELETE
-									reward = 1.0
-								} else { // Action DELETE
-									reward = -1.0
-								}
-							} else {
-								if curMemory.Action == qlearn.ActionNotDelete { // Action NOT DELETE
-									reward = -.5
-								} else { // Action DELETE
-									reward = .5
-								}
+								reward *= 2.
 							}
 						} else {
-							if hitGtMiss {
-								if curMemory.Action == qlearn.ActionNotDelete { // Action NOT DELETE
-									reward = -.5
-								} else { // Action DELETE
-									reward = .5
-								}
-							} else {
-								if curMemory.Action == qlearn.ActionNotDelete { // Action NOT DELETE
-									reward = -1.0
-								} else { // Action DELETE
-									reward = 1.0
-								}
+							if curMemory.Action == qlearn.ActionNotDelete { // Action NOT DELETE
+								reward = -1.0
+							} else { // Action DELETE
+								reward = 1.0
+							}
+							if !hitGtMiss {
+								reward *= 2.
 							}
 						}
 						// Update table
@@ -580,38 +570,28 @@ func (cache *AIRL) delayedRewardAdditionAgent(hit bool, hitGtMiss bool, filename
 			curMemory := curChoices[idx]
 			reward := 0.0
 			if hit {
+				if curMemory.Action == qlearn.ActionStore && storeTick == -1 {
+					storeTick = curMemory.Tick
+				}
+				if curMemory.Action == qlearn.ActionStore { // Action STORE
+					reward = 1.0
+				} else { // Action NOT STORE
+					reward = -1.0
+				}
 				if hitGtMiss {
-					if curMemory.Action == qlearn.ActionStore && storeTick == -1 {
-						storeTick = curMemory.Tick
-					}
-					if curMemory.Action == qlearn.ActionStore { // Action STORE
-						reward = 1.0
-					} else { // Action NOT STORE
-						reward = -1.0
-					}
-				} else {
-					if curMemory.Action == qlearn.ActionStore { // Action STORE
-						reward = .75
-					} else { // Action NOT STORE
-						reward = .5
-					}
+					reward *= 2.
 				}
 			} else {
-				if hitGtMiss {
-					if curMemory.Action == qlearn.ActionNotStore && notStoreTick == -1 {
-						notStoreTick = curMemory.Tick
-					}
-					if curMemory.Action == qlearn.ActionStore { // Action STORE
-						reward = .5
-					} else { // Action NOT STORE
-						reward = .75
-					}
-				} else {
-					if curMemory.Action == qlearn.ActionStore { // Action STORE
-						reward = -1.0
-					} else { // Action NOT STORE
-						reward = 1.0
-					}
+				if curMemory.Action == qlearn.ActionNotStore && notStoreTick == -1 {
+					notStoreTick = curMemory.Tick
+				}
+				if curMemory.Action == qlearn.ActionStore { // Action STORE
+					reward = -1.0
+				} else { // Action NOT STORE
+					reward = 1.0
+				}
+				if !hitGtMiss {
+					reward *= 2.
 				}
 			}
 			// Update table
@@ -680,33 +660,35 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) 
 		cache.numLocal = 0
 		cache.numRemote = 0
 
-		if cache.additionAgentPrevQValue == 0. {
-			cache.additionAgentPrevQValue = cache.additionAgent.QValue
-		} else {
-			if cache.additionAgentPrevQValue > cache.additionAgent.QValue || cache.additionAgent.QValue < 0. {
-				cache.additionAgentBadQValueInARow++
+		if cache.additionAgent.Epsilon <= cache.additionAgent.MinEpsilon {
+			if cache.additionAgentPrevQValue == 0. {
+				cache.additionAgentPrevQValue = cache.additionAgent.QValue
 			} else {
-				cache.additionAgentBadQValueInARow = 0
+				if cache.additionAgentPrevQValue > cache.additionAgent.QValue {
+					cache.additionAgentBadQValueInARow++
+				} else {
+					cache.additionAgentBadQValueInARow = 0
+				}
+				cache.additionAgentPrevQValue = cache.additionAgent.QValue
 			}
-			cache.additionAgentPrevQValue = cache.additionAgent.QValue
 		}
-		if cache.evictionAgentPrevQValue == 0. {
-			cache.evictionAgentPrevQValue = cache.evictionAgent.QValue
-		} else {
-			if cache.evictionAgentPrevQValue > cache.evictionAgent.QValue || cache.evictionAgent.QValue < 0. {
-				cache.evictionAgentBadQValueInARow++
+		if cache.evictionAgent.Epsilon <= cache.evictionAgent.MinEpsilon {
+			if cache.evictionAgentPrevQValue == 0. {
+				cache.evictionAgentPrevQValue = cache.evictionAgent.QValue
 			} else {
-				cache.evictionAgentBadQValueInARow = 0
+				if cache.evictionAgentPrevQValue > cache.evictionAgent.QValue {
+					cache.evictionAgentBadQValueInARow++
+				} else {
+					cache.evictionAgentBadQValueInARow = 0
+				}
+				cache.evictionAgentPrevQValue = cache.evictionAgent.QValue
 			}
-			cache.evictionAgentPrevQValue = cache.evictionAgent.QValue
 		}
 
-		if cache.additionAgentBadQValueInARow >= maxBadQValueInARow {
+		if cache.additionAgentBadQValueInARow >= maxBadQValueInARow || cache.evictionAgentBadQValueInARow >= maxBadQValueInARow {
 			cache.additionAgentBadQValueInARow = 0
-			cache.additionAgent.UnleashEpsilon()
-		}
-		if cache.evictionAgentBadQValueInARow >= maxBadQValueInARow {
 			cache.evictionAgentBadQValueInARow = 0
+			cache.additionAgent.UnleashEpsilon()
 			cache.evictionAgent.UnleashEpsilon()
 		}
 	}
