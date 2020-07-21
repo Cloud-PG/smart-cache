@@ -175,6 +175,8 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False,
                     values.append(
                         (df['std dev free space'].mean() / cache_size) * 100.,
                     )
+                    # CPU Efficiency
+                    values.append(df['CPU efficiency'].mean())
                     # Hit Rate
                     values.append(df['hit rate'].mean())
                     leaderboard.append(values)
@@ -206,7 +208,7 @@ def load_results(folder: str, top: int = 0, top_table_output: bool = False,
                         "cacheName", "throughput", "cacheCost",
                         "readOnHitRatio", "bandSaturation",
                         "avgFreeSpace", "stdDevFreeSpace",
-                        "hitRate",
+                        "cpuEff", "hitRate",
                     ]
                 )
                 top_df = top_df.sort_values(
