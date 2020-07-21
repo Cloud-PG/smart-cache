@@ -514,16 +514,12 @@ func (cache *AIRL) delayedRewardEvictionAgent(hit bool, hitGtMiss bool, filename
 						if hit {
 							if curMemory.Action == qlearn.ActionNotDelete { // Action NOT DELETE
 								reward = 1.0
-							} else { // Action DELETE
-								reward = -1.0
 							}
 							if hitGtMiss {
 								reward *= 2.
 							}
 						} else {
-							if curMemory.Action == qlearn.ActionNotDelete { // Action NOT DELETE
-								reward = -1.0
-							} else { // Action DELETE
+							if curMemory.Action == qlearn.ActionDelete { // Action DELETE
 								reward = 1.0
 							}
 							if !hitGtMiss {
