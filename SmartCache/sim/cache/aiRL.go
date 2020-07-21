@@ -581,10 +581,16 @@ func (cache *AIRL) delayedRewardAdditionAgent(hit bool, hitGtMiss bool, filename
 			}
 			// Update table
 			cache.additionAgent.UpdateTable(curMemory.State, curState, curMemory.Action, reward)
+			// Update epsilon
+			cache.additionAgent.UpdateEpsilon()
+
+			if hit && storeTick != -1 {
+				break
+			} else if !hit && notStoreTick != -1 {
+				break
+			}
 		}
 	}
-	// Update epsilon
-	cache.additionAgent.UpdateEpsilon()
 
 	return storeTick, notStoreTick
 }
