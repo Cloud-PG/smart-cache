@@ -4,7 +4,6 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"os"
 	"simulator/v2/cache/ai/featuremap"
 	"simulator/v2/cache/ai/qlearn"
@@ -431,46 +430,24 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 		case qlearn.ActionDelete:
 			newFileList := make([]*FileSupportData, 0)
 			curFileList := cache.curCacheStatesFiles[catIdx]
-			rand.Shuffle(len(curFileList), func(i, j int) {
-				curFileList[i], curFileList[j] = curFileList[j], curFileList[i]
-			})
-			maxDeleteNum := len(curFileList) >> 1
-			if maxDeleteNum == 0 {
-				maxDeleteNum = 1
-			}
 			// fmt.Println("REMOVE: ", maxDeleteNum, " OF ", len(curFileList), "|")
 			for _, curFile := range curFileList {
-				if maxDeleteNum > 0 {
-					maxDeleteNum--
-					curFileStats := cache.stats.Get(curFile.Filename)
-					// fmt.Println("REMOVE FREQ:", curFile.Frequency)
-					curFileStats.removeFromCache()
+				curFileStats := cache.stats.Get(curFile.Filename)
+				// fmt.Println("REMOVE FREQ:", curFile.Frequency)
+				curFileStats.removeFromCache()
 
-					// Update sizes
-					cache.size -= curFileStats.Size
-					cache.dataDeleted += curFileStats.Size
-					totalDeleted += curFileStats.Size
+				// Update sizes
+				cache.size -= curFileStats.Size
+				cache.dataDeleted += curFileStats.Size
+				totalDeleted += curFileStats.Size
 
-					deletedFiles = append(deletedFiles, curFile.Filename)
+				deletedFiles = append(deletedFiles, curFile.Filename)
 
-					cache.evictionAgent.UpdateMemory(curFile, qlearn.Choice{
-						State:  catIdx,
-						Action: catAction,
-						Tick:   cache.tick,
-					})
-				} else {
-					newFileList = append(newFileList, curFile)
-					cache.evictionAgent.UpdateMemory(curFile, qlearn.Choice{
-						State:  catIdx,
-						Action: qlearn.ActionNotDelete,
-						Tick:   cache.tick,
-					})
-					cache.evictionAgent.UpdateMemory("NotDelete", qlearn.Choice{
-						State:  catIdx,
-						Action: qlearn.ActionNotDelete,
-						Tick:   cache.tick,
-					})
-				}
+				cache.evictionAgent.UpdateMemory(curFile, qlearn.Choice{
+					State:  catIdx,
+					Action: catAction,
+					Tick:   cache.tick,
+				})
 			}
 			cache.curCacheStatesFiles[catIdx] = newFileList
 		case qlearn.ActionNotDelete:
@@ -664,7 +641,7 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) 
 			cache.additionAgent.UnleashEpsilon()
 			cache.evictionAgentBadQValue = 0
 			cache.evictionAgent.UnleashEpsilon()
-			cache.evictionAgentStep = 32
+			cache.evictionAgentStep = cache.evictionAgentStep>>1 + 1
 		}
 	}
 
