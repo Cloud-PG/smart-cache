@@ -87,7 +87,7 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 			&cache.evictionFeatureManager,
 			qlearn.EvictionAgent,
 			initEpsilon,
-			decayRateEpsilon*2,
+			decayRateEpsilon*4.,
 		)
 		cache.evictionAgentOK = true
 	} else {
