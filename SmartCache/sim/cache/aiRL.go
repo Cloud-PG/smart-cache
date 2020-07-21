@@ -4,10 +4,10 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"os"
 	"simulator/v2/cache/ai/featuremap"
 	"simulator/v2/cache/ai/qlearn"
-	"sort"
 
 	"go.uber.org/zap"
 )
@@ -15,12 +15,6 @@ import (
 const (
 	maxBadQValueInARow = 14
 )
-
-type BetterFile []*FileSupportData
-
-func (s BetterFile) Len() int           { return len(s) }
-func (s BetterFile) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
-func (s BetterFile) Less(i, j int) bool { return s[i].Frequency < s[j].Frequency }
 
 // AIRL cache
 type AIRL struct {
@@ -434,8 +428,10 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 		switch catAction {
 		case qlearn.ActionDelete:
 			newFileList := make([]*FileSupportData, 0)
-			var curFileList BetterFile = cache.curCacheStatesFiles[catIdx]
-			sort.Sort(curFileList)
+			curFileList := cache.curCacheStatesFiles[catIdx]
+			rand.Shuffle(len(curFileList), func(i, j int) {
+				curFileList[i], curFileList[j] = curFileList[j], curFileList[i]
+			})
 			maxDeleteNum := len(curFileList) >> 1
 			if maxDeleteNum == 0 {
 				maxDeleteNum = 1
