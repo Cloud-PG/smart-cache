@@ -673,10 +673,12 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) 
 			}
 		}
 
-		if cache.additionAgentBadQValue >= maxBadQValue || cache.evictionAgentBadQValue >= maxBadQValue {
+		if cache.additionAgentBadQValue >= maxBadQValue  {
 			cache.additionAgentBadQValue = 0
-			cache.evictionAgentBadQValue = 0
 			cache.additionAgent.UnleashEpsilon()
+		}
+		if  cache.evictionAgentBadQValue >= maxBadQValue {
+			cache.evictionAgentBadQValue = 0
 			cache.evictionAgent.UnleashEpsilon()
 		}
 	}
