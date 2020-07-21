@@ -647,7 +647,7 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) 
 		cache.numLocal = 0
 		cache.numRemote = 0
 
-		if cache.additionAgent.Epsilon <= 0.5 {
+		if cache.additionAgent.Epsilon <= 0.25 {
 			if cache.additionAgentPrevQValue == 0. {
 				cache.additionAgentPrevQValue = cache.additionAgent.QValue
 			} else {
@@ -659,7 +659,7 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) 
 				cache.additionAgentPrevQValue = cache.additionAgent.QValue
 			}
 		}
-		if cache.evictionAgent.Epsilon <= 0.5 {
+		if cache.evictionAgent.Epsilon <= 0.25 {
 			if cache.evictionAgentPrevQValue == 0. {
 				cache.evictionAgentPrevQValue = cache.evictionAgent.QValue
 			} else {
