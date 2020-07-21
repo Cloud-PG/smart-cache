@@ -493,7 +493,9 @@ func (cache *AIRL) checkEvictionNextState(oldStateIdx int, newStateIdx int) bool
 	newState := cache.evictionAgent.Table.States[newStateIdx]
 	catSizeIdx := cache.evictionFeatureManager.FeatureIdxMap["catSize"]
 	catNumReqIdx := cache.evictionFeatureManager.FeatureIdxMap["catNumReq"]
-	return oldState[catSizeIdx] == newState[catSizeIdx] && oldState[catNumReqIdx] >= newState[catNumReqIdx]
+	catDeltaLastRequestIdx := cache.evictionFeatureManager.FeatureIdxMap["catDeltaLastRequest"]
+	//catPercOccIdx := cache.evictionFeatureManager.FeatureIdxMap["catPercOcc"]
+	return oldState[catSizeIdx] == newState[catSizeIdx] && oldState[catDeltaLastRequestIdx] == newState[catDeltaLastRequestIdx] && oldState[catNumReqIdx] >= newState[catNumReqIdx]
 }
 
 func (cache *AIRL) delayedRewardEvictionAgent(hit bool, hitGtMiss bool, filename int64, storeTick int64) {
@@ -514,12 +516,16 @@ func (cache *AIRL) delayedRewardEvictionAgent(hit bool, hitGtMiss bool, filename
 						if hit {
 							if curMemory.Action == qlearn.ActionNotDelete { // Action NOT DELETE
 								reward = 1.0
+							} else { // Action DELETE
+								reward = -1.0
 							}
 							if hitGtMiss {
 								reward *= 2.
 							}
 						} else {
-							if curMemory.Action == qlearn.ActionDelete { // Action DELETE
+							if curMemory.Action == qlearn.ActionNotDelete { // Action NOT DELETE
+								reward = -1.0
+							} else { // Action DELETE
 								reward = 1.0
 							}
 							if !hitGtMiss {
