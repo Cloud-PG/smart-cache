@@ -404,6 +404,9 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 	if forced {
 		cache.evictionAgentNumForcedCalls++
 		cache.evictionAgentStep = cache.evictionAgentStep>>1 + 1
+		if cache.evictionAgentStep > 64000 {
+			cache.evictionAgentStep = 64000
+		}
 		choicesList, inMemory := cache.evictionAgent.Memory["NotDelete"]
 		if inMemory {
 			for _, choice := range *choicesList {
