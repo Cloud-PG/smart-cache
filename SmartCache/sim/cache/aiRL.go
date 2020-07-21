@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	maxBadQValue = 14
+	maxBadQValue = 7
 )
 
 // AIRL cache
