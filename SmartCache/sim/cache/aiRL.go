@@ -439,7 +439,7 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 				maxDeleteNum = 1
 			}
 			// fmt.Println("REMOVE: ", maxDeleteNum, " OF ", len(curFileList), "|")
-			for _, curFile := range cache.curCacheStatesFiles[catIdx] {
+			for _, curFile := range curFileList {
 				if maxDeleteNum > 0 {
 					maxDeleteNum--
 					curFileStats := cache.stats.Get(curFile.Filename)
