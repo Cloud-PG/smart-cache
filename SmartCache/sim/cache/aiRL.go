@@ -581,11 +581,6 @@ func (cache *AIRL) delayedRewardAdditionAgent(hit bool, hitGtMiss bool, filename
 			cache.additionAgent.UpdateTable(curMemory.State, curState, curMemory.Action, reward)
 			// Update epsilon
 			cache.additionAgent.UpdateEpsilon()
-			if hit && curMemory.Action == qlearn.ActionStore {
-				break
-			} else if !hit && curMemory.Action == qlearn.ActionNotStore {
-				break
-			}
 		}
 	}
 
