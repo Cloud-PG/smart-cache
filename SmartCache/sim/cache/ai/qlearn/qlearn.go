@@ -30,6 +30,10 @@ const (
 	ActionNotDelete
 	// ActionDelete indicates to remove a category of files
 	ActionDelete
+	// ActionDeleteHalf indicates to remove an half of the category files
+	ActionDeleteHalf
+	// ActionDeleteQuarter indicates to remove a quarter of the category files
+	ActionDeleteQuarter
 
 	// RLSARSA indicates the standard RL update algorithm SARSA
 	RLSARSA RLUpdateAlg = iota - 2
@@ -205,6 +209,8 @@ func (agent *Agent) Init(featureManager *featuremap.FeatureManager, role AgentRo
 			featureManager,
 			[]ActionType{
 				ActionNotDelete,
+				ActionDeleteQuarter,
+				ActionDeleteHalf,
 				ActionDelete,
 			},
 		)

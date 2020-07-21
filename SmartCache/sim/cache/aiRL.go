@@ -4,6 +4,7 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"os"
 	"simulator/v2/cache/ai/featuremap"
 	"simulator/v2/cache/ai/qlearn"
@@ -431,7 +432,6 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 	for catIdx, catAction := range cache.curCacheStates {
 		switch catAction {
 		case qlearn.ActionDelete:
-			newFileList := make([]*FileSupportData, 0)
 			curFileList := cache.curCacheStatesFiles[catIdx]
 			// fmt.Println("REMOVE: ", maxDeleteNum, " OF ", len(curFileList), "|")
 			for _, curFile := range curFileList {
@@ -452,6 +452,39 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 					Tick:   cache.tick,
 				})
 			}
+			cache.curCacheStatesFiles[catIdx] = make([]*FileSupportData, 0)
+		case qlearn.ActionDeleteHalf, qlearn.ActionDeleteQuarter:
+			curFileList := cache.curCacheStatesFiles[catIdx]
+			rand.Shuffle(len(curFileList), func(i, j int) {
+				curFileList[i], curFileList[j] = curFileList[j], curFileList[i]
+			})
+			// fmt.Println("REMOVE: ", maxDeleteNum, " OF ", len(curFileList), "|")
+			maxIdx := 0
+			if catAction == qlearn.ActionDeleteHalf {
+				maxIdx = len(curFileList) / 2
+			} else {
+				maxIdx = len(curFileList) / 4
+			}
+			for idx := 0; idx < maxIdx; idx++ {
+				curFile := curFileList[idx]
+				curFileStats := cache.stats.Get(curFile.Filename)
+				// fmt.Println("REMOVE FREQ:", curFile.Frequency)
+				curFileStats.removeFromCache()
+
+				// Update sizes
+				cache.size -= curFileStats.Size
+				cache.dataDeleted += curFileStats.Size
+				totalDeleted += curFileStats.Size
+
+				deletedFiles = append(deletedFiles, curFile.Filename)
+
+				cache.evictionAgent.UpdateMemory(curFile, qlearn.Choice{
+					State:  catIdx,
+					Action: catAction,
+					Tick:   cache.tick,
+				})
+			}
+			newFileList := curFileList[maxIdx:]
 			cache.curCacheStatesFiles[catIdx] = newFileList
 		case qlearn.ActionNotDelete:
 			cache.evictionAgent.UpdateMemory("NotDelete", qlearn.Choice{
