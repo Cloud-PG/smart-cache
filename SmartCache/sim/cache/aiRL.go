@@ -664,6 +664,7 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) 
 			cache.additionAgent.UnleashEpsilon()
 			cache.evictionAgentBadQValue = 0
 			cache.evictionAgent.UnleashEpsilon()
+			cache.evictionAgentStep = 32
 		}
 	}
 
