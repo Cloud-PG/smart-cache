@@ -524,6 +524,15 @@ func (cache *AIRL) delayedRewardEvictionAgent(hit bool, hitGtMiss bool, filename
 							if hitGtMiss {
 								reward *= 2.
 							}
+						} else {
+							if curMemory.Action == qlearn.ActionNotDelete { // Action NOT DELETE
+								reward = -1.0
+							} else { // Action DELETE
+								reward = 1.0
+							}
+							if !hitGtMiss {
+								reward *= 2.
+							}
 						}
 						// Update table
 						cache.evictionAgent.UpdateTable(curMemory.State, catStateIdx, curMemory.Action, reward)
@@ -544,7 +553,7 @@ func (cache *AIRL) delayedRewardAdditionAgent(hit bool, hitGtMiss bool, filename
 
 	if inMemory {
 		curChoices := *prevChoices
-		for idx := len(curChoices) - 1; idx > -1; idx-- {
+		for idx := 0; idx < len(curChoices); idx++ {
 			curMemory := curChoices[idx]
 			reward := 0.0
 			if hit {
