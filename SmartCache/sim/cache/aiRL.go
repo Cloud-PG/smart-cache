@@ -13,30 +13,30 @@ import (
 )
 
 const (
-	maxBadQValueInARow = 14
+	maxBadQValue = 28
 )
 
 // AIRL cache
 type AIRL struct {
 	SimpleCache
-	additionAgentOK              bool
-	evictionAgentOK              bool
-	additionAgentBadQValueInARow int
-	evictionAgentBadQValueInARow int
-	additionAgentPrevQValue      float64
-	evictionAgentPrevQValue      float64
-	additionFeatureManager       featuremap.FeatureManager
-	evictionFeatureManager       featuremap.FeatureManager
-	additionAgent                qlearn.Agent
-	evictionAgent                qlearn.Agent
-	evictionAgentStep            int64
-	evictionAgentNumCalls        int64
-	evictionAgentNumForcedCalls  int64
-	evictionRO                   float64
-	actionCounters               map[qlearn.ActionType]int
-	bufferIdxVector              []int
-	curCacheStates               map[int]qlearn.ActionType
-	curCacheStatesFiles          map[int][]*FileSupportData
+	additionAgentOK             bool
+	evictionAgentOK             bool
+	additionAgentBadQValue      int
+	evictionAgentBadQValue      int
+	additionAgentPrevQValue     float64
+	evictionAgentPrevQValue     float64
+	additionFeatureManager      featuremap.FeatureManager
+	evictionFeatureManager      featuremap.FeatureManager
+	additionAgent               qlearn.Agent
+	evictionAgent               qlearn.Agent
+	evictionAgentStep           int64
+	evictionAgentNumCalls       int64
+	evictionAgentNumForcedCalls int64
+	evictionRO                  float64
+	actionCounters              map[qlearn.ActionType]int
+	bufferIdxVector             []int
+	curCacheStates              map[int]qlearn.ActionType
+	curCacheStatesFiles         map[int][]*FileSupportData
 }
 
 // Init the AIRL struct
@@ -419,6 +419,8 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 			}
 			*choicesList = (*choicesList)[:0]
 		}
+	} else {
+		cache.evictionAgentStep = cache.evictionAgentStep << 1
 	}
 
 	// fmt.Println(cache.curCacheStates)
@@ -477,17 +479,6 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 				Action: catAction,
 				Tick:   cache.tick,
 			})
-		}
-	}
-
-	if !forced {
-		curCacheOccupancy := cache.Occupancy()
-		if curCacheOccupancy < 25. {
-			cache.evictionAgentStep = cache.evictionAgentStep << 1
-		} else if curCacheOccupancy < 50. {
-			cache.evictionAgentStep += cache.evictionAgentStep >> 2
-		} else if curCacheOccupancy < 75. {
-			cache.evictionAgentStep += cache.evictionAgentStep >> 1
 		}
 	}
 
@@ -660,10 +651,10 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) 
 			if cache.additionAgentPrevQValue == 0. {
 				cache.additionAgentPrevQValue = cache.additionAgent.QValue
 			} else {
-				if cache.additionAgentPrevQValue > cache.additionAgent.QValue {
-					cache.additionAgentBadQValueInARow++
-				} else {
-					cache.additionAgentBadQValueInARow = 0
+				if cache.additionAgent.QValue-cache.additionAgentPrevQValue < 0. {
+					cache.additionAgentBadQValue++
+				} else if cache.additionAgentBadQValue > 0 {
+					cache.additionAgentBadQValue--
 				}
 				cache.additionAgentPrevQValue = cache.additionAgent.QValue
 			}
@@ -672,18 +663,18 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) 
 			if cache.evictionAgentPrevQValue == 0. {
 				cache.evictionAgentPrevQValue = cache.evictionAgent.QValue
 			} else {
-				if cache.evictionAgentPrevQValue > cache.evictionAgent.QValue {
-					cache.evictionAgentBadQValueInARow++
-				} else {
-					cache.evictionAgentBadQValueInARow = 0
+				if cache.evictionAgent.QValue-cache.evictionAgentPrevQValue < 0. {
+					cache.evictionAgentBadQValue++
+				} else if cache.evictionAgentBadQValue > 0 {
+					cache.evictionAgentBadQValue--
 				}
 				cache.evictionAgentPrevQValue = cache.evictionAgent.QValue
 			}
 		}
 
-		if cache.additionAgentBadQValueInARow >= maxBadQValueInARow || cache.evictionAgentBadQValueInARow >= maxBadQValueInARow {
-			cache.additionAgentBadQValueInARow = 0
-			cache.evictionAgentBadQValueInARow = 0
+		if cache.additionAgentBadQValue >= maxBadQValue || cache.evictionAgentBadQValue >= maxBadQValue {
+			cache.additionAgentBadQValue = 0
+			cache.evictionAgentBadQValue = 0
 			cache.additionAgent.UnleashEpsilon()
 			cache.evictionAgent.UnleashEpsilon()
 		}
