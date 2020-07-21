@@ -553,7 +553,7 @@ func (cache *AIRL) delayedRewardAdditionAgent(hit bool, hitGtMiss bool, filename
 
 	if inMemory {
 		curChoices := *prevChoices
-		for idx := 0; idx < len(curChoices); idx++ {
+		for idx := len(curChoices) - 1; idx > -1; idx-- {
 			curMemory := curChoices[idx]
 			reward := 0.0
 			if hit {
@@ -585,6 +585,11 @@ func (cache *AIRL) delayedRewardAdditionAgent(hit bool, hitGtMiss bool, filename
 			cache.additionAgent.UpdateTable(curMemory.State, curState, curMemory.Action, reward)
 			// Update epsilon
 			cache.additionAgent.UpdateEpsilon()
+			if hit && curMemory.Action == qlearn.ActionStore {
+				break
+			} else if !hit && curMemory.Action == qlearn.ActionNotStore {
+				break
+			}
 		}
 	}
 
