@@ -312,6 +312,8 @@ func (cache *AIRL) updateCategoryStates() {
 				cache.bufferIdxVector = append(cache.bufferIdxVector, feature.Index(file.Frequency))
 			case "catDeltaLastRequest":
 				cache.bufferIdxVector = append(cache.bufferIdxVector, feature.Index(file.Recency))
+			case "hitRate":
+				cache.bufferIdxVector = append(cache.bufferIdxVector, feature.Index(cache.SimpleCache.HitRate()))
 			}
 		}
 		curCatIdx := 0
@@ -361,6 +363,8 @@ func (cache *AIRL) updateCategoryStates() {
 				cache.bufferIdxVector = append(cache.bufferIdxVector, feature.Index(catPercOcc[catIdx]))
 			case "percOcc":
 				cache.bufferIdxVector = append(cache.bufferIdxVector, feature.Index(cache.SimpleCache.Occupancy()))
+			case "hitRate":
+				cache.bufferIdxVector = append(cache.bufferIdxVector, feature.Index(cache.SimpleCache.HitRate()))
 			}
 		}
 		// fmt.Println(cache.bufferIdxVector)
