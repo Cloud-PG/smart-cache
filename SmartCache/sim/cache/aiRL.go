@@ -471,8 +471,8 @@ func (cache *AIRL) checkEvictionNextState(oldStateIdx int, newStateIdx int) bool
 	catSizeIdx := cache.evictionFeatureManager.FeatureIdxMap["catSize"]
 	catNumReqIdx := cache.evictionFeatureManager.FeatureIdxMap["catNumReq"]
 	catDeltaLastRequestIdx := cache.evictionFeatureManager.FeatureIdxMap["catDeltaLastRequest"]
-	//catPercOccIdx := cache.evictionFeatureManager.FeatureIdxMap["catPercOcc"]
-	return oldState[catSizeIdx] == newState[catSizeIdx] && oldState[catDeltaLastRequestIdx] <= newState[catDeltaLastRequestIdx] && oldState[catNumReqIdx] <= newState[catNumReqIdx]
+	catPercOccIdx := cache.evictionFeatureManager.FeatureIdxMap["catPercOcc"]
+	return newState[catSizeIdx] >= oldState[catSizeIdx] && newState[catDeltaLastRequestIdx] >= oldState[catDeltaLastRequestIdx] && newState[catNumReqIdx] >= oldState[catNumReqIdx] && newState[catPercOccIdx] >= oldState[catPercOccIdx]
 }
 
 func (cache *AIRL) delayedRewardEvictionAgent(hit bool, hitGtMiss bool, filename int64, storeTick int64) {
