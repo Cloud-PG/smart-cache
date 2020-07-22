@@ -462,7 +462,7 @@ def plot_measure(tools: list,
                 if "Action store" not in values.columns:
                     continue
                 for action in [column
-                               for column in values.column
+                               for column in values.columns
                                if column.lower().find("store") != -1 and
                                column.lower().find("action") != -1]:
                     points = values[action]
@@ -481,7 +481,7 @@ def plot_measure(tools: list,
                 if "Action delete" not in values.columns:
                     continue
                 for action in [column
-                               for column in values.column
+                               for column in values.columns
                                if column.lower().find(" delete") != -1 and
                                column.lower().find("action") != -1]:
                     points = values[action]
