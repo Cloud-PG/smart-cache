@@ -28,8 +28,8 @@ const (
 	ActionStore
 	// ActionNotDelete indicates to not remove a category of files
 	ActionNotDelete
-	// ActionDelete indicates to remove a category of files
-	ActionDelete
+	// ActionDeleteOne indicates to remove a file from a category
+	ActionDeleteOne
 	// ActionDeleteHalf indicates to remove an half of the category files
 	ActionDeleteHalf
 	// ActionDeleteQuarter indicates to remove a quarter of the category files
@@ -211,7 +211,7 @@ func (agent *Agent) Init(featureManager *featuremap.FeatureManager, role AgentRo
 				ActionNotDelete,
 				ActionDeleteQuarter,
 				ActionDeleteHalf,
-				ActionDelete,
+				ActionDeleteOne,
 			},
 		)
 	}
@@ -268,8 +268,12 @@ func (agent Agent) QTableToString() string {
 
 	for _, action := range agent.Table.ActionTypes {
 		switch action {
-		case ActionDelete:
-			tmp = append(tmp, "ActionDelete")
+		case ActionDeleteOne:
+			tmp = append(tmp, "ActionDeleteOne")
+		case ActionDeleteHalf:
+			tmp = append(tmp, "ActionDeleteHalf")
+		case ActionDeleteQuarter:
+			tmp = append(tmp, "ActionDeleteQuarter")
 		case ActionNotDelete:
 			tmp = append(tmp, "ActionNotDelete")
 		case ActionStore:

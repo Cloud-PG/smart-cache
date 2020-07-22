@@ -60,7 +60,7 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 
 	cache.actionCounters[qlearn.ActionStore] = 0
 	cache.actionCounters[qlearn.ActionNotStore] = 0
-	cache.actionCounters[qlearn.ActionDelete] = 0
+	cache.actionCounters[qlearn.ActionDeleteOne] = 0
 	cache.actionCounters[qlearn.ActionNotDelete] = 0
 
 	logger.Info("Feature maps", zap.String("addition map", additionFeatureMap), zap.String("eviction map", evictionFeatureMap))
@@ -107,7 +107,7 @@ func (cache *AIRL) ClearHitMissStats() {
 	cache.evictionAgentNumForcedCalls = 0
 	cache.actionCounters[qlearn.ActionStore] = 0
 	cache.actionCounters[qlearn.ActionNotStore] = 0
-	cache.actionCounters[qlearn.ActionDelete] = 0
+	cache.actionCounters[qlearn.ActionDeleteOne] = 0
 	cache.actionCounters[qlearn.ActionNotDelete] = 0
 }
 
@@ -432,28 +432,32 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 	deletedFiles := make([]int64, 0)
 	for catIdx, catAction := range cache.curCacheStates {
 		switch catAction {
-		case qlearn.ActionDelete:
+		case qlearn.ActionDeleteOne:
 			curFileList := cache.curCacheStatesFiles[catIdx]
+			idx2Delete := rand.Intn(len(curFileList))
 			// fmt.Println("REMOVE: ", maxDeleteNum, " OF ", len(curFileList), "|")
-			for _, curFile := range curFileList {
-				curFileStats := cache.stats.Get(curFile.Filename)
-				// fmt.Println("REMOVE FREQ:", curFile.Frequency)
-				curFileStats.removeFromCache()
+			curFile := curFileList[idx2Delete]
+			curFileStats := cache.stats.Get(curFile.Filename)
+			// fmt.Println("REMOVE FREQ:", curFile.Frequency)
+			curFileStats.removeFromCache()
 
-				// Update sizes
-				cache.size -= curFileStats.Size
-				cache.dataDeleted += curFileStats.Size
-				totalDeleted += curFileStats.Size
+			// Update sizes
+			cache.size -= curFileStats.Size
+			cache.dataDeleted += curFileStats.Size
+			totalDeleted += curFileStats.Size
 
-				deletedFiles = append(deletedFiles, curFile.Filename)
+			deletedFiles = append(deletedFiles, curFile.Filename)
 
-				cache.evictionAgent.UpdateMemory(curFile, qlearn.Choice{
-					State:  catIdx,
-					Action: catAction,
-					Tick:   cache.tick,
-				})
-			}
-			cache.curCacheStatesFiles[catIdx] = make([]*FileSupportData, 0)
+			cache.evictionAgent.UpdateMemory(curFile, qlearn.Choice{
+				State:  catIdx,
+				Action: catAction,
+				Tick:   cache.tick,
+			})
+
+			copy(curFileList[idx2Delete:], curFileList[idx2Delete+1:])
+			curFileList = curFileList[:len(curFileList)-1]
+			cache.curCacheStatesFiles[catIdx] = curFileList
+
 		case qlearn.ActionDeleteHalf, qlearn.ActionDeleteQuarter:
 			curFileList := cache.curCacheStatesFiles[catIdx]
 			rand.Shuffle(len(curFileList), func(i, j int) {
@@ -461,7 +465,9 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 			})
 			// fmt.Println("REMOVE: ", maxDeleteNum, " OF ", len(curFileList), "|")
 			maxIdx := 0
-			if catAction == qlearn.ActionDeleteHalf {
+			if len(curFileList) == 1 {
+				maxIdx = 1
+			} else if catAction == qlearn.ActionDeleteHalf {
 				maxIdx = len(curFileList) / 2
 			} else {
 				maxIdx = len(curFileList) / 4
