@@ -490,7 +490,7 @@ func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
 				csvHeaderColumns = append(csvHeaderColumns, "Eviction step")
 				csvHeaderColumns = append(csvHeaderColumns, "Action store")
 				csvHeaderColumns = append(csvHeaderColumns, "Action not store")
-				csvHeaderColumns = append(csvHeaderColumns, "Action delete")
+				csvHeaderColumns = append(csvHeaderColumns, "Action delete one")
 				csvHeaderColumns = append(csvHeaderColumns, "Action delete half")
 				csvHeaderColumns = append(csvHeaderColumns, "Action delete quarter")
 				csvHeaderColumns = append(csvHeaderColumns, "Action not delete")

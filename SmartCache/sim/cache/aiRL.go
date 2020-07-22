@@ -609,7 +609,7 @@ func (cache *AIRL) rewardEvictionAfterForcedCall(added bool) {
 					cache.evictionAgent.UpdateEpsilon()
 				}
 			}
-		} else if added && action == qlearn.ActionDelete {
+		} else {
 			for catStateIdx := range cache.curCacheStates {
 				if cache.checkEvictionNextState(state, catStateIdx) {
 					// Update table
@@ -934,7 +934,7 @@ func (cache *AIRL) ExtraOutput(info string) string {
 		result = fmt.Sprintf("%d,%d,%d,%d,%d,%d",
 			cache.actionCounters[qlearn.ActionStore],
 			cache.actionCounters[qlearn.ActionNotStore],
-			cache.actionCounters[qlearn.ActionDelete],
+			cache.actionCounters[qlearn.ActionDeleteOne],
 			cache.actionCounters[qlearn.ActionDeleteHalf],
 			cache.actionCounters[qlearn.ActionDeleteQuarter],
 			cache.actionCounters[qlearn.ActionNotDelete],
