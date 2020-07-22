@@ -463,7 +463,8 @@ def plot_measure(tools: list,
                     continue
                 for action in [column
                                for column in values.column
-                               if column.lower().find("store") != -1]:
+                               if column.lower().find("store") != -1 and
+                               column.lower().find("action") != -1]:
                     points = values[action]
                     cur_line = cur_fig.line(
                         dates if num_points == -
@@ -481,7 +482,8 @@ def plot_measure(tools: list,
                     continue
                 for action in [column
                                for column in values.column
-                               if column.lower().find("delete") != -1]:
+                               if column.lower().find(" delete") != -1 and
+                               column.lower().find("action") != -1]:
                     points = values[action]
                     cur_line = cur_fig.line(
                         dates if num_points == -
