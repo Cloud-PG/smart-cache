@@ -925,10 +925,12 @@ func (cache *AIRL) ExtraOutput(info string) string {
 			cache.additionAgent.Epsilon, cache.evictionAgent.Epsilon,
 		)
 	case "actionStats":
-		result = fmt.Sprintf("%d,%d,%d,%d",
+		result = fmt.Sprintf("%d,%d,%d,%d,%d,%d",
 			cache.actionCounters[qlearn.ActionStore],
 			cache.actionCounters[qlearn.ActionNotStore],
-			cache.actionCounters[qlearn.ActionDelete]+cache.actionCounters[qlearn.ActionDeleteHalf]+cache.actionCounters[qlearn.ActionDeleteQuarter],
+			cache.actionCounters[qlearn.ActionDelete],
+			cache.actionCounters[qlearn.ActionDeleteHalf],
+			cache.actionCounters[qlearn.ActionDeleteQuarter],
 			cache.actionCounters[qlearn.ActionNotDelete],
 		)
 	default:
