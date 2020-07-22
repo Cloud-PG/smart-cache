@@ -30,6 +30,7 @@ type AIRL struct {
 	additionAgent               qlearn.Agent
 	evictionAgent               qlearn.Agent
 	evictionAgentStep           int64
+	evictionAgentK              int64
 	evictionAgentNumCalls       int64
 	evictionAgentNumForcedCalls int64
 	evictionRO                  float64
@@ -55,7 +56,8 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 	initEpsilon := args[2].(float64)
 	decayRateEpsilon := args[3].(float64)
 
-	cache.evictionAgentStep = 32
+	cache.evictionAgentK = 32
+	cache.evictionAgentStep = cache.evictionAgentK
 	cache.evictionRO = 0.1
 	cache.numPrevDayReq = -1
 
@@ -411,9 +413,9 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 	// Forced event rewards
 	if forced {
 		cache.evictionAgentNumForcedCalls++
-		cache.evictionAgentStep = cache.evictionAgentStep>>1 + 1
-		if cache.evictionAgentStep > cache.numPrevDayReq {
-			cache.evictionAgentStep = cache.numPrevDayReq
+		cache.evictionAgentK = cache.evictionAgentK>>1 + 1
+		if cache.evictionAgentK > cache.numPrevDayReq {
+			cache.evictionAgentK = cache.numPrevDayReq
 		}
 		choicesList, inMemory := cache.evictionAgent.Memory["NotDelete"]
 		if inMemory {
@@ -430,7 +432,7 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 			*choicesList = (*choicesList)[:0]
 		}
 	} else {
-		cache.evictionAgentStep = cache.evictionAgentStep << 1
+		cache.evictionAgentK = cache.evictionAgentK << 1
 	}
 
 	// fmt.Println(cache.curCacheStates)
@@ -563,16 +565,13 @@ func (cache *AIRL) delayedRewardEvictionAgent(hit bool, filename int64, storeTic
 	}
 }
 
-func (cache *AIRL) delayedRewardAdditionAgent(hit bool, filename int64, storeTick int64, curState int) {
+func (cache *AIRL) delayedRewardAdditionAgent(hit bool, filename int64, curState int) {
 	prevChoices, inMemory := cache.additionAgent.Memory[filename]
 
 	if inMemory {
 		curChoices := *prevChoices
 		for idx := len(curChoices) - 1; idx > -1; idx-- {
 			curMemory := curChoices[idx]
-			if curMemory.Tick < storeTick {
-				break
-			}
 			reward := 0.0
 			if hit {
 				if curMemory.Action == qlearn.ActionStore { // Action STORE
@@ -622,8 +621,8 @@ func (cache *AIRL) rewardEvictionAfterForcedCall(added bool) {
 // BeforeRequest of LRU cache
 func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) {
 
-	if cache.tick%cache.evictionAgentStep == 0 {
-		if cache.evictionAgentOK {
+	if cache.evictionAgentOK {
+		if cache.evictionAgentStep <= 0 {
 			_, deletedFiles := cache.callEvictionAgent(false)
 			if hit {
 				for _, filename := range deletedFiles {
@@ -633,6 +632,9 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) 
 					}
 				}
 			}
+			cache.evictionAgentStep = cache.evictionAgentK
+		} else {
+			cache.evictionAgentStep--
 		}
 	}
 
@@ -683,7 +685,8 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) 
 			cache.additionAgent.UnleashEpsilon()
 			cache.evictionAgentBadQValue = 0
 			cache.evictionAgent.UnleashEpsilon()
-			cache.evictionAgentStep = cache.evictionAgentStep>>1 + 1
+			cache.evictionAgentK = cache.evictionAgentK>>1 + 1
+			cache.evictionAgentStep = cache.evictionAgentK
 		}
 	}
 
@@ -740,7 +743,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 		logger.Debug("cache", zap.Int("current state", curState))
 
-		cache.delayedRewardAdditionAgent(hit, request.Filename, fileStats.InCacheTick, curState)
+		cache.delayedRewardAdditionAgent(hit, request.Filename, curState)
 
 		if cache.evictionAgentOK {
 			cache.delayedRewardEvictionAgent(hit, request.Filename, fileStats.InCacheTick)
@@ -925,7 +928,7 @@ func (cache *AIRL) ExtraOutput(info string) string {
 		result = fmt.Sprintf("%d,%d,%d",
 			cache.evictionAgentNumCalls,
 			cache.evictionAgentNumForcedCalls,
-			cache.evictionAgentStep,
+			cache.evictionAgentK,
 		)
 	case "epsilonStats":
 		result = fmt.Sprintf("%0.6f,%0.6f",
