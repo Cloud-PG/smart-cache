@@ -158,9 +158,10 @@ func (table QTable) Features2Idxs(features ...interface{}) []int {
 
 // Choice of an agent
 type Choice struct {
-	State  int        `json:"state"`
-	Action ActionType `json:"action"`
-	Tick   int64      `json:"tick"`
+	State     int        `json:"state"`
+	Action    ActionType `json:"action"`
+	Tick      int64      `json:"tick"`
+	ReadOnHit float64    `json:"readOnHit"`
 }
 
 // Agent used in Qlearning

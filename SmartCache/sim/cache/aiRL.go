@@ -457,9 +457,10 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 			deletedFiles = append(deletedFiles, curFile.Filename)
 
 			cache.evictionAgent.UpdateMemory(curFile, qlearn.Choice{
-				State:  catIdx,
-				Action: catAction,
-				Tick:   cache.tick,
+				State:     catIdx,
+				Action:    catAction,
+				Tick:      cache.tick,
+				ReadOnHit: cache.dataReadOnHit,
 			})
 
 			copy(curFileList[idx2Delete:], curFileList[idx2Delete+1:])
@@ -494,18 +495,20 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 				deletedFiles = append(deletedFiles, curFile.Filename)
 
 				cache.evictionAgent.UpdateMemory(curFile, qlearn.Choice{
-					State:  catIdx,
-					Action: catAction,
-					Tick:   cache.tick,
+					State:     catIdx,
+					Action:    catAction,
+					Tick:      cache.tick,
+					ReadOnHit: cache.dataReadOnHit,
 				})
 			}
 			newFileList := curFileList[maxIdx:]
 			cache.curCacheStatesFiles[catIdx] = newFileList
 		case qlearn.ActionNotDelete:
 			cache.evictionAgent.UpdateMemory("NotDelete", qlearn.Choice{
-				State:  catIdx,
-				Action: catAction,
-				Tick:   cache.tick,
+				State:     catIdx,
+				Action:    catAction,
+				Tick:      cache.tick,
+				ReadOnHit: cache.dataReadOnHit,
 			})
 		}
 	}
@@ -541,17 +544,22 @@ func (cache *AIRL) delayedRewardEvictionAgent(hit bool, filename int64, storeTic
 				for catStateIdx := range cache.curCacheStates {
 					if cache.checkEvictionNextState(curMemory.State, catStateIdx) {
 						reward := 0.0
+						if curMemory.ReadOnHit < cache.dataReadOnHit {
+							reward += 2.
+						} else {
+							reward += -2.
+						}
 						if hit {
 							if curMemory.Action == qlearn.ActionNotDelete { // Action NOT DELETE
-								reward = 1.0
-							} else { // Action DELETE
-								reward = -1.0
+								reward += 1.0
+							} else { // All DELETE Actions
+								reward += -1.0
 							}
 						} else {
 							if curMemory.Action == qlearn.ActionNotDelete { // Action NOT DELETE
-								reward = -1.0
-							} else { // Action DELETE
-								reward = 1.0
+								reward += -1.0
+							} else { // All DELETE Actions
+								reward += 1.0
 							}
 						}
 						// Update table
@@ -573,17 +581,22 @@ func (cache *AIRL) delayedRewardAdditionAgent(hit bool, filename int64, curState
 		for idx := len(curChoices) - 1; idx > -1; idx-- {
 			curMemory := curChoices[idx]
 			reward := 0.0
+			if curMemory.ReadOnHit < cache.dataReadOnHit {
+				reward += 2.
+			} else {
+				reward += -2.
+			}
 			if hit {
 				if curMemory.Action == qlearn.ActionStore { // Action STORE
-					reward = 1.0
+					reward += 1.0
 				} else { // Action NOT STORE
-					reward = -1.0
+					reward += -1.0
 				}
 			} else {
 				if curMemory.Action == qlearn.ActionStore { // Action STORE
-					reward = -1.0
+					reward += -1.0
 				} else { // Action NOT STORE
-					reward = 1.0
+					reward += 1.0
 				}
 			}
 			// Update table
@@ -768,9 +781,10 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			cache.actionCounters[curAction]++
 
 			cache.additionAgent.UpdateMemory(request.Filename, qlearn.Choice{
-				State:  curState,
-				Action: curAction,
-				Tick:   cache.tick,
+				State:     curState,
+				Action:    curAction,
+				Tick:      cache.tick,
+				ReadOnHit: cache.dataReadOnHit,
 			})
 
 			switch curAction {
