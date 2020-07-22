@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from bokeh.models import (BasicTickFormatter, FuncTickFormatter, Legend,
                           Range1d, SaveTool, Span)
-from bokeh.palettes import Category20
+from bokeh.palettes import Category20, PuBu, RdPu
 from bokeh.plotting import figure
 
 from .utils import get_cache_size
@@ -461,17 +461,23 @@ def plot_measure(tools: list,
             if target == "additionActions":
                 if "Action store" not in values.columns:
                     continue
+                not_colors = cycle(PuBu[9])
+                negative_colors = cycle(RdPu[9])
                 for action in [column
                                for column in values.columns
                                if column.lower().find("store") != -1 and
                                column.lower().find("action") != -1]:
                     points = values[action]
+                    if action.lower().find("not") != -1:
+                        color = next(not_colors)
+                    else:
+                        color = next(negative_colors)
                     cur_line = cur_fig.line(
                         dates if num_points == -
                         1 else collapse2numpoints(num_points, x=dates),
                         points if num_points == -
                         1 else collapse2numpoints(num_points, y=points),
-                        color="red",
+                        color=color,
                         line_width=_LINE_WIDTH,
                     )
                     legend_items.append(
@@ -480,17 +486,23 @@ def plot_measure(tools: list,
             elif target == "evictionActions":
                 if "Action delete" not in values.columns:
                     continue
+                not_colors = cycle(PuBu[9])
+                negative_colors = cycle(RdPu[9])
                 for action in [column
                                for column in values.columns
                                if column.lower().find(" delete") != -1 and
                                column.lower().find("action") != -1]:
                     points = values[action]
+                    if action.lower().find("not") != -1:
+                        color = next(not_colors)
+                    else:
+                        color = next(negative_colors)
                     cur_line = cur_fig.line(
                         dates if num_points == -
                         1 else collapse2numpoints(num_points, x=dates),
                         points if num_points == -
                         1 else collapse2numpoints(num_points, y=points),
-                        color="red",
+                        color=color,
                         line_width=_LINE_WIDTH,
                     )
                     legend_items.append(
