@@ -14,6 +14,12 @@ _LINE_WIDTH = 2.8
 _DAY_SECONDS = 60. * 60. * 24.
 _Band1Gbit = (1000. / 8.) * _DAY_SECONDS
 
+READ_ON_HIT = "read on hit"
+READ_DATA = "read data"
+WRITTEN_DATA = "written data"
+DELETED_DATA = "deleted data"
+READ_ON_MISS_DATA = "read on miss data"
+
 
 def update_colors(new_names: str, color_table: dict):
     names = [
@@ -449,7 +455,7 @@ def plot_measure(tools: list,
         )
         cur_fig.renderers.extend([hline_1])
 
-    read_data_type = 'read on hit data' if read_on_hit else 'read data'
+    read_data_type = READ_ON_HIT if read_on_hit else READ_DATA
     legend_items = []
 
     cur_band = _Band1Gbit * bandwidth
@@ -518,85 +524,85 @@ def plot_measure(tools: list,
                 points = values['std dev free space']
             elif target == "costFunction":
                 cache_size = get_cache_size(cache_name)
-                points = ((values['written data'] +
-                           values['deleted data'] +
-                           values['read on miss data']) / cache_size) * 100.
+                points = ((values[WRITTEN_DATA] +
+                           values[DELETED_DATA] +
+                           values[READ_ON_MISS_DATA]) / cache_size) * 100.
             elif target == "cacheCost":
                 cache_size = get_cache_size(cache_name)
-                points = ((values['written data'] +
-                           values['deleted data']) / cache_size) * 100.
+                points = ((values[WRITTEN_DATA] +
+                           values[DELETED_DATA]) / cache_size) * 100.
                 # Old cost
-                # points = values['written data'] + \
-                #     values['deleted data'] + values['read on miss data']
+                # points = values[WRITTEN_DATA] + \
+                #     values[DELETED_DATA] + values[READ_ON_MISS_DATA]
             elif target == "costFunctionVs":
                 for inner_cache_name, inner_values in filter_results(
                     results, run_type, filters
                 ):
                     if inner_cache_name.find("lru_") != -1 and inner_cache_name.index("lru_") == 0:
-                        lru_cost = inner_values['written data'] + \
-                            inner_values['deleted data'] + \
-                            inner_values['read on miss data']
+                        lru_cost = inner_values[WRITTEN_DATA] + \
+                            inner_values[DELETED_DATA] + \
+                            inner_values[READ_ON_MISS_DATA]
                         break
                 else:
                     continue
-                points = values['written data'] + \
-                    values['deleted data'] + values['read on miss data']
+                points = values[WRITTEN_DATA] + \
+                    values[DELETED_DATA] + values[READ_ON_MISS_DATA]
                 points /= lru_cost
             elif target == "cacheCostVs":
                 for inner_cache_name, inner_values in filter_results(
                     results, run_type, filters
                 ):
                     if inner_cache_name.find("lru_") != -1 and inner_cache_name.index("lru_") == 0:
-                        lru_cost = inner_values['written data'] + \
-                            inner_values['deleted data']
+                        lru_cost = inner_values[WRITTEN_DATA] + \
+                            inner_values[DELETED_DATA]
                         break
                 else:
                     continue
-                points = values['written data'] + values['deleted data']
+                points = values[WRITTEN_DATA] + values[DELETED_DATA]
                 points /= lru_cost
             elif target == "miss":
                 cache_size = get_cache_size(cache_name)
                 points = (
-                    values['read on miss data'] - values['written data']
+                    values[READ_ON_MISS_DATA] - values[WRITTEN_DATA]
                 ) / cache_size*100
             elif target == "throughput":
                 points = (
                     (
-                        values['read on hit data'] - values['written data']
-                    ) / values['read data']
+                        values[READ_ON_HIT] - values[WRITTEN_DATA]
+                    ) / values[READ_DATA]
                 ) * 100.
                 # Old throughput
-                # points = (values['read on hit data'] / values['written data']) * 100.
+                # points = (values[READ_ON_HIT] / values[WRITTEN_DATA]) * 100.
                 # very Old throughput
-                # points = values['read on hit data'] / values['written data']
+                # points = values[READ_ON_HIT] / values[WRITTEN_DATA]
             elif target == "throughputVs":
                 for inner_cache_name, inner_values in filter_results(
                     results, run_type, filters
                 ):
                     if inner_cache_name.find("lru_") != -1 and inner_cache_name.index("lru_") == 0:
-                        lru_cost = inner_values['read on hit data'] - \
-                            inner_values['written data']
+                        lru_cost = inner_values[READ_ON_HIT] - \
+                            inner_values[WRITTEN_DATA]
                         break
                 else:
                     continue
-                points = values['read on hit data'] - values['written data']
+                points = values[READ_ON_HIT] - values[WRITTEN_DATA]
                 points /= lru_cost
             elif target == "network_in_saturation":
-                points = (values['read on miss data'] / cur_band) * 100.
+                points = (values[READ_ON_MISS_DATA] / cur_band) * 100.
             elif target == "network_out_saturation":
-                points = (values['read data'] / cur_band) * 100.
+                points = (values[READ_DATA] / cur_band) * 100.
             elif target == "readOnHitRatio":
-                points = (values['read on hit data'] /
-                          values['read data']) * 100.
+                points = (values[READ_ON_HIT] /
+                          values[READ_DATA]) * 100.
             elif target == "readOnMissRatio":
-                points = (values['read on miss data'] /
-                          values['read data']) * 100.
+                points = (values[READ_ON_MISS_DATA] /
+                          values[READ_DATA]) * 100.
             elif target == "writtenRatio":
-                points = (values['written data'] /
-                          values['read data']) * 100.
+                points = (values[WRITTEN_DATA] /
+                          values[READ_DATA]) * 100.
             elif target == "deletedRatio":
-                points = (values['deleted data'] /
-                          values['read data']) * 100.
+                points = (values[DELETED_DATA] /
+                          values[READ_DATA]) * 100.
             else:
                 raise Exception(f"Unknown target '{target}'...")
 
@@ -627,7 +633,7 @@ def plot_measure(tools: list,
                 )
         elif run_type == "run_single_window":
             points = results['run_full_normal'][cache_name][read_data_type] / \
-                results['run_full_normal'][cache_name]['written data']
+                results['run_full_normal'][cache_name][WRITTEN_DATA]
             cur_line = cur_fig.line(
                 dates,
                 points,
@@ -658,7 +664,7 @@ def plot_measure(tools: list,
                 ]
             ).sort_values(by=['date'])
             points = single_windows[read_data_type] / \
-                single_windows['written data']
+                single_windows[WRITTEN_DATA]
             cur_line = cur_fig.line(
                 dates,
                 points,
@@ -681,7 +687,7 @@ def plot_measure(tools: list,
                 in next_windows['date'].astype(str)
             ]
             points = next_windows[read_data_type] / \
-                next_windows['written data']
+                next_windows[WRITTEN_DATA]
             cur_line = cur_fig.line(
                 cur_dates,
                 points,
@@ -704,7 +710,7 @@ def plot_measure(tools: list,
             )
         elif run_type == "run_next_period":
             points = results['run_full_normal'][cache_name][read_data_type] / \
-                results['run_full_normal'][cache_name]['written data']
+                results['run_full_normal'][cache_name][WRITTEN_DATA]
             cur_line = cur_fig.line(
                 dates,
                 points,
@@ -734,7 +740,7 @@ def plot_measure(tools: list,
                 ]
             )
             points = single_windows.sort_values(by=['date'])
-            points = points[read_data_type] / points['written data']
+            points = points[read_data_type] / points[WRITTEN_DATA]
             cur_line = cur_fig.line(
                 dates,
                 points,
@@ -751,11 +757,11 @@ def plot_measure(tools: list,
             ])
             for period, period_values in values.items():
                 cur_period = period_values[
-                    ['date', read_data_type, 'written data']
+                    ['date', read_data_type, WRITTEN_DATA]
                 ][period_values.date.isin(datetimes)].sort_values(by=['date'])
                 cur_period_name = f"{cache_name} - from {period.split('-')[0]}"
                 points = cur_period[read_data_type] / \
-                    cur_period['written data']
+                    cur_period[WRITTEN_DATA]
                 cur_dates = [
                     elm.split(" ")[0]
                     for elm
