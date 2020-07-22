@@ -524,7 +524,7 @@ func (cache *AIRL) checkEvictionNextState(oldStateIdx int, newStateIdx int) bool
 	return newState[catSizeIdx] == oldState[catSizeIdx] && newState[catDeltaLastRequestIdx] == oldState[catDeltaLastRequestIdx] && newState[catNumReqIdx] >= oldState[catNumReqIdx]
 }
 
-func (cache *AIRL) delayedRewardEvictionAgent(hit bool, hitGtMiss bool, filename int64, storeTick int64) {
+func (cache *AIRL) delayedRewardEvictionAgent(hit bool, filename int64, storeTick int64) {
 	if storeTick == -1 {
 		return
 	}
@@ -545,17 +545,11 @@ func (cache *AIRL) delayedRewardEvictionAgent(hit bool, hitGtMiss bool, filename
 							} else { // Action DELETE
 								reward = -1.0
 							}
-							if hitGtMiss {
-								reward *= 2.
-							}
 						} else {
 							if curMemory.Action == qlearn.ActionNotDelete { // Action NOT DELETE
 								reward = -1.0
 							} else { // Action DELETE
 								reward = 1.0
-							}
-							if !hitGtMiss {
-								reward *= 2.
 							}
 						}
 						// Update table
@@ -569,7 +563,7 @@ func (cache *AIRL) delayedRewardEvictionAgent(hit bool, hitGtMiss bool, filename
 	}
 }
 
-func (cache *AIRL) delayedRewardAdditionAgent(hit bool, hitGtMiss bool, filename int64, curState int) {
+func (cache *AIRL) delayedRewardAdditionAgent(hit bool, filename int64, curState int) {
 	prevChoices, inMemory := cache.additionAgent.Memory[filename]
 
 	if inMemory {
@@ -582,9 +576,6 @@ func (cache *AIRL) delayedRewardAdditionAgent(hit bool, hitGtMiss bool, filename
 					reward = 1.0
 				} else { // Action NOT STORE
 					reward = -1.0
-				}
-				if hitGtMiss {
-					reward *= 2.
 				}
 			} else {
 				if curMemory.Action == qlearn.ActionStore { // Action STORE
@@ -746,10 +737,10 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 		logger.Debug("cache", zap.Int("current state", curState))
 
-		cache.delayedRewardAdditionAgent(hit, fileStats.NHits > fileStats.NMiss, request.Filename, curState)
+		cache.delayedRewardAdditionAgent(hit, request.Filename, curState)
 
 		if cache.evictionAgentOK {
-			cache.delayedRewardEvictionAgent(hit, fileStats.NHits > fileStats.NMiss, request.Filename, fileStats.InCacheTick)
+			cache.delayedRewardEvictionAgent(hit, request.Filename, fileStats.InCacheTick)
 		}
 
 		if !hit {
@@ -830,7 +821,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 		// #####################################################################
 
 		if cache.evictionAgentOK {
-			cache.delayedRewardEvictionAgent(hit, fileStats.NHits > fileStats.NMiss, request.Filename, fileStats.InCacheTick)
+			cache.delayedRewardEvictionAgent(hit, request.Filename, fileStats.InCacheTick)
 		}
 
 		if !hit {
