@@ -465,7 +465,7 @@ def plot_measure(tools: list,
     ):
         if run_type == "run_full_normal":
             if target == "additionActions":
-                if "Action store" not in values.columns:
+                if "Action not store" not in values.columns:
                     continue
                 not_colors = cycle(Blues[9])
                 negative_colors = cycle(Oranges[9])
@@ -490,7 +490,7 @@ def plot_measure(tools: list,
                         (action, [cur_line]))
                 continue
             elif target == "evictionActions":
-                if "Action delete" not in values.columns:
+                if "Action not delete" not in values.columns:
                     continue
                 not_colors = cycle(Blues[9])
                 negative_colors = cycle(Oranges[9])
