@@ -37,6 +37,8 @@ type AIRL struct {
 	bufferIdxVector             []int
 	curCacheStates              map[int]qlearn.ActionType
 	curCacheStatesFiles         map[int][]*FileSupportData
+	numPrevDayReq               int64
+	numServedReq                int64
 }
 
 // Init the AIRL struct
@@ -55,6 +57,7 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 
 	cache.evictionAgentStep = 32
 	cache.evictionRO = 0.1
+	cache.numPrevDayReq = -1
 
 	cache.actionCounters = make(map[qlearn.ActionType]int)
 
@@ -409,6 +412,9 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 	if forced {
 		cache.evictionAgentNumForcedCalls++
 		cache.evictionAgentStep = cache.evictionAgentStep>>1 + 1
+		if cache.evictionAgentStep > cache.numPrevDayReq {
+			cache.evictionAgentStep = cache.numPrevDayReq
+		}
 		choicesList, inMemory := cache.evictionAgent.Memory["NotDelete"]
 		if inMemory {
 			for _, choice := range *choicesList {
@@ -653,6 +659,8 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) 
 		cache.lowerCPUEff = 0.
 		cache.numLocal = 0
 		cache.numRemote = 0
+		cache.numPrevDayReq = cache.numServedReq
+		cache.numServedReq = 0
 
 		if cache.additionAgent.Epsilon <= 0.25 {
 			if cache.additionAgentPrevQValue == 0. {
@@ -689,6 +697,8 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) 
 	}
 
 	fileStats.updateStats(hit, request.Size, request.UserID, request.SiteName, request.DayTime)
+
+	cache.numServedReq++
 
 	return fileStats, hit
 }
