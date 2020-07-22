@@ -592,9 +592,6 @@ func (cache *AIRL) delayedRewardAdditionAgent(hit bool, hitGtMiss bool, filename
 				} else { // Action NOT STORE
 					reward = 1.0
 				}
-				if !hitGtMiss {
-					reward *= 2.
-				}
 			}
 			// Update table
 			cache.additionAgent.UpdateTable(curMemory.State, curState, curMemory.Action, reward)
