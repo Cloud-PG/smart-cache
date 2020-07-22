@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from bokeh.models import (BasicTickFormatter, FuncTickFormatter, Legend,
                           Range1d, SaveTool, Span)
-from bokeh.palettes import Category20, PuBu, RdPu
+from bokeh.palettes import Category20, Blues, OrRd
 from bokeh.plotting import figure
 
 from .utils import get_cache_size
@@ -461,8 +461,8 @@ def plot_measure(tools: list,
             if target == "additionActions":
                 if "Action store" not in values.columns:
                     continue
-                not_colors = cycle(PuBu[9])
-                negative_colors = cycle(RdPu[9])
+                not_colors = cycle(Blues[9])
+                negative_colors = cycle(OrRd[9])
                 for action in [column
                                for column in values.columns
                                if column.lower().find("store") != -1 and
@@ -486,8 +486,8 @@ def plot_measure(tools: list,
             elif target == "evictionActions":
                 if "Action delete" not in values.columns:
                     continue
-                not_colors = cycle(PuBu[9])
-                negative_colors = cycle(RdPu[9])
+                not_colors = cycle(Blues[9])
+                negative_colors = cycle(OrRd[9])
                 for action in [column
                                for column in values.columns
                                if column.lower().find(" delete") != -1 and
