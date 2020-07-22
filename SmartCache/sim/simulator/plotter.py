@@ -160,7 +160,8 @@ def plot_column(tools: list,
             if upper_bound is not None and upper_bound_points is None and not np.array_equal(upper_bound_points, values[upper_bound].to_numpy()):
                 points = upper_bound_points = values[upper_bound].to_numpy()
                 if any(np.isnan(points)):
-                    print("WARNING [Upper bound]: some points are NaN and will be put to 0...")
+                    print(
+                        "WARNING [Upper bound]: some points are NaN and will be put to 0...")
                     points[np.isnan(points)] = 0.0
                 cur_line = cur_fig.line(
                     dates if num_points == -
@@ -189,7 +190,8 @@ def plot_column(tools: list,
             if lower_bound is not None and lower_bound_points is None and not np.array_equal(lower_bound_points, values[lower_bound].to_numpy()):
                 points = lower_bound_points = values[lower_bound].to_numpy()
                 if any(np.isnan(points)):
-                    print("WARNING [Lower bound]: some points are NaN and will be put to 0...")
+                    print(
+                        "WARNING [Lower bound]: some points are NaN and will be put to 0...")
                     points[np.isnan(points)] = 0.0
                 cur_line = cur_fig.line(
                     dates if num_points == -
@@ -459,54 +461,38 @@ def plot_measure(tools: list,
             if target == "additionActions":
                 if "Action store" not in values.columns:
                     continue
-                store_points = values['Action store']
-                cur_line = cur_fig.line(
-                    dates if num_points == -
-                    1 else collapse2numpoints(num_points, x=dates),
-                    store_points if num_points == -
-                    1 else collapse2numpoints(num_points, y=store_points),
-                    color="blue",
-                    line_width=_LINE_WIDTH,
-                )
-                legend_items.append(
-                    ("Action store", [cur_line]))
-                not_store_points = values['Action not store']
-                cur_line = cur_fig.line(
-                    dates if num_points == -
-                    1 else collapse2numpoints(num_points, x=dates),
-                    not_store_points if num_points == -
-                    1 else collapse2numpoints(num_points, y=not_store_points),
-                    color="red",
-                    line_width=_LINE_WIDTH,
-                )
-                legend_items.append(
-                    ("Action not store", [cur_line]))
+                for action in [column
+                               for column in values.column
+                               if column.lower().find("store") != -1]:
+                    points = values[action]
+                    cur_line = cur_fig.line(
+                        dates if num_points == -
+                        1 else collapse2numpoints(num_points, x=dates),
+                        points if num_points == -
+                        1 else collapse2numpoints(num_points, y=points),
+                        color="red",
+                        line_width=_LINE_WIDTH,
+                    )
+                    legend_items.append(
+                        (action, [cur_line]))
                 continue
             elif target == "evictionActions":
                 if "Action delete" not in values.columns:
                     continue
-                delete_points = values['Action delete']
-                cur_line = cur_fig.line(
-                    dates if num_points == -
-                    1 else collapse2numpoints(num_points, x=dates),
-                    delete_points if num_points == -
-                    1 else collapse2numpoints(num_points, y=delete_points),
-                    color="red",
-                    line_width=_LINE_WIDTH,
-                )
-                legend_items.append(
-                    ("Action delete", [cur_line]))
-                not_delete_points = values['Action not delete']
-                cur_line = cur_fig.line(
-                    dates if num_points == -
-                    1 else collapse2numpoints(num_points, x=dates),
-                    not_delete_points if num_points == -
-                    1 else collapse2numpoints(num_points, y=not_delete_points),
-                    color="blue",
-                    line_width=_LINE_WIDTH,
-                )
-                legend_items.append(
-                    ("Action not delete", [cur_line]))
+                for action in [column
+                               for column in values.column
+                               if column.lower().find("delete") != -1]:
+                    points = values[action]
+                    cur_line = cur_fig.line(
+                        dates if num_points == -
+                        1 else collapse2numpoints(num_points, x=dates),
+                        points if num_points == -
+                        1 else collapse2numpoints(num_points, y=points),
+                        color="red",
+                        line_width=_LINE_WIDTH,
+                    )
+                    legend_items.append(
+                        (action, [cur_line]))
                 continue
             elif target == "sizePerc":
                 cache_size = get_cache_size(cache_name)
