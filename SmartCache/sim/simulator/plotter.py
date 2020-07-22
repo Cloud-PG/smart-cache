@@ -14,7 +14,7 @@ _LINE_WIDTH = 2.8
 _DAY_SECONDS = 60. * 60. * 24.
 _Band1Gbit = (1000. / 8.) * _DAY_SECONDS
 
-READ_ON_HIT = "read on hit"
+READ_ON_HIT_DATA = "read on hit data"
 READ_DATA = "read data"
 WRITTEN_DATA = "written data"
 DELETED_DATA = "deleted data"
@@ -419,7 +419,7 @@ def plot_measure(tools: list,
                  x_range=None,
                  y_axis_label: str = "MB",
                  y_axis_type: str = "auto",
-                 read_on_hit: bool = True,
+                 _DATA: bool = True,
                  title: str = "Read on Write data",
                  run_type: str = "run_full_normal",
                  datetimes: list = [],
@@ -455,7 +455,7 @@ def plot_measure(tools: list,
         )
         cur_fig.renderers.extend([hline_1])
 
-    read_data_type = READ_ON_HIT if read_on_hit else READ_DATA
+    read_data_type = READ_ON_HIT_DATA if read_on_hit else READ_DATA
     legend_items = []
 
     cur_band = _Band1Gbit * bandwidth
@@ -568,31 +568,31 @@ def plot_measure(tools: list,
             elif target == "throughput":
                 points = (
                     (
-                        values[READ_ON_HIT] - values[WRITTEN_DATA]
+                        values[READ_ON_HIT_DATA] - values[WRITTEN_DATA]
                     ) / values[READ_DATA]
                 ) * 100.
                 # Old throughput
-                # points = (values[READ_ON_HIT] / values[WRITTEN_DATA]) * 100.
+                # points = (values[READ_ON_HIT_DATA] / values[WRITTEN_DATA]) * 100.
                 # very Old throughput
-                # points = values[READ_ON_HIT] / values[WRITTEN_DATA]
+                # points = values[READ_ON_HIT_DATA] / values[WRITTEN_DATA]
             elif target == "throughputVs":
                 for inner_cache_name, inner_values in filter_results(
                     results, run_type, filters
                 ):
                     if inner_cache_name.find("lru_") != -1 and inner_cache_name.index("lru_") == 0:
-                        lru_cost = inner_values[READ_ON_HIT] - \
+                        lru_cost = inner_values[READ_ON_HIT_DATA] - \
                             inner_values[WRITTEN_DATA]
                         break
                 else:
                     continue
-                points = values[READ_ON_HIT] - values[WRITTEN_DATA]
+                points = values[READ_ON_HIT_DATA] - values[WRITTEN_DATA]
                 points /= lru_cost
             elif target == "network_in_saturation":
                 points = (values[READ_ON_MISS_DATA] / cur_band) * 100.
             elif target == "network_out_saturation":
                 points = (values[READ_DATA] / cur_band) * 100.
             elif target == "readOnHitRatio":
-                points = (values[READ_ON_HIT] /
+                points = (values[READ_ON_HIT_DATA] /
                           values[READ_DATA]) * 100.
             elif target == "readOnMissRatio":
                 points = (values[READ_ON_MISS_DATA] /
