@@ -496,7 +496,7 @@ def plot_measure(tools: list,
                 negative_colors = cycle(Oranges[9])
                 for action in [column
                                for column in values.columns
-                               if column.lower().find(" delete") != -1 and
+                               if column.lower().find("delete") != -1 and
                                column.lower().find("action") != -1]:
                     points = values[action]
                     if action.lower().find("not") != -1:
