@@ -563,13 +563,16 @@ func (cache *AIRL) delayedRewardEvictionAgent(hit bool, filename int64, storeTic
 	}
 }
 
-func (cache *AIRL) delayedRewardAdditionAgent(hit bool, filename int64, curState int) {
+func (cache *AIRL) delayedRewardAdditionAgent(hit bool, filename int64, storeTick int64, curState int) {
 	prevChoices, inMemory := cache.additionAgent.Memory[filename]
 
 	if inMemory {
 		curChoices := *prevChoices
 		for idx := len(curChoices) - 1; idx > -1; idx-- {
 			curMemory := curChoices[idx]
+			if curMemory.Tick < storeTick {
+				break
+			}
 			reward := 0.0
 			if hit {
 				if curMemory.Action == qlearn.ActionStore { // Action STORE
@@ -737,7 +740,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 		logger.Debug("cache", zap.Int("current state", curState))
 
-		cache.delayedRewardAdditionAgent(hit, request.Filename, curState)
+		cache.delayedRewardAdditionAgent(hit, request.Filename, fileStats.InCacheTick, curState)
 
 		if cache.evictionAgentOK {
 			cache.delayedRewardEvictionAgent(hit, request.Filename, fileStats.InCacheTick)
