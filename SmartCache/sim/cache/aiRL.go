@@ -58,7 +58,7 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 
 	cache.evictionAgentK = 32
 	cache.evictionAgentStep = cache.evictionAgentK
-	cache.evictionRO = 0.1
+	cache.evictionRO = 0.42
 	cache.numPrevDayReq = -1
 
 	cache.actionCounters = make(map[qlearn.ActionType]int)
