@@ -607,23 +607,15 @@ func (cache *AIRL) delayedRewardAdditionAgent(hit bool, filename int64, curState
 func (cache *AIRL) rewardEvictionAfterForcedCall(added bool) {
 	for state, action := range cache.curCacheStates {
 		if !added && action == qlearn.ActionNotDelete {
-			for catStateIdx := range cache.curCacheStates {
-				if cache.checkEvictionNextState(state, catStateIdx) {
-					// Update table
-					cache.evictionAgent.UpdateTable(state, catStateIdx, action, -cache.evictionRO)
-					// Update epsilon
-					cache.evictionAgent.UpdateEpsilon()
-				}
-			}
+			// Update table
+			cache.evictionAgent.UpdateTable(state, state, action, -cache.evictionRO)
+			// Update epsilon
+			cache.evictionAgent.UpdateEpsilon()
 		} else {
-			for catStateIdx := range cache.curCacheStates {
-				if cache.checkEvictionNextState(state, catStateIdx) {
-					// Update table
-					cache.evictionAgent.UpdateTable(state, catStateIdx, action, cache.evictionRO)
-					// Update epsilon
-					cache.evictionAgent.UpdateEpsilon()
-				}
-			}
+			// Update table
+			cache.evictionAgent.UpdateTable(state, state, action, cache.evictionRO)
+			// Update epsilon
+			cache.evictionAgent.UpdateEpsilon()
 		}
 	}
 }
