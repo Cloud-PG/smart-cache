@@ -429,7 +429,7 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 					}
 				}
 			}
-			*choicesList = (*choicesList)[:0]
+			delete(cache.evictionAgent.Memory, "NotDelete")
 		}
 	} else {
 		cache.evictionAgentK = cache.evictionAgentK << 1
@@ -870,9 +870,6 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 				cache.size += requestedFileSize
 				fileStats.addInCache(cache.tick, &request.DayTime)
-				if cache.evictionAgentOK && forced {
-					cache.rewardEvictionAfterForcedCall(added)
-				}
 				added = true
 				if cache.evictionAgentOK && forced {
 					cache.rewardEvictionAfterForcedCall(added)
