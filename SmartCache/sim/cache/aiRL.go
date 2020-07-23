@@ -530,9 +530,6 @@ func (cache *AIRL) checkEvictionNextState(oldStateIdx int, newStateIdx int) bool
 }
 
 func (cache *AIRL) delayedRewardEvictionAgent(hit bool, filename int64, storeTick int64) {
-	if storeTick == -1 {
-		return
-	}
 	prevChoices, inMemory := cache.evictionAgent.Memory[filename]
 
 	if inMemory {
