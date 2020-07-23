@@ -423,7 +423,7 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 				for catStateIdx := range cache.curCacheStates {
 					if cache.checkEvictionNextState(choice.State, catStateIdx) {
 						// Update table
-						cache.evictionAgent.UpdateTable(choice.State, choice.State, choice.Action, -cache.evictionRO)
+						cache.evictionAgent.UpdateTable(choice.State, catStateIdx, choice.Action, -cache.evictionRO)
 						// Update epsilon
 						cache.evictionAgent.UpdateEpsilon()
 					}
@@ -456,7 +456,7 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 
 			deletedFiles = append(deletedFiles, curFile.Filename)
 
-			cache.evictionAgent.UpdateMemory(curFile, qlearn.Choice{
+			cache.evictionAgent.UpdateMemory(curFile.Filename, qlearn.Choice{
 				State:     catIdx,
 				Action:    catAction,
 				Tick:      cache.tick,
@@ -494,7 +494,7 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 
 				deletedFiles = append(deletedFiles, curFile.Filename)
 
-				cache.evictionAgent.UpdateMemory(curFile, qlearn.Choice{
+				cache.evictionAgent.UpdateMemory(curFile.Filename, qlearn.Choice{
 					State:     catIdx,
 					Action:    catAction,
 					Tick:      cache.tick,
@@ -504,12 +504,20 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 			newFileList := curFileList[maxIdx:]
 			cache.curCacheStatesFiles[catIdx] = newFileList
 		case qlearn.ActionNotDelete:
-			cache.evictionAgent.UpdateMemory("NotDelete", qlearn.Choice{
-				State:     catIdx,
-				Action:    catAction,
-				Tick:      cache.tick,
-				ReadOnHit: cache.dataReadOnHit,
-			})
+			for _, curFile := range cache.curCacheStatesFiles[catIdx] {
+				cache.evictionAgent.UpdateMemory(curFile.Filename, qlearn.Choice{
+					State:     catIdx,
+					Action:    catAction,
+					Tick:      cache.tick,
+					ReadOnHit: cache.dataReadOnHit,
+				})
+				cache.evictionAgent.UpdateMemory("NotDelete", qlearn.Choice{
+					State:     catIdx,
+					Action:    catAction,
+					Tick:      cache.tick,
+					ReadOnHit: cache.dataReadOnHit,
+				})
+			}
 		}
 	}
 
