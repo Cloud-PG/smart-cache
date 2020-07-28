@@ -17,6 +17,8 @@ type Obj struct {
 	Name            string       `json:"name"`
 	Type            string       `json:"type"`
 	ReflectType     reflect.Kind `json:"reflectType"`
+	StringValues    []string     `json:"stringValues"`
+	BoolValues      []bool       `json:"boolValues"`
 	Int64Values     []int64      `json:"int64Values"`
 	Float64Values   []float64    `json:"float64Values"`
 	Buckets         bool         `json:"buckets"`
@@ -128,16 +130,16 @@ func (manager *FeatureManager) Populate(featureMapFilePath string) {
 					Name: feature,
 				}
 
-				var bucketValues []interface{}
+				var itemValues []interface{}
 
 				for featureIter.Next() {
 					curFeatureKey := featureIter.Key().String()
 					curFeatureValue := featureIter.Value()
 
 					switch curFeatureKey {
-					case "buckets":
+					case "buckets", "values":
 						if curFeatureValue.Elem().Kind() == reflect.Slice {
-							bucketValues = curFeatureValue.Elem().Interface().([]interface{})
+							itemValues = curFeatureValue.Elem().Interface().([]interface{})
 							curStruct.Buckets = true
 						} else {
 							logger.Error(
@@ -172,22 +174,40 @@ func (manager *FeatureManager) Populate(featureMapFilePath string) {
 				}
 
 				switch curStruct.Type {
+				case "bool":
+					// fmt.Println("int", reflect.TypeOf(itemValues[0]).Kind())
+					curStruct.ReflectType = reflect.Bool
+					curStruct.BoolValues = make([]bool, len(itemValues))
+					for idx, val := range itemValues {
+						curStruct.BoolValues[idx] = val.(bool)
+					}
+				case "string":
+					// fmt.Println("int", reflect.TypeOf(itemValues[0]).Kind())
+					curStruct.ReflectType = reflect.String
+					curStruct.StringValues = make([]string, len(itemValues))
+					for idx, val := range itemValues {
+						curStruct.StringValues[idx] = val.(string)
+					}
 				case "int":
-					// fmt.Println("int", reflect.TypeOf(bucketValues[0]).Kind())
+					// fmt.Println("int", reflect.TypeOf(itemValues[0]).Kind())
 					curStruct.ReflectType = reflect.Int64
-					curStruct.Int64Values = make([]int64, len(bucketValues))
-					for idx, val := range bucketValues {
+					curStruct.Int64Values = make([]int64, len(itemValues))
+					for idx, val := range itemValues {
 						curStruct.Int64Values[idx] = int64(val.(float64)) // numbers from JSON are always floats
 					}
-					curStruct.Int64Values = append(curStruct.Int64Values, math.MaxInt64)
+					if curStruct.BucketOpenRight {
+						curStruct.Int64Values = append(curStruct.Int64Values, math.MaxInt64)
+					}
 				case "float":
-					// fmt.Println("float", reflect.TypeOf(bucketValues[0]).Kind())
+					// fmt.Println("float", reflect.TypeOf(itemValues[0]).Kind())
 					curStruct.ReflectType = reflect.Float64
-					curStruct.Float64Values = make([]float64, len(bucketValues))
-					for idx, val := range bucketValues {
+					curStruct.Float64Values = make([]float64, len(itemValues))
+					for idx, val := range itemValues {
 						curStruct.Float64Values[idx] = val.(float64)
 					}
-					curStruct.Float64Values = append(curStruct.Float64Values, math.MaxFloat64)
+					if curStruct.BucketOpenRight {
+						curStruct.Float64Values = append(curStruct.Float64Values, math.MaxFloat64)
+					}
 				}
 
 				// fmt.Println("struct", curStruct)
@@ -226,6 +246,10 @@ func (manager *FeatureManager) Populate(featureMapFilePath string) {
 func (obj Obj) Size() int {
 	if obj.Buckets {
 		switch obj.ReflectType {
+		case reflect.String:
+			return len(obj.StringValues)
+		case reflect.Bool:
+			return len(obj.BoolValues)
 		case reflect.Int64:
 			return len(obj.Int64Values)
 		case reflect.Float64:
@@ -239,16 +263,13 @@ func (obj Obj) Size() int {
 func (obj Obj) Value(idx int) interface{} {
 	if obj.Buckets {
 		switch obj.ReflectType {
+		case reflect.String:
+			return obj.StringValues[idx]
+		case reflect.Bool:
+			return obj.BoolValues[idx]
 		case reflect.Int64:
-			if obj.BucketOpenRight {
-				return math.MaxInt64
-			}
 			return obj.Int64Values[idx]
-
 		case reflect.Float64:
-			if obj.BucketOpenRight {
-				return math.MaxFloat64
-			}
 			return obj.Float64Values[idx]
 
 		}
@@ -261,6 +282,26 @@ func (obj Obj) Values() chan ObjVal {
 	outChan := make(chan ObjVal, obj.Size())
 	if obj.Buckets {
 		switch obj.ReflectType {
+		case reflect.String:
+			go func() {
+				defer close(outChan)
+				for idx, elm := range obj.StringValues {
+					outChan <- ObjVal{
+						Idx: idx,
+						Val: elm,
+					}
+				}
+			}()
+		case reflect.Bool:
+			go func() {
+				defer close(outChan)
+				for idx, elm := range obj.BoolValues {
+					outChan <- ObjVal{
+						Idx: idx,
+						Val: elm,
+					}
+				}
+			}()
 		case reflect.Int64:
 			go func() {
 				defer close(outChan)
@@ -290,6 +331,20 @@ func (obj Obj) Values() chan ObjVal {
 func (obj Obj) Index(value interface{}) int {
 	if obj.Buckets {
 		switch obj.ReflectType {
+		case reflect.String:
+			curVal := value.(string)
+			for idx, val := range obj.StringValues {
+				if curVal == val {
+					return idx
+				}
+			}
+		case reflect.Bool:
+			curVal := value.(bool)
+			for idx, val := range obj.BoolValues {
+				if curVal == val {
+					return idx
+				}
+			}
 		case reflect.Int64:
 			curVal := value.(int64)
 			for idx, val := range obj.Int64Values {
