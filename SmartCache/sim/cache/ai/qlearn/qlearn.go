@@ -28,8 +28,8 @@ const (
 	ActionStore
 	// ActionNotDelete indicates to not remove a category of files
 	ActionNotDelete
-	// ActionDeleteOne indicates to remove a file from a category
-	ActionDeleteOne
+	// ActionDeleteAll indicates to remove a all files from a category
+	ActionDeleteAll
 	// ActionDeleteHalf indicates to remove an half of the category files
 	ActionDeleteHalf
 	// ActionDeleteQuarter indicates to remove a quarter of the category files
@@ -162,12 +162,16 @@ type Choice struct {
 	Action    ActionType `json:"action"`
 	Tick      int64      `json:"tick"`
 	ReadOnHit float64    `json:"readOnHit"`
+	Occupancy float64    `json:"occupancy"`
+	Hit       bool       `json:"hit"`
+	Frequency int64      `json:"frequency"`
 }
 
 // Agent used in Qlearning
 type Agent struct {
-	Memory           map[interface{}]*[]Choice `json:"choices"`
-	Table            QTable                    `json:"qtable"`
+	FileMemory       map[interface{}]Choice    `json:"fileMemory"`
+	EventMemory      map[interface{}]*[]Choice `json:"fileMemory"`
+	QTable           QTable                    `json:"qtable"`
 	NumStates        int                       `json:"numStates"`
 	NumVars          int                       `json:"numVars"`
 	LearningRate     float64                   `json:"learningRate"`
@@ -192,12 +196,13 @@ func (agent *Agent) Init(featureManager *featuremap.FeatureManager, role AgentRo
 	agent.Epsilon = initEpsilon
 	agent.MaxEpsilon = 1.0
 	agent.MinEpsilon = 0.1
-	agent.Memory = make(map[interface{}]*[]Choice, 0)
+	agent.FileMemory = make(map[interface{}]Choice, 0)
+	agent.EventMemory = make(map[interface{}]*[]Choice, 0)
 
 	switch role {
 	case AdditionAgent:
 		// With getArgMax the first action is the default choice
-		agent.Table.Init(
+		agent.QTable.Init(
 			featureManager,
 			[]ActionType{
 				ActionNotStore,
@@ -206,13 +211,13 @@ func (agent *Agent) Init(featureManager *featuremap.FeatureManager, role AgentRo
 		)
 	case EvictionAgent:
 		// With getArgMax the first action is the default choice
-		agent.Table.Init(
+		agent.QTable.Init(
 			featureManager,
 			[]ActionType{
 				ActionNotDelete,
 				ActionDeleteQuarter,
 				ActionDeleteHalf,
-				ActionDeleteOne,
+				ActionDeleteAll,
 			},
 		)
 	}
@@ -220,8 +225,8 @@ func (agent *Agent) Init(featureManager *featuremap.FeatureManager, role AgentRo
 	agent.UpdateAlgorithm = RLQLearning
 	agent.RGenerator = randomGenerator
 
-	agent.NumStates = len(agent.Table.States)
-	agent.NumVars = agent.NumStates * len(agent.Table.Actions[0])
+	agent.NumStates = len(agent.QTable.States)
+	agent.NumVars = agent.NumStates * len(agent.QTable.Actions[0])
 
 	logger.Info("Agent",
 		zap.Int("numStates", agent.NumStates),
@@ -267,10 +272,10 @@ func (agent Agent) QTableToString() string {
 
 	var tmp []string
 
-	for _, action := range agent.Table.ActionTypes {
+	for _, action := range agent.QTable.ActionTypes {
 		switch action {
-		case ActionDeleteOne:
-			tmp = append(tmp, "ActionDeleteOne")
+		case ActionDeleteAll:
+			tmp = append(tmp, "ActionDeleteAll")
 		case ActionDeleteHalf:
 			tmp = append(tmp, "ActionDeleteHalf")
 		case ActionDeleteQuarter:
@@ -283,22 +288,22 @@ func (agent Agent) QTableToString() string {
 			tmp = append(tmp, "ActionNotStore")
 		}
 	}
-	for _, feature := range agent.Table.FeatureManager.Features {
+	for _, feature := range agent.QTable.FeatureManager.Features {
 		tmp = append(tmp, feature.Name)
 	}
 
 	csvOutput = append(csvOutput, strings.Join(tmp, ","))
 
 	// counter := 0
-	for idx, state := range agent.Table.States {
+	for idx, state := range agent.QTable.States {
 		tmp = tmp[:0]
 
-		for _, value := range agent.Table.Actions[idx] {
+		for _, value := range agent.QTable.Actions[idx] {
 			tmp = append(tmp, fmt.Sprintf("%09.2f", value))
 		}
 
 		for featureIdx, featureValIdx := range state {
-			curFeature := agent.Table.FeatureManager.Features[featureIdx]
+			curFeature := agent.QTable.FeatureManager.Features[featureIdx]
 			switch curFeature.ReflectType {
 			case reflect.Int64:
 				curFeatureVal := curFeature.Int64Values[featureValIdx]
@@ -327,7 +332,7 @@ func (agent Agent) QTableToString() string {
 func (agent Agent) GetCoverage() (float64, float64) {
 	actionsCov := 0
 	stateCov := 0
-	for _, actions := range agent.Table.Actions {
+	for _, actions := range agent.QTable.Actions {
 		curStateCov := false
 		for _, action := range actions {
 			if action != 0.0 {
@@ -346,12 +351,12 @@ func (agent Agent) GetCoverage() (float64, float64) {
 
 // GetActionValue returns the value of a state action
 func (agent Agent) GetActionValue(stateIdx int, action ActionType) float64 {
-	return agent.Table.Actions[stateIdx][agent.Table.ActionTypeIdxs[action]]
+	return agent.QTable.Actions[stateIdx][agent.QTable.ActionTypeIdxs[action]]
 }
 
 // GetBestActionValue returns the best action for the given state
 func (agent Agent) GetBestActionValue(stateIdx int) float64 {
-	values := agent.Table.Actions[stateIdx]
+	values := agent.QTable.Actions[stateIdx]
 	maxValueIdx, maxValue := getArgMax(values)
 	logger.Debug("Get best action",
 		zap.Float64s("values", values),
@@ -362,9 +367,9 @@ func (agent Agent) GetBestActionValue(stateIdx int) float64 {
 
 // GetBestAction returns the best action for the given state
 func (agent Agent) GetBestAction(stateIdx int) ActionType {
-	values := agent.Table.Actions[stateIdx]
+	values := agent.QTable.Actions[stateIdx]
 	maxValueIdx, _ := getArgMax(values)
-	bestAction := agent.Table.ActionTypes[maxValueIdx]
+	bestAction := agent.QTable.ActionTypes[maxValueIdx]
 	logger.Debug("Get best action",
 		zap.Float64s("values", values),
 		zap.Int("idx max value", maxValueIdx),
@@ -380,15 +385,15 @@ func (agent *Agent) UpdateTable(stateIdx int, newStateIdx int, action ActionType
 	curStateValue := agent.GetActionValue(stateIdx, action)
 	nextStateBestValue := agent.GetBestActionValue(newStateIdx)
 
-	actionIdx := agent.Table.ActionTypeIdxs[action]
+	actionIdx := agent.QTable.ActionTypeIdxs[action]
 
 	switch agent.UpdateAlgorithm {
 	// case RLSARSA:
-	// 	nextStateIdx := getArgMax(agent.Table[newState]) // The next state is the same
-	// 	agent.Table.Actions[stateIdx][actionIdx] = (1.0-agent.LearningRate)*curStateValue + agent.LearningRate*(reward+agent.DiscountFactor*agent.Table.Actions[state][nextStateIdx])
+	// 	nextStateIdx := getArgMax(agent.QTable[newState]) // The next state is the same
+	// 	agent.QTable.Actions[stateIdx][actionIdx] = (1.0-agent.LearningRate)*curStateValue + agent.LearningRate*(reward+agent.DiscountFactor*agent.QTable.Actions[state][nextStateIdx])
 	case RLQLearning:
 		newQ := curStateValue + agent.LearningRate*(reward+agent.DiscountFactor*nextStateBestValue-curStateValue)
-		agent.Table.Actions[stateIdx][actionIdx] = newQ
+		agent.QTable.Actions[stateIdx][actionIdx] = newQ
 	default:
 		panic(fmt.Sprintf("Update %d is not implemented", agent.UpdateAlgorithm))
 	}
@@ -402,17 +407,21 @@ func (agent *Agent) UpdateEpsilon() {
 	}
 }
 
-// UpdateMemory insert made actions in memory
-func (agent *Agent) UpdateMemory(key interface{}, choices ...Choice) {
-	prevChoices, inMemory := agent.Memory[key]
+// UpdateFileMemory insert made actions in memory
+func (agent *Agent) UpdateFileMemory(key interface{}, choice Choice) {
+	agent.FileMemory[key] = choice
+}
+
+// UpdateEventMemory insert made actions in memory
+func (agent *Agent) UpdateEventMemory(key interface{}, choices ...Choice) {
+	prevChoices, inMemory := agent.EventMemory[key]
 	if inMemory {
 		*prevChoices = append(*prevChoices, choices...)
 	} else {
 		newChoices := make([]Choice, 0)
 		newChoices = append(newChoices, choices...)
-		agent.Memory[key] = &newChoices
+		agent.EventMemory[key] = &newChoices
 	}
-
 }
 
 //##############################################################################
