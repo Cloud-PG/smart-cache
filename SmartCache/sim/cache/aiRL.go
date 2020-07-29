@@ -550,7 +550,6 @@ func (cache *AIRL) delayedRewardEvictionAgent(fileStats *FileStats, hit bool) {
 	prevChoice, inMemory := cache.evictionAgent.FileMemory[fileStats.Filename]
 
 	if inMemory {
-		cache.updateCategories()
 		reward := 0.0
 		if cache.dataReadOnHit > prevChoice.ReadOnHit {
 			reward += 1.
