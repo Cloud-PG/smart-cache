@@ -8,9 +8,9 @@ import (
 
 const (
 	// MaxNumDaysStat limit to stay in the stats
-	MaxNumDaysStat = 4.
+	MaxNumDaysStat = 7.
 	// DeltaDays2Purge limit the clean action of the stats
-	DeltaDays2Purge = 2.
+	DeltaDays2Purge = 14.
 )
 
 // Stats collector of statistics for weight function cache
