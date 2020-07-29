@@ -710,7 +710,7 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) 
 			}
 		}
 
-		fmt.Println(cache.additionAgentBadQValue, cache.evictionAgentBadQValue)
+		// fmt.Println(cache.additionAgentBadQValue, cache.evictionAgentBadQValue)
 
 		if cache.additionAgentBadQValue >= maxBadQValue {
 			cache.additionAgentBadQValue = 0
