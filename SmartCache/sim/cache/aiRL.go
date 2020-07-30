@@ -34,10 +34,9 @@ type AIRL struct {
 	evictionAgentNumCalls       int64
 	evictionAgentNumForcedCalls int64
 	evictionRO                  float64
+	evictionCategoryManager     CategoryManager
 	actionCounters              map[qlearn.ActionType]int
 	bufferIdxVector             []int
-	curCacheStates              map[int]qlearn.ActionType
-	curCacheStatesFiles         map[int][]*FileSupportData
 	numPrevDayReq               int64
 	numServedReq                int64
 }
@@ -45,9 +44,6 @@ type AIRL struct {
 // Init the AIRL struct
 func (cache *AIRL) Init(args ...interface{}) interface{} {
 	logger = zap.L()
-
-	cache.curCacheStates = make(map[int]qlearn.ActionType)
-	cache.curCacheStatesFiles = make(map[int][]*FileSupportData)
 
 	cache.SimpleCache.Init(NoQueue)
 
@@ -98,6 +94,14 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 			decayRateEpsilon,
 		)
 		cache.evictionAgentOK = true
+		cache.evictionCategoryManager = CategoryManager{}
+		cache.evictionCategoryManager.Init(
+			cache.evictionFeatureManager.Features,
+			cache.evictionFeatureManager.FeatureIdxWeights,
+			cache.evictionFeatureManager.FileFeatures,
+			cache.evictionFeatureManager.FileFeatureIdxWeights,
+			cache.evictionFeatureManager.FileFeatureIdxMap,
+		)
 	} else {
 		cache.evictionAgentOK = false
 	}
@@ -296,112 +300,175 @@ func (cache *AIRL) getState4AdditionAgent(hit bool, curFileStats *FileStats) int
 	return cache.additionAgent.QTable.FeatureIdxs2StateIdx(cache.bufferIdxVector...)
 }
 
-func (cache *AIRL) updateCategories() {
+type CatState struct {
+	Idx      int
+	Category int
+	Files    []*FileSupportData
+	Action   qlearn.ActionType
+}
 
-	// Remove previous content
-	for key := range cache.curCacheStates {
-		delete(cache.curCacheStates, key)
+type CategoryManager struct {
+	buffer                 []int
+	featureIdxWeights      []int
+	fileFeatureIdxWeights  []int
+	fileFeatures           []featuremap.Obj
+	features               []featuremap.Obj
+	fileFeatureIdxMap      map[string]int
+	categoryFileListMap    map[int][]*FileSupportData
+	categoryFileFeatureIdx map[int][]int
+	fileSupportDataSizeMap map[*FileSupportData]float64
+	filesCategoryMap       map[int64]int
+	categorySizesMap       map[int]float64
+	categoryStatesMap      map[int]int
+	generatorChan          chan CatState
+}
+
+func (catMan *CategoryManager) Init(features []featuremap.Obj, featureWeights []int, fileFeatures []featuremap.Obj, fileFeatureWeights []int, fileFeatureIdxMap map[string]int) {
+	catMan.buffer = make([]int, 0)
+	catMan.featureIdxWeights = featureWeights
+	catMan.fileFeatureIdxWeights = fileFeatureWeights
+	catMan.fileFeatures = fileFeatures
+	catMan.features = features
+
+	catMan.categoryFileListMap = make(map[int][]*FileSupportData)
+	catMan.categoryFileFeatureIdx = make(map[int][]int)
+	catMan.fileSupportDataSizeMap = make(map[*FileSupportData]float64)
+	catMan.filesCategoryMap = make(map[int64]int)
+	catMan.categorySizesMap = make(map[int]float64)
+	catMan.fileFeatureIdxMap = make(map[string]int)
+	catMan.categoryStatesMap = make(map[int]int)
+
+	catMan.fileFeatureIdxMap = fileFeatureIdxMap
+}
+
+func (catMan *CategoryManager) deleteFileFromCategory(category int, file2Remove *FileSupportData) {
+	delete(catMan.filesCategoryMap, file2Remove.Filename)
+	catMan.categorySizesMap[category] -= catMan.fileSupportDataSizeMap[file2Remove]
+	categoryFiles := catMan.categoryFileListMap[category]
+	deleteIdx := -1
+	for idx, file := range categoryFiles {
+		fmt.Println(category, idx, file.Filename, file2Remove.Filename)
+		if file.Filename == file2Remove.Filename {
+			deleteIdx = idx
+			break
+		}
 	}
-	for key := range cache.curCacheStatesFiles {
-		delete(cache.curCacheStatesFiles, key)
+	fmt.Println(deleteIdx)
+	if deleteIdx == -1 {
+		panic("ERROR: Cannot delete file from category...")
+	}
+	copy(categoryFiles[deleteIdx:], categoryFiles[deleteIdx+1:])
+	categoryFiles = categoryFiles[:len(categoryFiles)-1]
+	if len(categoryFiles) > 0 {
+		catMan.categoryFileListMap[category] = categoryFiles
+	} else {
+		delete(catMan.categoryFileListMap, category)
+		delete(catMan.categoryFileFeatureIdx, category)
+		delete(catMan.categorySizesMap, category)
+		catMan.categoryFileListMap[category] = make([]*FileSupportData, 0)
+	}
+}
+
+func (catMan *CategoryManager) insertFileInCategory(category int, file *FileSupportData) {
+	catMan.categoryFileListMap[category] = append(catMan.categoryFileListMap[category], file)
+	catMan.fileSupportDataSizeMap[file] = file.Size
+	catMan.filesCategoryMap[file.Filename] = category
+	catMan.categorySizesMap[category] += file.Size
+}
+
+func (catMan *CategoryManager) AddOrUpdateCategoryFile(category int, curFile *FileSupportData) {
+	oldFileCategory, inMemory := catMan.filesCategoryMap[curFile.Filename]
+	if inMemory {
+		if oldFileCategory != category {
+			// Delete from category
+			catMan.deleteFileFromCategory(oldFileCategory, curFile)
+			// Add to category
+			catMan.insertFileInCategory(category, curFile)
+		}
+	} else {
+		// Add to category
+		catMan.insertFileInCategory(category, curFile)
+	}
+}
+
+func (catMan CategoryManager) GetFileCategory(curFile *FileSupportData) int {
+	catMan.buffer = catMan.buffer[:0]
+	for _, feature := range catMan.features {
+		// fmt.Println(feature.Name)
+		switch feature.Name {
+		case "catSize":
+			catMan.buffer = append(catMan.buffer, feature.Index(curFile.Size))
+		case "catNumReq":
+			catMan.buffer = append(catMan.buffer, feature.Index(curFile.Frequency))
+		case "catDeltaLastRequest":
+			catMan.buffer = append(catMan.buffer, feature.Index(curFile.Recency))
+		}
+	}
+	curCatIdx := 0
+	for idx, value := range catMan.buffer {
+		curCatIdx += value * catMan.fileFeatureIdxWeights[idx]
 	}
 
-	var curAction qlearn.ActionType
-	catPercOcc := make(map[int]float64)
-	catFiles := make(map[int][]*FileSupportData)
-	catIdxMap := make(map[int][]int)
+	_, present := catMan.categoryFileListMap[curCatIdx]
+	if !present {
+		catMan.categoryFileListMap[curCatIdx] = make([]*FileSupportData, 0)
+		catMan.categoryFileFeatureIdx[curCatIdx] = make([]int, len(catMan.buffer))
+		catMan.categorySizesMap[curCatIdx] = 0.0
+		copy(catMan.categoryFileFeatureIdx[curCatIdx], catMan.buffer)
+	}
 
-	idxWeights := cache.evictionFeatureManager.FileFeatureIdxWeights
+	return curCatIdx
+}
 
-	for _, file := range cache.files.Get() {
-		// fmt.Println(file.Filename)
-		cache.bufferIdxVector = cache.bufferIdxVector[:0]
-		for _, feature := range cache.evictionFeatureManager.FileFeatures {
-			// fmt.Println(feature.Name)
-			switch feature.Name {
-			case "catSize":
-				cache.bufferIdxVector = append(cache.bufferIdxVector, feature.Index(file.Size))
-			case "catNumReq":
-				cache.bufferIdxVector = append(cache.bufferIdxVector, feature.Index(file.Frequency))
-			case "catDeltaLastRequest":
-				cache.bufferIdxVector = append(cache.bufferIdxVector, feature.Index(file.Recency))
+func (catMan CategoryManager) GetStateFromCategories(agent qlearn.Agent, occupancy float64, hitRate float64, maxSize float64) chan CatState {
+	catMan.generatorChan = make(chan CatState, len(catMan.categoryFileListMap))
+	go func() {
+		defer close(catMan.generatorChan)
+		for catID, curCat := range catMan.categoryFileFeatureIdx {
+			catMan.buffer = catMan.buffer[:0]
+			for _, feature := range catMan.features {
+				switch feature.Name {
+				case "catSize":
+					catMan.buffer = append(catMan.buffer, curCat[catMan.fileFeatureIdxMap["catSize"]])
+				case "catNumReq":
+					catMan.buffer = append(catMan.buffer, curCat[catMan.fileFeatureIdxMap["catNumReq"]])
+				case "catDeltaLastRequest":
+					catMan.buffer = append(catMan.buffer, curCat[catMan.fileFeatureIdxMap["catDeltaLastRequest"]])
+				case "catPercOcc":
+					percSize := (catMan.categorySizesMap[catID] / maxSize) * 100.
+					catMan.buffer = append(catMan.buffer, feature.Index(percSize))
+				case "percOcc":
+					catMan.buffer = append(catMan.buffer, feature.Index(occupancy))
+				case "hitRate":
+					catMan.buffer = append(catMan.buffer, feature.Index(hitRate))
+				}
+			}
+			// fmt.Println(catMan.buffer)
+			curState := agent.QTable.FeatureIdxs2StateIdx(catMan.buffer...)
+			var curAction qlearn.ActionType
+			if expEvictionTradeoff := agent.GetRandomFloat(); expEvictionTradeoff > agent.Epsilon {
+				// ########################
+				// ### Exploiting phase ###
+				// ########################
+				curAction = agent.GetBestAction(curState)
+			} else {
+				// ##########################
+				// #### Exploring phase #####
+				// ##########################
+
+				// ----- Random choice -----
+				randomActionIdx := int(agent.GetRandomFloat() * float64(len(agent.QTable.ActionTypes)))
+				curAction = agent.QTable.ActionTypes[randomActionIdx]
+			}
+			catMan.generatorChan <- CatState{
+				Idx:      curState,
+				Category: catID,
+				Files:    catMan.categoryFileListMap[catID],
+				Action:   curAction,
 			}
 		}
-		curCatIdx := 0
-		for idx, value := range cache.bufferIdxVector {
-			curCatIdx += value * idxWeights[idx]
-		}
-		catSize, inPercOcc := catPercOcc[curCatIdx]
-		if !inPercOcc {
-			catPercOcc[curCatIdx] = file.Size
-			newSlice := make([]int, len(cache.bufferIdxVector))
-			copy(newSlice, cache.bufferIdxVector)
-			catIdxMap[curCatIdx] = newSlice
-			// Create catFiles list
-			catFiles[curCatIdx] = make([]*FileSupportData, 0)
-		} else {
-			catPercOcc[curCatIdx] = catSize + file.Size
-		}
-
-		catFiles[curCatIdx] = append(catFiles[curCatIdx], file)
-
-		// fmt.Println(file, cache.bufferIdxVector, curCatIdx)
-	}
-
-	// fmt.Println(idxWeights)
-	// fmt.Println(catPercOcc)
-	// fmt.Println(catIdxMap)
-
-	for catIdx, size := range catPercOcc {
-		curCatPercOcc := (size / cache.MaxSize) * 100.
-		catPercOcc[catIdx] = curCatPercOcc
-	}
-
-	// fmt.Println(catPercOcc)
-	// fmt.Println(catIdxMap)
-
-	for catIdx, curCat := range catIdxMap {
-		cache.bufferIdxVector = cache.bufferIdxVector[:0]
-		for _, feature := range cache.evictionFeatureManager.Features {
-			switch feature.Name {
-			case "catSize":
-				cache.bufferIdxVector = append(cache.bufferIdxVector, curCat[cache.evictionFeatureManager.FileFeatureIdxMap["catSize"]])
-			case "catNumReq":
-				cache.bufferIdxVector = append(cache.bufferIdxVector, curCat[cache.evictionFeatureManager.FileFeatureIdxMap["catNumReq"]])
-			case "catDeltaLastRequest":
-				cache.bufferIdxVector = append(cache.bufferIdxVector, curCat[cache.evictionFeatureManager.FileFeatureIdxMap["catDeltaLastRequest"]])
-			case "catPercOcc":
-				cache.bufferIdxVector = append(cache.bufferIdxVector, feature.Index(catPercOcc[catIdx]))
-			case "percOcc":
-				cache.bufferIdxVector = append(cache.bufferIdxVector, feature.Index(cache.SimpleCache.Occupancy()))
-			case "hitRate":
-				cache.bufferIdxVector = append(cache.bufferIdxVector, feature.Index(cache.SimpleCache.HitRate()))
-			}
-		}
-		// fmt.Println(cache.bufferIdxVector)
-		curCatState := cache.evictionAgent.QTable.FeatureIdxs2StateIdx(cache.bufferIdxVector...)
-
-		if expEvictionTradeoff := cache.evictionAgent.GetRandomFloat(); expEvictionTradeoff > cache.evictionAgent.Epsilon {
-			// ########################
-			// ### Exploiting phase ###
-			// ########################
-			curAction = cache.evictionAgent.GetBestAction(curCatState)
-		} else {
-			// ##########################
-			// #### Exploring phase #####
-			// ##########################
-
-			// ----- Random choice -----
-			randomActionIdx := int(cache.evictionAgent.GetRandomFloat() * float64(len(cache.evictionAgent.QTable.ActionTypes)))
-			curAction = cache.evictionAgent.QTable.ActionTypes[randomActionIdx]
-		}
-
-		cache.actionCounters[curAction]++
-		cache.curCacheStates[curCatState] = curAction
-
-		cache.curCacheStatesFiles[curCatState] = make([]*FileSupportData, len(catFiles[catIdx]))
-		copy(cache.curCacheStatesFiles[curCatState], catFiles[catIdx])
-	}
+	}()
+	return catMan.generatorChan
 }
 
 func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
@@ -414,9 +481,6 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 
 	// fmt.Println("----- EVICTION -----")
 
-	// fmt.Println("----- Update Category States -----")
-	cache.updateCategories()
-
 	// Forced event rewards
 	if forced {
 		cache.evictionAgentNumForcedCalls++
@@ -427,10 +491,15 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 		choicesList, inMemory := cache.evictionAgent.EventMemory["NotDelete"]
 		if inMemory {
 			for _, choice := range *choicesList {
-				for catStateIdx := range cache.curCacheStates {
-					if cache.checkEvictionNextState(choice.State, catStateIdx) {
+				for catState := range cache.evictionCategoryManager.GetStateFromCategories(
+					cache.evictionAgent,
+					cache.Occupancy(),
+					cache.HitRate(),
+					cache.MaxSize,
+				) {
+					if cache.checkEvictionNextState(choice.State, catState.Idx) {
 						// Update table
-						cache.evictionAgent.UpdateTable(choice.State, catStateIdx, choice.Action, -cache.evictionRO)
+						cache.evictionAgent.UpdateTable(choice.State, catState.Idx, choice.Action, -cache.evictionRO)
 						// Update epsilon
 						cache.evictionAgent.UpdateEpsilon()
 					}
@@ -444,10 +513,15 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 
 	// fmt.Println(cache.curCacheStates)
 
-	for catIdx, catAction := range cache.curCacheStates {
-		switch catAction {
+	for catState := range cache.evictionCategoryManager.GetStateFromCategories(
+		cache.evictionAgent,
+		cache.Occupancy(),
+		cache.HitRate(),
+		cache.MaxSize,
+	) {
+		switch catState.Action {
 		case qlearn.ActionDeleteAll:
-			curFileList := cache.curCacheStatesFiles[catIdx]
+			curFileList := catState.Files
 			for _, curFile := range curFileList {
 				curFileStats := cache.stats.Get(curFile.Filename)
 				// fmt.Println("REMOVE FREQ:", curFile.Frequency)
@@ -460,18 +534,18 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 
 				deletedFiles = append(deletedFiles, curFile.Filename)
 
+				cache.evictionCategoryManager.deleteFileFromCategory(catState.Category, curFile)
 				cache.evictionAgent.UpdateFileMemory(curFile.Filename, qlearn.Choice{
-					State:     catIdx,
-					Action:    catAction,
+					State:     catState.Idx,
+					Action:    catState.Action,
 					Tick:      cache.tick,
 					ReadOnHit: cache.dataReadOnHit,
 					Occupancy: cache.Occupancy(),
 					Frequency: curFile.Frequency,
 				})
 			}
-			cache.curCacheStatesFiles[catIdx] = make([]*FileSupportData, 0)
 		case qlearn.ActionDeleteHalf, qlearn.ActionDeleteQuarter:
-			curFileList := cache.curCacheStatesFiles[catIdx]
+			curFileList := catState.Files
 			rand.Shuffle(len(curFileList), func(i, j int) {
 				curFileList[i], curFileList[j] = curFileList[j], curFileList[i]
 			})
@@ -479,7 +553,7 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 			maxIdx := 0
 			if len(curFileList) == 1 {
 				maxIdx = 1
-			} else if catAction == qlearn.ActionDeleteHalf {
+			} else if catState.Action == qlearn.ActionDeleteHalf {
 				maxIdx = len(curFileList) / 2
 			} else {
 				maxIdx = len(curFileList) / 4
@@ -497,30 +571,29 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 
 				deletedFiles = append(deletedFiles, curFile.Filename)
 
+				cache.evictionCategoryManager.deleteFileFromCategory(catState.Category, curFile)
 				cache.evictionAgent.UpdateFileMemory(curFile.Filename, qlearn.Choice{
-					State:     catIdx,
-					Action:    catAction,
+					State:     catState.Idx,
+					Action:    catState.Action,
 					Tick:      cache.tick,
 					ReadOnHit: cache.dataReadOnHit,
 					Occupancy: cache.Occupancy(),
 					Frequency: curFile.Frequency,
 				})
 			}
-			newFileList := curFileList[maxIdx:]
-			cache.curCacheStatesFiles[catIdx] = newFileList
 		case qlearn.ActionNotDelete:
-			for _, curFile := range cache.curCacheStatesFiles[catIdx] {
+			for _, curFile := range catState.Files {
 				cache.evictionAgent.UpdateFileMemory(curFile.Filename, qlearn.Choice{
-					State:     catIdx,
-					Action:    catAction,
+					State:     catState.Idx,
+					Action:    catState.Action,
 					Tick:      cache.tick,
 					ReadOnHit: cache.dataReadOnHit,
 					Occupancy: cache.Occupancy(),
 					Frequency: curFile.Frequency,
 				})
 				cache.evictionAgent.UpdateEventMemory("NotDelete", qlearn.Choice{
-					State:     catIdx,
-					Action:    catAction,
+					State:     catState.Idx,
+					Action:    catState.Action,
 					Tick:      cache.tick,
 					ReadOnHit: cache.dataReadOnHit,
 					Occupancy: cache.Occupancy(),
@@ -550,7 +623,6 @@ func (cache *AIRL) delayedRewardEvictionAgent(fileStats *FileStats, hit bool) {
 	prevChoice, inMemory := cache.evictionAgent.FileMemory[fileStats.Filename]
 
 	if inMemory {
-		cache.updateCategories()
 		reward := 0.0
 		if cache.dataReadOnHit > prevChoice.ReadOnHit {
 			reward += 1.
@@ -577,10 +649,15 @@ func (cache *AIRL) delayedRewardEvictionAgent(fileStats *FileStats, hit bool) {
 				reward += -1.
 			}
 		}
-		for catStateIdx := range cache.curCacheStates {
-			if cache.checkEvictionNextState(prevChoice.State, catStateIdx) {
+		for catState := range cache.evictionCategoryManager.GetStateFromCategories(
+			cache.evictionAgent,
+			cache.Occupancy(),
+			cache.HitRate(),
+			cache.MaxSize,
+		) {
+			if cache.checkEvictionNextState(prevChoice.State, catState.Idx) {
 				// Update table
-				cache.evictionAgent.UpdateTable(prevChoice.State, catStateIdx, prevChoice.Action, reward)
+				cache.evictionAgent.UpdateTable(prevChoice.State, catState.Idx, prevChoice.Action, reward)
 				// Update epsilon
 				cache.evictionAgent.UpdateEpsilon()
 			}
@@ -627,15 +704,20 @@ func (cache *AIRL) delayedRewardAdditionAgent(curState int, fileStats *FileStats
 }
 
 func (cache *AIRL) rewardEvictionAfterForcedCall(added bool) {
-	for state, action := range cache.curCacheStates {
-		if !added && action == qlearn.ActionNotDelete {
+	for catState := range cache.evictionCategoryManager.GetStateFromCategories(
+		cache.evictionAgent,
+		cache.Occupancy(),
+		cache.HitRate(),
+		cache.MaxSize,
+	) {
+		if !added && catState.Action == qlearn.ActionNotDelete {
 			// Update table
-			cache.evictionAgent.UpdateTable(state, state, action, -cache.evictionRO)
+			cache.evictionAgent.UpdateTable(catState.Idx, catState.Idx, catState.Action, -cache.evictionRO)
 			// Update epsilon
 			cache.evictionAgent.UpdateEpsilon()
 		} else {
 			// Update table
-			cache.evictionAgent.UpdateTable(state, state, action, cache.evictionRO)
+			cache.evictionAgent.UpdateTable(catState.Idx, catState.Idx, catState.Action, cache.evictionRO)
 			// Update epsilon
 			cache.evictionAgent.UpdateEpsilon()
 		}
@@ -644,7 +726,7 @@ func (cache *AIRL) rewardEvictionAfterForcedCall(added bool) {
 
 // BeforeRequest of LRU cache
 func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) {
-
+	fmt.Println("+++ REQUESTED FILE -> ", request.Filename)
 	if cache.evictionAgentOK {
 		if cache.evictionAgentStep <= 0 {
 			_, deletedFiles := cache.callEvictionAgent(false)
@@ -830,13 +912,19 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					}
 					return false
 				}
-				cache.files.Insert(&FileSupportData{
+				curFileSupportData := FileSupportData{
 					Filename:  request.Filename,
 					Size:      request.Size,
 					Frequency: fileStats.Frequency,
 					Recency:   fileStats.Recency,
 					Weight:    fileStats.Weight,
-				})
+				}
+				cache.files.Insert(&curFileSupportData)
+
+				if cache.evictionAgentOK {
+					fileCategory := cache.evictionCategoryManager.GetFileCategory(&curFileSupportData)
+					cache.evictionCategoryManager.AddOrUpdateCategoryFile(fileCategory, &curFileSupportData)
+				}
 
 				cache.size += requestedFileSize
 				fileStats.addInCache(cache.tick, &request.DayTime)
@@ -850,13 +938,18 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			// #######################
 			// ##### HIT branch  #####
 			// #######################
-			cache.files.Update(&FileSupportData{
+			curFileSupportData := FileSupportData{
 				Filename:  request.Filename,
 				Size:      request.Size,
 				Frequency: fileStats.Frequency,
 				Recency:   fileStats.Recency,
 				Weight:    fileStats.Weight,
-			})
+			}
+			cache.files.Update(&curFileSupportData)
+			if cache.evictionAgentOK {
+				fileCategory := cache.evictionCategoryManager.GetFileCategory(&curFileSupportData)
+				cache.evictionCategoryManager.AddOrUpdateCategoryFile(fileCategory, &curFileSupportData)
+			}
 		}
 
 	} else {
@@ -887,13 +980,19 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				}
 			}
 			if cache.Size()+requestedFileSize <= cache.MaxSize {
-				cache.files.Insert(&FileSupportData{
+				curFileSupportData := FileSupportData{
 					Filename:  request.Filename,
 					Size:      request.Size,
 					Frequency: fileStats.Frequency,
 					Recency:   fileStats.Recency,
 					Weight:    fileStats.Weight,
-				})
+				}
+				cache.files.Insert(&curFileSupportData)
+
+				if cache.evictionAgentOK {
+					fileCategory := cache.evictionCategoryManager.GetFileCategory(&curFileSupportData)
+					cache.evictionCategoryManager.AddOrUpdateCategoryFile(fileCategory, &curFileSupportData)
+				}
 
 				cache.size += requestedFileSize
 				fileStats.addInCache(cache.tick, &request.DayTime)
@@ -907,13 +1006,18 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			// ##### HIT branch  #####
 			// #######################
 			logger.Debug("NO ADDITION TABLE - Normal hit branch")
-			cache.files.Update(&FileSupportData{
+			curFileSupportData := FileSupportData{
 				Filename:  request.Filename,
 				Size:      request.Size,
 				Frequency: fileStats.Frequency,
 				Recency:   fileStats.Recency,
 				Weight:    fileStats.Weight,
-			})
+			}
+			cache.files.Update(&curFileSupportData)
+			if cache.evictionAgentOK {
+				fileCategory := cache.evictionCategoryManager.GetFileCategory(&curFileSupportData)
+				cache.evictionCategoryManager.AddOrUpdateCategoryFile(fileCategory, &curFileSupportData)
+			}
 		}
 	}
 
