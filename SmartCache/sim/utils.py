@@ -2,6 +2,8 @@ import logging
 import subprocess
 import sys
 from os import path
+import argparse
+import pathlib
 
 import coloredlogs
 
@@ -24,18 +26,31 @@ def get_logger(filename: str = __name__, level: str = 'INFO') -> 'logger.Logger'
 
 def get_simulator_exe(force_creation: bool = False) -> str:
     logger = get_logger(__name__)
-    cur_dir = path.dirname(path.abspath(__file__))
-    sim_path = path.join(cur_dir, 'bin', SIM_NAME)
+    cur_dir = pathlib.Path(__file__).parent.absolute()
+    sim_path = cur_dir.joinpath('bin', SIM_NAME)
     logger.debug(f"[BUILD]->[Sim Path][{sim_path}]")
     if force_creation or not path.exists(sim_path) or not path.isfile(sim_path):
         try:
             logger.debug(f"[BUILD]->[RUN]")
-            subprocess.check_output(
-                f"./build_sim.sh", shell=True, cwd=cur_dir,
+            print(subprocess.check_output(
+                f"./build_sim.sh",
+                shell=True, cwd=cur_dir,
                 stderr=subprocess.STDOUT
-            )
+            ).decode("utf-8"), end="")
         except subprocess.CalledProcessError as err:
-            logger.debug(f"[BUILD]->[ERROR]{err.output.decode('ascii')}")
-            print(f"[BUILD ERROR]:\n{err.output.decode('ascii')}")
+            logger.debug(f"[BUILD]->[ERROR]{err.output.decode('utf-8')}")
+            print(f"[BUILD ERROR]:\n{err.output.decode('utf-8')}")
             exit(-1)
     return sim_path
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Go Simulator Utils')
+    parser.add_argument(
+        'command', type=str, choices=["compile"],
+        help='the command to execute'
+    )
+
+    args = parser.parse_args()
+    if args.command == "compile":
+        get_simulator_exe(True)
