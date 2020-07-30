@@ -14,7 +14,7 @@ from yaspin.spinners import Spinners
 
 from DataManager.collector.dataset.reader import SimulatorDatasetReader
 from SmartCache.ai.models.generator import DonkeyModel
-from SmartCache.sim import get_simulator_exe
+from SmartCache.sim.utils import get_simulator_exe
 
 from .dashboard import plot_results
 from .ga import compare_greedy_solution, get_best_configuration
@@ -46,7 +46,7 @@ def prepare_process_call(args, simulator_exe, cache_type, working_dir: str,
         f"--simStartFromWindow={start_window}",
         f"--simStopWindow={stop_window}",
         # Enable CPU profiling
-        # "--cpuprofile=simulationCPU.prof",
+        "--cpuprofile=simulationCPU.prof",
         # Enable Memory profiling
         # "--memprofile=simulationMEM.prof",
     ]
