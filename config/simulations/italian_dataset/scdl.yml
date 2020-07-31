@@ -1,7 +1,7 @@
 --- # Simulation parameters
 sim:
-  data: ../../datasets/source2018_numeric_it_with_avro_order/
-  outputFolder: ../../results/sim_italian_dataset/cache_100T_10Gbit
+  data: ../../../datasets/source2018_numeric_it_with_avro_order/
+  outputFolder: ../../../results/sim_italian_dataset/cache_100T_10Gbit
   type: normal
   window:
     start: 0
@@ -21,6 +21,6 @@ sim:
       epsilon:
         decay: 0.000001
       addition:
-        featuremap: ../../featureMaps/rlAdditionFeatureMap.json
+        featuremap: ../../../featureMaps/rlAdditionFeatureMap.json
       eviction:
-        featuremap: ../../featureMaps/rlEvictionFeatureMap.json
+        featuremap: ../../../featureMaps/rlEvictionFeatureMap.json
