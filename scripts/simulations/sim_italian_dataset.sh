@@ -1,15 +1,13 @@
 #!/usr/bin/env bash
 
-SIM_EXE="../../SmartCache/sim/bin/simulator"
-
 python -m SmartCache.sim.utils compile &&
 
-SIM_EXE sim ../../config/simulations/italian_dataset/lru.yml &&
-SIM_EXE sim ../../config/simulations/italian_dataset/lfu.yml &&
-SIM_EXE sim ../../config/simulations/italian_dataset/sizeBig.yml &&
-SIM_EXE sim ../../config/simulations/italian_dataset/sizeSmall.yml &&
+simulator sim ../../config/simulations/italian_dataset/lru.yml &&
+simulator sim ../../config/simulations/italian_dataset/lfu.yml &&
+simulator sim ../../config/simulations/italian_dataset/sizeBig.yml &&
+simulator sim ../../config/simulations/italian_dataset/sizeSmall.yml &&
 
-SIM_EXE sim ../../config/simulations/italian_dataset/scdl.yml &&
+simulator sim ../../config/simulations/italian_dataset/scdl.yml &&
 
 ### ----- Plot results -----
 
