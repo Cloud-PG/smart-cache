@@ -69,12 +69,12 @@ func configureViper(configFilenameWithNoExt string) {
 	viper.SetDefault("weightfunc.gamma", 1.0)
 	viper.SetDefault("loglevel", "INFO")
 
-	viper.SetDefault("ai.rl.epsilonstart", 1.0)
-	viper.SetDefault("ai.rl.epsilondecay", 0.0000042)
+	viper.SetDefault("ai.rl.epsilon.start", 1.0)
+	viper.SetDefault("ai.rl.epsilon.decay", 0.0000042)
 
 	viper.SetDefault("ai.featuremap", "")
-	viper.SetDefault("ai.rladditionfeaturemap", "")
-	viper.SetDefault("ai.rlevictionfeaturemap", "")
+	viper.SetDefault("ai.rladdition.featuremap", "")
+	viper.SetDefault("ai.rleviction.featuremap", "")
 	viper.SetDefault("ai.model", "")
 
 	viper.SetDefault("dataset2testpath", "")
@@ -296,6 +296,10 @@ func simCommand() *cobra.Command {
 			logger.Info("CONF_VAR", zap.Float64("weightGamma", weightGamma))
 
 			aiFeatureMap = viper.GetString("sim.ai.featuremap")
+			aiFeatureMap, errAbs = filepath.Abs(aiFeatureMap)
+			if errAbs != nil {
+				panic(errAbs)
+			}
 			logger.Info("CONF_VAR", zap.String("aiFeatureMap", aiFeatureMap))
 
 			dataset2TestPath = viper.GetString("sim.ai.dataset2TestPath")
@@ -304,16 +308,24 @@ func simCommand() *cobra.Command {
 			aiModel = viper.GetString("sim.ai.model")
 			logger.Info("CONF_VAR", zap.String("aiModel", aiModel))
 
-			aiRLAdditionFeatureMap = viper.GetString("sim.ai.rl.additionfeaturemap")
+			aiRLAdditionFeatureMap = viper.GetString("sim.ai.rl.addition.featuremap")
+			aiRLAdditionFeatureMap, errAbs = filepath.Abs(aiRLAdditionFeatureMap)
+			if errAbs != nil {
+				panic(errAbs)
+			}
 			logger.Info("CONF_VAR", zap.String("aiRLAdditionFeatureMap", aiRLAdditionFeatureMap))
 
-			aiRLEvictionFeatureMap = viper.GetString("sim.ai.rl.evictionfeaturemap")
+			aiRLEvictionFeatureMap = viper.GetString("sim.ai.rl.eviction.featuremap")
+			aiRLEvictionFeatureMap, errAbs = filepath.Abs(aiRLEvictionFeatureMap)
+			if errAbs != nil {
+				panic(errAbs)
+			}
 			logger.Info("CONF_VAR", zap.String("aiRLEvictionFeatureMap", aiRLEvictionFeatureMap))
 
-			aiRLEpsilonStart = viper.GetFloat64("sim.ai.rl.epsilonstart")
+			aiRLEpsilonStart = viper.GetFloat64("sim.ai.rl.epsilon.start")
 			logger.Info("CONF_VAR", zap.Float64("aiRLEpsilonStart", aiRLEpsilonStart))
 
-			aiRLEpsilonDecay = viper.GetFloat64("sim.ai.rl.epsilondecay")
+			aiRLEpsilonDecay = viper.GetFloat64("sim.ai.rl.epsilon.decay")
 			logger.Info("CONF_VAR", zap.Float64("aiRLEpsilonDecay", aiRLEpsilonDecay))
 
 			cacheType = viper.GetString("sim.cache.type")
