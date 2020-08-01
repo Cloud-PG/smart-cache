@@ -21,6 +21,6 @@ sim:
       epsilon:
         decay: 0.000001
       addition:
-        featuremap: ../../../featureMaps/rlAdditionFeatureMap.json
+        featuremap: ../../../../featureMaps/rlAdditionFeatureMap.json
       eviction:
-        featuremap: ../../../featureMaps/rlEvictionFeatureMap.json
+        featuremap: ../../../../featureMaps/rlEvictionFeatureMap.json
