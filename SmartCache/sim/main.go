@@ -50,7 +50,7 @@ func configureViper(configFilenameWithNoExt string) {
 	viper.SetDefault("sim.window.size", 7)
 	viper.SetDefault("sim.window.start", 0)
 	viper.SetDefault("sim.window.stop", 0)
-	viper.SetDefault("sim.cachewatermarks", false)
+	viper.SetDefault("sim.cache.watermarks", false)
 	viper.SetDefault("sim.coldstart", false)
 	viper.SetDefault("sim.coldstartnostats", false)
 	viper.SetDefault("sim.bandwidthmanager", false)
