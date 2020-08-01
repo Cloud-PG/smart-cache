@@ -1,23 +1,33 @@
 #!/usr/bin/env bash
 
-python -m SmartCache.sim.simulator sim ../../datasets/HighFrequencyDataset/ --force-exe-build 'true' --cache-type lru,lfu,sizeSmall,sizeBig --cache-size 10 --cache-size-unit "G" --simulation-steps normal --window-start 0 --window-stop 52 --region it --cache-bandwidth 1 --cache-bandwidth-redirect 'true' --out-folder ../../results/sim_syntethic_dataset/HighFrequencyDataset &&
+#!/usr/bin/env bash
 
-python -m SmartCache.sim.simulator sim ../../datasets/SizeFocusedDataset/ --force-exe-build 'true' --cache-type lru,lfu,sizeSmall,sizeBig --cache-size 10 --cache-size-unit "G" --simulation-steps normal --window-start 0 --window-stop 52 --region it --cache-bandwidth 1 --cache-bandwidth-redirect 'true' --out-folder ../../results/sim_syntethic_dataset/SizeFocusedDataset &&
+python -m SmartCache.sim.utils compile --release "true" &&
 
-python -m SmartCache.sim.simulator sim ../../datasets/RecencyFocusedDataset/ --force-exe-build 'true' --cache-type lru,lfu,sizeSmall,sizeBig --cache-size 10 --cache-size-unit "G" --simulation-steps normal --window-start 0 --window-stop 52 --region it --cache-bandwidth 1 --cache-bandwidth-redirect 'true' --out-folder ../../results/sim_syntethic_dataset/RecencyFocusedDataset &&
+# High Frequency Datset
+simulator sim ../../config/simulations/synthetic_dataset/high_frequency_dataset/lru.yml &&
+simulator sim ../../config/simulations/synthetic_dataset/high_frequency_dataset/lfu.yml &&
+simulator sim ../../config/simulations/synthetic_dataset/high_frequency_dataset/sizeBig.yml &&
+simulator sim ../../config/simulations/synthetic_dataset/high_frequency_dataset/sizeSmall.yml &&
+simulator sim ../../config/simulations/synthetic_dataset/high_frequency_dataset/scdl.yml &&
 
-# ------------------------ RL HighFrequencyDataset  ----------------------------
-python -m SmartCache.sim.simulator simAI ../../datasets/HighFrequencyDataset --force-exe-build 'true' --simulation-steps normal --window-start 0 --window-stop 52 --cache-type aiRL --region it --cache-size 10 --cache-size-unit "G" --cache-bandwidth 1 --cache-bandwidth-redirect 'true' --out-folder ../../results/sim_syntethic_dataset/HighFrequencyDataset --ai-rl-addition-feature-map ../../featureMaps/rlAdditionFeatureMap.json --ai-rl-eviction-feature-map ../../featureMaps/rlEvictionFeatureMap.json --load-prev-normal-run 'false' --dump-files-and-stats 'false' --decay-rate-epsilon 0.0005 &&
+# Recency Focused Datset
+simulator sim ../../config/simulations/synthetic_dataset/recency_focused_dataset/lru.yml &&
+simulator sim ../../config/simulations/synthetic_dataset/recency_focused_dataset/lfu.yml &&
+simulator sim ../../config/simulations/synthetic_dataset/recency_focused_dataset/sizeBig.yml &&
+simulator sim ../../config/simulations/synthetic_dataset/recency_focused_dataset/sizeSmall.yml &&
+simulator sim ../../config/simulations/synthetic_dataset/recency_focused_dataset/scdl.yml &&
 
-# ------------------------ RL SizeFocusedDataset  ----------------------------
-python -m SmartCache.sim.simulator simAI ../../datasets/SizeFocusedDataset --force-exe-build 'true' --simulation-steps normal --window-start 0 --window-stop 52 --cache-type aiRL --region it --cache-size 10 --cache-size-unit "G" --cache-bandwidth 1 --cache-bandwidth-redirect 'true' --out-folder ../../results/sim_syntethic_dataset/SizeFocusedDataset --ai-rl-addition-feature-map ../../featureMaps/rlAdditionFeatureMap.json --ai-rl-eviction-feature-map ../../featureMaps/rlEvictionFeatureMap.json --load-prev-normal-run 'false' --dump-files-and-stats 'false' --decay-rate-epsilon 0.0005 &&
-
-# ------------------------ RL RecencyFocusedDataset  ----------------------------
-python -m SmartCache.sim.simulator simAI ../../datasets/RecencyFocusedDataset --force-exe-build 'true' --simulation-steps normal --window-start 0 --window-stop 52 --cache-type aiRL --region it --cache-size 10 --cache-size-unit "G" --cache-bandwidth 1 --cache-bandwidth-redirect 'true' --out-folder ../../results/sim_syntethic_dataset/RecencyFocusedDataset --ai-rl-addition-feature-map ../../featureMaps/rlAdditionFeatureMap.json --ai-rl-eviction-feature-map ../../featureMaps/rlEvictionFeatureMap.json --load-prev-normal-run 'false' --dump-files-and-stats 'false' --decay-rate-epsilon 0.0005 &&
+# Size Focused Datset
+simulator sim ../../config/simulations/synthetic_dataset/size_focused_dataset/lru.yml &&
+simulator sim ../../config/simulations/synthetic_dataset/size_focused_dataset/lfu.yml &&
+simulator sim ../../config/simulations/synthetic_dataset/size_focused_dataset/sizeBig.yml &&
+simulator sim ../../config/simulations/synthetic_dataset/size_focused_dataset/sizeSmall.yml &&
+simulator sim ../../config/simulations/synthetic_dataset/size_focused_dataset/scdl.yml &&
 
 ### ----- Plot results -----
 
-python -m SmartCache.sim.simulator plot ../../results/sim_syntethic_dataset/HighFrequencyDataset --plot-resolution 1280,800 --cache-bandwidth 1 --export-table 'true' &&
+python -m SmartCache.sim.simulator plot ../../results/sim_synthetic_dataset/HighFrequencyDataset --plot-resolution 1280,800 --cache-bandwidth 10 --export-table 'true' &&
 
 python -m SmartCache.sim.simulator plot ../../results/sim_syntethic_dataset/SizeFocusedDataset --plot-resolution 1280,800 --cache-bandwidth 1 --export-table 'true' &&
 

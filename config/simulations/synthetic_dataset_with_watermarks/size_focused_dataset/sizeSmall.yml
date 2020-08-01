@@ -1,0 +1,18 @@
+--- # Simulation parameters
+sim:
+  data: ../../../../datasets/SizeFocusedDataset/
+  outputFolder: ../../../../results/sim_syntethic_dataset_with_watermarks/SizeFocusedDataset
+  type: normal
+  window:
+    start: 0
+    stop: 52
+  region: it
+  cache:
+    type: sizeSmall
+    watermarks: true
+    size:
+      value: 10
+      unit: G
+    bandwidth: 
+      value: 1
+      redirect: true

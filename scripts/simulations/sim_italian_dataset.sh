@@ -11,7 +11,7 @@ simulator sim ../../config/simulations/italian_dataset/scdl.yml &&
 
 ### ----- Plot results -----
 
-python -m SmartCache.sim.simulator plot ../../results/sim_italian_dataset/cache_100T_10Gbit --plot-resolution 1280,800 --cache-bandwidth 10 --export-table 'true'
+python -m SmartCache.sim.simulator plot ../../results/sim_italian_dataset --plot-resolution 1280,800 --cache-bandwidth 10 --export-table 'true'
 
 ### ----- Plot tables -----
 
