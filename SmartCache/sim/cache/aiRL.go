@@ -300,6 +300,7 @@ func (cache *AIRL) getState4AdditionAgent(hit bool, curFileStats *FileStats) int
 	return cache.additionAgent.QTable.FeatureIdxs2StateIdx(cache.bufferIdxVector...)
 }
 
+// CatState is a struct to manage the state of eviction agent starting from categories
 type CatState struct {
 	Idx      int
 	Category int
@@ -307,6 +308,13 @@ type CatState struct {
 	Action   qlearn.ActionType
 }
 
+// DelCatFile stores the files to be deleted in eviction call
+type DelCatFile struct {
+	Category int
+	File     *FileSupportData
+}
+
+// CategoryManager helps the category management in the eviction agent
 type CategoryManager struct {
 	buffer                 []int
 	featureIdxWeights      []int
@@ -323,6 +331,7 @@ type CategoryManager struct {
 	generatorChan          chan CatState
 }
 
+// Init initialize the Category Manager
 func (catMan *CategoryManager) Init(features []featuremap.Obj, featureWeights []int, fileFeatures []featuremap.Obj, fileFeatureWeights []int, fileFeatureIdxMap map[string]int) {
 	catMan.buffer = make([]int, 0)
 	catMan.featureIdxWeights = featureWeights
@@ -379,6 +388,7 @@ func (catMan *CategoryManager) insertFileInCategory(category int, file *FileSupp
 	catMan.categorySizesMap[category] += file.Size
 }
 
+// AddOrUpdateCategoryFile inserts or update a file associated to its category
 func (catMan *CategoryManager) AddOrUpdateCategoryFile(category int, file *FileSupportData) {
 	// fmt.Println("ADD OR UPDATE FILE CATEGORY [", category, "]-> ", file.Filename)
 	oldFileCategory, inMemory := catMan.filesCategoryMap[file.Filename]
@@ -395,6 +405,7 @@ func (catMan *CategoryManager) AddOrUpdateCategoryFile(category int, file *FileS
 	}
 }
 
+// GetFileCategory returns the category of a specific file
 func (catMan CategoryManager) GetFileCategory(file *FileSupportData) int {
 	catMan.buffer = catMan.buffer[:0]
 	for _, feature := range catMan.features {
@@ -424,6 +435,7 @@ func (catMan CategoryManager) GetFileCategory(file *FileSupportData) int {
 	return curCatIdx
 }
 
+// GetStateFromCategories generates all the states from the current categories
 func (catMan CategoryManager) GetStateFromCategories(agent qlearn.Agent, occupancy float64, hitRate float64, maxSize float64) chan CatState {
 	catMan.generatorChan = make(chan CatState, len(catMan.categoryFileListMap))
 	go func() {
@@ -518,6 +530,8 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 
 	// fmt.Println(cache.curCacheStates)
 
+	files2delete := make([]DelCatFile, 0)
+
 	for catState := range cache.evictionCategoryManager.GetStateFromCategories(
 		cache.evictionAgent,
 		cache.Occupancy(),
@@ -540,7 +554,10 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 
 				deletedFiles = append(deletedFiles, curFile.Filename)
 
-				cache.evictionCategoryManager.deleteFileFromCategory(catState.Category, curFile)
+				files2delete = append(files2delete, DelCatFile{
+					Category: catState.Category,
+					File:     curFile,
+				})
 				cache.evictionAgent.UpdateFileMemory(curFile.Filename, qlearn.Choice{
 					State:     catState.Idx,
 					Action:    catState.Action,
@@ -579,7 +596,10 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 
 				deletedFiles = append(deletedFiles, curFile.Filename)
 
-				cache.evictionCategoryManager.deleteFileFromCategory(catState.Category, curFile)
+				files2delete = append(files2delete, DelCatFile{
+					Category: catState.Category,
+					File:     curFile,
+				})
 				cache.evictionAgent.UpdateFileMemory(curFile.Filename, qlearn.Choice{
 					State:     catState.Idx,
 					Action:    catState.Action,
@@ -610,6 +630,10 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 				})
 			}
 		}
+	}
+
+	for _, file2Delete := range files2delete {
+		cache.evictionCategoryManager.deleteFileFromCategory(file2Delete.Category, file2Delete.File)
 	}
 
 	// fmt.Println("deleted", deletedFiles)
