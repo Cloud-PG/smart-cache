@@ -389,7 +389,7 @@ func simCommand() *cobra.Command {
 			switch simType {
 			case "normal":
 				finalOutputFolder := filepath.Join(simOutputFolder, "run_full_normal", baseName)
-				err := os.MkdirAll(finalOutputFolder, os.ModeDir)
+				err := os.MkdirAll(finalOutputFolder, 0755)
 				if err != nil && !os.IsExist(err) {
 					panic(err)
 				}
