@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-python -m SmartCache.sim.utils compile &&
+python -m SmartCache.sim.utils compile --release "true" &&
 
 simulator sim ../../config/simulations/italian_dataset/lru.yml &&
 simulator sim ../../config/simulations/italian_dataset/lfu.yml &&
