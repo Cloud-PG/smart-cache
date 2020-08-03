@@ -1,6 +1,6 @@
 --- # Simulation parameters
 sim:
-  data: ../../../../datasets/source2018_numeric_it_with_avro_order/
+  data: ../../../../datasets/HighFrequencyDataset/
   outputFolder: ../../../../results/sim_synthetic_dataset/HighFrequencyDataset
   type: normal
   window:
