@@ -39,7 +39,7 @@ func configureViper(configFilenameWithNoExt string) {
 	viper.AddConfigPath(".")                     // optionally look for config in the working directory
 
 	viper.SetDefault("sim.region", "all")
-	viper.SetDefault("sim.outfile", "")
+	viper.SetDefault("sim.outputFolder", ".")
 	viper.SetDefault("sim.dump", false)
 	viper.SetDefault("sim.dumpfilesandstats", true)
 	viper.SetDefault("sim.dumpfilename", "")
@@ -54,28 +54,28 @@ func configureViper(configFilenameWithNoExt string) {
 	viper.SetDefault("sim.bandwidthmanager", false)
 	viper.SetDefault("sim.bandwidth", 10.0)
 
-	viper.SetDefault("cpuprofile", "")
-	viper.SetDefault("memprofile", "")
-	viper.SetDefault("outputupdatedelay", 2.4)
+	viper.SetDefault("sim.cpuprofile", "")
+	viper.SetDefault("sim.memprofile", "")
+	viper.SetDefault("sim.outputupdatedelay", 2.4)
 
-	viper.SetDefault("cache.size.value", 100.)
-	viper.SetDefault("cache.size.unit", "T")
+	viper.SetDefault("sim.cache.size.value", 100.)
+	viper.SetDefault("sim.cache.size.unit", "T")
 
-	viper.SetDefault("weightfunc.name", "FuncAdditiveExp")
-	viper.SetDefault("weightfunc.alpha", 1.0)
-	viper.SetDefault("weightfunc.beta", 1.0)
-	viper.SetDefault("weightfunc.gamma", 1.0)
-	viper.SetDefault("loglevel", "INFO")
+	viper.SetDefault("sim.weightfunc.name", "FuncAdditiveExp")
+	viper.SetDefault("sim.weightfunc.alpha", 1.0)
+	viper.SetDefault("sim.weightfunc.beta", 1.0)
+	viper.SetDefault("sim.weightfunc.gamma", 1.0)
+	viper.SetDefault("sim.loglevel", "INFO")
 
-	viper.SetDefault("ai.rl.epsilon.start", 1.0)
-	viper.SetDefault("ai.rl.epsilon.decay", 0.0000042)
+	viper.SetDefault("sim.ai.rl.epsilon.start", 1.0)
+	viper.SetDefault("sim.ai.rl.epsilon.decay", 0.0000042)
 
-	viper.SetDefault("ai.featuremap", "")
-	viper.SetDefault("ai.rladdition.featuremap", "")
-	viper.SetDefault("ai.rleviction.featuremap", "")
-	viper.SetDefault("ai.model", "")
+	viper.SetDefault("sim.ai.featuremap", "")
+	viper.SetDefault("sim.ai.rl.addition.featuremap", "")
+	viper.SetDefault("sim.ai.rl.eviction.featuremap", "")
+	viper.SetDefault("sim.ai.model", "")
 
-	viper.SetDefault("dataset2testpath", "")
+	viper.SetDefault("sim.dataset2testpath", "")
 }
 
 func simCommand() *cobra.Command {
@@ -272,31 +272,33 @@ func simCommand() *cobra.Command {
 			simWindowSize = viper.GetInt("sim.window.size")
 			logger.Info("CONF_VAR", zap.Int("simWindowSize", simWindowSize))
 
-			cpuprofile = viper.GetString("cpuprofile")
+			cpuprofile = viper.GetString("sim.cpuprofile")
 			logger.Info("CONF_VAR", zap.String("cpuprofile", cpuprofile))
 
-			memprofile = viper.GetString("memprofile")
+			memprofile = viper.GetString("sim.memprofile")
 			logger.Info("CONF_VAR", zap.String("memprofile", memprofile))
 
-			outputUpdateDelay = viper.GetFloat64("outputupdatedelay")
+			outputUpdateDelay = viper.GetFloat64("sim.outputupdatedelay")
 			logger.Info("CONF_VAR", zap.Float64("outputUpdateDelay", outputUpdateDelay))
 
-			weightFunc = viper.GetString("weightfunc.name")
+			weightFunc = viper.GetString("sim.weightfunc.name")
 			logger.Info("CONF_VAR", zap.String("weightFunc", weightFunc))
 
-			weightAlpha = viper.GetFloat64("weightfunc.alpha")
+			weightAlpha = viper.GetFloat64("sim.weightfunc.alpha")
 			logger.Info("CONF_VAR", zap.Float64("weightAlpha", weightAlpha))
 
-			weightBeta = viper.GetFloat64("weightfunc.beta")
+			weightBeta = viper.GetFloat64("sim.weightfunc.beta")
 			logger.Info("CONF_VAR", zap.Float64("weightBeta", weightBeta))
 
-			weightGamma = viper.GetFloat64("weightfunc.gamma")
+			weightGamma = viper.GetFloat64("sim.weightfunc.gamma")
 			logger.Info("CONF_VAR", zap.Float64("weightGamma", weightGamma))
 
 			aiFeatureMap = viper.GetString("sim.ai.featuremap")
-			aiFeatureMap, errAbs = filepath.Abs(aiFeatureMap)
-			if errAbs != nil {
-				panic(errAbs)
+			if aiFeatureMap != "" {
+				aiFeatureMap, errAbs = filepath.Abs(aiFeatureMap)
+				if errAbs != nil {
+					panic(errAbs)
+				}
 			}
 			logger.Info("CONF_VAR", zap.String("aiFeatureMap", aiFeatureMap))
 
@@ -307,16 +309,20 @@ func simCommand() *cobra.Command {
 			logger.Info("CONF_VAR", zap.String("aiModel", aiModel))
 
 			aiRLAdditionFeatureMap = viper.GetString("sim.ai.rl.addition.featuremap")
-			aiRLAdditionFeatureMap, errAbs = filepath.Abs(aiRLAdditionFeatureMap)
-			if errAbs != nil {
-				panic(errAbs)
+			if aiRLAdditionFeatureMap != "" {
+				aiRLAdditionFeatureMap, errAbs = filepath.Abs(aiRLAdditionFeatureMap)
+				if errAbs != nil {
+					panic(errAbs)
+				}
 			}
 			logger.Info("CONF_VAR", zap.String("aiRLAdditionFeatureMap", aiRLAdditionFeatureMap))
 
 			aiRLEvictionFeatureMap = viper.GetString("sim.ai.rl.eviction.featuremap")
-			aiRLEvictionFeatureMap, errAbs = filepath.Abs(aiRLEvictionFeatureMap)
-			if errAbs != nil {
-				panic(errAbs)
+			if aiRLEvictionFeatureMap != "" {
+				aiRLEvictionFeatureMap, errAbs = filepath.Abs(aiRLEvictionFeatureMap)
+				if errAbs != nil {
+					panic(errAbs)
+				}
 			}
 			logger.Info("CONF_VAR", zap.String("aiRLEvictionFeatureMap", aiRLEvictionFeatureMap))
 
@@ -574,6 +580,7 @@ func simCommand() *cobra.Command {
 				csvHeaderColumns = append(csvHeaderColumns, "Action delete all")
 				csvHeaderColumns = append(csvHeaderColumns, "Action delete half")
 				csvHeaderColumns = append(csvHeaderColumns, "Action delete quarter")
+				csvHeaderColumns = append(csvHeaderColumns, "Action delete one")
 				csvHeaderColumns = append(csvHeaderColumns, "Action not delete")
 			}
 			csvSimOutput.Write(csvHeaderColumns)

@@ -23,7 +23,7 @@ type AgentRole int
 
 const (
 	// ActionNotStore indicates to store an element in cache
-	ActionNotStore ActionType = iota - 6
+	ActionNotStore ActionType = iota - 7
 	// ActionStore indicates to not store an element in cache
 	ActionStore
 	// ActionNotDelete indicates to not remove a category of files
@@ -34,6 +34,8 @@ const (
 	ActionDeleteHalf
 	// ActionDeleteQuarter indicates to remove a quarter of the category files
 	ActionDeleteQuarter
+	// ActionDeleteOne indicates to remove a file of the category
+	ActionDeleteOne
 
 	// RLSARSA indicates the standard RL update algorithm SARSA
 	RLSARSA RLUpdateAlg = iota - 2
@@ -215,9 +217,10 @@ func (agent *Agent) Init(featureManager *featuremap.FeatureManager, role AgentRo
 			featureManager,
 			[]ActionType{
 				ActionNotDelete,
+				ActionDeleteOne,
 				ActionDeleteQuarter,
 				ActionDeleteHalf,
-				ActionDeleteAll,
+				// ActionDeleteAll,
 			},
 		)
 	}
@@ -280,6 +283,8 @@ func (agent Agent) QTableToString() string {
 			tmp = append(tmp, "ActionDeleteHalf")
 		case ActionDeleteQuarter:
 			tmp = append(tmp, "ActionDeleteQuarter")
+		case ActionDeleteOne:
+			tmp = append(tmp, "ActionDeleteOne")
 		case ActionNotDelete:
 			tmp = append(tmp, "ActionNotDelete")
 		case ActionStore:
