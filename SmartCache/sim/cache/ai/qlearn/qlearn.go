@@ -23,7 +23,7 @@ type AgentRole int
 
 const (
 	// ActionNotStore indicates to store an element in cache
-	ActionNotStore ActionType = iota - 4
+	ActionNotStore ActionType = iota - 6
 	// ActionStore indicates to not store an element in cache
 	ActionStore
 	// ActionNotDelete indicates to not remove a category of files
