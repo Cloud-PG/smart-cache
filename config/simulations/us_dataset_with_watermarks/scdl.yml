@@ -9,7 +9,7 @@ sim:
   region: us
   cache:
     type: aiRL
-    watermarks: true
+    watermarks: false
     size:
       value: 200
       unit: T
