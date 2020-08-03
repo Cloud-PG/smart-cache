@@ -6,7 +6,7 @@
         {
             "label": "build simulator",
             "type": "shell",
-            "command": "pipenv run python -m SmartCache.sim.utils compile",
+            "command": "pipenv run python -m SmartCache.sim.utils compile --fast 'true'",
             "problemMatcher": [],
             "group": {
                 "kind": "build",
