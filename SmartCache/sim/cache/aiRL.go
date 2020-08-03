@@ -351,7 +351,7 @@ func (catMan *CategoryManager) Init(features []featuremap.Obj, featureWeights []
 }
 
 func (catMan *CategoryManager) deleteFileFromCategory(category int, file2Remove *FileSupportData) {
-	// fmt.Println("DELETE FILE FROM CATEGORY [", category, "]-> ", file2Remove.Filename)
+	// fmt.Println("[CATMANAGER] DELETE FILE FROM CATEGORY [", category, "]-> ", file2Remove.Filename)
 	delete(catMan.filesCategoryMap, file2Remove.Filename)
 	catMan.categorySizesMap[category] -= catMan.fileSupportDataSizeMap[file2Remove]
 	categoryFiles := catMan.categoryFileListMap[category]
@@ -377,7 +377,7 @@ func (catMan *CategoryManager) deleteFileFromCategory(category int, file2Remove 
 }
 
 func (catMan *CategoryManager) insertFileInCategory(category int, file *FileSupportData) {
-	// fmt.Println("INSERT FILE IN CATEGORY [", category, "]-> ", file.Filename)
+	// fmt.Println("[CATMANAGER] INSERT FILE IN CATEGORY [", category, "]-> ", file.Filename)
 	_, inMemory := catMan.categoryFileListMap[category]
 	if !inMemory {
 		catMan.categoryFileListMap[category] = make([]*FileSupportData, 0)
@@ -390,7 +390,7 @@ func (catMan *CategoryManager) insertFileInCategory(category int, file *FileSupp
 
 // AddOrUpdateCategoryFile inserts or update a file associated to its category
 func (catMan *CategoryManager) AddOrUpdateCategoryFile(category int, file *FileSupportData) {
-	// fmt.Println("ADD OR UPDATE FILE CATEGORY [", category, "]-> ", file.Filename)
+	// fmt.Println("[CATMANAGER] ADD OR UPDATE FILE CATEGORY [", category, "]-> ", file.Filename)
 	oldFileCategory, inMemory := catMan.filesCategoryMap[file.Filename]
 	if inMemory {
 		if oldFileCategory != category {
@@ -492,11 +492,12 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 	var (
 		totalDeleted float64
 		deletedFiles = make([]int64, 0)
+		files2delete = make([]DelCatFile, 0)
 	)
 
 	cache.evictionAgentNumCalls++
 
-	// fmt.Println("----- EVICTION -----")
+	// fmt.Println("----- EVICTION ----- Forced[", forced, "]")
 
 	// Forced event rewards
 	if forced {
@@ -527,10 +528,6 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 	} else {
 		cache.evictionAgentK = cache.evictionAgentK << 1
 	}
-
-	// fmt.Println(cache.curCacheStates)
-
-	files2delete := make([]DelCatFile, 0)
 
 	for catState := range cache.evictionCategoryManager.GetStateFromCategories(
 		cache.evictionAgent,
@@ -632,11 +629,12 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 		}
 	}
 
+	// fmt.Printf("[CATMANAGER] files 2 delete -> %#v\n", files2delete)
 	for _, file2Delete := range files2delete {
 		cache.evictionCategoryManager.deleteFileFromCategory(file2Delete.Category, file2Delete.File)
 	}
 
-	// fmt.Println("deleted", deletedFiles)
+	// fmt.Println("[CATMANAGER] Deleted files -> ", deletedFiles)
 	cache.files.Remove(deletedFiles, false)
 
 	return totalDeleted, deletedFiles
@@ -759,7 +757,7 @@ func (cache *AIRL) rewardEvictionAfterForcedCall(added bool) {
 
 // BeforeRequest of LRU cache
 func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) {
-	// fmt.Println("+++ REQUESTED FILE -> ", request.Filename)
+	// fmt.Println("+++ REQUESTED FILE +++-> ", request.Filename)
 	if cache.evictionAgentOK {
 		if cache.evictionAgentStep <= 0 {
 			_, deletedFiles := cache.callEvictionAgent(false)
@@ -914,20 +912,19 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				randomActionIdx := int(cache.additionAgent.GetRandomFloat() * float64(len(cache.additionAgent.QTable.ActionTypes)))
 				curAction = cache.additionAgent.QTable.ActionTypes[randomActionIdx]
 			}
-			cache.actionCounters[curAction]++
-
-			cache.additionAgent.UpdateFileMemory(request.Filename, qlearn.Choice{
-				State:     curState,
-				Action:    curAction,
-				Tick:      cache.tick,
-				Hit:       hit,
-				ReadOnHit: cache.dataReadOnHit,
-				Occupancy: cache.Occupancy(),
-				Frequency: fileStats.Frequency,
-			})
 
 			switch curAction {
 			case qlearn.ActionNotStore:
+				cache.actionCounters[curAction]++
+				cache.additionAgent.UpdateFileMemory(request.Filename, qlearn.Choice{
+					State:     curState,
+					Action:    curAction,
+					Tick:      cache.tick,
+					Hit:       hit,
+					ReadOnHit: cache.dataReadOnHit,
+					Occupancy: cache.Occupancy(),
+					Frequency: fileStats.Frequency,
+				})
 				return false
 			case qlearn.ActionStore:
 				forced := false
@@ -944,29 +941,40 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 						cache.rewardEvictionAfterForcedCall(false)
 					}
 					return false
-				}
-				curFileSupportData := FileSupportData{
-					Filename:  request.Filename,
-					Size:      request.Size,
-					Frequency: fileStats.Frequency,
-					Recency:   fileStats.Recency,
-					Weight:    fileStats.Weight,
-				}
-				cache.files.Insert(&curFileSupportData)
+				} else {
+					curFileSupportData := FileSupportData{
+						Filename:  request.Filename,
+						Size:      request.Size,
+						Frequency: fileStats.Frequency,
+						Recency:   fileStats.Recency,
+						Weight:    fileStats.Weight,
+					}
+					cache.files.Insert(&curFileSupportData)
 
-				if cache.evictionAgentOK {
-					fileCategory := cache.evictionCategoryManager.GetFileCategory(&curFileSupportData)
-					cache.evictionCategoryManager.AddOrUpdateCategoryFile(fileCategory, &curFileSupportData)
-				}
+					if cache.evictionAgentOK {
+						fileCategory := cache.evictionCategoryManager.GetFileCategory(&curFileSupportData)
+						cache.evictionCategoryManager.AddOrUpdateCategoryFile(fileCategory, &curFileSupportData)
+					}
 
-				cache.size += requestedFileSize
-				fileStats.addInCache(cache.tick, &request.DayTime)
-				added = true
-				if cache.evictionAgentOK && forced {
-					cache.rewardEvictionAfterForcedCall(added)
+					cache.size += requestedFileSize
+					fileStats.addInCache(cache.tick, &request.DayTime)
+					added = true
+					if cache.evictionAgentOK && forced {
+						cache.rewardEvictionAfterForcedCall(added)
+					}
+
+					cache.actionCounters[curAction]++
+					cache.additionAgent.UpdateFileMemory(request.Filename, qlearn.Choice{
+						State:     curState,
+						Action:    curAction,
+						Tick:      cache.tick,
+						Hit:       hit,
+						ReadOnHit: cache.dataReadOnHit,
+						Occupancy: cache.Occupancy(),
+						Frequency: fileStats.Frequency,
+					})
 				}
 			}
-
 		} else {
 			// #######################
 			// ##### HIT branch  #####
@@ -979,6 +987,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				Weight:    fileStats.Weight,
 			}
 			cache.files.Update(&curFileSupportData)
+
 			if cache.evictionAgentOK {
 				fileCategory := cache.evictionCategoryManager.GetFileCategory(&curFileSupportData)
 				cache.evictionCategoryManager.AddOrUpdateCategoryFile(fileCategory, &curFileSupportData)
@@ -1007,12 +1016,17 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			if cache.Size()+requestedFileSize > cache.MaxSize {
 				if cache.evictionAgentOK {
 					forced = true
-					cache.callEvictionAgent(true)
+					cache.callEvictionAgent(forced)
 				} else {
 					cache.Free(requestedFileSize, false)
 				}
 			}
-			if cache.Size()+requestedFileSize <= cache.MaxSize {
+			if cache.Size()+requestedFileSize > cache.MaxSize {
+				if cache.evictionAgentOK && forced {
+					cache.rewardEvictionAfterForcedCall(false)
+				}
+				return false
+			} else {
 				curFileSupportData := FileSupportData{
 					Filename:  request.Filename,
 					Size:      request.Size,
@@ -1047,6 +1061,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				Weight:    fileStats.Weight,
 			}
 			cache.files.Update(&curFileSupportData)
+
 			if cache.evictionAgentOK {
 				fileCategory := cache.evictionCategoryManager.GetFileCategory(&curFileSupportData)
 				cache.evictionCategoryManager.AddOrUpdateCategoryFile(fileCategory, &curFileSupportData)
@@ -1060,6 +1075,11 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 // Free removes files from the cache
 func (cache *AIRL) Free(amount float64, percentage bool) float64 {
 	return cache.SimpleCache.Free(amount, percentage)
+}
+
+// CheckWatermark checks the watermark levels and resolve the situation
+func (cache *AIRL) CheckWatermark() bool {
+	return true
 }
 
 // ExtraStats for output

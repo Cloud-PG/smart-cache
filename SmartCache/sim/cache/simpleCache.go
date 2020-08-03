@@ -414,6 +414,7 @@ func (cache *SimpleCache) Free(amount float64, percentage bool) float64 {
 
 // CheckWatermark checks the watermark levels and resolve the situation
 func (cache *SimpleCache) CheckWatermark() bool {
+	// fmt.Println("CHECK WATERMARKS")
 	ok := true
 	if cache.Occupancy() >= cache.HighWaterMark {
 		ok = false
