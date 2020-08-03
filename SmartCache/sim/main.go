@@ -33,8 +33,6 @@ var (
 	buildstamp string
 )
 
-type simDetailCmd int
-
 func configureViper(configFilenameWithNoExt string) {
 	viper.SetConfigName(configFilenameWithNoExt) // name of config file (without extension)
 	viper.SetConfigType("yaml")                  // REQUIRED if the config file does not have the extension in the name
