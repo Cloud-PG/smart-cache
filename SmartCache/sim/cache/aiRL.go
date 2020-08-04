@@ -110,9 +110,9 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 	return nil
 }
 
-// ClearHitMissStats the cache stats
-func (cache *AIRL) ClearHitMissStats() {
-	cache.SimpleCache.ClearHitMissStats()
+// ClearStats the cache stats
+func (cache *AIRL) ClearStats() {
+	cache.SimpleCache.ClearStats()
 	cache.evictionAgentNumCalls = 0
 	cache.evictionAgentNumForcedCalls = 0
 	cache.actionCounters[qlearn.ActionStore] = 0
@@ -812,14 +812,6 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) 
 	cache.curTime = request.DayTime
 
 	if !cache.curTime.Equal(cache.prevTime) {
-		cache.numDailyHit = 0
-		cache.numDailyMiss = 0
-		cache.hitCPUEff = 0.
-		cache.missCPUEff = 0.
-		cache.upperCPUEff = 0.
-		cache.lowerCPUEff = 0.
-		cache.numLocal = 0
-		cache.numRemote = 0
 
 		if cache.additionAgent.Epsilon <= .2 {
 			if cache.additionAgentPrevQValue == 0. {
@@ -864,6 +856,8 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) 
 			cache.evictionAgentStep = cache.evictionAgentK
 		}
 	}
+
+	cache.numReq++
 
 	fileStats.updateStats(hit, request.Size, request.UserID, request.SiteName, request.DayTime)
 

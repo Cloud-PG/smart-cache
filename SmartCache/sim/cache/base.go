@@ -49,7 +49,7 @@ type Cache interface {
 
 	Clear()
 	ClearFiles()
-	ClearHitMissStats()
+	ClearStats()
 	Free(amount float64, percentage bool) float64
 
 	ExtraStats() string
@@ -265,9 +265,9 @@ func ClearFiles(cache Cache) {
 	cache.ClearFiles()
 }
 
-// ClearHitMissStats the current cache instance
-func ClearHitMissStats(cache Cache) {
-	cache.ClearHitMissStats()
+// ClearStats the current cache instance
+func ClearStats(cache Cache) {
+	cache.ClearStats()
 }
 
 // Check the current cache instance

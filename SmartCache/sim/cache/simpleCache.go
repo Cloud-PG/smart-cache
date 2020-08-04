@@ -25,26 +25,26 @@ const (
 
 // SimpleCache cache
 type SimpleCache struct {
-	stats                              Stats
-	files                              Manager
-	ordType                            queueType
-	hit, miss, size, MaxSize           float64
-	hitCPUEff, missCPUEff              float64
-	upperCPUEff, lowerCPUEff           float64
-	numLocal, numRemote                int64
-	dataWritten, dataRead, dataDeleted float64
-	dataReadOnHit, dataReadOnMiss      float64
-	dailyfreeSpace                     []float64
-	sumDailyFreeSpace                  float64
-	HighWaterMark                      float64
-	LowWaterMark                       float64
-	numDailyHit                        int64
-	numDailyMiss                       int64
-	prevTime                           time.Time
-	curTime                            time.Time
-	region                             string
-	bandwidth                          float64
-	tick                               int64
+	stats                                               Stats
+	files                                               Manager
+	ordType                                             queueType
+	hit, miss, size, MaxSize                            float64
+	hitCPUEff, missCPUEff                               float64
+	upperCPUEff, lowerCPUEff                            float64
+	numReq, numAccept, numRedirect, numLocal, numRemote int64
+	dataWritten, dataRead, dataDeleted                  float64
+	dataReadOnHit, dataReadOnMiss                       float64
+	dailyfreeSpace                                      []float64
+	sumDailyFreeSpace                                   float64
+	HighWaterMark                                       float64
+	LowWaterMark                                        float64
+	numDailyHit                                         int64
+	numDailyMiss                                        int64
+	prevTime                                            time.Time
+	curTime                                             time.Time
+	region                                              string
+	bandwidth                                           float64
+	tick                                                int64
 }
 
 // Init the LRU struct
@@ -109,13 +109,16 @@ func (cache *SimpleCache) Clear() {
 	cache.missCPUEff = 0.
 	cache.upperCPUEff = 0.
 	cache.lowerCPUEff = 0.
+	cache.numReq = 0
+	cache.numAccept = 0
+	cache.numRedirect = 0
 	cache.numLocal = 0
 	cache.numRemote = 0
 	cache.tick = 0
 }
 
-// ClearHitMissStats the cache stats
-func (cache *SimpleCache) ClearHitMissStats() {
+// ClearStats the cache stats
+func (cache *SimpleCache) ClearStats() {
 	cache.hit = 0.
 	cache.miss = 0.
 	cache.dataWritten = 0.
@@ -129,6 +132,9 @@ func (cache *SimpleCache) ClearHitMissStats() {
 	cache.missCPUEff = 0.
 	cache.upperCPUEff = 0.
 	cache.lowerCPUEff = 0.
+	cache.numReq = 0
+	cache.numAccept = 0
+	cache.numRedirect = 0
 	cache.numLocal = 0
 	cache.numRemote = 0
 }
@@ -260,19 +266,11 @@ func (cache *SimpleCache) Load(filename string) [][]byte {
 
 // BeforeRequest of LRU cache
 func (cache *SimpleCache) BeforeRequest(request *Request, hit bool) (*FileStats, bool) {
-	cache.prevTime = cache.curTime
-	cache.curTime = request.DayTime
+	// cache.prevTime = cache.curTime
+	// cache.curTime = request.DayTime
+	// if !cache.curTime.Equal(cache.prevTime) {}
 
-	if !cache.curTime.Equal(cache.prevTime) {
-		cache.numDailyHit = 0
-		cache.numDailyMiss = 0
-		cache.hitCPUEff = 0.
-		cache.missCPUEff = 0.
-		cache.upperCPUEff = 0.
-		cache.lowerCPUEff = 0.
-		cache.numLocal = 0
-		cache.numRemote = 0
-	}
+	cache.numReq++
 
 	curStats, _ := cache.stats.GetOrCreate(request.Filename, request.Size, request.DayTime, cache.tick)
 	curStats.updateStats(hit, request.Size, request.UserID, request.SiteName, request.DayTime)
@@ -353,6 +351,7 @@ func (cache *SimpleCache) AfterRequest(request *Request, hit bool, added bool) {
 	// - added variable is needed just for code consistency
 	if added {
 		cache.dataWritten += request.Size
+		cache.numAccept++
 	}
 	cache.dataRead += request.Size
 

@@ -658,7 +658,7 @@ func simCommand() *cobra.Command {
 						}
 						csvSimOutput.Write(csvRow)
 					}
-					cache.ClearHitMissStats(curCacheInstance)
+					cache.ClearStats(curCacheInstance)
 					// Update time window
 					latestTime = curTime
 					windowStepCounter++
