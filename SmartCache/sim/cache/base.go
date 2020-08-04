@@ -73,16 +73,21 @@ type Cache interface {
 	CPUEffUpperBound() float64
 	CPUEffLowerBound() float64
 	BandwidthUsage() float64
+	NumRequests() int64
+	NumHits() int64
+	NumAdded() int64
+	NumRedirected() int64
 
 	Check(int64) bool
 	CheckWatermark() bool
+	CheckRedirect() bool
 	BeforeRequest(request *Request, hit bool) (*FileStats, bool)
 	UpdatePolicy(request *Request, fileStats *FileStats, hit bool) bool
 	AfterRequest(request *Request, hit bool, added bool)
 }
 
 // GetFile requests a file to the cache
-func GetFile(checkWatermarks bool, bandwidthManager bool, cache Cache, vars ...interface{}) (bool, bool) {
+func GetFile(cache Cache, vars ...interface{}) (bool, bool) {
 	/* vars:
 	[0] -> filename int64
 	[1] -> size     float64
@@ -122,17 +127,26 @@ func GetFile(checkWatermarks bool, bandwidthManager bool, cache Cache, vars ...i
 		cacheRequest.Size = vars[1].(float64)
 	}
 
+	// Check file
 	hit := Check(cache, cacheRequest.Filename)
-	if bandwidthManager && !hit && BandwidthUsage(cache) >= 95.0 {
-		return false, true
+
+	// Check Redirect
+	redirect := false
+	if !hit {
+		redirect = CheckRedirect(cache)
 	}
+	if redirect {
+		return false, redirect
+	}
+	// Manage request
 	fileStats, hit := BeforeRequest(cache, &cacheRequest, hit)
 	added := UpdatePolicy(cache, &cacheRequest, fileStats, hit)
 	AfterRequest(cache, &cacheRequest, hit, added)
-	if checkWatermarks {
-		CheckWatermark(cache)
-	}
-	return added, false
+
+	// Check watermarks
+	CheckWatermark(cache)
+
+	return added, redirect
 }
 
 // Init initializes the cache instance
@@ -275,6 +289,11 @@ func Check(cache Cache, filename int64) bool {
 	return cache.Check(filename)
 }
 
+// CheckRedirect the current cache instance
+func CheckRedirect(cache Cache) bool {
+	return cache.CheckRedirect()
+}
+
 // CheckWatermark of the current cache instance
 func CheckWatermark(cache Cache) bool {
 	return cache.CheckWatermark()
@@ -303,4 +322,24 @@ func AvgFreeSpace(cache Cache) float64 {
 // StdDevFreeSpace of the current cache instance
 func StdDevFreeSpace(cache Cache) float64 {
 	return cache.StdDevFreeSpace()
+}
+
+// NumRequests of the current cache instance
+func NumRequests(cache Cache) int64 {
+	return cache.NumRequests()
+}
+
+// NumRedirected of the current cache instance
+func NumRedirected(cache Cache) int64 {
+	return cache.NumRedirected()
+}
+
+// NumAdded of the current cache instance
+func NumAdded(cache Cache) int64 {
+	return cache.NumAdded()
+}
+
+// NumHits of the current cache instance
+func NumHits(cache Cache) int64 {
+	return cache.NumHits()
 }

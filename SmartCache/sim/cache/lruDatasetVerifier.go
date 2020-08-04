@@ -20,13 +20,13 @@ type LRUDatasetVerifier struct {
 
 // Init the LRU struct
 func (cache *LRUDatasetVerifier) Init(args ...interface{}) interface{} {
-	cache.SimpleCache.Init()
+	cache.SimpleCache.Init(LRUQueue, args[0].(bool))
 
 	cache.files = Manager{}
 	cache.stats.fileStats = make(map[int64]*FileStats)
 
 	cache.datasetFileMap = make(map[int64]bool)
-	datasetFilePath := args[0].(string)
+	datasetFilePath := args[1].(string)
 
 	datasetFile, errOpenFile := os.Open(datasetFilePath)
 	if errOpenFile != nil {

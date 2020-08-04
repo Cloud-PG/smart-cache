@@ -6,8 +6,8 @@ import (
 	// "fmt"
 )
 
-func TestWeightFunLRUBaseMultipleInsert(t *testing.T) {
-	testCache := &WeightFunLRU{
+func TestWeightFunBaseMultipleInsert(t *testing.T) {
+	testCache := &WeightFun{
 		SimpleCache: SimpleCache{
 			MaxSize:       3.0,
 			HighWaterMark: 100.,
@@ -15,12 +15,12 @@ func TestWeightFunLRUBaseMultipleInsert(t *testing.T) {
 		},
 		SelFunctionType: FuncWeightedRequests,
 	}
-	testCache.Init()
+	testCache.Init(LRUQueue, false)
 
-	res, _ := GetFile(false, false, testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
-	GetFile(false, false, testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
-	GetFile(false, false, testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
-	GetFile(false, false, testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
+	res, _ := GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
 
 	if !res {
 		t.Fatalf("First insert error -> Expected %t but got %t", true, res)
@@ -35,8 +35,8 @@ func TestWeightFunLRUBaseMultipleInsert(t *testing.T) {
 	}
 }
 
-func TestWeightFunLRUClear(t *testing.T) {
-	testCache := &WeightFunLRU{
+func TestWeightFunClear(t *testing.T) {
+	testCache := &WeightFun{
 		SimpleCache: SimpleCache{
 			MaxSize:       3.0,
 			HighWaterMark: 100.,
@@ -44,12 +44,12 @@ func TestWeightFunLRUClear(t *testing.T) {
 		},
 		SelFunctionType: FuncWeightedRequests,
 	}
-	testCache.Init()
+	testCache.Init(LRUQueue, false)
 
-	GetFile(false, false, testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
-	GetFile(false, false, testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
-	GetFile(false, false, testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
-	GetFile(false, false, testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
 
 	testCache.Clear()
 
@@ -66,8 +66,8 @@ func TestWeightFunLRUClear(t *testing.T) {
 	}
 }
 
-func TestWeightFunLRUInsert(t *testing.T) {
-	testCache := &WeightFunLRU{
+func TestWeightFunInsert(t *testing.T) {
+	testCache := &WeightFun{
 		SimpleCache: SimpleCache{
 			MaxSize:       5.0,
 			HighWaterMark: 100.,
@@ -75,18 +75,18 @@ func TestWeightFunLRUInsert(t *testing.T) {
 		},
 		SelFunctionType: FuncWeightedRequests,
 	}
-	testCache.Init()
+	testCache.Init(LRUQueue, false)
 
-	GetFile(false, false, testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
-	GetFile(false, false, testCache, int64(1), size2, floatZero, floatZero, time.Now().Unix())
-	GetFile(false, false, testCache, int64(2), size1, floatZero, floatZero, time.Now().Unix())
-	GetFile(false, false, testCache, int64(3), size1, floatZero, floatZero, time.Now().Unix())
-	GetFile(false, false, testCache, int64(1), size2, floatZero, floatZero, time.Now().Unix())
-	GetFile(false, false, testCache, int64(1), size2, floatZero, floatZero, time.Now().Unix())
-	GetFile(false, false, testCache, int64(1), size2, floatZero, floatZero, time.Now().Unix())
-	GetFile(false, false, testCache, int64(4), size1, floatZero, floatZero, time.Now().Unix())
-	GetFile(false, false, testCache, int64(3), size1, floatZero, floatZero, time.Now().Unix())
-	GetFile(false, false, testCache, int64(4), size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, int64(1), size2, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, int64(2), size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, int64(3), size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, int64(1), size2, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, int64(1), size2, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, int64(1), size2, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, int64(4), size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, int64(3), size1, floatZero, floatZero, time.Now().Unix())
+	GetFile(testCache, int64(4), size1, floatZero, floatZero, time.Now().Unix())
 
 	if testCache.HitRate() != 30.0 {
 		t.Fatalf("Hit rate error -> Expected %f but got %f", 30.0, testCache.HitRate())
@@ -99,7 +99,7 @@ func TestWeightFunLRUInsert(t *testing.T) {
 	}
 }
 
-// func BenchmarkWeightFunLRU(b *testing.B) {
+// func BenchmarkWeightFun(b *testing.B) {
 // 	var maxSize float64 = 1024. * 1024. * 10.
 // 	var LetterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 
@@ -111,14 +111,14 @@ func TestWeightFunLRUInsert(t *testing.T) {
 // 		return string(filepath)
 // 	}
 
-// 	testCache := &WeightFunLRU{
+// 	testCache := &WeightFun{
 // 		SimpleCache: SimpleCache{
 // 			MaxSize: maxSize,
 // 		},
 // 	}
-// 	testCache.Init()
+// 	testCache.Init(LRUQueue, false)
 
 // 	for n := 0; n < b.N; n++ {
-// 		GetFile(false, false, testCache, genRandomFilePath(5), rand.Float64()*maxSize, 0.0, 0.0)
+// 		GetFile(testCache, genRandomFilePath(5), rand.Float64()*maxSize, 0.0, 0.0)
 // 	}
 // }

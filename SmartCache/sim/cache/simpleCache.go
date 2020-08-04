@@ -25,35 +25,36 @@ const (
 
 // SimpleCache cache
 type SimpleCache struct {
-	stats                                               Stats
-	files                                               Manager
-	ordType                                             queueType
-	hit, miss, size, MaxSize                            float64
-	hitCPUEff, missCPUEff                               float64
-	upperCPUEff, lowerCPUEff                            float64
-	numReq, numAccept, numRedirect, numLocal, numRemote int64
-	dataWritten, dataRead, dataDeleted                  float64
-	dataReadOnHit, dataReadOnMiss                       float64
-	dailyfreeSpace                                      []float64
-	sumDailyFreeSpace                                   float64
-	HighWaterMark                                       float64
-	LowWaterMark                                        float64
-	numDailyHit                                         int64
-	numDailyMiss                                        int64
-	prevTime                                            time.Time
-	curTime                                             time.Time
-	region                                              string
-	bandwidth                                           float64
-	tick                                                int64
+	stats                              Stats
+	files                              Manager
+	ordType                            queueType
+	hit, miss, size, MaxSize           float64
+	hitCPUEff, missCPUEff              float64
+	upperCPUEff, lowerCPUEff           float64
+	numReq, numAdded, numRedirected    int64
+	numLocal, numRemote                int64
+	dataWritten, dataRead, dataDeleted float64
+	dataReadOnHit, dataReadOnMiss      float64
+	dailyfreeSpace                     []float64
+	sumDailyFreeSpace                  float64
+	HighWaterMark                      float64
+	LowWaterMark                       float64
+	numDailyHit                        int64
+	numDailyMiss                       int64
+	prevTime                           time.Time
+	curTime                            time.Time
+	region                             string
+	bandwidth                          float64
+	tick                               int64
+	canRedirect                        bool
+	useWatermarks                      bool
 }
 
 // Init the LRU struct
 func (cache *SimpleCache) Init(vars ...interface{}) interface{} {
-	if len(vars) == 0 {
-		cache.ordType = LRUQueue
-	} else {
-		cache.ordType = vars[0].(queueType)
-	}
+	cache.ordType = vars[0].(queueType)
+	cache.canRedirect = vars[1].(bool)
+	cache.useWatermarks = vars[2].(bool)
 
 	cache.stats.Init()
 	cache.files.Init(cache.ordType)
@@ -110,8 +111,8 @@ func (cache *SimpleCache) Clear() {
 	cache.upperCPUEff = 0.
 	cache.lowerCPUEff = 0.
 	cache.numReq = 0
-	cache.numAccept = 0
-	cache.numRedirect = 0
+	cache.numAdded = 0
+	cache.numRedirected = 0
 	cache.numLocal = 0
 	cache.numRemote = 0
 	cache.tick = 0
@@ -133,8 +134,8 @@ func (cache *SimpleCache) ClearStats() {
 	cache.upperCPUEff = 0.
 	cache.lowerCPUEff = 0.
 	cache.numReq = 0
-	cache.numAccept = 0
-	cache.numRedirect = 0
+	cache.numAdded = 0
+	cache.numRedirected = 0
 	cache.numLocal = 0
 	cache.numRemote = 0
 }
@@ -351,7 +352,7 @@ func (cache *SimpleCache) AfterRequest(request *Request, hit bool, added bool) {
 	// - added variable is needed just for code consistency
 	if added {
 		cache.dataWritten += request.Size
-		cache.numAccept++
+		cache.numAdded++
 	}
 	cache.dataRead += request.Size
 
@@ -411,16 +412,30 @@ func (cache *SimpleCache) Free(amount float64, percentage bool) float64 {
 	return totalDeleted
 }
 
+// CheckRedirect checks the cache can redirect requests on miss
+func (cache *SimpleCache) CheckRedirect() bool {
+	redirect := false
+	if cache.canRedirect {
+		if cache.BandwidthUsage() >= 95. {
+			redirect = true
+			cache.numRedirected++
+		}
+	}
+	return redirect
+}
+
 // CheckWatermark checks the watermark levels and resolve the situation
 func (cache *SimpleCache) CheckWatermark() bool {
-	// fmt.Println("CHECK WATERMARKS")
 	ok := true
-	if cache.Occupancy() >= cache.HighWaterMark {
-		ok = false
-		cache.Free(
-			cache.Occupancy()-cache.LowWaterMark,
-			true,
-		)
+	if cache.useWatermarks {
+		// fmt.Println("CHECK WATERMARKS")
+		if cache.Occupancy() >= cache.HighWaterMark {
+			ok = false
+			cache.Free(
+				cache.Occupancy()-cache.LowWaterMark,
+				true,
+			)
+		}
 	}
 	return ok
 }
@@ -565,4 +580,24 @@ func (cache *SimpleCache) StdDevFreeSpace() float64 {
 		sum += curDiff * curDiff
 	}
 	return math.Sqrt(sum / float64(len(cache.dailyfreeSpace)-1))
+}
+
+// NumRequests returns the # of requested files
+func (cache *SimpleCache) NumRequests() int64 {
+	return cache.numReq
+}
+
+// NumRedirected returns the # of redirected files
+func (cache *SimpleCache) NumRedirected() int64 {
+	return cache.numRedirected
+}
+
+// NumAdded returns the # of Added files
+func (cache *SimpleCache) NumAdded() int64 {
+	return cache.numAdded
+}
+
+// NumHits returns the # of Added files
+func (cache *SimpleCache) NumHits() int64 {
+	return int64(cache.hit)
 }

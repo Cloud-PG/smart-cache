@@ -44,12 +44,12 @@ type AIRL struct {
 func (cache *AIRL) Init(args ...interface{}) interface{} {
 	logger = zap.L()
 
-	cache.SimpleCache.Init(NoQueue)
+	cache.SimpleCache.Init(NoQueue, args[0].(bool), args[1].(bool))
 
-	additionFeatureMap := args[0].(string)
-	evictionFeatureMap := args[1].(string)
-	initEpsilon := args[2].(float64)
-	decayRateEpsilon := args[3].(float64)
+	additionFeatureMap := args[2].(string)
+	evictionFeatureMap := args[3].(string)
+	initEpsilon := args[4].(float64)
+	decayRateEpsilon := args[5].(float64)
 
 	cache.evictionAgentK = 32
 	cache.evictionAgentStep = cache.evictionAgentK

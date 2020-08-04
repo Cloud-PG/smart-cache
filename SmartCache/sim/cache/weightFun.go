@@ -12,21 +12,21 @@ type WeightFunctionParameters struct {
 	Gamma float64
 }
 
-// WeightFunLRU cache
-type WeightFunLRU struct {
+// WeightFun cache
+type WeightFun struct {
 	SimpleCache
 	Parameters      WeightFunctionParameters
 	SelFunctionType FunctionType
 }
 
-// Init the WeightFunLRU struct
-func (cache *WeightFunLRU) Init(_ ...interface{}) interface{} {
-	cache.SimpleCache.Init()
+// Init the WeightFun struct
+func (cache *WeightFun) Init(args ...interface{}) interface{} {
+	cache.SimpleCache.Init(args...)
 	return cache
 }
 
-// Dumps the WeightFunLRU cache
-func (cache *WeightFunLRU) Dumps(fileAndStats bool) [][]byte {
+// Dumps the WeightFun cache
+func (cache *WeightFun) Dumps(fileAndStats bool) [][]byte {
 	logger.Info("Dump cache into byte string")
 	outData := make([][]byte, 0)
 	var newLine = []byte("\n")
@@ -60,8 +60,8 @@ func (cache *WeightFunLRU) Dumps(fileAndStats bool) [][]byte {
 	return outData
 }
 
-// Loads the WeightFunLRU cache
-func (cache *WeightFunLRU) Loads(inputString [][]byte, _ ...interface{}) {
+// Loads the WeightFun cache
+func (cache *WeightFun) Loads(inputString [][]byte, _ ...interface{}) {
 	logger.Info("Load cache dump string")
 	var curRecord DumpRecord
 	var curRecordInfo DumpInfo
@@ -83,7 +83,7 @@ func (cache *WeightFunLRU) Loads(inputString [][]byte, _ ...interface{}) {
 }
 
 // BeforeRequest of LRU cache
-func (cache *WeightFunLRU) BeforeRequest(request *Request, hit bool) (*FileStats, bool) {
+func (cache *WeightFun) BeforeRequest(request *Request, hit bool) (*FileStats, bool) {
 	// cache.prevTime = cache.curTime
 	// cache.curTime = request.DayTime
 	// if !cache.curTime.Equal(cache.prevTime) {}
@@ -96,8 +96,8 @@ func (cache *WeightFunLRU) BeforeRequest(request *Request, hit bool) (*FileStats
 	return curStats, hit
 }
 
-// UpdatePolicy of WeightFunLRU cache
-func (cache *WeightFunLRU) UpdatePolicy(request *Request, fileStats *FileStats, hit bool) bool {
+// UpdatePolicy of WeightFun cache
+func (cache *WeightFun) UpdatePolicy(request *Request, fileStats *FileStats, hit bool) bool {
 	var added = false
 
 	requestedFileSize := request.Size
@@ -138,7 +138,7 @@ func (cache *WeightFunLRU) UpdatePolicy(request *Request, fileStats *FileStats, 
 }
 
 // ExtraStats for output
-func (cache *WeightFunLRU) ExtraStats() string {
+func (cache *WeightFun) ExtraStats() string {
 	return fmt.Sprintf(
 		"a:%0.2f|b:%0.2f|g:%0.2f",
 		cache.Parameters.Alpha, cache.Parameters.Beta, cache.Parameters.Gamma,

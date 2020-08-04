@@ -32,10 +32,10 @@ type AINN struct {
 
 // Init the AINN struct
 func (cache *AINN) Init(args ...interface{}) interface{} {
-	cache.SimpleCache.Init()
+	cache.SimpleCache.Init(LRUQueue, args[0].(bool), args[1].(bool))
 
-	featureMapFilePath := args[0].(string)
-	modelFilePath := args[1].(string)
+	featureMapFilePath := args[2].(string)
+	modelFilePath := args[3].(string)
 
 	cache.aiFeatureOrder = []string{
 		"siteName",
