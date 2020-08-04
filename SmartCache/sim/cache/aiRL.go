@@ -1220,25 +1220,38 @@ func (cache *AIRL) ExtraStats() string {
 	)
 }
 
+func writeQTable(outFilename string, data string) {
+	qtableAdditionFile, errCreateQTablecsv := os.Create(outFilename)
+	defer func() {
+		closeErr := qtableAdditionFile.Close()
+		if closeErr != nil {
+			panic(closeErr)
+		}
+	}()
+	if errCreateQTablecsv != nil {
+		panic(errCreateQTablecsv)
+	}
+	_, writeErr := qtableAdditionFile.WriteString(data)
+	if writeErr != nil {
+		panic(writeErr)
+	}
+}
+
 // ExtraOutput for output specific information
 func (cache *AIRL) ExtraOutput(info string) string {
 	result := ""
 	switch info {
-	case "additionQtable":
+	case "additionQTable":
 		if cache.additionAgentOK {
-			if cache.additionAgentChoicesLogFile != nil {
-				cache.additionAgentChoicesLogFile.Close()
-			}
 			result = cache.additionAgent.QTableToString()
+			writeQTable("additionQTable.csv", result)
 		} else {
 			result = ""
 		}
-	case "evictionQtable":
+	case "evictionQTable":
 		if cache.evictionAgentOK {
-			if cache.evictionAgentChoicesLogFile != nil {
-				cache.evictionAgentChoicesLogFile.Close()
-			}
 			result = cache.evictionAgent.QTableToString()
+			writeQTable("additionQTable.csv", result)
 		} else {
 			result = ""
 		}
@@ -1279,4 +1292,16 @@ func (cache *AIRL) ExtraOutput(info string) string {
 		result = "NONE"
 	}
 	return result
+}
+
+// Terminate pending things of the cache
+func (cache *AIRL) Terminate() error {
+	if cache.additionAgentChoicesLogFile != nil {
+		cache.additionAgentChoicesLogFile.Close()
+	}
+	if cache.evictionAgentChoicesLogFile != nil {
+		cache.evictionAgentChoicesLogFile.Close()
+	}
+	cache.SimpleCache.Terminate()
+	return nil
 }

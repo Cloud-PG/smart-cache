@@ -642,3 +642,9 @@ func (cache *SimpleCache) NumDeleted() int64 {
 func (cache *SimpleCache) NumHits() int64 {
 	return int64(cache.hit)
 }
+
+// Terminate close all pending things of the cache
+func (cache *SimpleCache) Terminate() error {
+	cache.choicesLogFile.Close()
+	return nil
+}

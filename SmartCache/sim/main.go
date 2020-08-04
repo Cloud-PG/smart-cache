@@ -381,8 +381,6 @@ func simCommand() *cobra.Command {
 			dumpFileName := baseName + ".json.gz"
 			resultFileName := baseName + "_results.csv"
 			resultRunStatsName := baseName + "_run_stats.json"
-			resultAdditionQTableName := baseName + "_additionQtable.csv"
-			resultEvictionQTableName := baseName + "_evictionQtable.csv"
 
 			if simOutFile == "" {
 				simOutFile = resultFileName
@@ -842,10 +840,12 @@ func simCommand() *cobra.Command {
 			if cacheType == "aiRL" {
 				// Save tables
 				logger.Info("Save addition table...")
-				writeQTable(resultAdditionQTableName, cache.ExtraOutput(curCacheInstance, "additionQtable"))
+				cache.ExtraOutput(curCacheInstance, "additionQTable")
 				logger.Info("Save eviction table...")
-				writeQTable(resultEvictionQTableName, cache.ExtraOutput(curCacheInstance, "evictionQtable"))
+				cache.ExtraOutput(curCacheInstance, "evictionQTable")
 			}
+
+			cache.Terminate(curCacheInstance)
 
 			logger.Info("Simulation DONE!")
 			_ = logger.Sync()
@@ -881,23 +881,6 @@ func main() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err.Error())
 		os.Exit(-1)
-	}
-}
-
-func writeQTable(outFilename string, data string) {
-	qtableAdditionFile, errCreateQTablecsv := os.Create(outFilename)
-	defer func() {
-		closeErr := qtableAdditionFile.Close()
-		if closeErr != nil {
-			panic(closeErr)
-		}
-	}()
-	if errCreateQTablecsv != nil {
-		panic(errCreateQTablecsv)
-	}
-	_, writeErr := qtableAdditionFile.WriteString(data)
-	if writeErr != nil {
-		panic(writeErr)
 	}
 }
 

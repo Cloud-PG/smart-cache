@@ -26,7 +26,7 @@ def main():
 
     print(f"{STATUS_ARROW}Plot value function")
     tableType = filename.name.split(".csv")[0].rsplit(
-        "_", 1)[1].replace("Qtable", "").strip()
+        "_", 1)[1].replace("QTable", "").strip()
     prev_runs = search_runs(filename.resolve().parent)
     if prev_runs:
         value_function_runs = []

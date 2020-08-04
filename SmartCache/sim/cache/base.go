@@ -85,6 +85,7 @@ type Cache interface {
 	BeforeRequest(request *Request, hit bool) (*FileStats, bool)
 	UpdatePolicy(request *Request, fileStats *FileStats, hit bool) bool
 	AfterRequest(request *Request, hit bool, added bool)
+	Terminate() error
 }
 
 // GetFile requests a file to the cache
@@ -348,4 +349,9 @@ func NumDeleted(cache Cache) int64 {
 // NumHits of the current cache instance
 func NumHits(cache Cache) int64 {
 	return cache.NumHits()
+}
+
+// Terminate of the current cache instance
+func Terminate(cache Cache) error {
+	return cache.Terminate()
 }
