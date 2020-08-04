@@ -17,6 +17,17 @@ const (
 	initK             = 32
 )
 
+var (
+	choicesLogHeader = []string{
+		"tick",
+		"filename",
+		"size",
+		"num req",
+		"delta t",
+		"action",
+	}
+)
+
 // AIRL cache
 type AIRL struct {
 	SimpleCache
@@ -30,6 +41,8 @@ type AIRL struct {
 	evictionFeatureManager      featuremap.FeatureManager
 	additionAgent               qlearn.Agent
 	evictionAgent               qlearn.Agent
+	additionAgentChoicesLogFile *OutputCSV
+	evictionAgentChoicesLogFile *OutputCSV
 	evictionAgentStep           int64
 	evictionAgentK              int64
 	evictionAgentNumCalls       int64
@@ -77,6 +90,9 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 			initEpsilon,
 			decayRateEpsilon,
 		)
+		cache.additionAgentChoicesLogFile = &OutputCSV{}
+		cache.additionAgentChoicesLogFile.Create("additionAgentChoiceLog.csv", true)
+		cache.additionAgentChoicesLogFile.Write(choicesLogHeader)
 		cache.additionAgentOK = true
 	} else {
 		cache.additionAgentOK = false
@@ -92,7 +108,6 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 			initEpsilon,
 			decayRateEpsilon,
 		)
-		cache.evictionAgentOK = true
 		cache.evictionCategoryManager = CategoryManager{}
 		cache.evictionCategoryManager.Init(
 			cache.evictionFeatureManager.Features,
@@ -101,6 +116,10 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 			cache.evictionFeatureManager.FileFeatureIdxWeights,
 			cache.evictionFeatureManager.FileFeatureIdxMap,
 		)
+		cache.evictionAgentChoicesLogFile = &OutputCSV{}
+		cache.evictionAgentChoicesLogFile.Create("evictionAgentChoiceLog.csv", true)
+		cache.evictionAgentChoicesLogFile.Write(choicesLogHeader)
+		cache.evictionAgentOK = true
 	} else {
 		cache.evictionAgentOK = false
 	}
@@ -565,6 +584,14 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 					Occupancy: cache.Occupancy(),
 					Frequency: curFile.Frequency,
 				})
+				cache.evictionAgentChoicesLogFile.Write([]string{
+					fmt.Sprintf("%d", cache.tick),
+					fmt.Sprintf("%d", curFileStats.Filename),
+					fmt.Sprintf("%0.2f", curFileStats.Size),
+					fmt.Sprintf("%d", curFileStats.Frequency),
+					fmt.Sprintf("%d", curFileStats.DeltaLastRequest),
+					"DeleteAll",
+				})
 			}
 		case qlearn.ActionDeleteHalf, qlearn.ActionDeleteQuarter:
 			curFileList := catState.Files
@@ -572,6 +599,12 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 				curFileList[i], curFileList[j] = curFileList[j], curFileList[i]
 			})
 			numDeletes := 0
+			actionString := ""
+			if catState.Action == qlearn.ActionDeleteHalf {
+				actionString = "DeleteHalf"
+			} else {
+				actionString = "DeleteQuarter"
+			}
 			if len(curFileList) == 1 {
 				numDeletes = 1
 			} else if catState.Action == qlearn.ActionDeleteHalf {
@@ -603,6 +636,14 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 					ReadOnHit: cache.dataReadOnHit,
 					Occupancy: cache.Occupancy(),
 					Frequency: curFile.Frequency,
+				})
+				cache.evictionAgentChoicesLogFile.Write([]string{
+					fmt.Sprintf("%d", cache.tick),
+					fmt.Sprintf("%d", curFileStats.Filename),
+					fmt.Sprintf("%0.2f", curFileStats.Size),
+					fmt.Sprintf("%d", curFileStats.Frequency),
+					fmt.Sprintf("%d", curFileStats.DeltaLastRequest),
+					actionString,
 				})
 				numDeletes--
 				if numDeletes <= 0 {
@@ -636,8 +677,17 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 				Occupancy: cache.Occupancy(),
 				Frequency: curFile.Frequency,
 			})
+			cache.evictionAgentChoicesLogFile.Write([]string{
+				fmt.Sprintf("%d", cache.tick),
+				fmt.Sprintf("%d", curFileStats.Filename),
+				fmt.Sprintf("%0.2f", curFileStats.Size),
+				fmt.Sprintf("%d", curFileStats.Frequency),
+				fmt.Sprintf("%d", curFileStats.DeltaLastRequest),
+				"DeleteOne",
+			})
 		case qlearn.ActionNotDelete:
 			for _, curFile := range catState.Files {
+				curFileStats := cache.stats.Get(curFile.Filename)
 				cache.evictionAgent.UpdateFileMemory(curFile.Filename, qlearn.Choice{
 					State:     catState.Idx,
 					Action:    catState.Action,
@@ -653,6 +703,14 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 					ReadOnHit: cache.dataReadOnHit,
 					Occupancy: cache.Occupancy(),
 					Frequency: curFile.Frequency,
+				})
+				cache.evictionAgentChoicesLogFile.Write([]string{
+					fmt.Sprintf("%d", cache.tick),
+					fmt.Sprintf("%d", curFileStats.Filename),
+					fmt.Sprintf("%0.2f", curFileStats.Size),
+					fmt.Sprintf("%d", curFileStats.Frequency),
+					fmt.Sprintf("%d", curFileStats.DeltaLastRequest),
+					"NotDelete",
 				})
 			}
 		}
@@ -946,6 +1004,14 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					Occupancy: cache.Occupancy(),
 					Frequency: fileStats.Frequency,
 				})
+				cache.additionAgentChoicesLogFile.Write([]string{
+					fmt.Sprintf("%d", cache.tick),
+					fmt.Sprintf("%d", fileStats.Filename),
+					fmt.Sprintf("%0.2f", fileStats.Size),
+					fmt.Sprintf("%d", fileStats.Frequency),
+					fmt.Sprintf("%d", fileStats.DeltaLastRequest),
+					"NotStore",
+				})
 				return false
 			case qlearn.ActionStore:
 				forced := false
@@ -993,6 +1059,14 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 						ReadOnHit: cache.dataReadOnHit,
 						Occupancy: cache.Occupancy(),
 						Frequency: fileStats.Frequency,
+					})
+					cache.additionAgentChoicesLogFile.Write([]string{
+						fmt.Sprintf("%d", cache.tick),
+						fmt.Sprintf("%d", fileStats.Filename),
+						fmt.Sprintf("%0.2f", fileStats.Size),
+						fmt.Sprintf("%d", fileStats.Frequency),
+						fmt.Sprintf("%d", fileStats.DeltaLastRequest),
+						"Store",
 					})
 				}
 			}
@@ -1122,12 +1196,18 @@ func (cache *AIRL) ExtraOutput(info string) string {
 	switch info {
 	case "additionQtable":
 		if cache.additionAgentOK {
+			if cache.additionAgentChoicesLogFile != nil {
+				cache.additionAgentChoicesLogFile.Close()
+			}
 			result = cache.additionAgent.QTableToString()
 		} else {
 			result = ""
 		}
 	case "evictionQtable":
 		if cache.evictionAgentOK {
+			if cache.evictionAgentChoicesLogFile != nil {
+				cache.evictionAgentChoicesLogFile.Close()
+			}
 			result = cache.evictionAgent.QTableToString()
 		} else {
 			result = ""

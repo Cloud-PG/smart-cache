@@ -549,7 +549,7 @@ func simCommand() *cobra.Command {
 			}
 
 			csvSimOutput := cache.OutputCSV{}
-			csvSimOutput.Create(simOutFile)
+			csvSimOutput.Create(simOutFile, false)
 			defer csvSimOutput.Close()
 
 			csvHeaderColumns := []string{"date",
