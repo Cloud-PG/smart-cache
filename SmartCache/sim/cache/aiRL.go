@@ -17,17 +17,6 @@ const (
 	initK             = 32
 )
 
-var (
-	choicesLogHeader = []string{
-		"tick",
-		"filename",
-		"size",
-		"num req",
-		"delta t",
-		"action",
-	}
-)
-
 // AIRL cache
 type AIRL struct {
 	SimpleCache
@@ -592,6 +581,14 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 					fmt.Sprintf("%d", curFileStats.DeltaLastRequest),
 					"DeleteAll",
 				})
+				cache.choicesLogFile.Write([]string{
+					fmt.Sprintf("%d", cache.tick),
+					fmt.Sprintf("%d", curFileStats.Filename),
+					fmt.Sprintf("%0.2f", curFileStats.Size),
+					fmt.Sprintf("%d", curFileStats.Frequency),
+					fmt.Sprintf("%d", curFileStats.DeltaLastRequest),
+					"Delete",
+				})
 			}
 		case qlearn.ActionDeleteHalf, qlearn.ActionDeleteQuarter:
 			curFileList := catState.Files
@@ -645,6 +642,14 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 					fmt.Sprintf("%d", curFileStats.DeltaLastRequest),
 					actionString,
 				})
+				cache.choicesLogFile.Write([]string{
+					fmt.Sprintf("%d", cache.tick),
+					fmt.Sprintf("%d", curFileStats.Filename),
+					fmt.Sprintf("%0.2f", curFileStats.Size),
+					fmt.Sprintf("%d", curFileStats.Frequency),
+					fmt.Sprintf("%d", curFileStats.DeltaLastRequest),
+					"Delete",
+				})
 				numDeletes--
 				if numDeletes <= 0 {
 					break
@@ -684,6 +689,14 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 				fmt.Sprintf("%d", curFileStats.Frequency),
 				fmt.Sprintf("%d", curFileStats.DeltaLastRequest),
 				"DeleteOne",
+			})
+			cache.choicesLogFile.Write([]string{
+				fmt.Sprintf("%d", cache.tick),
+				fmt.Sprintf("%d", curFileStats.Filename),
+				fmt.Sprintf("%0.2f", curFileStats.Size),
+				fmt.Sprintf("%d", curFileStats.Frequency),
+				fmt.Sprintf("%d", curFileStats.DeltaLastRequest),
+				"Delete",
 			})
 		case qlearn.ActionNotDelete:
 			for _, curFile := range catState.Files {
@@ -1068,6 +1081,14 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 						fmt.Sprintf("%d", fileStats.DeltaLastRequest),
 						"Store",
 					})
+					cache.choicesLogFile.Write([]string{
+						fmt.Sprintf("%d", cache.tick),
+						fmt.Sprintf("%d", fileStats.Filename),
+						fmt.Sprintf("%0.2f", fileStats.Size),
+						fmt.Sprintf("%d", fileStats.Frequency),
+						fmt.Sprintf("%d", fileStats.DeltaLastRequest),
+						"Add",
+					})
 				}
 			}
 		} else {
@@ -1142,6 +1163,15 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				if cache.evictionAgentOK && forced {
 					cache.rewardEvictionAfterForcedCall(added)
 				}
+
+				cache.choicesLogFile.Write([]string{
+					fmt.Sprintf("%d", cache.tick),
+					fmt.Sprintf("%d", fileStats.Filename),
+					fmt.Sprintf("%0.2f", fileStats.Size),
+					fmt.Sprintf("%d", fileStats.Frequency),
+					fmt.Sprintf("%d", fileStats.DeltaLastRequest),
+					"Add",
+				})
 			}
 		} else {
 			// #######################

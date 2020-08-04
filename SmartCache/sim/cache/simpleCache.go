@@ -23,6 +23,17 @@ const (
 	DailyBandwidth1Gbit = (1000. / 8.) * 60. * 60. * 24.
 )
 
+var (
+	choicesLogHeader = []string{
+		"tick",
+		"filename",
+		"size",
+		"num req",
+		"delta t",
+		"action",
+	}
+)
+
 // SimpleCache cache
 type SimpleCache struct {
 	stats                              Stats
@@ -49,6 +60,7 @@ type SimpleCache struct {
 	tick                               int64
 	canRedirect                        bool
 	useWatermarks                      bool
+	choicesLogFile                     *OutputCSV
 }
 
 // Init the LRU struct
@@ -72,6 +84,10 @@ func (cache *SimpleCache) Init(vars ...interface{}) interface{} {
 	if cache.HighWaterMark < cache.LowWaterMark {
 		panic(fmt.Sprintf("High watermark is lower then Low waterrmark -> %f < %f", cache.HighWaterMark, cache.LowWaterMark))
 	}
+
+	cache.choicesLogFile = &OutputCSV{}
+	cache.choicesLogFile.Create("choicesLogFile.csv", true)
+	cache.choicesLogFile.Write(choicesLogHeader)
 
 	return cache
 }
@@ -303,6 +319,14 @@ func (cache *SimpleCache) UpdatePolicy(request *Request, fileStats *FileStats, h
 				Frequency: fileStats.FrequencyInCache,
 				Recency:   fileStats.Recency,
 			})
+			cache.choicesLogFile.Write([]string{
+				fmt.Sprintf("%d", cache.tick),
+				fmt.Sprintf("%d", fileStats.Filename),
+				fmt.Sprintf("%0.2f", fileStats.Size),
+				fmt.Sprintf("%d", fileStats.Frequency),
+				fmt.Sprintf("%d", fileStats.DeltaLastRequest),
+				"Add",
+			})
 
 			added = true
 		}
@@ -409,6 +433,14 @@ func (cache *SimpleCache) Free(amount float64, percentage bool) float64 {
 			totalDeleted += curFile.Size
 
 			deletedFiles = append(deletedFiles, curFile.Filename)
+			cache.choicesLogFile.Write([]string{
+				fmt.Sprintf("%d", cache.tick),
+				fmt.Sprintf("%d", curFileStats.Filename),
+				fmt.Sprintf("%0.2f", curFileStats.Size),
+				fmt.Sprintf("%d", curFileStats.Frequency),
+				fmt.Sprintf("%d", curFileStats.DeltaLastRequest),
+				"Delete",
+			})
 			cache.numDeleted++
 		}
 		cache.files.Remove(deletedFiles, false)
