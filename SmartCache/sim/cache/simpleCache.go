@@ -647,7 +647,7 @@ func (cache *SimpleCache) NumHits() int64 {
 
 func (cache *SimpleCache) toChoiceBuffer(curChoice []string) {
 	cache.choicesBuffer = append(cache.choicesBuffer, curChoice)
-	if len(cache.choicesBuffer) > 999 {
+	if len(cache.choicesBuffer) > 9999 {
 		cache.flushChoices()
 	}
 }

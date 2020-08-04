@@ -1314,7 +1314,7 @@ func (cache *AIRL) Terminate() error {
 
 func (cache *AIRL) toAdditionChoiceBuffer(curChoice []string) {
 	cache.additionAgentChoicesLogFileBuffer = append(cache.additionAgentChoicesLogFileBuffer, curChoice)
-	if len(cache.choicesBuffer) > 999 {
+	if len(cache.choicesBuffer) > 9999 {
 		cache.flushChoices()
 	}
 }
@@ -1328,7 +1328,7 @@ func (cache *AIRL) flushAdditionChoices() {
 
 func (cache *AIRL) toEvictionChoiceBuffer(curChoice []string) {
 	cache.evictionAgentChoicesLogFileBuffer = append(cache.evictionAgentChoicesLogFileBuffer, curChoice)
-	if len(cache.choicesBuffer) > 999 {
+	if len(cache.choicesBuffer) > 9999 {
 		cache.flushChoices()
 	}
 }
