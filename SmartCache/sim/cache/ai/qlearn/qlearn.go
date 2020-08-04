@@ -172,7 +172,7 @@ type Choice struct {
 // Agent used in Qlearning
 type Agent struct {
 	FileMemory       map[interface{}]Choice    `json:"fileMemory"`
-	EventMemory      map[interface{}]*[]Choice `json:"fileMemory"`
+	EventMemory      map[interface{}]*[]Choice `json:"eventMemory"`
 	QTable           QTable                    `json:"qtable"`
 	NumStates        int                       `json:"numStates"`
 	NumVars          int                       `json:"numVars"`
