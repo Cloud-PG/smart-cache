@@ -29,20 +29,20 @@ simulator sim ../../config/simulations/synthetic_dataset/size_focused_dataset/sc
 
 python -m SmartCache.sim.simulator plot ../../results/sim_synthetic_dataset/HighFrequencyDataset --plot-resolution 1280,800 --cache-bandwidth 10 --export-table 'true' &&
 
-python -m SmartCache.sim.simulator plot ../../results/sim_syntethic_dataset/SizeFocusedDataset --plot-resolution 1280,800 --cache-bandwidth 1 --export-table 'true' &&
+python -m SmartCache.sim.simulator plot ../../results/sim_synthetic_dataset/SizeFocusedDataset --plot-resolution 1280,800 --cache-bandwidth 1 --export-table 'true' &&
 
-python -m SmartCache.sim.simulator plot ../../results/sim_syntethic_dataset/RecencyFocusedDataset --plot-resolution 1280,800 --cache-bandwidth 1 --export-table 'true'
+python -m SmartCache.sim.simulator plot ../../results/sim_synthetic_dataset/RecencyFocusedDataset --plot-resolution 1280,800 --cache-bandwidth 1 --export-table 'true'
 
 ### ----- Plot tables -----
 
-# python -m Probe.qTable ../../results/sim_syntethic_dataset/HighFrequencyDataset/run_full_normal/aiRL_10G_it/aiRL_10G_it_additionQtable.csv &&
+# python -m Probe.qTable ../../results/sim_synthetic_dataset/HighFrequencyDataset/run_full_normal/aiRL_10G_it/aiRL_10G_it_additionQtable.csv &&
 
-# python -m Probe.qTable ../../results/sim_syntethic_dataset/HighFrequencyDataset/run_full_normal/aiRL_10G_it/aiRL_10G_it_evictionQtable.csv &&
+# python -m Probe.qTable ../../results/sim_synthetic_dataset/HighFrequencyDataset/run_full_normal/aiRL_10G_it/aiRL_10G_it_evictionQtable.csv &&
 
-# python -m Probe.qTable ../../results/sim_syntethic_dataset/SizeFocusedDataset/run_full_normal/aiRL_10G_it/aiRL_10G_it_additionQtable.csv &&
+# python -m Probe.qTable ../../results/sim_synthetic_dataset/SizeFocusedDataset/run_full_normal/aiRL_10G_it/aiRL_10G_it_additionQtable.csv &&
 
-# python -m Probe.qTable ../../results/sim_syntethic_dataset/SizeFocusedDataset/run_full_normal/aiRL_10G_it/aiRL_10G_it_evictionQtable.csv &&
+# python -m Probe.qTable ../../results/sim_synthetic_dataset/SizeFocusedDataset/run_full_normal/aiRL_10G_it/aiRL_10G_it_evictionQtable.csv &&
 
-# python -m Probe.qTable ../../results/sim_syntethic_dataset/RecencyFocusedDataset/run_full_normal/aiRL_10G_it/aiRL_10G_it_additionQtable.csv &&
+# python -m Probe.qTable ../../results/sim_synthetic_dataset/RecencyFocusedDataset/run_full_normal/aiRL_10G_it/aiRL_10G_it_additionQtable.csv &&
 
-# python -m Probe.qTable ../../results/sim_syntethic_dataset/RecencyFocusedDataset/run_full_normal/aiRL_10G_it/aiRL_10G_it_evictionQtable.csv
+# python -m Probe.qTable ../../results/sim_synthetic_dataset/RecencyFocusedDataset/run_full_normal/aiRL_10G_it/aiRL_10G_it_evictionQtable.csv
