@@ -1302,6 +1302,6 @@ func (cache *AIRL) Terminate() error {
 	if cache.evictionAgentChoicesLogFile != nil {
 		cache.evictionAgentChoicesLogFile.Close()
 	}
-	cache.SimpleCache.Terminate()
+	_ = cache.SimpleCache.Terminate()
 	return nil
 }
