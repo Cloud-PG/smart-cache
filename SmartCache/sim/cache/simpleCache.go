@@ -61,6 +61,7 @@ type SimpleCache struct {
 	canRedirect                        bool
 	useWatermarks                      bool
 	choicesLogFile                     *OutputCSV
+	choicesBuffer                      [][]string
 }
 
 // Init the LRU struct
@@ -88,6 +89,7 @@ func (cache *SimpleCache) Init(vars ...interface{}) interface{} {
 	cache.choicesLogFile = &OutputCSV{}
 	cache.choicesLogFile.Create("choicesLogFile.csv", true)
 	cache.choicesLogFile.Write(choicesLogHeader)
+	cache.choicesBuffer = make([][]string, 0)
 
 	return cache
 }
@@ -319,7 +321,7 @@ func (cache *SimpleCache) UpdatePolicy(request *Request, fileStats *FileStats, h
 				Frequency: fileStats.FrequencyInCache,
 				Recency:   fileStats.Recency,
 			})
-			cache.choicesLogFile.Write([]string{
+			cache.toChoiceBuffer([]string{
 				fmt.Sprintf("%d", cache.tick),
 				fmt.Sprintf("%d", fileStats.Filename),
 				fmt.Sprintf("%0.2f", fileStats.Size),
@@ -433,7 +435,7 @@ func (cache *SimpleCache) Free(amount float64, percentage bool) float64 {
 			totalDeleted += curFile.Size
 
 			deletedFiles = append(deletedFiles, curFile.Filename)
-			cache.choicesLogFile.Write([]string{
+			cache.toChoiceBuffer([]string{
 				fmt.Sprintf("%d", cache.tick),
 				fmt.Sprintf("%d", curFileStats.Filename),
 				fmt.Sprintf("%0.2f", curFileStats.Size),
@@ -643,8 +645,23 @@ func (cache *SimpleCache) NumHits() int64 {
 	return int64(cache.hit)
 }
 
+func (cache *SimpleCache) toChoiceBuffer(curChoice []string) {
+	cache.choicesBuffer = append(cache.choicesBuffer, curChoice)
+	if len(cache.choicesBuffer) > 999 {
+		cache.flushChoices()
+	}
+}
+
+func (cache *SimpleCache) flushChoices() {
+	for _, choice := range cache.choicesBuffer {
+		cache.choicesLogFile.Write(choice)
+	}
+	cache.choicesBuffer = cache.choicesBuffer[:0]
+}
+
 // Terminate close all pending things of the cache
 func (cache *SimpleCache) Terminate() error {
+	cache.flushChoices()
 	cache.choicesLogFile.Close()
 	return nil
 }
