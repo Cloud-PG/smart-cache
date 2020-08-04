@@ -198,8 +198,8 @@ func (agent *Agent) Init(featureManager *featuremap.FeatureManager, role AgentRo
 	agent.Epsilon = initEpsilon
 	agent.MaxEpsilon = 1.0
 	agent.MinEpsilon = 0.1
-	agent.FileMemory = make(map[interface{}]Choice, 0)
-	agent.EventMemory = make(map[interface{}]*[]Choice, 0)
+	agent.FileMemory = make(map[interface{}]Choice)
+	agent.EventMemory = make(map[interface{}]*[]Choice)
 
 	switch role {
 	case AdditionAgent:
@@ -220,7 +220,7 @@ func (agent *Agent) Init(featureManager *featuremap.FeatureManager, role AgentRo
 				ActionDeleteOne,
 				ActionDeleteQuarter,
 				ActionDeleteHalf,
-				// ActionDeleteAll,
+				ActionDeleteAll,
 			},
 		)
 	}
