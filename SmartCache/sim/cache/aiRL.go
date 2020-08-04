@@ -1312,26 +1312,28 @@ func (cache *AIRL) Terminate() error {
 	return nil
 }
 
-func (cache *SimpleCache) toAdditionChoiceBuffer(curChoice []string) {
+func (cache *AIRL) toAdditionChoiceBuffer(curChoice []string) {
 	cache.additionAgentChoicesLogFileBuffer = append(cache.additionAgentChoicesLogFileBuffer, curChoice)
 	if len(cache.choicesBuffer) > 999 {
 		cache.flushChoices()
+	}
 }
 
-func (cache *SimpleCache) flushAdditionChoices() {
+func (cache *AIRL) flushAdditionChoices() {
 	for _, choice := range cache.additionAgentChoicesLogFileBuffer {
 		cache.additionAgentChoicesLogFile.Write(choice)
 	}
 	cache.additionAgentChoicesLogFileBuffer = cache.additionAgentChoicesLogFileBuffer[:0]
 }
 
-func (cache *SimpleCache) toEvictionChoiceBuffer(curChoice []string) {
+func (cache *AIRL) toEvictionChoiceBuffer(curChoice []string) {
 	cache.evictionAgentChoicesLogFileBuffer = append(cache.evictionAgentChoicesLogFileBuffer, curChoice)
 	if len(cache.choicesBuffer) > 999 {
 		cache.flushChoices()
+	}
 }
 
-func (cache *SimpleCache) flushEvictionChoices() {
+func (cache *AIRL) flushEvictionChoices() {
 	for _, choice := range cache.evictionAgentChoicesLogFileBuffer {
 		cache.evictionAgentChoicesLogFile.Write(choice)
 	}
