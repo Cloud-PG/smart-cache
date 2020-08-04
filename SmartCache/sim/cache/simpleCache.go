@@ -31,7 +31,8 @@ type SimpleCache struct {
 	hit, miss, size, MaxSize           float64
 	hitCPUEff, missCPUEff              float64
 	upperCPUEff, lowerCPUEff           float64
-	numReq, numAdded, numRedirected    int64
+	numReq, numRedirected              int64
+	numAdded, numDeleted               int64
 	numLocal, numRemote                int64
 	dataWritten, dataRead, dataDeleted float64
 	dataReadOnHit, dataReadOnMiss      float64
@@ -112,6 +113,7 @@ func (cache *SimpleCache) Clear() {
 	cache.lowerCPUEff = 0.
 	cache.numReq = 0
 	cache.numAdded = 0
+	cache.numDeleted = 0
 	cache.numRedirected = 0
 	cache.numLocal = 0
 	cache.numRemote = 0
@@ -135,6 +137,7 @@ func (cache *SimpleCache) ClearStats() {
 	cache.lowerCPUEff = 0.
 	cache.numReq = 0
 	cache.numAdded = 0
+	cache.numDeleted = 0
 	cache.numRedirected = 0
 	cache.numLocal = 0
 	cache.numRemote = 0
@@ -406,6 +409,7 @@ func (cache *SimpleCache) Free(amount float64, percentage bool) float64 {
 			totalDeleted += curFile.Size
 
 			deletedFiles = append(deletedFiles, curFile.Filename)
+			cache.numDeleted++
 		}
 		cache.files.Remove(deletedFiles, false)
 	}
@@ -595,6 +599,11 @@ func (cache *SimpleCache) NumRedirected() int64 {
 // NumAdded returns the # of Added files
 func (cache *SimpleCache) NumAdded() int64 {
 	return cache.numAdded
+}
+
+// NumDeleted returns the # of Added files
+func (cache *SimpleCache) NumDeleted() int64 {
+	return cache.numDeleted
 }
 
 // NumHits returns the # of Added files

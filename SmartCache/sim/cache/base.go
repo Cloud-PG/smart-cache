@@ -76,6 +76,7 @@ type Cache interface {
 	NumRequests() int64
 	NumHits() int64
 	NumAdded() int64
+	NumDeleted() int64
 	NumRedirected() int64
 
 	Check(int64) bool
@@ -337,6 +338,11 @@ func NumRedirected(cache Cache) int64 {
 // NumAdded of the current cache instance
 func NumAdded(cache Cache) int64 {
 	return cache.NumAdded()
+}
+
+// NumDeleted of the current cache instance
+func NumDeleted(cache Cache) int64 {
+	return cache.NumDeleted()
 }
 
 // NumHits of the current cache instance

@@ -660,6 +660,7 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 
 	// fmt.Printf("[CATMANAGER] files 2 delete -> %#v\n", files2delete)
 	for _, file2Delete := range files2delete {
+		cache.numDeleted++
 		cache.evictionCategoryManager.deleteFileFromCategory(file2Delete.Category, file2Delete.File)
 	}
 
