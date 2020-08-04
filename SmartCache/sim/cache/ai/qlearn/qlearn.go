@@ -309,23 +309,7 @@ func (agent Agent) QTableToString() string {
 
 		for featureIdx, featureValIdx := range state {
 			curFeature := agent.QTable.FeatureManager.Features[featureIdx]
-			switch curFeature.ReflectType {
-			case reflect.Int64:
-				curFeatureVal := curFeature.Int64Values[featureValIdx]
-				if curFeatureVal == math.MaxInt64 {
-					tmp = append(tmp, "max")
-				} else {
-					tmp = append(tmp, fmt.Sprintf("%d", curFeatureVal))
-				}
-			case reflect.Float64:
-				curFeatureVal := curFeature.Float64Values[featureValIdx]
-				if curFeatureVal == math.MaxFloat64 {
-					tmp = append(tmp, "max")
-				} else {
-					tmp = append(tmp, fmt.Sprintf("%09.2f", curFeatureVal))
-				}
-			}
-
+			tmp = append(tmp, curFeature.ToString(featureValIdx))
 		}
 
 		csvOutput = append(csvOutput, strings.Join(tmp, ","))

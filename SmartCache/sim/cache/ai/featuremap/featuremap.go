@@ -363,3 +363,30 @@ func (obj Obj) Index(value interface{}) int {
 	}
 	return -1
 }
+
+// ToString transform the given index feature object value to a string
+func (obj Obj) ToString(valIdx int) string {
+	outString := ""
+	switch obj.ReflectType {
+	case reflect.String:
+		outString = obj.StringValues[valIdx]
+	case reflect.Bool:
+		curFeatureVal := obj.BoolValues[valIdx]
+		outString = fmt.Sprintf("%t", curFeatureVal)
+	case reflect.Int64:
+		curFeatureVal := obj.Int64Values[valIdx]
+		if curFeatureVal == math.MaxInt64 {
+			outString = "max"
+		} else {
+			outString = fmt.Sprintf("%d", curFeatureVal)
+		}
+	case reflect.Float64:
+		curFeatureVal := obj.Float64Values[valIdx]
+		if curFeatureVal == math.MaxFloat64 {
+			outString = "max"
+		} else {
+			outString = fmt.Sprintf("%09.2f", curFeatureVal)
+		}
+	}
+	return outString
+}
