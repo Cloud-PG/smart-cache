@@ -23,7 +23,9 @@ type AgentRole int
 
 const (
 	// ActionNotStore indicates to store an element in cache
-	ActionNotStore ActionType = iota - 7
+	ActionNONE ActionType = iota - 8
+	// ActionNotStore indicates to store an element in cache
+	ActionNotStore
 	// ActionStore indicates to not store an element in cache
 	ActionStore
 	// ActionNotDelete indicates to not remove a category of files
@@ -163,7 +165,7 @@ type Choice struct {
 	State     int        `json:"state"`
 	Action    ActionType `json:"action"`
 	Tick      int64      `json:"tick"`
-	ReadOnHit float64    `json:"readOnHit"`
+	DeltaT    int64      `json:"deltaT"`
 	Occupancy float64    `json:"occupancy"`
 	Hit       bool       `json:"hit"`
 	Frequency int64      `json:"frequency"`
@@ -171,21 +173,20 @@ type Choice struct {
 
 // Agent used in Qlearning
 type Agent struct {
-	FileMemory       map[interface{}]Choice    `json:"fileMemory"`
-	EventMemory      map[interface{}]*[]Choice `json:"eventMemory"`
-	QTable           QTable                    `json:"qtable"`
-	NumStates        int                       `json:"numStates"`
-	NumVars          int                       `json:"numVars"`
-	LearningRate     float64                   `json:"learningRate"`
-	DiscountFactor   float64                   `json:"discountFactor"`
-	DecayRateEpsilon float64                   `json:"decayRateEpsilon"`
-	Epsilon          float64                   `json:"epsilon"`
-	MaxEpsilon       float64                   `json:"maxEpsilon"`
-	MinEpsilon       float64                   `json:"minEpsilon"`
-	StepNum          int32                     `json:"episodeCounter"`
-	RGenerator       *rand.Rand                `json:"rGenerator"`
-	UpdateAlgorithm  RLUpdateAlg               `json:"updateAlgorithm"`
-	QValue           float64                   `json:"qValue"`
+	Memory           map[interface{}][]Choice `json:"memory"`
+	QTable           QTable                   `json:"qtable"`
+	NumStates        int                      `json:"numStates"`
+	NumVars          int                      `json:"numVars"`
+	LearningRate     float64                  `json:"learningRate"`
+	DiscountFactor   float64                  `json:"discountFactor"`
+	DecayRateEpsilon float64                  `json:"decayRateEpsilon"`
+	Epsilon          float64                  `json:"epsilon"`
+	MaxEpsilon       float64                  `json:"maxEpsilon"`
+	MinEpsilon       float64                  `json:"minEpsilon"`
+	StepNum          int32                    `json:"episodeCounter"`
+	RGenerator       *rand.Rand               `json:"rGenerator"`
+	UpdateAlgorithm  RLUpdateAlg              `json:"updateAlgorithm"`
+	QValue           float64                  `json:"qValue"`
 }
 
 // Init initilizes the Agent struct
@@ -198,8 +199,7 @@ func (agent *Agent) Init(featureManager *featuremap.FeatureManager, role AgentRo
 	agent.Epsilon = initEpsilon
 	agent.MaxEpsilon = 1.0
 	agent.MinEpsilon = 0.1
-	agent.FileMemory = make(map[interface{}]Choice)
-	agent.EventMemory = make(map[interface{}]*[]Choice)
+	agent.Memory = make(map[interface{}][]Choice)
 
 	switch role {
 	case AdditionAgent:
@@ -396,20 +396,26 @@ func (agent *Agent) UpdateEpsilon() {
 	}
 }
 
-// UpdateFileMemory insert made actions in memory
-func (agent *Agent) UpdateFileMemory(key interface{}, choice Choice) {
-	agent.FileMemory[key] = choice
-}
-
-// UpdateEventMemory insert made actions in memory
-func (agent *Agent) UpdateEventMemory(key interface{}, choices ...Choice) {
-	prevChoices, inMemory := agent.EventMemory[key]
+// ToMemory insert made actions in memory
+func (agent *Agent) ToMemory(key interface{}, choices ...Choice) {
+	pastChoices, inMemory := agent.Memory[key]
 	if inMemory {
-		*prevChoices = append(*prevChoices, choices...)
+		pastChoices = append(pastChoices, choices...)
+		agent.Memory[key] = pastChoices
 	} else {
 		newChoices := make([]Choice, 0)
 		newChoices = append(newChoices, choices...)
-		agent.EventMemory[key] = &newChoices
+		agent.Memory[key] = newChoices
+	}
+}
+
+// ShiftMemory remove the oldest memory
+func (agent *Agent) ShiftMemory(key interface{}) {
+	pastChoices, inMemory := agent.Memory[key]
+	if inMemory {
+		pastChoices[0] = pastChoices[1]
+		pastChoices = pastChoices[:1]
+		agent.Memory[key] = pastChoices
 	}
 }
 

@@ -526,9 +526,9 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 		if cache.evictionAgentK < initK {
 			cache.evictionAgentK = initK
 		}
-		choicesList, inMemory := cache.evictionAgent.EventMemory["NotDelete"]
+		choicesList, inMemory := cache.evictionAgent.Memory["NotDelete"]
 		if inMemory {
-			for _, choice := range *choicesList {
+			for _, choice := range choicesList {
 				for catState := range cache.evictionCategoryManager.GetStateFromCategories(
 					cache.evictionAgent,
 					cache.Occupancy(),
@@ -543,7 +543,7 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 					}
 				}
 			}
-			delete(cache.evictionAgent.EventMemory, "NotDelete")
+			delete(cache.evictionAgent.Memory, "NotDelete")
 		}
 	} else {
 		cache.evictionAgentK = cache.evictionAgentK << 1
@@ -577,13 +577,13 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 					Category: catState.Category,
 					File:     curFile,
 				})
-				cache.evictionAgent.UpdateFileMemory(curFile.Filename, qlearn.Choice{
+				cache.evictionAgent.ToMemory(curFile.Filename, qlearn.Choice{
 					State:     catState.Idx,
 					Action:    catState.Action,
 					Tick:      cache.tick,
-					ReadOnHit: cache.dataReadOnHit,
+					DeltaT:    curFileStats.DeltaLastRequest,
 					Occupancy: cache.Occupancy(),
-					Frequency: curFile.Frequency,
+					Frequency: curFileStats.Frequency,
 				})
 				cache.toEvictionChoiceBuffer([]string{
 					fmt.Sprintf("%d", cache.tick),
@@ -638,13 +638,13 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 					Category: catState.Category,
 					File:     curFile,
 				})
-				cache.evictionAgent.UpdateFileMemory(curFile.Filename, qlearn.Choice{
+				cache.evictionAgent.ToMemory(curFile.Filename, qlearn.Choice{
 					State:     catState.Idx,
 					Action:    catState.Action,
 					Tick:      cache.tick,
-					ReadOnHit: cache.dataReadOnHit,
+					DeltaT:    curFileStats.DeltaLastRequest,
 					Occupancy: cache.Occupancy(),
-					Frequency: curFile.Frequency,
+					Frequency: curFileStats.Frequency,
 				})
 				cache.toEvictionChoiceBuffer([]string{
 					fmt.Sprintf("%d", cache.tick),
@@ -686,13 +686,13 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 				Category: catState.Category,
 				File:     curFile,
 			})
-			cache.evictionAgent.UpdateFileMemory(curFile.Filename, qlearn.Choice{
+			cache.evictionAgent.ToMemory(curFile.Filename, qlearn.Choice{
 				State:     catState.Idx,
 				Action:    catState.Action,
 				Tick:      cache.tick,
-				ReadOnHit: cache.dataReadOnHit,
+				DeltaT:    curFileStats.DeltaLastRequest,
 				Occupancy: cache.Occupancy(),
-				Frequency: curFile.Frequency,
+				Frequency: curFileStats.Frequency,
 			})
 			cache.toEvictionChoiceBuffer([]string{
 				fmt.Sprintf("%d", cache.tick),
@@ -713,21 +713,21 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 		case qlearn.ActionNotDelete:
 			for _, curFile := range catState.Files {
 				curFileStats := cache.stats.Get(curFile.Filename)
-				cache.evictionAgent.UpdateFileMemory(curFile.Filename, qlearn.Choice{
+				cache.evictionAgent.ToMemory(curFile.Filename, qlearn.Choice{
 					State:     catState.Idx,
 					Action:    catState.Action,
 					Tick:      cache.tick,
-					ReadOnHit: cache.dataReadOnHit,
+					DeltaT:    curFileStats.DeltaLastRequest,
 					Occupancy: cache.Occupancy(),
-					Frequency: curFile.Frequency,
+					Frequency: curFileStats.Frequency,
 				})
-				cache.evictionAgent.UpdateEventMemory("NotDelete", qlearn.Choice{
+				cache.evictionAgent.ToMemory("NotDelete", qlearn.Choice{
 					State:     catState.Idx,
 					Action:    catState.Action,
 					Tick:      cache.tick,
-					ReadOnHit: cache.dataReadOnHit,
+					DeltaT:    curFileStats.DeltaLastRequest,
 					Occupancy: cache.Occupancy(),
-					Frequency: curFile.Frequency,
+					Frequency: curFileStats.Frequency,
 				})
 				cache.toEvictionChoiceBuffer([]string{
 					fmt.Sprintf("%d", cache.tick),
@@ -763,89 +763,53 @@ func (cache *AIRL) checkEvictionNextState(oldStateIdx int, newStateIdx int) bool
 	return newState[catSizeIdx] == oldState[catSizeIdx] && newState[catDeltaLastRequestIdx] == oldState[catDeltaLastRequestIdx] && newState[catNumReqIdx] >= oldState[catNumReqIdx]
 }
 
-func (cache *AIRL) delayedRewardEvictionAgent(fileStats *FileStats, hit bool) {
-	prevChoice, inMemory := cache.evictionAgent.FileMemory[fileStats.Filename]
+func (cache *AIRL) delayedRewardEvictionAgent(filename int64) {
+	memories, inMemory := cache.evictionAgent.Memory[filename]
 
-	if inMemory {
+	if inMemory && len(memories) == 2 {
+		prevMemory, nextMemory := memories[0], memories[1]
 		reward := 0.0
-		if cache.dataReadOnHit > prevChoice.ReadOnHit {
-			reward += 1.
-		} else {
-			reward += -1.
-		}
-		switch prevChoice.Action {
-		// case qlearn.ActionNotDelete:
-		// 	reward -= 1.
-		case qlearn.ActionDeleteAll, qlearn.ActionDeleteHalf, qlearn.ActionDeleteQuarter, qlearn.ActionDeleteOne:
-			if cache.Occupancy() < 95. {
-				reward += -5.
-			}
-		}
-		// if hit {
-		// 	reward += 1.
-		// } else {
-		// 	reward += -1.
-		// }
-		// if cache.dataReadOnHit > cache.dataReadOnMiss {
-		// 	reward += 1.
-		// } else {
-		// 	reward += -1.
-		// }
-		for catState := range cache.evictionCategoryManager.GetStateFromCategories(
-			cache.evictionAgent,
-			cache.Occupancy(),
-			cache.HitRate(),
-			cache.MaxSize,
-		) {
-			if cache.checkEvictionNextState(prevChoice.State, catState.Idx) {
-				// Update table
-				cache.evictionAgent.UpdateTable(prevChoice.State, catState.Idx, prevChoice.Action, reward)
-				// Update epsilon
-				cache.evictionAgent.UpdateEpsilon()
-			}
-		}
+
+		// Update table
+		cache.evictionAgent.UpdateTable(prevMemory.State, nextMemory.State, prevMemory.Action, reward)
+		// Update epsilon
+		cache.evictionAgent.UpdateEpsilon()
 	}
 }
 
-func (cache *AIRL) delayedRewardAdditionAgent(curState int, fileStats *FileStats, hit bool) {
-	prevChoice, inMemory := cache.additionAgent.FileMemory[fileStats.Filename]
+func (cache *AIRL) delayedRewardAdditionAgent(filename int64) {
+	memories, inMemory := cache.additionAgent.Memory[filename]
 
-	if inMemory {
+	if inMemory && len(memories) == 2 {
+		prevMemory, nextMemory := memories[0], memories[1]
 		reward := 0.0
 
-		if hit {
+		if !prevMemory.Hit && !nextMemory.Hit && prevMemory.Action == qlearn.ActionNotStore {
+			reward += -1.
+		}
+		if !prevMemory.Hit && nextMemory.Hit && prevMemory.Action == qlearn.ActionStore {
 			reward += 1.
-		} else {
-			reward += -1.
-		}
-		if cache.dataReadOnHit > prevChoice.ReadOnHit {
-			reward += 1.
-		} else {
-			reward += -1.
-		}
-		if prevChoice.Action == qlearn.ActionNotStore && prevChoice.Frequency > 1 && prevChoice.Occupancy < 95. {
-			reward += -1.
-		}
-
-		switch prevChoice.Action {
-		case qlearn.ActionStore:
-			if !prevChoice.Hit == hit {
+			if nextMemory.DeltaT < prevMemory.DeltaT {
 				reward += 1.
 			}
-		case qlearn.ActionNotStore:
-			if !prevChoice.Hit == !hit {
+		}
+		if prevMemory.Hit && nextMemory.Hit {
+			reward += 1.
+		}
+		if prevMemory.Hit && !nextMemory.Hit {
+			if prevMemory.Action == qlearn.ActionNotStore {
 				reward += 1.
-			} else {
-				reward += -1.
-			}
-			if cache.Occupancy() < 100. {
+			} else { // prev Action STORE
 				reward += -1.
 			}
 		}
 		// Update table
-		cache.additionAgent.UpdateTable(prevChoice.State, curState, prevChoice.Action, reward)
+		cache.additionAgent.UpdateTable(prevMemory.State, nextMemory.State, prevMemory.Action, reward)
 		// Update epsilon
 		cache.additionAgent.UpdateEpsilon()
+
+		// Remove oldest memory
+		cache.additionAgent.ShiftMemory(filename)
 	}
 }
 
@@ -995,12 +959,6 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 		logger.Debug("cache", zap.Int("current state", curState))
 
-		cache.delayedRewardAdditionAgent(curState, fileStats, hit)
-
-		if cache.evictionAgentOK {
-			cache.delayedRewardEvictionAgent(fileStats, hit)
-		}
-
 		if !hit {
 
 			if expAdditionTradeoff := cache.additionAgent.GetRandomFloat(); expAdditionTradeoff > cache.additionAgent.Epsilon {
@@ -1021,12 +979,12 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			switch curAction {
 			case qlearn.ActionNotStore:
 				cache.actionCounters[curAction]++
-				cache.additionAgent.UpdateFileMemory(request.Filename, qlearn.Choice{
+				cache.additionAgent.ToMemory(request.Filename, qlearn.Choice{
 					State:     curState,
 					Action:    curAction,
 					Tick:      cache.tick,
+					DeltaT:    fileStats.DeltaLastRequest,
 					Hit:       hit,
-					ReadOnHit: cache.dataReadOnHit,
 					Occupancy: cache.Occupancy(),
 					Frequency: fileStats.Frequency,
 				})
@@ -1077,12 +1035,12 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					}
 
 					cache.actionCounters[curAction]++
-					cache.additionAgent.UpdateFileMemory(request.Filename, qlearn.Choice{
+					cache.additionAgent.ToMemory(request.Filename, qlearn.Choice{
 						State:     curState,
 						Action:    curAction,
 						Tick:      cache.tick,
+						DeltaT:    fileStats.DeltaLastRequest,
 						Hit:       hit,
-						ReadOnHit: cache.dataReadOnHit,
 						Occupancy: cache.Occupancy(),
 						Frequency: fileStats.Frequency,
 					})
@@ -1116,6 +1074,15 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				Weight:    fileStats.Weight,
 			}
 			cache.files.Update(&curFileSupportData)
+			cache.additionAgent.ToMemory(request.Filename, qlearn.Choice{
+				State:     curState,
+				Action:    qlearn.ActionNONE,
+				Tick:      cache.tick,
+				DeltaT:    fileStats.DeltaLastRequest,
+				Hit:       hit,
+				Occupancy: cache.Occupancy(),
+				Frequency: fileStats.Frequency,
+			})
 
 			if cache.evictionAgentOK {
 				fileCategory := cache.evictionCategoryManager.GetFileCategory(&curFileSupportData)
@@ -1127,10 +1094,6 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 		// #####################################################################
 		// #                      NO ADDITION TABLE                            #
 		// #####################################################################
-
-		if cache.evictionAgentOK {
-			cache.delayedRewardEvictionAgent(fileStats, hit)
-		}
 
 		if !hit {
 			// ########################
@@ -1208,6 +1171,17 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 	}
 
 	return added
+}
+
+// AfterRequest of the cache
+func (cache *AIRL) AfterRequest(request *Request, hit bool, added bool) {
+	if cache.additionAgentOK {
+		cache.delayedRewardAdditionAgent(request.Filename)
+	}
+	if cache.evictionAgentOK {
+		cache.delayedRewardEvictionAgent(request.Filename)
+	}
+	cache.SimpleCache.AfterRequest(request, hit, added)
 }
 
 // Free removes files from the cache
