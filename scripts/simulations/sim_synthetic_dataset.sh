@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-#!/usr/bin/env bash
-
 python -m SmartCache.sim.utils compile --release "true" &&
 
 # High Frequency Datset
