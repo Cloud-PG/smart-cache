@@ -62,13 +62,15 @@ type SimpleCache struct {
 	useWatermarks                      bool
 	choicesLogFile                     *OutputCSV
 	choicesBuffer                      [][]string
+	logSimulation                      bool
 }
 
 // Init the LRU struct
 func (cache *SimpleCache) Init(vars ...interface{}) interface{} {
 	cache.ordType = vars[0].(queueType)
-	cache.canRedirect = vars[1].(bool)
-	cache.useWatermarks = vars[2].(bool)
+	cache.logSimulation = vars[1].(bool)
+	cache.canRedirect = vars[2].(bool)
+	cache.useWatermarks = vars[3].(bool)
 
 	cache.stats.Init()
 	cache.files.Init(cache.ordType)
@@ -86,10 +88,12 @@ func (cache *SimpleCache) Init(vars ...interface{}) interface{} {
 		panic(fmt.Sprintf("High watermark is lower then Low waterrmark -> %f < %f", cache.HighWaterMark, cache.LowWaterMark))
 	}
 
-	cache.choicesLogFile = &OutputCSV{}
-	cache.choicesLogFile.Create("choicesLogFile.csv", true)
-	cache.choicesLogFile.Write(choicesLogHeader)
-	cache.choicesBuffer = make([][]string, 0)
+	if cache.logSimulation {
+		cache.choicesLogFile = &OutputCSV{}
+		cache.choicesLogFile.Create("choicesLogFile.csv", true)
+		cache.choicesLogFile.Write(choicesLogHeader)
+		cache.choicesBuffer = make([][]string, 0)
+	}
 
 	return cache
 }
@@ -646,9 +650,11 @@ func (cache *SimpleCache) NumHits() int64 {
 }
 
 func (cache *SimpleCache) toChoiceBuffer(curChoice []string) {
-	cache.choicesBuffer = append(cache.choicesBuffer, curChoice)
-	if len(cache.choicesBuffer) > 9999 {
-		cache.flushChoices()
+	if cache.choicesLogFile != nil {
+		cache.choicesBuffer = append(cache.choicesBuffer, curChoice)
+		if len(cache.choicesBuffer) > 9999 {
+			cache.flushChoices()
+		}
 	}
 }
 
@@ -661,7 +667,9 @@ func (cache *SimpleCache) flushChoices() {
 
 // Terminate close all pending things of the cache
 func (cache *SimpleCache) Terminate() error {
-	cache.flushChoices()
-	cache.choicesLogFile.Close()
+	if cache.choicesLogFile != nil {
+		cache.flushChoices()
+		cache.choicesLogFile.Close()
+	}
 	return nil
 }

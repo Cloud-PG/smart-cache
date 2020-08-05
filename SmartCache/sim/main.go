@@ -53,6 +53,7 @@ func configureViper(configFilenameWithNoExt string) {
 	viper.SetDefault("sim.coldstartnostats", false)
 	viper.SetDefault("sim.redirectreq", false)
 	viper.SetDefault("sim.bandwidth", 10.0)
+	viper.SetDefault("sim.log", false)
 
 	viper.SetDefault("sim.cpuprofile", "")
 	viper.SetDefault("sim.memprofile", "")
@@ -95,6 +96,7 @@ func simCommand() *cobra.Command {
 		simFileType          string
 		simLoadDump          bool
 		simLoadDumpFileName  string
+		simLog               bool
 		simOutputFolder      string
 		simRegion            string
 		simType              string
@@ -249,6 +251,9 @@ func simCommand() *cobra.Command {
 
 			simLoadDumpFileName = viper.GetString("sim.loaddumpfilename")
 			logger.Info("CONF_VAR", zap.String("simLoadDumpFileName", simLoadDumpFileName))
+
+			simLog = viper.GetBool("sim.log")
+			logger.Info("CONF_VAR", zap.Bool("simLog", simLog))
 
 			simOutputFolder = viper.GetString("sim.outputFolder")
 			simOutputFolder, errAbs = filepath.Abs(simOutputFolder)
@@ -407,6 +412,7 @@ func simCommand() *cobra.Command {
 				cacheType,
 				cacheSize,
 				cacheSizeUnit,
+				simLog,
 				simRedirectReq,
 				simCacheWatermarks,
 				weightFunc,
@@ -430,7 +436,7 @@ func simCommand() *cobra.Command {
 			}
 
 			if dataset2TestPath != "" {
-				cache.Init(curCacheInstance, simRedirectReq, simCacheWatermarks, dataset2TestPath)
+				cache.Init(curCacheInstance, simLog, simRedirectReq, simCacheWatermarks, dataset2TestPath)
 			} else {
 				switch cacheType {
 				case "aiNN":
@@ -438,7 +444,7 @@ func simCommand() *cobra.Command {
 						fmt.Println("ERR: No feature map indicated...")
 						os.Exit(-1)
 					}
-					cache.Init(curCacheInstance, simRedirectReq, simCacheWatermarks, aiFeatureMap, aiModel)
+					cache.Init(curCacheInstance, simLog, simRedirectReq, simCacheWatermarks, aiFeatureMap, aiModel)
 				case "aiRL":
 					if aiRLAdditionFeatureMap == "" {
 						logger.Info("No addition feature map indicated...")
@@ -464,6 +470,7 @@ func simCommand() *cobra.Command {
 
 					cache.Init(
 						curCacheInstance,
+						simLog,
 						simRedirectReq,
 						simCacheWatermarks,
 						aiRLAdditionFeatureMap,
@@ -884,7 +891,7 @@ func main() {
 	}
 }
 
-func genCache(cacheType string, cacheSize float64, cacheSizeUnit string, redirect bool, watermarks bool, weightFunc string, weightAlpha float64, weightBeta float64, weightGamma float64) cache.Cache {
+func genCache(cacheType string, cacheSize float64, cacheSizeUnit string, log bool, redirect bool, watermarks bool, weightFunc string, weightAlpha float64, weightBeta float64, weightGamma float64) cache.Cache {
 	logger := zap.L()
 	var cacheInstance cache.Cache
 	cacheSizeMegabytes := cache.GetCacheSize(cacheSize, cacheSizeUnit)
@@ -896,7 +903,7 @@ func genCache(cacheType string, cacheSize float64, cacheSizeUnit string, redirec
 		cacheInstance = &cache.SimpleCache{
 			MaxSize: cacheSizeMegabytes,
 		}
-		cache.Init(cacheInstance, cache.LRUQueue, redirect, watermarks)
+		cache.Init(cacheInstance, cache.LRUQueue, log, redirect, watermarks)
 	case "lfu":
 		logger.Info("Create LFU Cache",
 			zap.Float64("cacheSize", cacheSizeMegabytes),
@@ -904,7 +911,7 @@ func genCache(cacheType string, cacheSize float64, cacheSizeUnit string, redirec
 		cacheInstance = &cache.SimpleCache{
 			MaxSize: cacheSizeMegabytes,
 		}
-		cache.Init(cacheInstance, cache.LFUQueue, redirect, watermarks)
+		cache.Init(cacheInstance, cache.LFUQueue, log, redirect, watermarks)
 	case "sizeBig":
 		logger.Info("Create Size Big Cache",
 			zap.Float64("cacheSize", cacheSizeMegabytes),
@@ -912,7 +919,7 @@ func genCache(cacheType string, cacheSize float64, cacheSizeUnit string, redirec
 		cacheInstance = &cache.SimpleCache{
 			MaxSize: cacheSizeMegabytes,
 		}
-		cache.Init(cacheInstance, cache.SizeBigQueue, redirect, watermarks)
+		cache.Init(cacheInstance, cache.SizeBigQueue, log, redirect, watermarks)
 	case "sizeSmall":
 		logger.Info("Create Size Small Cache",
 			zap.Float64("cacheSize", cacheSizeMegabytes),
@@ -920,7 +927,7 @@ func genCache(cacheType string, cacheSize float64, cacheSizeUnit string, redirec
 		cacheInstance = &cache.SimpleCache{
 			MaxSize: cacheSizeMegabytes,
 		}
-		cache.Init(cacheInstance, cache.SizeSmallQueue, redirect, watermarks)
+		cache.Init(cacheInstance, cache.SizeSmallQueue, log, redirect, watermarks)
 	case "lruDatasetVerifier":
 		logger.Info("Create lruDatasetVerifier Cache",
 			zap.Float64("cacheSize", cacheSizeMegabytes),
@@ -982,7 +989,7 @@ func genCache(cacheType string, cacheSize float64, cacheSizeUnit string, redirec
 			},
 			SelFunctionType: selFunctionType,
 		}
-		cache.Init(cacheInstance, cache.LRUQueue, redirect, watermarks)
+		cache.Init(cacheInstance, cache.LRUQueue, log, redirect, watermarks)
 	default:
 		fmt.Printf("ERR: '%s' is not a valid cache type...\n", cacheType)
 		os.Exit(-2)

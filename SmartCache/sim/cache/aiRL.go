@@ -48,12 +48,16 @@ type AIRL struct {
 func (cache *AIRL) Init(args ...interface{}) interface{} {
 	logger = zap.L()
 
-	cache.SimpleCache.Init(NoQueue, args[0].(bool), args[1].(bool))
+	cache.SimpleCache.Init(NoQueue,
+		args[0].(bool), // log
+		args[1].(bool), // redirect
+		args[2].(bool), // watermarks
+	)
 
-	additionFeatureMap := args[2].(string)
-	evictionFeatureMap := args[3].(string)
-	initEpsilon := args[4].(float64)
-	decayRateEpsilon := args[5].(float64)
+	additionFeatureMap := args[3].(string)
+	evictionFeatureMap := args[4].(string)
+	initEpsilon := args[5].(float64)
+	decayRateEpsilon := args[6].(float64)
 
 	cache.evictionAgentK = 32
 	cache.evictionAgentStep = cache.evictionAgentK
@@ -81,10 +85,12 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 			initEpsilon,
 			decayRateEpsilon,
 		)
-		cache.additionAgentChoicesLogFile = &OutputCSV{}
-		cache.additionAgentChoicesLogFile.Create("additionAgentChoiceLog.csv", true)
-		cache.additionAgentChoicesLogFile.Write(choicesLogHeader)
-		cache.additionAgentChoicesLogFileBuffer = make([][]string, 0)
+		if cache.logSimulation {
+			cache.additionAgentChoicesLogFile = &OutputCSV{}
+			cache.additionAgentChoicesLogFile.Create("additionAgentChoiceLog.csv", true)
+			cache.additionAgentChoicesLogFile.Write(choicesLogHeader)
+			cache.additionAgentChoicesLogFileBuffer = make([][]string, 0)
+		}
 		cache.additionAgentOK = true
 	} else {
 		cache.additionAgentOK = false
@@ -108,10 +114,12 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 			cache.evictionFeatureManager.FileFeatureIdxWeights,
 			cache.evictionFeatureManager.FileFeatureIdxMap,
 		)
-		cache.evictionAgentChoicesLogFile = &OutputCSV{}
-		cache.evictionAgentChoicesLogFile.Create("evictionAgentChoiceLog.csv", true)
-		cache.evictionAgentChoicesLogFile.Write(choicesLogHeader)
-		cache.evictionAgentChoicesLogFileBuffer = make([][]string, 0)
+		if cache.logSimulation {
+			cache.evictionAgentChoicesLogFile = &OutputCSV{}
+			cache.evictionAgentChoicesLogFile.Create("evictionAgentChoiceLog.csv", true)
+			cache.evictionAgentChoicesLogFile.Write(choicesLogHeader)
+			cache.evictionAgentChoicesLogFileBuffer = make([][]string, 0)
+		}
 		cache.evictionAgentOK = true
 	} else {
 		cache.evictionAgentOK = false
@@ -805,6 +813,11 @@ func (cache *AIRL) delayedRewardAdditionAgent(curState int, fileStats *FileStats
 	if inMemory {
 		reward := 0.0
 
+		if hit {
+			reward += 1.
+		} else {
+			reward += -1.
+		}
 		if cache.dataReadOnHit > prevChoice.ReadOnHit {
 			reward += 1.
 		} else {
@@ -814,30 +827,26 @@ func (cache *AIRL) delayedRewardAdditionAgent(curState int, fileStats *FileStats
 			reward += -1.
 		}
 
-		// switch prevChoice.Action {
-		// case qlearn.ActionStore:
-		// 	if !prevChoice.Hit == hit {
-		// 		reward += 1.
-		// 	}
-		// 	if cache.Occupancy() >= 98. {
-		// 		reward += -1.
-		// 	}
-		// case qlearn.ActionNotStore:
-		// 	if !prevChoice.Hit == !hit {
-		// 		reward += 1.
-		// 	} else {
-		// 		reward += -1.
-		// 	}
-		// 	if cache.Occupancy() < 100. {
-		// 		reward += -1.
-		// 	}
-		// }
+		switch prevChoice.Action {
+		case qlearn.ActionStore:
+			if !prevChoice.Hit == hit {
+				reward += 1.
+			}
+		case qlearn.ActionNotStore:
+			if !prevChoice.Hit == !hit {
+				reward += 1.
+			} else {
+				reward += -1.
+			}
+			if cache.Occupancy() < 100. {
+				reward += -1.
+			}
+		}
 		// Update table
 		cache.additionAgent.UpdateTable(prevChoice.State, curState, prevChoice.Action, reward)
 		// Update epsilon
 		cache.additionAgent.UpdateEpsilon()
 	}
-
 }
 
 func (cache *AIRL) rewardEvictionAfterForcedCall(added bool) {
@@ -1300,22 +1309,26 @@ func (cache *AIRL) ExtraOutput(info string) string {
 
 // Terminate pending things of the cache
 func (cache *AIRL) Terminate() error {
-	if cache.additionAgentChoicesLogFile != nil {
-		cache.flushAdditionChoices()
-		cache.additionAgentChoicesLogFile.Close()
-	}
-	if cache.evictionAgentChoicesLogFile != nil {
-		cache.flushEvictionChoices()
-		cache.evictionAgentChoicesLogFile.Close()
+	if cache.logSimulation {
+		if cache.additionAgentChoicesLogFile != nil {
+			cache.flushAdditionChoices()
+			cache.additionAgentChoicesLogFile.Close()
+		}
+		if cache.evictionAgentChoicesLogFile != nil {
+			cache.flushEvictionChoices()
+			cache.evictionAgentChoicesLogFile.Close()
+		}
 	}
 	_ = cache.SimpleCache.Terminate()
 	return nil
 }
 
 func (cache *AIRL) toAdditionChoiceBuffer(curChoice []string) {
-	cache.additionAgentChoicesLogFileBuffer = append(cache.additionAgentChoicesLogFileBuffer, curChoice)
-	if len(cache.choicesBuffer) > 9999 {
-		cache.flushChoices()
+	if cache.logSimulation {
+		cache.additionAgentChoicesLogFileBuffer = append(cache.additionAgentChoicesLogFileBuffer, curChoice)
+		if len(cache.choicesBuffer) > 9999 {
+			cache.flushChoices()
+		}
 	}
 }
 
@@ -1327,9 +1340,11 @@ func (cache *AIRL) flushAdditionChoices() {
 }
 
 func (cache *AIRL) toEvictionChoiceBuffer(curChoice []string) {
-	cache.evictionAgentChoicesLogFileBuffer = append(cache.evictionAgentChoicesLogFileBuffer, curChoice)
-	if len(cache.choicesBuffer) > 9999 {
-		cache.flushChoices()
+	if cache.logSimulation {
+		cache.evictionAgentChoicesLogFileBuffer = append(cache.evictionAgentChoicesLogFileBuffer, curChoice)
+		if len(cache.choicesBuffer) > 9999 {
+			cache.flushChoices()
+		}
 	}
 }
 
