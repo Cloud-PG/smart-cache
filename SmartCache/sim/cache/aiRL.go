@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	maxBadQValueInRow = 6
+	maxBadQValueInRow = 28
 	initK             = 32
 )
 
@@ -349,6 +349,7 @@ type CategoryManager struct {
 	categorySizesMap       map[int]float64
 	categoryStatesMap      map[int]int
 	generatorChan          chan CatState
+	lastStateAction        map[int]CatState
 }
 
 // Init initialize the Category Manager
@@ -366,6 +367,7 @@ func (catMan *CategoryManager) Init(features []featuremap.Obj, featureWeights []
 	catMan.categorySizesMap = make(map[int]float64)
 	catMan.fileFeatureIdxMap = make(map[string]int)
 	catMan.categoryStatesMap = make(map[int]int)
+	catMan.lastStateAction = make(map[int]CatState)
 
 	catMan.fileFeatureIdxMap = fileFeatureIdxMap
 }
@@ -456,52 +458,61 @@ func (catMan CategoryManager) GetFileCategory(file *FileSupportData) int {
 }
 
 // GetStateFromCategories generates all the states from the current categories
-func (catMan CategoryManager) GetStateFromCategories(agent qlearn.Agent, occupancy float64, hitRate float64, maxSize float64) chan CatState {
+func (catMan *CategoryManager) GetStateFromCategories(newStates bool, agent qlearn.Agent, occupancy float64, hitRate float64, maxSize float64) chan CatState {
 	catMan.generatorChan = make(chan CatState, len(catMan.categoryFileListMap))
 	go func() {
 		defer close(catMan.generatorChan)
-		for catID := range catMan.categoryFileListMap {
-			curCat := catMan.categoryFileFeatureIdx[catID]
-			catMan.buffer = catMan.buffer[:0]
-			for _, feature := range catMan.features {
-				switch feature.Name {
-				case "catSize":
-					catMan.buffer = append(catMan.buffer, curCat[catMan.fileFeatureIdxMap["catSize"]])
-				case "catNumReq":
-					catMan.buffer = append(catMan.buffer, curCat[catMan.fileFeatureIdxMap["catNumReq"]])
-				case "catDeltaLastRequest":
-					catMan.buffer = append(catMan.buffer, curCat[catMan.fileFeatureIdxMap["catDeltaLastRequest"]])
-				case "catPercOcc":
-					percSize := (catMan.categorySizesMap[catID] / maxSize) * 100.
-					catMan.buffer = append(catMan.buffer, feature.Index(percSize))
-				case "percOcc":
-					catMan.buffer = append(catMan.buffer, feature.Index(occupancy))
-				case "hitRate":
-					catMan.buffer = append(catMan.buffer, feature.Index(hitRate))
+		if newStates {
+			catMan.lastStateAction = make(map[int]CatState)
+			for catID := range catMan.categoryFileListMap {
+				curCat := catMan.categoryFileFeatureIdx[catID]
+				catMan.buffer = catMan.buffer[:0]
+				for _, feature := range catMan.features {
+					switch feature.Name {
+					case "catSize":
+						catMan.buffer = append(catMan.buffer, curCat[catMan.fileFeatureIdxMap["catSize"]])
+					case "catNumReq":
+						catMan.buffer = append(catMan.buffer, curCat[catMan.fileFeatureIdxMap["catNumReq"]])
+					case "catDeltaLastRequest":
+						catMan.buffer = append(catMan.buffer, curCat[catMan.fileFeatureIdxMap["catDeltaLastRequest"]])
+					case "catPercOcc":
+						percSize := (catMan.categorySizesMap[catID] / maxSize) * 100.
+						catMan.buffer = append(catMan.buffer, feature.Index(percSize))
+					case "percOcc":
+						catMan.buffer = append(catMan.buffer, feature.Index(occupancy))
+					case "hitRate":
+						catMan.buffer = append(catMan.buffer, feature.Index(hitRate))
+					}
 				}
-			}
-			// fmt.Println(catMan.buffer)
-			curState := agent.QTable.FeatureIdxs2StateIdx(catMan.buffer...)
-			var curAction qlearn.ActionType
-			if expEvictionTradeoff := agent.GetRandomFloat(); expEvictionTradeoff > agent.Epsilon {
-				// ########################
-				// ### Exploiting phase ###
-				// ########################
-				curAction = agent.GetBestAction(curState)
-			} else {
-				// ##########################
-				// #### Exploring phase #####
-				// ##########################
+				// fmt.Println(catMan.buffer)
+				curState := agent.QTable.FeatureIdxs2StateIdx(catMan.buffer...)
+				var curAction qlearn.ActionType
+				if expEvictionTradeoff := agent.GetRandomFloat(); expEvictionTradeoff > agent.Epsilon {
+					// ########################
+					// ### Exploiting phase ###
+					// ########################
+					curAction = agent.GetBestAction(curState)
+				} else {
+					// ##########################
+					// #### Exploring phase #####
+					// ##########################
 
-				// ----- Random choice -----
-				randomActionIdx := int(agent.GetRandomFloat() * float64(len(agent.QTable.ActionTypes)))
-				curAction = agent.QTable.ActionTypes[randomActionIdx]
+					// ----- Random choice -----
+					randomActionIdx := int(agent.GetRandomFloat() * float64(len(agent.QTable.ActionTypes)))
+					curAction = agent.QTable.ActionTypes[randomActionIdx]
+				}
+				curCatState := CatState{
+					Idx:      curState,
+					Category: catID,
+					Files:    catMan.categoryFileListMap[catID],
+					Action:   curAction,
+				}
+				catMan.generatorChan <- curCatState
+				catMan.lastStateAction[curState] = curCatState
 			}
-			catMan.generatorChan <- CatState{
-				Idx:      curState,
-				Category: catID,
-				Files:    catMan.categoryFileListMap[catID],
-				Action:   curAction,
+		} else {
+			for _, curCatState := range catMan.lastStateAction {
+				catMan.generatorChan <- curCatState
 			}
 		}
 	}()
@@ -530,6 +541,7 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 		if inMemory {
 			for _, choice := range choicesList {
 				for catState := range cache.evictionCategoryManager.GetStateFromCategories(
+					false,
 					cache.evictionAgent,
 					cache.Occupancy(),
 					cache.HitRate(),
@@ -550,6 +562,7 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 	}
 
 	for catState := range cache.evictionCategoryManager.GetStateFromCategories(
+		true,
 		cache.evictionAgent,
 		cache.Occupancy(),
 		cache.HitRate(),
@@ -763,17 +776,41 @@ func (cache *AIRL) checkEvictionNextState(oldStateIdx int, newStateIdx int) bool
 	return newState[catSizeIdx] == oldState[catSizeIdx] && newState[catDeltaLastRequestIdx] == oldState[catDeltaLastRequestIdx] && newState[catNumReqIdx] >= oldState[catNumReqIdx]
 }
 
-func (cache *AIRL) delayedRewardEvictionAgent(filename int64) {
+func (cache *AIRL) delayedRewardEvictionAgent(filename int64, inCacheTick int64, hit bool) {
 	memories, inMemory := cache.evictionAgent.Memory[filename]
 
-	if inMemory && len(memories) == 2 {
-		prevMemory, nextMemory := memories[0], memories[1]
-		reward := 0.0
-
-		// Update table
-		cache.evictionAgent.UpdateTable(prevMemory.State, nextMemory.State, prevMemory.Action, reward)
-		// Update epsilon
-		cache.evictionAgent.UpdateEpsilon()
+	if inMemory {
+		for idx := len(memories) - 1; idx > -1; idx-- {
+			memory := memories[idx]
+			if memory.Tick < inCacheTick {
+				break
+			}
+			reward := 0.0
+			if hit {
+				if memory.Action == qlearn.ActionNotDelete {
+					reward += 1.
+				}
+			} else { // MISS
+				if memory.Action != qlearn.ActionNotDelete {
+					reward += -1.
+				}
+			}
+			for catState := range cache.evictionCategoryManager.GetStateFromCategories(
+				false,
+				cache.evictionAgent,
+				cache.Occupancy(),
+				cache.HitRate(),
+				cache.MaxSize,
+			) {
+				if cache.checkEvictionNextState(memory.State, catState.Idx) {
+					// Update table
+					cache.evictionAgent.UpdateTable(memory.State, catState.Idx, memory.Action, reward)
+					// Update epsilon
+					cache.evictionAgent.UpdateEpsilon()
+				}
+			}
+		}
+		cache.evictionAgent.RemoveBeforeTick(filename, inCacheTick)
 	}
 }
 
@@ -782,39 +819,42 @@ func (cache *AIRL) delayedRewardAdditionAgent(filename int64) {
 
 	if inMemory && len(memories) == 2 {
 		prevMemory, nextMemory := memories[0], memories[1]
-		reward := 0.0
+		if prevMemory.Action != qlearn.ActionNONE {
+			reward := 0.0
 
-		if !prevMemory.Hit && !nextMemory.Hit && prevMemory.Action == qlearn.ActionNotStore {
-			reward += -1.
-		}
-		if !prevMemory.Hit && nextMemory.Hit && prevMemory.Action == qlearn.ActionStore {
-			reward += 1.
-			if nextMemory.DeltaT < prevMemory.DeltaT {
-				reward += 1.
-			}
-		}
-		if prevMemory.Hit && nextMemory.Hit {
-			reward += 1.
-		}
-		if prevMemory.Hit && !nextMemory.Hit {
-			if prevMemory.Action == qlearn.ActionNotStore {
-				reward += 1.
-			} else { // prev Action STORE
+			if !prevMemory.Hit && !nextMemory.Hit && prevMemory.Action == qlearn.ActionNotStore {
 				reward += -1.
 			}
-		}
-		// Update table
-		cache.additionAgent.UpdateTable(prevMemory.State, nextMemory.State, prevMemory.Action, reward)
-		// Update epsilon
-		cache.additionAgent.UpdateEpsilon()
+			if !prevMemory.Hit && nextMemory.Hit && prevMemory.Action == qlearn.ActionStore {
+				reward += 1.
+				if nextMemory.DeltaT < prevMemory.DeltaT {
+					reward += 1.
+				}
+			}
+			if prevMemory.Hit && nextMemory.Hit {
+				reward += 1.
+			}
+			if prevMemory.Hit && !nextMemory.Hit {
+				if prevMemory.Action == qlearn.ActionNotStore {
+					reward += 1.
+				} else { // prev Action STORE
+					reward += -1.
+				}
+			}
+			// Update table
+			cache.additionAgent.UpdateTable(prevMemory.State, nextMemory.State, prevMemory.Action, reward)
+			// Update epsilon
+			cache.additionAgent.UpdateEpsilon()
 
-		// Remove oldest memory
-		cache.additionAgent.ShiftMemory(filename)
+			// Remove oldest memory
+			cache.additionAgent.ShiftMemory(filename)
+		}
 	}
 }
 
 func (cache *AIRL) rewardEvictionAfterForcedCall(added bool) {
 	for catState := range cache.evictionCategoryManager.GetStateFromCategories(
+		false,
 		cache.evictionAgent,
 		cache.Occupancy(),
 		cache.HitRate(),
@@ -1174,14 +1214,14 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 }
 
 // AfterRequest of the cache
-func (cache *AIRL) AfterRequest(request *Request, hit bool, added bool) {
+func (cache *AIRL) AfterRequest(request *Request, fileStats *FileStats, hit bool, added bool) {
 	if cache.additionAgentOK {
 		cache.delayedRewardAdditionAgent(request.Filename)
 	}
 	if cache.evictionAgentOK {
-		cache.delayedRewardEvictionAgent(request.Filename)
+		cache.delayedRewardEvictionAgent(request.Filename, fileStats.InCacheTick, hit)
 	}
-	cache.SimpleCache.AfterRequest(request, hit, added)
+	cache.SimpleCache.AfterRequest(request, fileStats, hit, added)
 }
 
 // Free removes files from the cache

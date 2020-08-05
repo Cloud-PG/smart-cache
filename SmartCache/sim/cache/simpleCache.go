@@ -348,7 +348,7 @@ func (cache *SimpleCache) UpdatePolicy(request *Request, fileStats *FileStats, h
 }
 
 // AfterRequest of LRU cache
-func (cache *SimpleCache) AfterRequest(request *Request, hit bool, added bool) {
+func (cache *SimpleCache) AfterRequest(request *Request, fileStats *FileStats, hit bool, added bool) {
 
 	var currentCPUEff float64
 

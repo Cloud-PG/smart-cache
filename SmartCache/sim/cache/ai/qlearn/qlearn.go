@@ -413,8 +413,24 @@ func (agent *Agent) ToMemory(key interface{}, choices ...Choice) {
 func (agent *Agent) ShiftMemory(key interface{}) {
 	pastChoices, inMemory := agent.Memory[key]
 	if inMemory {
-		pastChoices[0] = pastChoices[1]
-		pastChoices = pastChoices[:1]
+		pastChoices = pastChoices[1:]
+		agent.Memory[key] = pastChoices
+	}
+}
+
+// RemoveBeforeTick remove the oldest memory
+func (agent *Agent) RemoveBeforeTick(key interface{}, tick int64) {
+	pastChoices, inMemory := agent.Memory[key]
+	if inMemory {
+		targetIdx := -1
+		for idx := len(pastChoices) - 1; idx > -1; idx-- {
+			choice := pastChoices[idx]
+			if choice.Tick < tick {
+				targetIdx = idx
+				break
+			}
+		}
+		pastChoices = pastChoices[targetIdx+1:]
 		agent.Memory[key] = pastChoices
 	}
 }

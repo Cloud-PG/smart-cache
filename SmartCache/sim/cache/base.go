@@ -84,7 +84,7 @@ type Cache interface {
 	CheckRedirect() bool
 	BeforeRequest(request *Request, hit bool) (*FileStats, bool)
 	UpdatePolicy(request *Request, fileStats *FileStats, hit bool) bool
-	AfterRequest(request *Request, hit bool, added bool)
+	AfterRequest(request *Request, fileStats *FileStats, hit bool, added bool)
 	Terminate() error
 }
 
@@ -143,7 +143,7 @@ func GetFile(cache Cache, vars ...interface{}) (bool, bool) {
 	// Manage request
 	fileStats, hit := BeforeRequest(cache, &cacheRequest, hit)
 	added := UpdatePolicy(cache, &cacheRequest, fileStats, hit)
-	AfterRequest(cache, &cacheRequest, hit, added)
+	AfterRequest(cache, &cacheRequest, fileStats, hit, added)
 
 	// Check watermarks
 	CheckWatermark(cache)
@@ -312,8 +312,8 @@ func UpdatePolicy(cache Cache, request *Request, fileStats *FileStats, hit bool)
 }
 
 // AfterRequest of the current cache instance
-func AfterRequest(cache Cache, request *Request, hit bool, added bool) {
-	cache.AfterRequest(request, hit, added)
+func AfterRequest(cache Cache, request *Request, fileStats *FileStats, hit bool, added bool) {
+	cache.AfterRequest(request, fileStats, hit, added)
 }
 
 // AvgFreeSpace of the current cache instance
