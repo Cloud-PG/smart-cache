@@ -1,7 +1,7 @@
 --- # Simulation parameters
 sim:
-  data: ../../../../../datasets/RecencyFocusedDataset/
-  outputFolder: ../../../../../results/sim_synthetic_dataset_with_watermarks/RecencyFocusedDataset
+  data: ../../../../datasets/RecencyFocusedDataset/
+  outputFolder: ../../../../results/sim_synthetic_dataset_with_watermarks/RecencyFocusedDataset
   type: normal
   window:
     start: 0

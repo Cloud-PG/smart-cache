@@ -1,7 +1,7 @@
 --- # Simulation parameters
 sim:
-  data: ../../../../../datasets/SizeFocusedDataset/
-  outputFolder: ../../../../../results/sim_synthetic_dataset/SizeFocusedDataset
+  data: ../../../../datasets/SizeFocusedDataset/
+  outputFolder: ../../../../results/sim_synthetic_dataset/SizeFocusedDataset
   type: normal
   window:
     start: 0
