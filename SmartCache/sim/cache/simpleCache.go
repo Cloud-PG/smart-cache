@@ -133,6 +133,8 @@ func (cache *SimpleCache) Clear() {
 	cache.missCPUEff = 0.
 	cache.upperCPUEff = 0.
 	cache.lowerCPUEff = 0.
+	cache.numDailyHit = 0
+	cache.numDailyMiss = 0
 	cache.numReq = 0
 	cache.numAdded = 0
 	cache.numDeleted = 0
@@ -157,6 +159,8 @@ func (cache *SimpleCache) ClearStats() {
 	cache.missCPUEff = 0.
 	cache.upperCPUEff = 0.
 	cache.lowerCPUEff = 0.
+	cache.numDailyHit = 0
+	cache.numDailyMiss = 0
 	cache.numReq = 0
 	cache.numAdded = 0
 	cache.numDeleted = 0
