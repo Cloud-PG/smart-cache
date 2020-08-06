@@ -1,7 +1,7 @@
 --- # Simulation parameters
 sim:
-  data: ../../../../datasets/HighFrequencyDataset/
-  outputFolder: ../../../../results/sim_synthetic_dataset/HighFrequencyDataset
+  data: ../../../../../datasets/HighFrequencyDataset/
+  outputFolder: ../../../../../results/sim_synthetic_dataset/HighFrequencyDataset
   type: normal
   window:
     start: 0
