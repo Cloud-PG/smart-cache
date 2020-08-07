@@ -7,10 +7,10 @@ import (
 )
 
 const (
-	// MaxNumDaysStat limit to stay in the stats
-	MaxNumDaysStat = 7.
-	// DeltaDays2Purge limit the clean action of the stats
-	DeltaDays2Purge = 14.
+	// MaxNumDayDiff limit to stay in the stats
+	MaxNumDayDiff = 2.
+	// DeltaDaysStep limit the clean action of the stats
+	DeltaDaysStep = 6.
 )
 
 // Stats collector of statistics for weight function cache
@@ -41,7 +41,7 @@ func (statStruct *Stats) Clear() {
 // Dirty indicates if the stats needs a purge
 func (statStruct Stats) Dirty() bool {
 	numDays := statStruct.lastUpdateTime.Sub(statStruct.firstUpdateTime).Hours() / 24.
-	if numDays >= DeltaDays2Purge {
+	if numDays >= DeltaDaysStep {
 		logger.Debug("Dirty Stats", zap.Float64("numDays", numDays),
 			zap.String("lastTime", statStruct.lastUpdateTime.Format(time.UnixDate)),
 			zap.String("firstTime", statStruct.firstUpdateTime.Format(time.UnixDate)),
@@ -55,7 +55,7 @@ func (statStruct Stats) Dirty() bool {
 func (statStruct *Stats) Purge() {
 	numDeletedFiles := 0
 	for filename, stats := range statStruct.fileStats {
-		if !stats.InCache && stats.DiffLastUpdate() >= MaxNumDaysStat {
+		if !stats.InCache && stats.DiffLastUpdate(statStruct.lastUpdateTime) >= MaxNumDayDiff {
 			logger.Debug("Purge", zap.Bool("in cache", stats.InCache))
 			statStruct.weightSum -= stats.Weight
 			delete(statStruct.fileStats, filename)
@@ -171,8 +171,8 @@ type FileStats struct {
 }
 
 // DiffLastUpdate returns the number of days from the last update stats
-func (stats FileStats) DiffLastUpdate() float64 {
-	return stats.LastTimeRequested.Sub(stats.FirstTime).Hours() / 24.
+func (stats FileStats) DiffLastUpdate(curTime time.Time) float64 {
+	return curTime.Sub(stats.LastTimeRequested).Hours() / 24.
 }
 
 func (stats *FileStats) addInCache(tick int64, curTime *time.Time) {
