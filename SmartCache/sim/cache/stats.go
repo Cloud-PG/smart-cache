@@ -8,7 +8,7 @@ import (
 
 const (
 	// MaxNumDayDiff limit to stay in the stats
-	MaxNumDayDiff = 2.
+	MaxNumDayDiff = 4.
 	// DeltaDaysStep limit the clean action of the stats
 	DeltaDaysStep = 6.
 )
