@@ -1278,7 +1278,7 @@ func (cache *AIRL) ExtraOutput(info string) string {
 	case "evictionQTable":
 		if cache.evictionAgentOK {
 			result = cache.evictionAgent.QTableToString()
-			writeQTable("additionQTable.csv", result)
+			writeQTable("evictionQTable.csv", result)
 		} else {
 			result = ""
 		}
