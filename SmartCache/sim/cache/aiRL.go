@@ -2,6 +2,7 @@ package cache
 
 import (
 	"compress/gzip"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"math/rand"
@@ -34,8 +35,10 @@ type AIRL struct {
 	evictionAgentChoicesLogFile       *OutputCSV
 	additionAgentChoicesLogFileBuffer [][]string
 	evictionAgentChoicesLogFileBuffer [][]string
+	evictionCheckNextStateMap         map[[8]byte]bool
 	evictionAgentStep                 int64
 	evictionAgentK                    int64
+	evictionUseK                      bool
 	evictionAgentNumCalls             int64
 	evictionAgentNumForcedCalls       int64
 	evictionRO                        float64
@@ -54,11 +57,13 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 		args[2].(bool), // watermarks
 	)
 
-	additionFeatureMap := args[3].(string)
-	evictionFeatureMap := args[4].(string)
-	initEpsilon := args[5].(float64)
-	decayRateEpsilon := args[6].(float64)
+	useK := args[3].(bool)
+	additionFeatureMap := args[4].(string)
+	evictionFeatureMap := args[5].(string)
+	initEpsilon := args[6].(float64)
+	decayRateEpsilon := args[7].(float64)
 
+	cache.evictionUseK = useK
 	cache.evictionAgentK = 32
 	cache.evictionAgentStep = cache.evictionAgentK
 	cache.evictionRO = 0.42
@@ -120,6 +125,7 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 			cache.evictionAgentChoicesLogFile.Write(choicesLogHeader)
 			cache.evictionAgentChoicesLogFileBuffer = make([][]string, 0)
 		}
+		cache.evictionCheckNextStateMap = make(map[[8]byte]bool)
 		cache.evictionAgentOK = true
 	} else {
 		cache.evictionAgentOK = false
@@ -142,6 +148,9 @@ func (cache *AIRL) ClearStats() {
 	cache.actionCounters[qlearn.ActionDeleteQuarter] = 0
 	cache.actionCounters[qlearn.ActionDeleteOne] = 0
 	cache.actionCounters[qlearn.ActionNotDelete] = 0
+	if !cache.evictionUseK {
+		cache.callEvictionAgent(false)
+	}
 }
 
 // Dumps the AIRL cache
@@ -767,13 +776,24 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 }
 
 func (cache *AIRL) checkEvictionNextState(oldStateIdx int, newStateIdx int) bool {
-	oldState := cache.evictionAgent.QTable.States[oldStateIdx]
-	newState := cache.evictionAgent.QTable.States[newStateIdx]
-	catSizeIdx := cache.evictionFeatureManager.FeatureIdxMap["catSize"]
-	catNumReqIdx := cache.evictionFeatureManager.FeatureIdxMap["catNumReq"]
-	catDeltaLastRequestIdx := cache.evictionFeatureManager.FeatureIdxMap["catDeltaLastRequest"]
-	// catPercOccIdx := cache.evictionFeatureManager.FeatureIdxMap["catPercOcc"]
-	return newState[catSizeIdx] == oldState[catSizeIdx] && newState[catDeltaLastRequestIdx] == oldState[catDeltaLastRequestIdx] && newState[catNumReqIdx] >= oldState[catNumReqIdx]
+	curArgs := [8]byte{}
+
+	binary.BigEndian.PutUint32(curArgs[:4], uint32(oldStateIdx))
+	binary.BigEndian.PutUint32(curArgs[4:], uint32(newStateIdx))
+
+	isNext, inMap := cache.evictionCheckNextStateMap[curArgs]
+	if !inMap {
+		oldState := cache.evictionAgent.QTable.States[oldStateIdx]
+		newState := cache.evictionAgent.QTable.States[newStateIdx]
+		catSizeIdx := cache.evictionFeatureManager.FeatureIdxMap["catSize"]
+		catNumReqIdx := cache.evictionFeatureManager.FeatureIdxMap["catNumReq"]
+		catDeltaLastRequestIdx := cache.evictionFeatureManager.FeatureIdxMap["catDeltaLastRequest"]
+		// catPercOccIdx := cache.evictionFeatureManager.FeatureIdxMap["catPercOcc"]
+		isNext = newState[catSizeIdx] == oldState[catSizeIdx] && newState[catDeltaLastRequestIdx] == oldState[catDeltaLastRequestIdx] && newState[catNumReqIdx] >= oldState[catNumReqIdx]
+	}
+
+	cache.evictionCheckNextStateMap[curArgs] = isNext
+	return isNext
 }
 
 func (cache *AIRL) delayedRewardEvictionAgent(filename int64, inCacheTick int64, hit bool) {
@@ -827,9 +847,6 @@ func (cache *AIRL) delayedRewardAdditionAgent(filename int64) {
 			}
 			if !prevMemory.Hit && nextMemory.Hit && prevMemory.Action == qlearn.ActionStore {
 				reward += 1.
-				if nextMemory.DeltaT < prevMemory.DeltaT {
-					reward += 1.
-				}
 			}
 			if prevMemory.Hit && nextMemory.Hit {
 				reward += 1.
@@ -877,7 +894,7 @@ func (cache *AIRL) rewardEvictionAfterForcedCall(added bool) {
 // BeforeRequest of LRU cache
 func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) {
 	//fmt.Println("+++ REQUESTED FILE +++-> ", request.Filename)
-	if cache.evictionAgentOK {
+	if cache.evictionAgentOK && cache.evictionUseK {
 		// fmt.Println(cache.evictionAgentStep)
 		if cache.evictionAgentStep <= 0 {
 			_, deletedFiles := cache.callEvictionAgent(false)
