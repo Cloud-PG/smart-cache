@@ -115,9 +115,9 @@ def dashboard(results: 'Results'):
         _EXTERNAL_STYLESHEETS, dbc.themes.BOOTSTRAP
     ], suppress_callback_exceptions=True)
 
-    tab_files = dbc.Card(
+    _TAB_FILES = dbc.Card(
         dbc.CardBody(
-            [
+                [
                 dcc.Checklist(
                     options=[
                         {'label': f" {filename}", 'value': filename}
@@ -128,10 +128,10 @@ def dashboard(results: 'Results'):
                     id="selected-files",
                 ),
             ]
-        ),
-    )
+                ),
+        )
 
-    tab_filters = dbc.Card(
+    _TAB_FILTERS = dbc.Card(
         dbc.CardBody(
             [
                 dcc.Checklist(
@@ -147,7 +147,21 @@ def dashboard(results: 'Results'):
         ),
     )
 
-    tab_columns = dbc.Card(
+    _TAB_MEASURES = dbc.Card(
+        dbc.CardBody(
+            [
+                html.H1("MEASURES"),
+            ]
+        ),
+    )
+
+    _TAB_TABLE = dbc.Card(
+        dbc.CardBody(
+            id="table",
+        ),
+    )
+
+    _TAB_COLUMNS = dbc.Card(
         dbc.Spinner(
             dbc.CardBody(
                 id="graphs",
@@ -155,28 +169,33 @@ def dashboard(results: 'Results'):
         ),
     )
 
-    tabs = dbc.Tabs(
+    _TABS = dbc.Tabs(
         [
-            dbc.Tab(tab_files, label="Files", tab_id="tab-files"),
-            dbc.Tab(tab_filters, label="Filters", tab_id="tab-filters"),
-            dbc.Tab(tab_columns, label="Columns", tab_id="tab-columns"),
+            dbc.Tab(_TAB_FILES, label="Files", tab_id="tab-files"),
+            dbc.Tab(_TAB_FILTERS, label="Filters", tab_id="tab-filters"),
+            dbc.Tab(_TAB_COLUMNS, label="Columns", tab_id="tab-columns"),
+            dbc.Tab(_TAB_MEASURES, label="Measures", tab_id="tab-measures"),
+            dbc.Tab(_TAB_TABLE, label="Table", tab_id="tab-table"),
         ],
         id="tabs",
     )
 
     @app.callback(
-        Output("graphs", "children"),
-        [Input("tabs", "active_tab")],
-        [
+       [
+           Output("graphs", "children"),
+           Output("table", "children"),
+       ],
+       [Input("tabs", "active_tab")],
+       [
             State("selected-files", "value"),
             State("selected-filters", "value"),
         ]
-    )
+       )
     def switch_tab(at, files, filters):
         if at == "tab-files":
-            return ""
+            return "", ""
         elif at == "tab-filters":
-            return ""
+            return "", ""
         elif at == "tab-columns":
             figures = []
             for column in _COLUMNS[1:]:
@@ -203,11 +222,15 @@ def dashboard(results: 'Results'):
 
                 figures.append(dcc.Graph(figure=fig))
 
-            return figures
+            return figures, ""
+        elif at == "tab-measures":
+            return "", ""
+        elif at == "tab-table":
+            return "", ""
 
     app.layout = html.Div(children=[
         html.H1(children='Result Dashboard'),
-        tabs
+        _TABS
     ], style={'padding': "1em"})
 
     app.run_server(debug=True)
