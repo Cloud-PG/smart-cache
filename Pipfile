@@ -46,6 +46,8 @@ graphviz = "*"
 tabulate = "*"
 modin = {extras = ["all"], version = "*"}
 dask = "*"
+dash = "*"
+dash-bootstrap-components = "*"
 
 [requires]
 python_version = "3"
