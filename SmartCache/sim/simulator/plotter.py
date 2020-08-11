@@ -564,7 +564,7 @@ def plot_measure(tools: list,
                 cache_size = get_cache_size(cache_name)
                 points = (
                     values[READ_ON_MISS_DATA] - values[WRITTEN_DATA]
-                ) / cache_size*100
+                ) / values[READ_DATA]
             elif target == "throughput":
                 points = (
                     (

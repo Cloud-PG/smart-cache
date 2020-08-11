@@ -81,7 +81,7 @@ class Results(object):
     def get_df(self, file_: str, filters: list):
         cur_elm = self._elemts[file_]
         if len(filters) != 0:
-            if len(cur_elm.components.intersection(set(filters))) != 0:
+            if len(cur_elm.components.intersection(set(filters))) == len(filters):
                 return cur_elm.df
             else:
                 return None
@@ -109,6 +109,56 @@ def aggregate_results(folder: str):
     return results
 
 
+def _get_cache_size(cache_filename):
+    if cache_filename.find("T_") != -1:
+        cache_size = float(cache_filename.split("T_")
+                           [0].rsplit("_", 1)[-1])
+        return float(cache_size * 1024**2)
+    elif cache_filename.find("G_") != -1:
+        cache_size = float(cache_filename.split("G_")
+                           [0].rsplit("_", 1)[-1])
+        return float(cache_size * 1024)
+    elif cache_filename.find("M_") != -1:
+        cache_size = float(cache_filename.split("M_")
+                           [0].rsplit("_", 1)[-1])
+        return float(cache_size * 1024)
+    else:
+        raise Exception(
+            f"Error: '{cache_filename}' cache name with unspecified size...")
+
+
+def _measure_throughput(df: 'pd.DataFrame') -> 'pd.Series':
+    return df['read on hit data'] - df['written data']
+
+
+def _measure_cost(df: 'pd.DataFrame') -> 'pd.Series':
+    return df['written data'] + df['deleted data']
+
+
+_MEASURES = {
+    'Throughput': _measure_throughput,
+    'Cost': _measure_cost,
+}
+
+
+def _get_measures(cache_filename: str, df: 'pd.DataFrame') -> list:
+    measures = [cache_filename]
+
+    cache_size = _get_cache_size(pathlib.Path(cache_filename).stem)
+
+    # Throughput
+    measures.append(
+        (_measure_throughput(df).mean() / cache_size) * 100.
+    )
+
+    # Cost
+    measures.append(
+        (_measure_cost(df).mean() / cache_size) * 100.
+    )
+
+    return measures
+
+
 def dashboard(results: 'Results'):
 
     app = dash.Dash("Result Dashboard", external_stylesheets=[
@@ -117,7 +167,7 @@ def dashboard(results: 'Results'):
 
     _TAB_FILES = dbc.Card(
         dbc.CardBody(
-                [
+            [
                 dcc.Checklist(
                     options=[
                         {'label': f" {filename}", 'value': filename}
@@ -128,8 +178,8 @@ def dashboard(results: 'Results'):
                     id="selected-files",
                 ),
             ]
-                ),
-        )
+        ),
+    )
 
     _TAB_FILTERS = dbc.Card(
         dbc.CardBody(
@@ -147,24 +197,26 @@ def dashboard(results: 'Results'):
         ),
     )
 
+    _TAB_COLUMNS = dbc.Card(
+        dbc.Spinner(
+            dbc.CardBody(
+                id="graphs-columns",
+            ),
+        ),
+    )
+
     _TAB_MEASURES = dbc.Card(
-        dbc.CardBody(
-            [
-                html.H1("MEASURES"),
-            ]
+        dbc.Spinner(
+            dbc.CardBody(
+                id="graphs-measures",
+            ),
         ),
     )
 
     _TAB_TABLE = dbc.Card(
-        dbc.CardBody(
-            id="table",
-        ),
-    )
-
-    _TAB_COLUMNS = dbc.Card(
         dbc.Spinner(
             dbc.CardBody(
-                id="graphs",
+                id="table",
             ),
         ),
     )
@@ -180,22 +232,23 @@ def dashboard(results: 'Results'):
         id="tabs",
     )
 
-    @app.callback(
-       [
-           Output("graphs", "children"),
-           Output("table", "children"),
-       ],
-       [Input("tabs", "active_tab")],
-       [
+    @ app.callback(
+        [
+            Output("graphs-columns", "children"),
+            Output("graphs-measures", "children"),
+            Output("table", "children"),
+        ],
+        [Input("tabs", "active_tab")],
+        [
             State("selected-files", "value"),
             State("selected-filters", "value"),
         ]
-       )
+    )
     def switch_tab(at, files, filters):
         if at == "tab-files":
-            return "", ""
+            return "", "", ""
         elif at == "tab-filters":
-            return "", ""
+            return "", "", ""
         elif at == "tab-columns":
             figures = []
             for column in _COLUMNS[1:]:
@@ -218,15 +271,68 @@ def dashboard(results: 'Results'):
                     title=column,
                     xaxis_title='day',
                     yaxis_title=column,
+                    autosize=False,
+                    width=1920,
+                    height=800,
                 )
 
                 figures.append(dcc.Graph(figure=fig))
+                figures.append(html.Hr())
 
-            return figures, ""
+            return figures, "", ""
         elif at == "tab-measures":
-            return "", ""
+            figures = []
+            for name, function in _MEASURES.items():
+
+                fig = go.Figure(layout=_LAYOUT)
+
+                for file_ in files:
+                    df = results.get_df(file_, filters)
+                    if df is not None:
+                        fig.add_trace(
+                            go.Scatter(
+                                x=df["date"],
+                                y=function(df),
+                                mode='lines',
+                                name=file_,
+                            )
+                        )
+
+                fig.update_layout(
+                    title=name,
+                    xaxis_title='day',
+                    yaxis_title=name,
+                    autosize=False,
+                    width=1920,
+                    height=800,
+                )
+
+                figures.append(dcc.Graph(figure=fig))
+                figures.append(html.Hr())
+
+            return "", figures, ""
         elif at == "tab-table":
-            return "", ""
+            table = []
+            for file_ in files:
+                df = results.get_df(file_, filters)
+                if df is not None:
+                    table.append(_get_measures(file_, df))
+            df = pd.DataFrame(
+                table,
+                columns=[
+                    "file", "Throughput", "Cost",
+                ]
+            )
+            df = df.sort_values(
+                by=["Throughput", "Cost"],
+                ascending=[False, True]
+            )
+
+            table = dbc.Table.from_dataframe(
+                df, striped=True, bordered=True, hover=True
+            )
+            return "", "", table
+        return "", "", ""
 
     app.layout = html.Div(children=[
         html.H1(children='Result Dashboard'),
