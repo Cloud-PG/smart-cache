@@ -1,4 +1,5 @@
 import pathlib
+from os import path
 
 import dash
 import dash_bootstrap_components as dbc
@@ -148,7 +149,7 @@ def _get_measures(cache_filename: str, df: 'pd.DataFrame') -> list:
 
     # Throughput
     measures.append(
-        (_measure_throughput(df).mean() / cache_size) * 100.
+        _measure_throughput(df).mean()
     )
 
     # Cost
@@ -232,7 +233,7 @@ def dashboard(results: 'Results'):
         id="tabs",
     )
 
-    @ app.callback(
+    @app.callback(
         [
             Output("graphs-columns", "children"),
             Output("graphs-measures", "children"),
@@ -247,76 +248,102 @@ def dashboard(results: 'Results'):
     def switch_tab(at, files, filters):
         if at == "tab-files":
             return "", "", ""
+
         elif at == "tab-filters":
             return "", "", ""
+
         elif at == "tab-columns":
             figures = []
             for column in _COLUMNS[1:]:
 
-                fig = go.Figure(layout=_LAYOUT)
-
+                files2plot = []
                 for file_ in files:
                     df = results.get_df(file_, filters)
                     if df is not None and column in df.columns:
-                        fig.add_trace(
-                            go.Scatter(
-                                x=df["date"],
-                                y=df[column],
-                                mode='lines',
-                                name=file_,
-                            )
+                        files2plot.append((file_, df))
+
+                prefix = path.commonprefix([file_ for file_, _ in files2plot])
+
+                fig = go.Figure(layout=_LAYOUT)
+
+                for file_, df in files2plot:
+                    name = file_.replace(prefix, "")
+                    fig.add_trace(
+                        go.Scatter(
+                            x=df["date"],
+                            y=df[column],
+                            mode='lines',
+                            name=name,
                         )
+                    )
 
                 fig.update_layout(
                     title=column,
                     xaxis_title='day',
                     yaxis_title=column,
-                    autosize=False,
-                    width=1920,
+                    autosize=True,
+                    # width=1920,
                     height=800,
                 )
 
                 figures.append(dcc.Graph(figure=fig))
                 figures.append(html.Hr())
-
             return figures, "", ""
+
         elif at == "tab-measures":
             figures = []
-            for name, function in _MEASURES.items():
+            for measure, function in _MEASURES.items():
 
-                fig = go.Figure(layout=_LAYOUT)
-
+                files2plot = []
                 for file_ in files:
                     df = results.get_df(file_, filters)
                     if df is not None:
-                        fig.add_trace(
-                            go.Scatter(
-                                x=df["date"],
-                                y=function(df),
-                                mode='lines',
-                                name=file_,
-                            )
+                        files2plot.append((file_, df))
+
+                prefix = path.commonprefix([file_ for file_, _ in files2plot])
+
+                fig = go.Figure(layout=_LAYOUT)
+
+                for file_, df in files2plot:
+                    name = file_.replace(prefix, "")
+                    fig.add_trace(
+                        go.Scatter(
+                            x=df["date"],
+                            y=function(df),
+                            mode='lines',
+                            name=name,
                         )
+                    )
 
                 fig.update_layout(
-                    title=name,
+                    title=measure,
                     xaxis_title='day',
-                    yaxis_title=name,
-                    autosize=False,
-                    width=1920,
+                    yaxis_title=measure,
+                    autosize=True,
+                    # width=1920,
                     height=800,
                 )
 
                 figures.append(dcc.Graph(figure=fig))
                 figures.append(html.Hr())
-
             return "", figures, ""
+
         elif at == "tab-table":
             table = []
+
+            files2plot = []
             for file_ in files:
                 df = results.get_df(file_, filters)
                 if df is not None:
-                    table.append(_get_measures(file_, df))
+                    files2plot.append((file_, df))
+
+            prefix = path.commonprefix([file_ for file_, _ in files2plot])
+
+            for file_, df in files2plot:
+                values = _get_measures(file_, df)
+                values[0] = values[0].replace(prefix, "")
+                table.append(values)
+
             df = pd.DataFrame(
                 table,
                 columns=[
@@ -332,6 +359,7 @@ def dashboard(results: 'Results'):
                 df, striped=True, bordered=True, hover=True
             )
             return "", "", table
+
         return "", "", ""
 
     app.layout = html.Div(children=[
