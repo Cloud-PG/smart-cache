@@ -136,9 +136,29 @@ def _measure_cost(df: 'pd.DataFrame') -> 'pd.Series':
     return df['written data'] + df['deleted data']
 
 
+def _measure_cpu_eff(df: 'pd.DataFrame') -> 'pd.Series':
+    return df['CPU efficiency']
+
+
+def _measure_avg_free_space(df: 'pd.DataFrame') -> 'pd.Series':
+    return df['avg free space']
+
+
+def _measure_std_dev_free_space(df: 'pd.DataFrame') -> 'pd.Series':
+    return df['std dev free space']
+
+
+def _measure_hit_rate(df: 'pd.DataFrame') -> 'pd.Series':
+    return df['hit rate']
+
+
 _MEASURES = {
     'Throughput': _measure_throughput,
     'Cost': _measure_cost,
+    'CPU Eff.': _measure_cpu_eff,
+    'Avg. Free Space': _measure_avg_free_space,
+    'Std. Dev. Free Space': _measure_std_dev_free_space,
+    'Hit rate': _measure_hit_rate,
 }
 
 
@@ -155,6 +175,26 @@ def _get_measures(cache_filename: str, df: 'pd.DataFrame') -> list:
     # Cost
     measures.append(
         (_measure_cost(df).mean() / cache_size) * 100.
+    )
+
+    # CPU Efficiency
+    measures.append(
+        _measure_cpu_eff(df).mean()
+    )
+
+    # Avg. Free Space
+    measures.append(
+        (_measure_avg_free_space(df).mean() / cache_size) * 100.
+    )
+
+    # Std. Dev. Free Space
+    measures.append(
+        (_measure_std_dev_free_space(df).mean() / cache_size) * 100.
+    )
+
+    # Hit rate
+    measures.append(
+        _measure_hit_rate(df).mean()
     )
 
     return measures
@@ -347,13 +387,15 @@ def dashboard(results: 'Results'):
             df = pd.DataFrame(
                 table,
                 columns=[
-                    "file", "Throughput", "Cost",
+                    "file", "Throughput", "Cost", "CPU Eff.", 
+                    "Avg. Free Space", "Std. Dev. Free Space", "Hit rate"
                 ]
             )
             df = df.sort_values(
-                by=["Throughput", "Cost"],
-                ascending=[False, True]
+                by=["Throughput", "Cost", "Hit rate"],
+                ascending=[False, True, False],
             )
+            df = df.round(2)
 
             table = dbc.Table.from_dataframe(
                 df, striped=True, bordered=True, hover=True
