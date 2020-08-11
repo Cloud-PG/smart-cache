@@ -859,7 +859,7 @@ func simCommand() *cobra.Command {
 				cache.ExtraOutput(curCacheInstance, "evictionQTable")
 			}
 
-			_ := cache.Terminate(curCacheInstance)
+			_ = cache.Terminate(curCacheInstance)
 
 			errViperWrite := viper.WriteConfigAs("config.yaml")
 			if errViperWrite != nil {
