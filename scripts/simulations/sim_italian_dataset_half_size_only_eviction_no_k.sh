@@ -2,12 +2,12 @@
 
 python -m SmartCache.sim.utils compile --release "true" &&
 
-simulator sim ../../config/simulations/italian_dataset_only_eviction_no_k/50T/lru.yml &&
-simulator sim ../../config/simulations/italian_dataset_only_eviction_no_k/50T/lfu.yml &&
-simulator sim ../../config/simulations/italian_dataset_only_eviction_no_k/50T/sizeBig.yml &&
-simulator sim ../../config/simulations/italian_dataset_only_eviction_no_k/50T/sizeSmall.yml &&
+simulator sim ../../config/simulations/italian_dataset_no_k_only_eviction/50T/lru.yml &&
+simulator sim ../../config/simulations/italian_dataset_no_k_only_eviction/50T/lfu.yml &&
+simulator sim ../../config/simulations/italian_dataset_no_k_only_eviction/50T/sizeBig.yml &&
+simulator sim ../../config/simulations/italian_dataset_no_k_only_eviction/50T/sizeSmall.yml &&
 
-simulator sim ../../config/simulations/italian_dataset_only_eviction_no_k/50T/scdl.yml &&
+simulator sim ../../config/simulations/italian_dataset_no_k_only_eviction/50T/scdl.yml &&
 
 ### ----- Plot results -----
 
