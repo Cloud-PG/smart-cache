@@ -392,9 +392,9 @@ func simCommand() *cobra.Command {
 
 			// Output files
 			simOutFile := ""
-			dumpFileName := baseName + ".json.gz"
-			resultFileName := baseName + "_results.csv"
-			resultRunStatsName := baseName + "_run_stats.json"
+			dumpFileName := "cache_dump.json.gz"
+			resultFileName := "simulation_results.csv"
+			resultRunStatsName := "simulation_run_stats.json"
 
 			if simOutFile == "" {
 				simOutFile = resultFileName
