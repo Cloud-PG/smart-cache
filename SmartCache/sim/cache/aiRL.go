@@ -953,13 +953,17 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) 
 		// fmt.Println(cache.additionAgentBadQValue, cache.evictionAgentBadQValue)
 
 		if cache.additionAgentBadQValue >= maxBadQValueInRow || cache.evictionAgentBadQValue >= maxBadQValueInRow {
-			cache.additionAgentBadQValue = 0
-			cache.additionAgent.UnleashEpsilon()
+			if cache.additionAgentOK {
+				cache.additionAgentBadQValue = 0
+				cache.additionAgent.UnleashEpsilon()
+			}
 
-			cache.evictionAgentBadQValue = 0
-			cache.evictionAgent.UnleashEpsilon()
-			cache.evictionAgentK = cache.evictionAgentK>>1 + 1
-			cache.evictionAgentStep = cache.evictionAgentK
+			if cache.evictionAgentOK {
+				cache.evictionAgentBadQValue = 0
+				cache.evictionAgent.UnleashEpsilon()
+				cache.evictionAgentK = cache.evictionAgentK>>1 + 1
+				cache.evictionAgentStep = cache.evictionAgentK
+			}
 		}
 	}
 
