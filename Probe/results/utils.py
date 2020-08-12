@@ -110,11 +110,10 @@ class Results(object):
     def files(self) -> 'list[str]':
         return list(sorted(self._elemts.keys()))
 
-    def get_df(self, file_: str, filters: tuple):
+    def get_df(self, file_: str, filters_all: list, filters_any: list):
         cur_elm = self._elemts[file_]
-        all_, any_ = filters
-        if len(all_) != 0 or len(any_) != 0:
-            if len(cur_elm.components.intersection(set(all_))) == len(all_) and len(cur_elm.components.intersection(set(any_))) != 0:
+        if len(filters_all) != 0 or len(filters_any) != 0:
+            if len(cur_elm.components.intersection(set(filters_all))) == len(filters_all) and len(cur_elm.components.intersection(set(filters_any))) != 0:
                 return cur_elm.df
             else:
                 return None
@@ -338,7 +337,7 @@ def dashboard(results: 'Results'):
 
                 files2plot = []
                 for file_ in files:
-                    df = results.get_df(file_, (filters_all, filters_any))
+                    df = results.get_df(file_, filters_all, filters_any)
                     if df is not None and column in df.columns:
                         files2plot.append((file_, df))
 
@@ -380,7 +379,7 @@ def dashboard(results: 'Results'):
 
                 files2plot = []
                 for file_ in files:
-                    df = results.get_df(file_, (filters_all, filters_any))
+                    df = results.get_df(file_, filters_all, filters_any)
                     if df is not None:
                         files2plot.append((file_, df))
 
@@ -419,7 +418,7 @@ def dashboard(results: 'Results'):
 
             files2plot = []
             for file_ in files:
-                df = results.get_df(file_, (filters_all, filters_any))
+                df = results.get_df(file_, filters_all, filters_any)
                 if df is not None:
                     files2plot.append((file_, df))
 
