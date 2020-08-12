@@ -923,7 +923,7 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) 
 			if cache.additionAgentPrevQValue == 0. {
 				cache.additionAgentPrevQValue = cache.additionAgent.QValue
 			} else {
-				if cache.additionAgent.QValue < cache.additionAgentPrevQValue {
+				if cache.additionAgent.QValue <= cache.additionAgentPrevQValue {
 					cache.additionAgentBadQValue++
 				} else {
 					cache.additionAgentBadQValue = 0
@@ -938,7 +938,7 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) 
 			if cache.evictionAgentPrevQValue == 0. {
 				cache.evictionAgentPrevQValue = cache.evictionAgent.QValue
 			} else {
-				if cache.evictionAgent.QValue < cache.evictionAgentPrevQValue {
+				if cache.evictionAgent.QValue <= cache.evictionAgentPrevQValue {
 					cache.evictionAgentBadQValue++
 				} else {
 					cache.evictionAgentBadQValue = 0
