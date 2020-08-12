@@ -110,7 +110,15 @@ def aggregate_results(folder: str):
     return results
 
 
-def _get_cache_size(cache_filename):
+def _get_cache_size(cache_filename: str) -> float:
+    """Returns the cache size from the result filename
+
+    :param cache_filename: result filename
+    :type cache_filename: str
+    :raises Exception: if the name does not contain the size
+    :return: the size of the cache in MegaBytes
+    :rtype: float
+    """
     if cache_filename.find("T_") != -1:
         cache_size = float(cache_filename.split("T_")
                            [0].rsplit("_", 1)[-1])
@@ -126,6 +134,24 @@ def _get_cache_size(cache_filename):
     else:
         raise Exception(
             f"Error: '{cache_filename}' cache name with unspecified size...")
+
+
+def _get_cache_bandwidth(cache_filename: str) -> float:
+    """Returns the cache bandwidth from the result filename
+
+    :param cache_filename: result filename
+    :type cache_filename: str
+    :raises Exception: if the name does not contain the bandwidth
+    :return: the daily bandwidth in megabytes
+    :rtype: float
+    """
+    if cache_filename.find("Gbit_") != -1:
+        bandwidth = float(cache_filename.split("Gbit_")
+                          [0].rsplit("_", 1)[-1])
+        return (1000. / 8.) * 60. * 60. * 24. * bandwidth
+    else:
+        raise Exception(
+            f"Error: '{cache_filename}' cache name with unspecified bandwidth...")
 
 
 def _measure_throughput(df: 'pd.DataFrame') -> 'pd.Series':
@@ -148,6 +174,10 @@ def _measure_std_dev_free_space(df: 'pd.DataFrame') -> 'pd.Series':
     return df['std dev free space']
 
 
+def _measure_bandwidth(df: 'pd.DataFrame', bandwidth: float) -> 'pd.Series':
+    return (df['read on miss data'] / bandwidth) * 100.
+
+
 def _measure_hit_rate(df: 'pd.DataFrame') -> 'pd.Series':
     return df['hit rate']
 
@@ -158,6 +188,7 @@ _MEASURES = {
     'CPU Eff.': _measure_cpu_eff,
     'Avg. Free Space': _measure_avg_free_space,
     'Std. Dev. Free Space': _measure_std_dev_free_space,
+    'Bandwidth': _measure_bandwidth,
     'Hit rate': _measure_hit_rate,
 }
 
@@ -166,6 +197,7 @@ def _get_measures(cache_filename: str, df: 'pd.DataFrame') -> list:
     measures = [cache_filename]
 
     cache_size = _get_cache_size(pathlib.Path(cache_filename).stem)
+    bandwidth = _get_cache_bandwidth(pathlib.Path(cache_filename).stem)
 
     # Throughput
     measures.append(
@@ -190,6 +222,11 @@ def _get_measures(cache_filename: str, df: 'pd.DataFrame') -> list:
     # Std. Dev. Free Space
     measures.append(
         (_measure_std_dev_free_space(df).mean() / cache_size) * 100.
+    )
+    
+    # Bandwidth
+    measures.append(
+        _measure_bandwidth(df, bandwidth)
     )
 
     # Hit rate
@@ -332,7 +369,9 @@ def dashboard(results: 'Results'):
 
         elif at == "tab-measures":
             figures = []
-            for measure, function in _MEASURES.items():
+            for measure, function in sorted(
+                    _MEASURES.items(), key=lambda elm: elm[0]
+            ):
 
                 files2plot = []
                 for file_ in files:
@@ -345,11 +384,16 @@ def dashboard(results: 'Results'):
                 fig = go.Figure(layout=_LAYOUT)
 
                 for file_, df in files2plot:
+                    args = []
+                    if measure == "Bandwidth":
+                        bandwidth = _get_cache_bandwidth(file_)
+                        args.append(bandwidth)
+
                     name = file_.replace(prefix, "")
                     fig.add_trace(
                         go.Scatter(
                             x=df["date"],
-                            y=function(df),
+                            y=function(df, *bandwidth),
                             mode='lines',
                             name=name,
                         )
@@ -387,8 +431,9 @@ def dashboard(results: 'Results'):
             df = pd.DataFrame(
                 table,
                 columns=[
-                    "file", "Throughput", "Cost", "CPU Eff.", 
-                    "Avg. Free Space", "Std. Dev. Free Space", "Hit rate"
+                    "file", "Throughput", "Cost", "CPU Eff.",
+                    "Avg. Free Space", "Std. Dev. Free Space", 
+                    "Bandwidth", "Hit rate"
                 ]
             )
             df = df.sort_values(
