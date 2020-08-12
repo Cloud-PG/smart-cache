@@ -110,10 +110,11 @@ class Results(object):
     def files(self) -> 'list[str]':
         return list(sorted(self._elemts.keys()))
 
-    def get_df(self, file_: str, filters: list):
+    def get_df(self, file_: str, filters: tuple):
         cur_elm = self._elemts[file_]
-        if len(filters) != 0:
-            if len(cur_elm.components.intersection(set(filters))) == len(filters):
+        all_, any_ = filters
+        if len(all_) != 0 or len(any_) != 0:
+            if len(cur_elm.components.intersection(set(all_))) == len(all_) and len(cur_elm.components.intersection(set(any_))) != 0:
                 return cur_elm.df
             else:
                 return None
@@ -251,6 +252,7 @@ def dashboard(results: 'Results'):
     _TAB_FILTERS = dbc.Card(
         dbc.CardBody(
             [
+                html.H2("All"),
                 dcc.Checklist(
                     options=[
                         {'label': f" {component}", 'value': component}
@@ -258,7 +260,18 @@ def dashboard(results: 'Results'):
                     ],
                     value=[],
                     labelStyle={'display': 'block'},
-                    id="selected-filters",
+                    id="selected-filters-all",
+                ),
+                html.Br(),
+                html.H2("Any"),
+                dcc.Checklist(
+                    options=[
+                        {'label': f" {component}", 'value': component}
+                        for component in results.components
+                    ],
+                    value=[],
+                    labelStyle={'display': 'block'},
+                    id="selected-filters-any",
                 ),
             ]
         ),
@@ -308,10 +321,11 @@ def dashboard(results: 'Results'):
         [Input("tabs", "active_tab")],
         [
             State("selected-files", "value"),
-            State("selected-filters", "value"),
+            State("selected-filters-all", "value"),
+            State("selected-filters-any", "value"),
         ]
     )
-    def switch_tab(at, files, filters):
+    def switch_tab(at, files, filters_all, filters_any):
         if at == "tab-files":
             return "", "", ""
 
@@ -324,7 +338,7 @@ def dashboard(results: 'Results'):
 
                 files2plot = []
                 for file_ in files:
-                    df = results.get_df(file_, filters)
+                    df = results.get_df(file_, (filters_all, filters_any))
                     if df is not None and column in df.columns:
                         files2plot.append((file_, df))
 
@@ -366,7 +380,7 @@ def dashboard(results: 'Results'):
 
                 files2plot = []
                 for file_ in files:
-                    df = results.get_df(file_, filters)
+                    df = results.get_df(file_, (filters_all, filters_any))
                     if df is not None:
                         files2plot.append((file_, df))
 
@@ -405,7 +419,7 @@ def dashboard(results: 'Results'):
 
             files2plot = []
             for file_ in files:
-                df = results.get_df(file_, filters)
+                df = results.get_df(file_, (filters_all, filters_any))
                 if df is not None:
                     files2plot.append((file_, df))
 
