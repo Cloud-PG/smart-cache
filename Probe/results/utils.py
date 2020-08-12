@@ -112,8 +112,10 @@ class Results(object):
 
     def get_df(self, file_: str, filters_all: list, filters_any: list):
         cur_elm = self._elemts[file_]
-        all_ = len(cur_elm.components.intersection(set(filters_all))) == len(filters_all) if len(filters_all) > 0 else True
-        any_ = len(cur_elm.components.intersection(set(filters_any))) != 0 if len(filters_any) > 0 else True
+        all_ = len(cur_elm.components.intersection(set(filters_all))) == len(
+            filters_all) if len(filters_all) > 0 else True
+        any_ = len(cur_elm.components.intersection(set(filters_any))
+                   ) != 0 if len(filters_any) > 0 else True
         if all_ and any_:
             return cur_elm.df
         return None
@@ -224,14 +226,13 @@ def _get_measures(cache_filename: str, df: 'pd.DataFrame') -> list:
     return measures
 
 
-_CACHE = {
-    'columns': {},
-    'measures': {},
-    'tables': {},
-}
-
-
 def dashboard(results: 'Results'):
+
+    _CACHE = {
+        'columns': {},
+        'measures': {},
+        'tables': {},
+    }
 
     app = dash.Dash("Result Dashboard", external_stylesheets=[
         _EXTERNAL_STYLESHEETS, dbc.themes.BOOTSTRAP
