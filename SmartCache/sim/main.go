@@ -348,29 +348,32 @@ func simCommand() *cobra.Command {
 
 			// Simulation variables
 			var (
-				numDailyRecords    int64
-				numInvalidRecords  int64
-				numJumpedRecords   int64
-				numFilteredRecords int64
-				totNumRecords      int64
-				totIterations      uint64
-				numIterations      uint64
-				windowStepCounter  int
-				windowCounter      int
-				recordFilter       cache.Filter
-				dataTypeFilter     cache.Filter
-				succesJobFilter    = cache.SuccessJob{}
-				cacheSizeString    string
-				redirectedData     float64
-				numRedirected      int64
+				numDailyRecords      int64
+				numInvalidRecords    int64
+				numJumpedRecords     int64
+				numFilteredRecords   int64
+				totNumRecords        int64
+				totIterations        uint64
+				numIterations        uint64
+				windowStepCounter    int
+				windowCounter        int
+				recordFilter         cache.Filter
+				dataTypeFilter       cache.Filter
+				succesJobFilter      = cache.SuccessJob{}
+				cacheSizeString      string
+				cacheBandwidthString string
+				redirectedData       float64
+				numRedirected        int64
 			)
 
 			// Generate simulation file output basename
 			cacheSizeString = fmt.Sprintf("%0.0f%s", cacheSize, strings.ToUpper(cacheSizeUnit))
+			cacheBandwidthString = fmt.Sprintf("%0.0fGbit", simBandwidth)
 
 			baseName := strings.Join([]string{
 				cacheType,
 				cacheSizeString,
+				cacheBandwidthString,
 				simRegion,
 			}, "_")
 
