@@ -56,9 +56,9 @@ type Cache interface {
 	ExtraOutput(string) string
 
 	HitRate() float64
-	HitOverMiss() float64
 	WeightedHitRate() float64
 	Size() float64
+	GetMaxSize() float64
 	Occupancy() float64
 	AvgFreeSpace() float64
 	StdDevFreeSpace() float64
@@ -72,6 +72,7 @@ type Cache interface {
 	CPUMissEff() float64
 	CPUEffUpperBound() float64
 	CPUEffLowerBound() float64
+	Bandwidth() float64
 	BandwidthUsage() float64
 	NumRequests() int64
 	NumHits() int64
@@ -161,11 +162,6 @@ func HitRate(cache Cache) float64 {
 	return cache.HitRate()
 }
 
-// HitOverMiss of the current cache instance
-func HitOverMiss(cache Cache) float64 {
-	return cache.HitOverMiss()
-}
-
 // WeightedHitRate of the current cache instance
 func WeightedHitRate(cache Cache) float64 {
 	return cache.WeightedHitRate()
@@ -174,6 +170,11 @@ func WeightedHitRate(cache Cache) float64 {
 // Size of the current cache instance
 func Size(cache Cache) float64 {
 	return cache.Size()
+}
+
+// GetMaxSize of the current cache instance
+func GetMaxSize(cache Cache) float64 {
+	return cache.GetMaxSize()
 }
 
 // Occupancy of the current cache instance
@@ -229,6 +230,11 @@ func CPUEffUpperBound(cache Cache) float64 {
 // CPUEffLowerBound of the current cache instance
 func CPUEffLowerBound(cache Cache) float64 {
 	return cache.CPUEffLowerBound()
+}
+
+// Bandwidth of the current cache instance
+func Bandwidth(cache Cache) float64 {
+	return cache.Bandwidth()
 }
 
 // BandwidthUsage of the current cache instance

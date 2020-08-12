@@ -495,14 +495,6 @@ func (cache *SimpleCache) HitRate() float64 {
 	return perc
 }
 
-// HitOverMiss of the cache
-func (cache *SimpleCache) HitOverMiss() float64 {
-	if cache.hit == 0. || cache.miss == 0. {
-		return 0.
-	}
-	return cache.hit / cache.miss
-}
-
 // WeightedHitRate of the cache
 func (cache *SimpleCache) WeightedHitRate() float64 {
 	return cache.HitRate() * cache.dataReadOnHit
@@ -513,9 +505,19 @@ func (cache *SimpleCache) Size() float64 {
 	return cache.size
 }
 
+// GetMaxSize of the cache
+func (cache *SimpleCache) GetMaxSize() float64 {
+	return cache.MaxSize
+}
+
 // Occupancy of the cache
 func (cache *SimpleCache) Occupancy() float64 {
 	return (cache.Size() / cache.MaxSize) * 100.
+}
+
+// Bandwidth of the cache
+func (cache *SimpleCache) Bandwidth() float64 {
+	return cache.bandwidth
 }
 
 // BandwidthUsage of the cache
