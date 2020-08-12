@@ -12,20 +12,51 @@ import plotly.graph_objects as go
 from dash.dependencies import Input, Output, State
 from plotly.graph_objs import Layout
 
+_SIM_RESULT_FILENAME = "/simulation_results.csv"
+
 _EXTERNAL_STYLESHEETS = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
-_COLUMNS = ['date', 'num req', 'num hit', 'num added', 'num deleted',
-            'num redirected', 'size', 'hit rate', 'hit over miss',
-            'weighted hit rate', 'written data', 'read data', 'read on hit data',
-            'read on miss data', 'deleted data', 'avg free space',
-            'std dev free space', 'CPU efficiency', 'CPU hit efficiency',
-            'CPU miss efficiency', 'CPU efficiency upper bound',
-            'CPU efficiency lower bound', 'Addition epsilon', 'Eviction epsilon',
-            'Addition qvalue function', 'Eviction qvalue function',
-            'Eviction calls', 'Eviction forced calls', 'Eviction step',
-            'Action store', 'Action not store', 'Action delete all',
-            'Action delete half', 'Action delete quarter', 'Action delete one',
-            'Action not delete']
+_COLUMNS = [
+    'date',
+    'num req',
+    'num hit',
+    'num added',
+    'num deleted',
+    'num redirected',
+    'cache size',
+    'size',
+    'occupancy',
+    'bandwidth',
+    'bandwidth usage',
+    'hit rate',
+    'weighted hit rate',
+    'written data',
+    'read data',
+    'read on hit data',
+    'read on miss data',
+    'deleted data',
+    'avg free space',
+    'std dev free space',
+    'CPU efficiency',
+    'CPU hit efficiency',
+    'CPU miss efficiency',
+    'CPU efficiency upper bound',
+    'CPU efficiency lower bound',
+    'Addition epsilon',
+    'Eviction epsilon',
+    'Addition qvalue function',
+    'Eviction qvalue function',
+    'Eviction calls',
+    'Eviction forced calls',
+    'Eviction step',
+    'Action store',
+    'Action not store',
+    'Action delete all',
+    'Action delete half',
+    'Action delete quarter',
+    'Action delete one',
+    'Action not delete',
+]
 
 _LAYOUT = Layout(
     paper_bgcolor='rgb(255,255,255)',
@@ -94,7 +125,9 @@ def aggregate_results(folder: str):
     abs_target_folder = pathlib.Path(folder).resolve()
     results = Results()
     all_columns = set(_COLUMNS)
-    for result_path in list(abs_target_folder.glob("**/*_results.csv")):
+    for result_path in list(
+        abs_target_folder.glob("**/simulation_results.csv")
+    ):
         df = pd.read_csv(result_path)
         cur_columns = set(df.columns)
         if cur_columns.issubset(all_columns):
@@ -108,50 +141,6 @@ def aggregate_results(folder: str):
             *components, filename = relative_path.parts
             results.insert(relative_path, components, filename, df)
     return results
-
-
-def _get_cache_size(cache_filename: str) -> float:
-    """Returns the cache size from the result filename
-
-    :param cache_filename: result filename
-    :type cache_filename: str
-    :raises Exception: if the name does not contain the size
-    :return: the size of the cache in MegaBytes
-    :rtype: float
-    """
-    if cache_filename.find("T_") != -1:
-        cache_size = float(cache_filename.split("T_")
-                           [0].rsplit("_", 1)[-1])
-        return float(cache_size * 1024**2)
-    elif cache_filename.find("G_") != -1:
-        cache_size = float(cache_filename.split("G_")
-                           [0].rsplit("_", 1)[-1])
-        return float(cache_size * 1024)
-    elif cache_filename.find("M_") != -1:
-        cache_size = float(cache_filename.split("M_")
-                           [0].rsplit("_", 1)[-1])
-        return float(cache_size * 1024)
-    else:
-        raise Exception(
-            f"Error: '{cache_filename}' cache name with unspecified size...")
-
-
-def _get_cache_bandwidth(cache_filename: str) -> float:
-    """Returns the cache bandwidth from the result filename
-
-    :param cache_filename: result filename
-    :type cache_filename: str
-    :raises Exception: if the name does not contain the bandwidth
-    :return: the daily bandwidth in megabytes
-    :rtype: float
-    """
-    if cache_filename.find("Gbit_") != -1:
-        bandwidth = float(cache_filename.split("Gbit_")
-                          [0].rsplit("_", 1)[-1])
-        return (1000. / 8.) * 60. * 60. * 24. * bandwidth
-    else:
-        raise Exception(
-            f"Error: '{cache_filename}' cache name with unspecified bandwidth...")
 
 
 def _measure_throughput(df: 'pd.DataFrame') -> 'pd.Series':
@@ -174,8 +163,8 @@ def _measure_std_dev_free_space(df: 'pd.DataFrame') -> 'pd.Series':
     return df['std dev free space']
 
 
-def _measure_bandwidth(df: 'pd.DataFrame', bandwidth: float) -> 'pd.Series':
-    return (df['read on miss data'] / bandwidth) * 100.
+def _measure_bandwidth(df: 'pd.DataFrame') -> 'pd.Series':
+    return (df['read on miss data'] / df['bandwidth']) * 100.
 
 
 def _measure_hit_rate(df: 'pd.DataFrame') -> 'pd.Series':
@@ -196,8 +185,8 @@ _MEASURES = {
 def _get_measures(cache_filename: str, df: 'pd.DataFrame') -> list:
     measures = [cache_filename]
 
-    cache_size = _get_cache_size(pathlib.Path(cache_filename).stem)
-    bandwidth = _get_cache_bandwidth(pathlib.Path(cache_filename).stem)
+    cache_size = df['cache size'][0]
+    bandwidth = df['bandwidth'][0]
 
     # Throughput
     measures.append(
@@ -209,9 +198,9 @@ def _get_measures(cache_filename: str, df: 'pd.DataFrame') -> list:
         (_measure_cost(df).mean() / cache_size) * 100.
     )
 
-    # CPU Efficiency
+    # Bandwidth
     measures.append(
-        _measure_cpu_eff(df).mean()
+        _measure_bandwidth(df).mean()
     )
 
     # Avg. Free Space
@@ -223,15 +212,15 @@ def _get_measures(cache_filename: str, df: 'pd.DataFrame') -> list:
     measures.append(
         (_measure_std_dev_free_space(df).mean() / cache_size) * 100.
     )
-    
-    # Bandwidth
-    measures.append(
-        _measure_bandwidth(df, bandwidth)
-    )
 
     # Hit rate
     measures.append(
         _measure_hit_rate(df).mean()
+    )
+
+    # CPU Efficiency
+    measures.append(
+        _measure_cpu_eff(df).mean()
     )
 
     return measures
@@ -344,7 +333,9 @@ def dashboard(results: 'Results'):
                 fig = go.Figure(layout=_LAYOUT)
 
                 for file_, df in files2plot:
-                    name = file_.replace(prefix, "")
+                    name = file_.replace(
+                        prefix, "").replace(
+                            _SIM_RESULT_FILENAME, "")
                     fig.add_trace(
                         go.Scatter(
                             x=df["date"],
@@ -384,16 +375,13 @@ def dashboard(results: 'Results'):
                 fig = go.Figure(layout=_LAYOUT)
 
                 for file_, df in files2plot:
-                    args = []
-                    if measure == "Bandwidth":
-                        bandwidth = _get_cache_bandwidth(file_)
-                        args.append(bandwidth)
-
-                    name = file_.replace(prefix, "")
+                    name = file_.replace(
+                        prefix, "").replace(
+                            _SIM_RESULT_FILENAME, "")
                     fig.add_trace(
                         go.Scatter(
                             x=df["date"],
-                            y=function(df, *bandwidth),
+                            y=function(df),
                             mode='lines',
                             name=name,
                         )
@@ -425,15 +413,17 @@ def dashboard(results: 'Results'):
 
             for file_, df in files2plot:
                 values = _get_measures(file_, df)
-                values[0] = values[0].replace(prefix, "")
+                values[0] = values[0].replace(
+                    prefix, "").replace(
+                    _SIM_RESULT_FILENAME, "")
                 table.append(values)
 
             df = pd.DataFrame(
                 table,
                 columns=[
-                    "file", "Throughput", "Cost", "CPU Eff.",
-                    "Avg. Free Space", "Std. Dev. Free Space", 
-                    "Bandwidth", "Hit rate"
+                    "file", "Throughput", "Cost", "Bandwidth",
+                    "Avg. Free Space", "Std. Dev. Free Space",
+                    "Hit rate", "CPU Eff."
                 ]
             )
             df = df.sort_values(
