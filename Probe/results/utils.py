@@ -112,13 +112,11 @@ class Results(object):
 
     def get_df(self, file_: str, filters_all: list, filters_any: list):
         cur_elm = self._elemts[file_]
-        if len(filters_all) != 0 or len(filters_any) != 0:
-            if len(cur_elm.components.intersection(set(filters_all))) == len(filters_all) and len(cur_elm.components.intersection(set(filters_any))) != 0:
-                return cur_elm.df
-            else:
-                return None
-        else:
+        all_ = len(cur_elm.components.intersection(set(filters_all))) == len(filters_all) if len(filters_all) > 0 else True
+        any_ = len(cur_elm.components.intersection(set(filters_any))) != 0 if len(filters_any) > 0 else True
+        if all_ and any_:
             return cur_elm.df
+        return None
 
 
 def aggregate_results(folder: str):
@@ -226,6 +224,13 @@ def _get_measures(cache_filename: str, df: 'pd.DataFrame') -> list:
     return measures
 
 
+_CACHE = {
+    'columns': {},
+    'measures': {},
+    'tables': {},
+}
+
+
 def dashboard(results: 'Results'):
 
     app = dash.Dash("Result Dashboard", external_stylesheets=[
@@ -311,13 +316,24 @@ def dashboard(results: 'Results'):
         id="tabs",
     )
 
+    app.layout = html.Div(children=[
+        html.H1(children='Result Dashboard'),
+        _TABS,
+    ], style={'padding': "1em"})
+
+    def selection2hash(files: list, filters_all: list, filters_any: list) -> str:
+        return str(hash(" ".join(files + filters_all + filters_any)))
+
     @app.callback(
         [
             Output("graphs-columns", "children"),
             Output("graphs-measures", "children"),
             Output("table", "children"),
+
         ],
-        [Input("tabs", "active_tab")],
+        [
+            Input("tabs", "active_tab"),
+        ],
         [
             State("selected-files", "value"),
             State("selected-filters-all", "value"),
@@ -325,58 +341,112 @@ def dashboard(results: 'Results'):
         ]
     )
     def switch_tab(at, files, filters_all, filters_any):
+        cur_hash = selection2hash(files, filters_all, filters_any)
         if at == "tab-files":
-            return "", "", ""
+            return ("", "", "")
 
         elif at == "tab-filters":
-            return "", "", ""
+            return ("", "", "")
 
         elif at == "tab-columns":
-            figures = []
-            for column in _COLUMNS[1:]:
+            if cur_hash in _CACHE['columns']:
+                return (_CACHE['columns'][cur_hash], "", "")
+            else:
+                figures = []
+                for column in _COLUMNS[1:]:
 
-                files2plot = []
-                for file_ in files:
-                    df = results.get_df(file_, filters_all, filters_any)
-                    if df is not None and column in df.columns:
-                        files2plot.append((file_, df))
+                    files2plot = []
+                    for file_ in files:
+                        df = results.get_df(file_, filters_all, filters_any)
+                        if df is not None and column in df.columns:
+                            files2plot.append((file_, df))
 
-                prefix = path.commonprefix([file_ for file_, _ in files2plot])
+                    prefix = path.commonprefix(
+                        [file_ for file_, _ in files2plot])
 
-                fig = go.Figure(layout=_LAYOUT)
+                    fig = go.Figure(layout=_LAYOUT)
 
-                for file_, df in files2plot:
-                    name = file_.replace(
-                        prefix, "").replace(
-                            _SIM_RESULT_FILENAME, "")
-                    fig.add_trace(
-                        go.Scatter(
-                            x=df["date"],
-                            y=df[column],
-                            mode='lines',
-                            name=name,
+                    for file_, df in files2plot:
+                        name = file_.replace(
+                            prefix, "").replace(
+                                _SIM_RESULT_FILENAME, "")
+                        fig.add_trace(
+                            go.Scatter(
+                                x=df["date"],
+                                y=df[column],
+                                mode='lines',
+                                name=name,
+                            )
                         )
+
+                    fig.update_layout(
+                        title=column,
+                        xaxis_title='day',
+                        yaxis_title=column,
+                        autosize=True,
+                        # width=1920,
+                        height=800,
                     )
 
-                fig.update_layout(
-                    title=column,
-                    xaxis_title='day',
-                    yaxis_title=column,
-                    autosize=True,
-                    # width=1920,
-                    height=800,
-                )
+                    figures.append(dcc.Graph(figure=fig))
+                    figures.append(html.Hr())
 
-                figures.append(dcc.Graph(figure=fig))
-                figures.append(html.Hr())
-            return figures, "", ""
+                _CACHE['columns'][cur_hash] = figures
+                return (figures, "", "")
 
         elif at == "tab-measures":
-            figures = []
-            for measure, function in sorted(
-                    _MEASURES.items(), key=lambda elm: elm[0]
-            ):
+            if cur_hash in _CACHE['measures']:
+                return ("", _CACHE['measures'][cur_hash], "")
+            else:
+                figures = []
+                for measure, function in sorted(
+                        _MEASURES.items(), key=lambda elm: elm[0]
+                ):
 
+                    files2plot = []
+                    for file_ in files:
+                        df = results.get_df(file_, filters_all, filters_any)
+                        if df is not None:
+                            files2plot.append((file_, df))
+
+                    prefix = path.commonprefix(
+                        [file_ for file_, _ in files2plot])
+
+                    fig = go.Figure(layout=_LAYOUT)
+
+                    for file_, df in files2plot:
+                        name = file_.replace(
+                            prefix, "").replace(
+                                _SIM_RESULT_FILENAME, "")
+                        fig.add_trace(
+                            go.Scatter(
+                                x=df["date"],
+                                y=function(df),
+                                mode='lines',
+                                name=name,
+                            )
+                        )
+
+                    fig.update_layout(
+                        title=measure,
+                        xaxis_title='day',
+                        yaxis_title=measure,
+                        autosize=True,
+                        # width=1920,
+                        height=800,
+                    )
+
+                    figures.append(dcc.Graph(figure=fig))
+                    figures.append(html.Hr())
+
+                _CACHE['measures'][cur_hash] = figures
+                return ("", figures, "")
+
+        elif at == "tab-table":
+            if cur_hash in _CACHE['tables']:
+                return ("", "", _CACHE['tables'][cur_hash])
+            else:
+                table = []
                 files2plot = []
                 for file_ in files:
                     df = results.get_df(file_, filters_all, filters_any)
@@ -385,76 +455,34 @@ def dashboard(results: 'Results'):
 
                 prefix = path.commonprefix([file_ for file_, _ in files2plot])
 
-                fig = go.Figure(layout=_LAYOUT)
-
                 for file_, df in files2plot:
-                    name = file_.replace(
+                    values = _get_measures(file_, df)
+                    values[0] = values[0].replace(
                         prefix, "").replace(
-                            _SIM_RESULT_FILENAME, "")
-                    fig.add_trace(
-                        go.Scatter(
-                            x=df["date"],
-                            y=function(df),
-                            mode='lines',
-                            name=name,
-                        )
-                    )
+                        _SIM_RESULT_FILENAME, "")
+                    table.append(values)
 
-                fig.update_layout(
-                    title=measure,
-                    xaxis_title='day',
-                    yaxis_title=measure,
-                    autosize=True,
-                    # width=1920,
-                    height=800,
+                df = pd.DataFrame(
+                    table,
+                    columns=[
+                        "file", "Throughput", "Cost", "Bandwidth",
+                        "Avg. Free Space", "Std. Dev. Free Space",
+                        "Hit rate", "CPU Eff."
+                    ]
+                )
+                df = df.sort_values(
+                    by=["Throughput", "Cost", "Hit rate"],
+                    ascending=[False, True, False],
+                )
+                df = df.round(2)
+
+                table = dbc.Table.from_dataframe(
+                    df, striped=True, bordered=True, hover=True
                 )
 
-                figures.append(dcc.Graph(figure=fig))
-                figures.append(html.Hr())
-            return "", figures, ""
-
-        elif at == "tab-table":
-            table = []
-
-            files2plot = []
-            for file_ in files:
-                df = results.get_df(file_, filters_all, filters_any)
-                if df is not None:
-                    files2plot.append((file_, df))
-
-            prefix = path.commonprefix([file_ for file_, _ in files2plot])
-
-            for file_, df in files2plot:
-                values = _get_measures(file_, df)
-                values[0] = values[0].replace(
-                    prefix, "").replace(
-                    _SIM_RESULT_FILENAME, "")
-                table.append(values)
-
-            df = pd.DataFrame(
-                table,
-                columns=[
-                    "file", "Throughput", "Cost", "Bandwidth",
-                    "Avg. Free Space", "Std. Dev. Free Space",
-                    "Hit rate", "CPU Eff."
-                ]
-            )
-            df = df.sort_values(
-                by=["Throughput", "Cost", "Hit rate"],
-                ascending=[False, True, False],
-            )
-            df = df.round(2)
-
-            table = dbc.Table.from_dataframe(
-                df, striped=True, bordered=True, hover=True
-            )
-            return "", "", table
-
-        return "", "", ""
-
-    app.layout = html.Div(children=[
-        html.H1(children='Result Dashboard'),
-        _TABS
-    ], style={'padding': "1em"})
+                _CACHE['tables'][cur_hash] = table
+                return ("", "", table)
+        else:
+            return ("", "", "")
 
     app.run_server(debug=True)
