@@ -629,7 +629,6 @@ func simCommand() *cobra.Command {
 				csvHeaderColumns = append(csvHeaderColumns, "Eviction qvalue function")
 				csvHeaderColumns = append(csvHeaderColumns, "Eviction calls")
 				csvHeaderColumns = append(csvHeaderColumns, "Eviction forced calls")
-				csvHeaderColumns = append(csvHeaderColumns, "Eviction step")
 				csvHeaderColumns = append(csvHeaderColumns, "Action store")
 				csvHeaderColumns = append(csvHeaderColumns, "Action not store")
 				csvHeaderColumns = append(csvHeaderColumns, "Action delete all")

@@ -1309,10 +1309,9 @@ func (cache *AIRL) ExtraOutput(info string) string {
 			evictionValueFunction,
 		)
 	case "evictionStats":
-		result = fmt.Sprintf("%d,%d,%d",
+		result = fmt.Sprintf("%d,%d",
 			cache.evictionAgentNumCalls,
 			cache.evictionAgentNumForcedCalls,
-			cache.evictionAgentK,
 		)
 	case "epsilonStats":
 		result = fmt.Sprintf("%0.6f,%0.6f",
