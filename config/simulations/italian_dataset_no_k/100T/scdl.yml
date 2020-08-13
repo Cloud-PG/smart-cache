@@ -21,9 +21,8 @@ sim:
     rl:
       epsilon:
         decay: 0.000001
-      use_k: false
       addition:
         featuremap: ../../../../featureMaps/rlAdditionFeatureMap.json
       eviction:
-        k: 512
+        use_k: false
         featuremap: ../../../../featureMaps/rlEvictionFeatureMap.json

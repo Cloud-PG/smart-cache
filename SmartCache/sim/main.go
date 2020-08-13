@@ -72,12 +72,11 @@ func configureViper(configFilenameWithNoExt string) {
 	viper.SetDefault("sim.ai.rl.epsilon.start", 1.0)
 	viper.SetDefault("sim.ai.rl.epsilon.decay", 0.0000042)
 
-	viper.SetDefault("sim.ai.rl.use_k", true)
-
 	viper.SetDefault("sim.ai.featuremap", "")
 	viper.SetDefault("sim.ai.rl.addition.featuremap", "")
 	viper.SetDefault("sim.ai.rl.eviction.featuremap", "")
 	viper.SetDefault("sim.ai.rl.eviction.k", 32)
+	viper.SetDefault("sim.ai.rl.eviction.use_k", true)
 	viper.SetDefault("sim.ai.model", "")
 
 	viper.SetDefault("sim.dataset2testpath", "")
@@ -350,7 +349,7 @@ func simCommand() *cobra.Command {
 			aiRLEpsilonDecay = viper.GetFloat64("sim.ai.rl.epsilon.decay")
 			logger.Info("CONF_VAR", zap.Float64("aiRLEpsilonDecay", aiRLEpsilonDecay))
 
-			simUseK = viper.GetBool("sim.ai.rl.use_k")
+			simUseK = viper.GetBool("sim.ai.rl.eviction.use_k")
 			logger.Info("CONF_VAR", zap.Bool("simUseK", simUseK))
 
 			cacheType = viper.GetString("sim.cache.type")
