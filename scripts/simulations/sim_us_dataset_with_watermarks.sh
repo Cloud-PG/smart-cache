@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+echo "===> $0" &&
 python -m SmartCache.sim.utils compile --release "true" &&
 
 simulator sim ../../config/simulations/us_dataset_with_watermarks/200T/lru.yml &&

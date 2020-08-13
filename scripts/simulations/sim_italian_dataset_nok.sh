@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+echo "===> $0" &&
 python -m SmartCache.sim.utils compile --release "true" &&
 
 simulator sim ../../config/simulations/italian_dataset_no_k/100T/lru.yml &&
