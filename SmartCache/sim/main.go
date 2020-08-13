@@ -77,6 +77,7 @@ func configureViper(configFilenameWithNoExt string) {
 	viper.SetDefault("sim.ai.featuremap", "")
 	viper.SetDefault("sim.ai.rl.addition.featuremap", "")
 	viper.SetDefault("sim.ai.rl.eviction.featuremap", "")
+	viper.SetDefault("sim.ai.rl.eviction.k", 32)
 	viper.SetDefault("sim.ai.model", "")
 
 	viper.SetDefault("sim.dataset2testpath", "")
@@ -124,6 +125,7 @@ func simCommand() *cobra.Command {
 		aiRLEvictionFeatureMap string
 		aiRLEpsilonStart       float64
 		aiRLEpsilonDecay       float64
+		aiRLEvictionK          int64
 		// cache
 		cacheType     string
 		cacheSize     float64
@@ -339,6 +341,9 @@ func simCommand() *cobra.Command {
 			}
 			logger.Info("CONF_VAR", zap.String("aiRLEvictionFeatureMap", aiRLEvictionFeatureMap))
 
+			aiRLEvictionK = viper.GetInt64("sim.ai.rl.eviction.k")
+			logger.Info("CONF_VAR", zap.Int64("aiRLEvictionK", aiRLEvictionK))
+
 			aiRLEpsilonStart = viper.GetFloat64("sim.ai.rl.epsilon.start")
 			logger.Info("CONF_VAR", zap.Float64("aiRLEpsilonStart", aiRLEpsilonStart))
 
@@ -507,6 +512,7 @@ func simCommand() *cobra.Command {
 						simRedirectReq,
 						simCacheWatermarks,
 						simUseK,
+						aiRLEvictionK,
 						aiRLAdditionFeatureMap,
 						aiRLEvictionFeatureMap,
 						aiRLEpsilonStart,

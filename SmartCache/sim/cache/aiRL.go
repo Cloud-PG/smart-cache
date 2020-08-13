@@ -15,7 +15,6 @@ import (
 
 const (
 	maxBadQValueInRow = 28
-	initK             = 32
 )
 
 // AIRL cache
@@ -58,13 +57,14 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 	)
 
 	useK := args[3].(bool)
-	additionFeatureMap := args[4].(string)
-	evictionFeatureMap := args[5].(string)
-	initEpsilon := args[6].(float64)
-	decayRateEpsilon := args[7].(float64)
+	evictionk := args[4].(int64)
+	additionFeatureMap := args[5].(string)
+	evictionFeatureMap := args[6].(string)
+	initEpsilon := args[7].(float64)
+	decayRateEpsilon := args[8].(float64)
 
 	cache.evictionUseK = useK
-	cache.evictionAgentK = 32
+	cache.evictionAgentK = evictionk
 	cache.evictionAgentStep = cache.evictionAgentK
 	cache.evictionRO = 0.42
 
@@ -542,10 +542,6 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 	// Forced event rewards
 	if forced {
 		cache.evictionAgentNumForcedCalls++
-		cache.evictionAgentK = cache.evictionAgentK>>1 + 1
-		if cache.evictionAgentK < initK {
-			cache.evictionAgentK = initK
-		}
 		choicesList, inMemory := cache.evictionAgent.Memory["NotDelete"]
 		if inMemory {
 			for _, choice := range choicesList {
@@ -566,8 +562,6 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 			}
 			delete(cache.evictionAgent.Memory, "NotDelete")
 		}
-	} else {
-		cache.evictionAgentK = cache.evictionAgentK << 1
 	}
 
 	for catState := range cache.evictionCategoryManager.GetStateFromCategories(
@@ -961,8 +955,6 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) 
 			if cache.evictionAgentOK {
 				cache.evictionAgentBadQValue = 0
 				cache.evictionAgent.UnleashEpsilon()
-				cache.evictionAgentK = cache.evictionAgentK>>1 + 1
-				cache.evictionAgentStep = cache.evictionAgentK
 			}
 		}
 	}
