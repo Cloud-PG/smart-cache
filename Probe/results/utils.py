@@ -144,7 +144,7 @@ def aggregate_results(folder: str):
 
 
 def _measure_throughput(df: 'pd.DataFrame') -> 'pd.Series':
-    return df['read on hit data'] - df['written data']
+    return df['read on hit data'] / df['written data']
 
 
 def _measure_cost(df: 'pd.DataFrame') -> 'pd.Series':
