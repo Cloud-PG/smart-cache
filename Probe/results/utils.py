@@ -171,6 +171,10 @@ def _measure_hit_rate(df: 'pd.DataFrame') -> 'pd.Series':
     return df['hit rate']
 
 
+def _agent_epsilon(df: 'pd.DataFrame') -> 'pd.Series':
+    return df['']
+
+
 _MEASURES = {
     'Throughput': _measure_throughput,
     'Cost': _measure_cost,
@@ -226,7 +230,26 @@ def _get_measures(cache_filename: str, df: 'pd.DataFrame') -> list:
     return measures
 
 
-def get_files2plot(results: 'Results', files: list, filters_all: list, filters_any: list, column: str = "") -> list:
+def get_files2plot(results: 'Results', files: list, filters_all: list,
+                   filters_any: list, column: str = "",
+                   agents: bool = False,) -> list:
+    """Returns a filtered list of files to plot (name and dataframe)
+
+    :param results: the result object with simulation data
+    :type results: Results
+    :param files: list of current file selection
+    :type files: list
+    :param filters_all: filters to apply for all file
+    :type filters_all: list
+    :param filters_any: filters to apply not exclusively
+    :type filters_any: list
+    :param column: column to plot, defaults to ""
+    :type column: str, optional
+    :param agents: search for agents, defaults to False
+    :type agents: bool, optional
+    :return: a list of files and dataframes
+    :rtype: list
+    """
     files2plot = []
     for file_ in files:
         df = results.get_df(file_, filters_all, filters_any)
@@ -234,12 +257,22 @@ def get_files2plot(results: 'Results', files: list, filters_all: list, filters_a
             if column != "":
                 if column in df.columns:
                     files2plot.append((file_, df))
+            elif agents:
+                if "Addition epsilon" in df.columns:
+                    files2plot.append((file_, df))
             else:
                 files2plot.append((file_, df))
     return files2plot
 
 
-def get_prefix(files2plot: list):
+def get_prefix(files2plot: list) -> str:
+    """Check the prefix of list of files to plot
+
+    :param files2plot: list of files and dataframes to plot
+    :type files2plot: list
+    :return: the commond prefix of the list of files
+    :rtype: str
+    """
     return path.commonprefix([file_ for file_, _ in files2plot])
 
 
@@ -248,6 +281,7 @@ def dashboard(results: 'Results'):
     _CACHE = {
         'columns': {},
         'measures': {},
+        'agents': {},
         'tables': {},
     }
 
@@ -315,6 +349,14 @@ def dashboard(results: 'Results'):
         ),
     )
 
+    _TAB_AGENTS = dbc.Card(
+        dbc.Spinner(
+            dbc.CardBody(
+                id="graphs-agents",
+            ),
+        ),
+    )
+
     _TAB_TABLE = dbc.Card(
         dbc.Spinner(
             dbc.CardBody(
@@ -329,6 +371,7 @@ def dashboard(results: 'Results'):
             dbc.Tab(_TAB_FILTERS, label="Filters", tab_id="tab-filters"),
             dbc.Tab(_TAB_COLUMNS, label="Columns", tab_id="tab-columns"),
             dbc.Tab(_TAB_MEASURES, label="Measures", tab_id="tab-measures"),
+            dbc.Tab(_TAB_AGENTS, label="Agents", tab_id="tab-agents"),
             dbc.Tab(_TAB_TABLE, label="Table", tab_id="tab-table"),
         ],
         id="tabs",
@@ -346,6 +389,7 @@ def dashboard(results: 'Results'):
         [
             Output("graphs-columns", "children"),
             Output("graphs-measures", "children"),
+            Output("graphs-agents", "children"),
             Output("table", "children"),
 
         ],
@@ -361,14 +405,14 @@ def dashboard(results: 'Results'):
     def switch_tab(at, files, filters_all, filters_any):
         cur_hash = selection2hash(files, filters_all, filters_any)
         if at == "tab-files":
-            return ("", "", "")
+            return ("", "", "", "")
 
         elif at == "tab-filters":
-            return ("", "", "")
+            return ("", "", "", "")
 
         elif at == "tab-columns":
             if cur_hash in _CACHE['columns']:
-                return (_CACHE['columns'][cur_hash], "", "")
+                return (_CACHE['columns'][cur_hash], "", "", "")
             else:
                 figures = []
                 for column in _COLUMNS[1:]:
@@ -392,11 +436,11 @@ def dashboard(results: 'Results'):
                     figures.append(html.Hr())
 
                 _CACHE['columns'][cur_hash] = figures
-                return (figures, "", "")
+                return (figures, "", "", "")
 
         elif at == "tab-measures":
             if cur_hash in _CACHE['measures']:
-                return ("", _CACHE['measures'][cur_hash], "")
+                return ("", _CACHE['measures'][cur_hash], "", "")
             else:
                 figures = []
                 for measure, function in sorted(
@@ -421,11 +465,33 @@ def dashboard(results: 'Results'):
                     figures.append(html.Hr())
 
                 _CACHE['measures'][cur_hash] = figures
-                return ("", figures, "")
+                return ("", figures, "", "")
+
+        elif at == "tab-agents":
+            if cur_hash in _CACHE['agents']:
+                return ("", "", _CACHE['agents'][cur_hash], "")
+            else:
+                figures = []
+                files2plot = get_files2plot(
+                    results,
+                    files,
+                    filters_all,
+                    filters_any,
+                    agents=True
+                )
+                prefix = get_prefix(files2plot)
+                figures.extend(
+                    make_agent_figures(
+                        files2plot,
+                        prefix,
+                    )
+                )
+                _CACHE['agents'][cur_hash] = figures
+                return ("", "", figures, "")
 
         elif at == "tab-table":
             if cur_hash in _CACHE['tables']:
-                return ("", "", _CACHE['tables'][cur_hash])
+                return ("", "", "", _CACHE['tables'][cur_hash])
             else:
                 files2plot = get_files2plot(
                     results,
@@ -437,11 +503,82 @@ def dashboard(results: 'Results'):
                 table = make_table(files2plot, prefix)
 
                 _CACHE['tables'][cur_hash] = table
-                return ("", "", table)
+                return ("", "", "", table)
         else:
-            return ("", "", "")
+            return ("", "", "", "")
 
     app.run_server(debug=True)
+
+
+"""
+
+
+
+,
+"""
+
+
+def _add_columns(fig: 'go.Figure', df: 'pd.DataFrame', name: str, column: str):
+    """Add a specific column to plot as trace line
+
+    :param fig: the figure where insert the trace
+    :type fig: go.Figure
+    :param df: the dataframe
+    :type df: pd.DataFrame
+    :param name: name of the file
+    :type name: str
+    :param column: name of the column
+    :type column: str
+    """
+    fig.add_trace(
+        go.Scatter(
+            x=df["date"],
+            y=df[column],
+            mode='lines',
+            name=f"{name}[{column}]",
+        )
+    )
+
+
+def make_agent_figures(files2plot: list, prefix: str) -> list:
+    """Prepare agent plot figures
+
+    :param files2plot: list of files and dataframes to plot
+    :type files2plot: list
+    :param prefix: prefix string of files
+    :type prefix: str
+    :return: list of figure elements
+    :rtype: list
+    """
+    figures = []
+    _AGENT_COLUMNS = {
+        "Epsilon": ['Addition epsilon', 'Eviction epsilon'],
+        "QValue": ['Addition qvalue function', 'Eviction qvalue function', ],
+        "Eviction calls": ['Eviction calls', 'Eviction forced calls'],
+        "Eviction step": ['Eviction step'],
+        "Addition actions": ['Action store', 'Action not store'],
+        "Eviction actions": ['Action delete all', 'Action delete half', 'Action delete quarter', 'Action delete one', 'Action not delete'],
+    }
+    for plot, columns in _AGENT_COLUMNS.items():
+        fig_epsilon = go.Figure(layout=_LAYOUT)
+        for file_, df in files2plot:
+            name = file_.replace(
+                prefix, "").replace(
+                    _SIM_RESULT_FILENAME, "")
+            for column in columns:
+                _add_columns(fig_epsilon, df, name, column)
+        fig_epsilon.update_layout(
+            title=plot,
+            xaxis_title='day',
+            yaxis_title=plot,
+            autosize=True,
+            # width=1920,
+            height=800,
+        )
+        figures.append(dcc.Graph(figure=fig_epsilon))
+        figures.append(html.Hr())
+
+    return figures
 
 
 def make_line_figures(files2plot: list, prefix: str, title: str,
