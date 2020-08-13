@@ -226,6 +226,23 @@ def _get_measures(cache_filename: str, df: 'pd.DataFrame') -> list:
     return measures
 
 
+def get_files2plot(results: 'Results', files: list, filters_all: list, filters_any: list, column: str = "") -> list:
+    files2plot = []
+    for file_ in files:
+        df = results.get_df(file_, filters_all, filters_any)
+        if df is not None:
+            if column != "":
+                if column in df.columns:
+                    files2plot.append((file_, df))
+            else:
+                files2plot.append((file_, df))
+    return files2plot
+
+
+def get_prefix(files2plot: list):
+    return path.commonprefix([file_ for file_, _ in files2plot])
+
+
 def dashboard(results: 'Results'):
 
     _CACHE = {
@@ -356,40 +373,22 @@ def dashboard(results: 'Results'):
                 figures = []
                 for column in _COLUMNS[1:]:
 
-                    files2plot = []
-                    for file_ in files:
-                        df = results.get_df(file_, filters_all, filters_any)
-                        if df is not None and column in df.columns:
-                            files2plot.append((file_, df))
-
-                    prefix = path.commonprefix(
-                        [file_ for file_, _ in files2plot])
-
-                    fig = go.Figure(layout=_LAYOUT)
-
-                    for file_, df in files2plot:
-                        name = file_.replace(
-                            prefix, "").replace(
-                                _SIM_RESULT_FILENAME, "")
-                        fig.add_trace(
-                            go.Scatter(
-                                x=df["date"],
-                                y=df[column],
-                                mode='lines',
-                                name=name,
-                            )
-                        )
-
-                    fig.update_layout(
-                        title=column,
-                        xaxis_title='day',
-                        yaxis_title=column,
-                        autosize=True,
-                        # width=1920,
-                        height=800,
+                    files2plot = get_files2plot(
+                        results,
+                        files,
+                        filters_all,
+                        filters_any,
+                        column,
                     )
-
-                    figures.append(dcc.Graph(figure=fig))
+                    prefix = get_prefix(files2plot)
+                    figures.append(dcc.Graph(
+                        figure=make_line_figures(
+                            files2plot,
+                            prefix,
+                            title=column,
+                            column=column
+                        )
+                    ))
                     figures.append(html.Hr())
 
                 _CACHE['columns'][cur_hash] = figures
@@ -404,40 +403,21 @@ def dashboard(results: 'Results'):
                         _MEASURES.items(), key=lambda elm: elm[0]
                 ):
 
-                    files2plot = []
-                    for file_ in files:
-                        df = results.get_df(file_, filters_all, filters_any)
-                        if df is not None:
-                            files2plot.append((file_, df))
-
-                    prefix = path.commonprefix(
-                        [file_ for file_, _ in files2plot])
-
-                    fig = go.Figure(layout=_LAYOUT)
-
-                    for file_, df in files2plot:
-                        name = file_.replace(
-                            prefix, "").replace(
-                                _SIM_RESULT_FILENAME, "")
-                        fig.add_trace(
-                            go.Scatter(
-                                x=df["date"],
-                                y=function(df),
-                                mode='lines',
-                                name=name,
-                            )
-                        )
-
-                    fig.update_layout(
-                        title=measure,
-                        xaxis_title='day',
-                        yaxis_title=measure,
-                        autosize=True,
-                        # width=1920,
-                        height=800,
+                    files2plot = get_files2plot(
+                        results,
+                        files,
+                        filters_all,
+                        filters_any,
                     )
-
-                    figures.append(dcc.Graph(figure=fig))
+                    prefix = get_prefix(files2plot)
+                    figures.append(dcc.Graph(
+                        figure=make_line_figures(
+                            files2plot,
+                            prefix,
+                            title=measure,
+                            function=function
+                        )
+                    ))
                     figures.append(html.Hr())
 
                 _CACHE['measures'][cur_hash] = figures
@@ -447,39 +427,14 @@ def dashboard(results: 'Results'):
             if cur_hash in _CACHE['tables']:
                 return ("", "", _CACHE['tables'][cur_hash])
             else:
-                table = []
-                files2plot = []
-                for file_ in files:
-                    df = results.get_df(file_, filters_all, filters_any)
-                    if df is not None:
-                        files2plot.append((file_, df))
-
-                prefix = path.commonprefix([file_ for file_, _ in files2plot])
-
-                for file_, df in files2plot:
-                    values = _get_measures(file_, df)
-                    values[0] = values[0].replace(
-                        prefix, "").replace(
-                        _SIM_RESULT_FILENAME, "")
-                    table.append(values)
-
-                df = pd.DataFrame(
-                    table,
-                    columns=[
-                        "file", "Throughput", "Cost", "Bandwidth",
-                        "Avg. Free Space", "Std. Dev. Free Space",
-                        "Hit rate", "CPU Eff."
-                    ]
+                files2plot = get_files2plot(
+                    results,
+                    files,
+                    filters_all,
+                    filters_any,
                 )
-                df = df.sort_values(
-                    by=["Throughput", "Cost", "Hit rate"],
-                    ascending=[False, True, False],
-                )
-                df = df.round(2)
-
-                table = dbc.Table.from_dataframe(
-                    df, striped=True, bordered=True, hover=True
-                )
+                prefix = get_prefix(files2plot)
+                table = make_table(files2plot, prefix)
 
                 _CACHE['tables'][cur_hash] = table
                 return ("", "", table)
@@ -487,3 +442,85 @@ def dashboard(results: 'Results'):
             return ("", "", "")
 
     app.run_server(debug=True)
+
+
+def make_line_figures(files2plot: list, prefix: str, title: str,
+                      function: callable = None, column: str = ""
+                      ) -> 'go.Figure':
+    """Make measure plots
+
+    :param files2plot: list of files to plot with their dataframes
+    :type files2plot: list
+    :param prefix: the files' prefix
+    :type prefix: str
+    :param title: the title of the current figure
+    :type title: str
+    :param function: the measure function to call, defaults to None
+    :type function: callable
+    :param column: the column to select from the dataframe, defaults to ""
+    :type column: str
+    :return: a plot figure
+    :rtype: go.Figure
+    """
+    fig = go.Figure(layout=_LAYOUT)
+    for file_, df in files2plot:
+        name = file_.replace(
+            prefix, "").replace(
+                _SIM_RESULT_FILENAME, "")
+        if function is not None:
+            y_ax = function(df)
+        elif column != "":
+            y_ax = df[column]
+        fig.add_trace(
+            go.Scatter(
+                x=df["date"],
+                y=y_ax,
+                mode='lines',
+                name=name,
+            )
+        )
+
+    fig.update_layout(
+        title=title,
+        xaxis_title='day',
+        yaxis_title=title,
+        autosize=True,
+        # width=1920,
+        height=800,
+    )
+    return fig
+
+
+def make_table(files2plot: list, prefix: str) -> 'dbc.Table':
+    """Make html table from files to plot
+
+    :param files2plot: list of files to plot with their dataframes
+    :type files2plot: list
+    :param prefix: the files' prefix
+    :type prefix: str
+    :return: html table component
+    :rtype: dbc.Table
+    """
+    table = []
+    for file_, df in files2plot:
+        values = _get_measures(file_, df)
+        values[0] = values[0].replace(
+            prefix, "").replace(
+            _SIM_RESULT_FILENAME, "")
+        table.append(values)
+    df = pd.DataFrame(
+        table,
+        columns=[
+            "file", "Throughput", "Cost", "Bandwidth",
+            "Avg. Free Space", "Std. Dev. Free Space",
+            "Hit rate", "CPU Eff."
+        ]
+    )
+    df = df.sort_values(
+        by=["Throughput", "Cost", "Hit rate"],
+        ascending=[False, True, False],
+    )
+    df = df.round(2)
+    return dbc.Table.from_dataframe(
+        df, striped=True, bordered=True, hover=True
+    )
