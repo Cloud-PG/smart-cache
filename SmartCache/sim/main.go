@@ -40,6 +40,7 @@ func configureViper(configFilenameWithNoExt string) {
 
 	viper.SetDefault("sim.region", "all")
 	viper.SetDefault("sim.outputFolder", ".")
+	viper.SetDefault("sim.overwrite", false)
 	viper.SetDefault("sim.dump", false)
 	viper.SetDefault("sim.dumpfilesandstats", true)
 	viper.SetDefault("sim.dumpfilename", "")
@@ -86,6 +87,7 @@ func simCommand() *cobra.Command {
 	var (
 		logLevel string
 		// Simulation
+		simOverwrite         bool
 		simBandwidth         float64
 		simRedirectReq       bool
 		simCacheWatermarks   bool
@@ -214,6 +216,9 @@ func simCommand() *cobra.Command {
 
 			cacheSizeUnit = viper.GetString("sim.cache.size.unit")
 			logger.Info("CONF_VAR", zap.String("cacheSizeUnit", cacheSizeUnit))
+
+			simOverwrite = viper.GetBool("sim.overwrite")
+			logger.Info("CONF_VAR", zap.Bool("simOverwrite", simOverwrite))
 
 			simBandwidth = viper.GetFloat64("sim.bandwidth")
 			logger.Info("CONF_VAR", zap.Float64("simBandwidth", simBandwidth))
@@ -404,9 +409,9 @@ func simCommand() *cobra.Command {
 			switch simType {
 			case "normal":
 				finalOutputFolder := filepath.Join(simOutputFolder, "run_full_normal", baseName)
-				err := os.MkdirAll(finalOutputFolder, 0755)
-				if err != nil && !os.IsExist(err) {
-					panic(err)
+				errMkdir := os.MkdirAll(finalOutputFolder, 0755)
+				if errMkdir != nil && !os.IsExist(errMkdir) {
+					panic(errMkdir)
 				}
 				errChdir = os.Chdir(finalOutputFolder)
 				if errChdir != nil {
@@ -414,6 +419,25 @@ func simCommand() *cobra.Command {
 				}
 				curWd, _ := os.Getwd()
 				logger.Info("Current Working Dir", zap.String("path", curWd))
+			}
+
+			// Check previous simulation results
+			if !simOverwrite {
+				fi, errStat := os.Stat(simOutFile)
+				if errStat != nil {
+					panic(errStat)
+				}
+				// get the size
+				size := fi.Size()
+				// TODO: check if the configuration is the same
+				if size >= 1024 {
+					logger.Info("Simulation already DONE! NO OVERWRITE...")
+					_ = logger.Sync()
+					// TODO: fix error
+					// -> https://github.com/uber-go/zap/issues/772
+					// -> https://github.com/uber-go/zap/issues/328
+					return
+				}
 			}
 
 			// ------------------------- Create cache --------------------------
