@@ -862,9 +862,9 @@ func (cache *AIRL) delayedRewardAdditionAgent(filename int64) {
 			// Update epsilon
 			cache.additionAgent.UpdateEpsilon()
 		}
+		// Remove oldest memory
+		cache.additionAgent.ShiftMemory(filename)
 	}
-	// Remove oldest memory
-	cache.additionAgent.ShiftMemory(filename)
 }
 
 func (cache *AIRL) rewardEvictionAfterForcedCall(added bool) {
