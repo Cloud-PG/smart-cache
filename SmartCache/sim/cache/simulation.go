@@ -3,6 +3,7 @@ package cache
 import (
 	"compress/gzip"
 	"encoding/csv"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -403,4 +404,193 @@ func GetCacheSize(cacheSize float64, cacheSizeUnit string) float64 {
 		res = cacheSize * 1024. * 1024.
 	}
 	return res
+}
+
+func Create(cacheType string, cacheSize float64, cacheSizeUnit string, log bool, weightFunc string, weightFuncParams WeightFunctionParameters) Cache {
+	logger := zap.L()
+	var cacheInstance Cache
+	cacheSizeMegabytes := GetCacheSize(cacheSize, cacheSizeUnit)
+	switch cacheType {
+	case "lru":
+		logger.Info("Create LRU Cache",
+			zap.Float64("cacheSize", cacheSizeMegabytes),
+		)
+		cacheInstance = &SimpleCache{
+			MaxSize: cacheSizeMegabytes,
+		}
+	case "lfu":
+		logger.Info("Create LFU Cache",
+			zap.Float64("cacheSize", cacheSizeMegabytes),
+		)
+		cacheInstance = &SimpleCache{
+			MaxSize: cacheSizeMegabytes,
+		}
+	case "sizeBig":
+		logger.Info("Create Size Big Cache",
+			zap.Float64("cacheSize", cacheSizeMegabytes),
+		)
+		cacheInstance = &SimpleCache{
+			MaxSize: cacheSizeMegabytes,
+		}
+	case "sizeSmall":
+		logger.Info("Create Size Small Cache",
+			zap.Float64("cacheSize", cacheSizeMegabytes),
+		)
+		cacheInstance = &SimpleCache{
+			MaxSize: cacheSizeMegabytes,
+		}
+	case "lruDatasetVerifier":
+		logger.Info("Create lruDatasetVerifier Cache",
+			zap.Float64("cacheSize", cacheSizeMegabytes),
+		)
+		cacheInstance = &LRUDatasetVerifier{
+			SimpleCache: SimpleCache{
+				MaxSize: cacheSizeMegabytes,
+			},
+		}
+	case "aiNN":
+		logger.Info("Create aiNN Cache",
+			zap.Float64("cacheSize", cacheSizeMegabytes),
+		)
+		cacheInstance = &AINN{
+			SimpleCache: SimpleCache{
+				MaxSize: cacheSizeMegabytes,
+			},
+		}
+	case "aiRL":
+		logger.Info("Create aiRL Cache",
+			zap.Float64("cacheSize", cacheSizeMegabytes),
+		)
+		cacheInstance = &AIRL{
+			SimpleCache: SimpleCache{
+				MaxSize: cacheSizeMegabytes,
+			},
+		}
+	case "weightFunLRU":
+		logger.Info("Create Weight Function Cache",
+			zap.Float64("cacheSize", cacheSizeMegabytes),
+		)
+
+		var (
+			selFunctionType FunctionType
+		)
+
+		switch weightFunc {
+		case "FuncAdditive":
+			selFunctionType = FuncAdditive
+		case "FuncAdditiveExp":
+			selFunctionType = FuncAdditiveExp
+		case "FuncMultiplicative":
+			selFunctionType = FuncMultiplicative
+		case "FuncWeightedRequests":
+			selFunctionType = FuncWeightedRequests
+		default:
+			fmt.Println("ERR: You need to specify a correct weight function.")
+			os.Exit(-1)
+		}
+
+		cacheInstance = &WeightFun{
+			SimpleCache: SimpleCache{
+				MaxSize: cacheSizeMegabytes,
+			},
+			Parameters:      weightFuncParams,
+			SelFunctionType: selFunctionType,
+		}
+	default:
+		fmt.Printf("ERR: '%s' is not a valid cache type...\n", cacheType)
+		os.Exit(-2)
+	}
+	return cacheInstance
+}
+
+type InitParameters struct {
+	Log                    bool
+	RedirectReq            bool
+	Watermarks             bool
+	Dataset2TestPath       string
+	AIFeatureMap           string
+	AIModel                string
+	FunctionType           string
+	WeightAlpha            float64
+	WeightBeta             float64
+	WeightGamma            float64
+	SimUseK                bool
+	AIRLEvictionK          int64
+	AIRLAdditionFeatureMap string
+	AIRLEvictionFeatureMap string
+	AIRLEpsilonStart       float64
+	AIRLEpsilonDecay       float64
+}
+
+func InitInstance(cacheType string, cacheInstance Cache, param InitParameters) {
+	logger := zap.L()
+	switch cacheType {
+	case "lru":
+		logger.Info("Init LRU Cache")
+		InitCache(cacheInstance, LRUQueue, param.Log, param.RedirectReq, param.Watermarks)
+	case "lfu":
+		logger.Info("Init LFU Cache")
+		InitCache(cacheInstance, LFUQueue, param.Log, param.RedirectReq, param.Watermarks)
+	case "sizeBig":
+		logger.Info("Init Size Big Cache")
+		InitCache(cacheInstance, SizeBigQueue, param.Log, param.RedirectReq, param.Watermarks)
+	case "sizeSmall":
+		InitCache(cacheInstance, SizeSmallQueue, param.Log, param.RedirectReq, param.Watermarks)
+	case "lruDatasetVerifier":
+		logger.Info("Init lruDatasetVerifier Cache")
+		InitCache(cacheInstance, param.Log, param.RedirectReq, param.Watermarks, param.Dataset2TestPath)
+	case "aiNN":
+		logger.Info("Init aiNN Cache")
+		if param.AIFeatureMap == "" {
+			fmt.Println("ERR: No feature map indicated...")
+			os.Exit(-1)
+		}
+		InitCache(cacheInstance, param.Log, param.RedirectReq, param.Watermarks, param.AIFeatureMap, param.AIModel)
+	case "aiRL":
+		logger.Info("Init aiRL Cache")
+		if param.AIRLAdditionFeatureMap == "" {
+			logger.Info("No addition feature map indicated...")
+		}
+		if param.AIRLEvictionFeatureMap == "" {
+			logger.Info("No eviction feature map indicated...")
+		}
+
+		var selFunctionType FunctionType
+		switch param.FunctionType {
+		case "FuncAdditive":
+			selFunctionType = FuncAdditive
+		case "FuncAdditiveExp":
+			selFunctionType = FuncAdditiveExp
+		case "FuncMultiplicative":
+			selFunctionType = FuncMultiplicative
+		case "FuncWeightedRequests":
+			selFunctionType = FuncWeightedRequests
+		default:
+			fmt.Println("ERR: You need to specify a correct weight function.")
+			os.Exit(-1)
+		}
+
+		InitCache(
+			cacheInstance,
+			param.Log,
+			param.RedirectReq,
+			param.Watermarks,
+			param.SimUseK,
+			param.AIRLEvictionK,
+			param.AIRLAdditionFeatureMap,
+			param.AIRLEvictionFeatureMap,
+			param.AIRLEpsilonStart,
+			param.AIRLEpsilonDecay,
+			selFunctionType,
+			param.WeightAlpha,
+			param.WeightBeta,
+			param.WeightGamma,
+		)
+	case "weightFunLRU":
+		logger.Info("Init Weight Function Cache")
+		InitCache(cacheInstance, LRUQueue, param.Log, param.RedirectReq, param.Watermarks)
+	default:
+		fmt.Printf("ERR: '%s' is not a valid cache type...\n", cacheType)
+		os.Exit(-2)
+	}
 }

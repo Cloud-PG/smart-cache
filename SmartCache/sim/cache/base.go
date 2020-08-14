@@ -152,8 +152,8 @@ func GetFile(cache Cache, vars ...interface{}) (bool, bool) {
 	return added, redirect
 }
 
-// Init initializes the cache instance
-func Init(cache Cache, args ...interface{}) interface{} {
+// InitCache initializes the cache instance
+func InitCache(cache Cache, args ...interface{}) interface{} {
 	return cache.Init(args...)
 }
 

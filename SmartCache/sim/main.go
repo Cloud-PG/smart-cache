@@ -427,40 +427,68 @@ func simCommand() *cobra.Command {
 
 			// Check previous simulation results
 			if !simOverwrite {
-				fi, errStat := os.Stat(simOutFile)
+				fileStat, errStat := os.Stat(simOutFile)
 				if errStat != nil {
-					panic(errStat)
-				}
-				// get the size
-				size := fi.Size()
-				// TODO: check if the configuration is the same
-				if size >= 1024 {
-					logger.Info("Simulation already DONE! NO OVERWRITE...")
-					_ = logger.Sync()
-					// TODO: fix error
-					// -> https://github.com/uber-go/zap/issues/772
-					// -> https://github.com/uber-go/zap/issues/328
-					return
+					if !os.IsNotExist(errStat) {
+						panic(errStat)
+					}
+				} else {
+					if fileStat.Size() > 600 {
+						// TODO: check if the configuration is the same
+						logger.Info("Simulation already DONE! NO OVERWRITE...")
+						_ = logger.Sync()
+						// TODO: fix error
+						// -> https://github.com/uber-go/zap/issues/772
+						// -> https://github.com/uber-go/zap/issues/328
+						return
+					} else {
+						logger.Info("Simulation results is empty... OVERWRITE...")
+					}
 				}
 			}
 
 			// ------------------------- Create cache --------------------------
-			curCacheInstance := genCache(
+			curCacheInstance := cache.Create(
 				cacheType,
 				cacheSize,
 				cacheSizeUnit,
 				simLog,
-				simRedirectReq,
-				simCacheWatermarks,
 				weightFunc,
-				weightAlpha,
-				weightBeta,
-				weightGamma,
+				cache.WeightFunctionParameters{
+					Alpha: weightAlpha,
+					Beta:  weightBeta,
+					Gamma: weightGamma,
+				},
 			)
 
-			// ----------------------- Configure cache -------------------------
+			// ------------------------- Init cache ----------------------------
+			cache.InitInstance(
+				cacheType,
+				curCacheInstance,
+				cache.InitParameters{
+					Log:                    simLog,
+					RedirectReq:            simRedirectReq,
+					Watermarks:             simCacheWatermarks,
+					Dataset2TestPath:       dataset2TestPath,
+					AIFeatureMap:           aiFeatureMap,
+					AIModel:                aiModel,
+					FunctionType:           weightFunc,
+					WeightAlpha:            weightAlpha,
+					WeightBeta:             weightBeta,
+					WeightGamma:            weightGamma,
+					SimUseK:                simUseK,
+					AIRLEvictionK:          aiRLEvictionK,
+					AIRLAdditionFeatureMap: aiRLAdditionFeatureMap,
+					AIRLEvictionFeatureMap: aiRLEvictionFeatureMap,
+					AIRLEpsilonStart:       aiRLEpsilonStart,
+					AIRLEpsilonDecay:       aiRLEpsilonDecay,
+				},
+			)
+
+			// --------------------- Set cache Bandwidth -----------------------
 			cache.SetBandwidth(curCacheInstance, simBandwidth)
-			// selectedRegion := fmt.Sprintf("_%s_", strings.ToLower(simRegion))
+
+			// -------------..-------- Set cache Region ------------------------
 			switch simRegion {
 			// TODO: add filter as a parameter
 			case "us":
@@ -470,58 +498,6 @@ func simCommand() *cobra.Command {
 			case "it":
 				dataTypeFilter = cache.ItDataMcTypes{}
 				cache.SetRegion(curCacheInstance, "it")
-			}
-
-			if dataset2TestPath != "" {
-				cache.Init(curCacheInstance, simLog, simRedirectReq, simCacheWatermarks, dataset2TestPath)
-			} else {
-				switch cacheType {
-				case "aiNN":
-					if aiFeatureMap == "" {
-						fmt.Println("ERR: No feature map indicated...")
-						os.Exit(-1)
-					}
-					cache.Init(curCacheInstance, simLog, simRedirectReq, simCacheWatermarks, aiFeatureMap, aiModel)
-				case "aiRL":
-					if aiRLAdditionFeatureMap == "" {
-						logger.Info("No addition feature map indicated...")
-					}
-					if aiRLEvictionFeatureMap == "" {
-						logger.Info("No eviction feature map indicated...")
-					}
-
-					var selFunctionType cache.FunctionType
-					switch weightFunc {
-					case "FuncAdditive":
-						selFunctionType = cache.FuncAdditive
-					case "FuncAdditiveExp":
-						selFunctionType = cache.FuncAdditiveExp
-					case "FuncMultiplicative":
-						selFunctionType = cache.FuncMultiplicative
-					case "FuncWeightedRequests":
-						selFunctionType = cache.FuncWeightedRequests
-					default:
-						fmt.Println("ERR: You need to specify a correct weight function.")
-						os.Exit(-1)
-					}
-
-					cache.Init(
-						curCacheInstance,
-						simLog,
-						simRedirectReq,
-						simCacheWatermarks,
-						simUseK,
-						aiRLEvictionK,
-						aiRLAdditionFeatureMap,
-						aiRLEvictionFeatureMap,
-						aiRLEpsilonStart,
-						aiRLEpsilonDecay,
-						selFunctionType,
-						weightAlpha,
-						weightBeta,
-						weightGamma,
-					)
-				}
 			}
 
 			if simDumpFileName == "" {
@@ -938,110 +914,4 @@ func main() {
 		fmt.Println(err.Error())
 		os.Exit(-1)
 	}
-}
-
-func genCache(cacheType string, cacheSize float64, cacheSizeUnit string, log bool, redirect bool, watermarks bool, weightFunc string, weightAlpha float64, weightBeta float64, weightGamma float64) cache.Cache {
-	logger := zap.L()
-	var cacheInstance cache.Cache
-	cacheSizeMegabytes := cache.GetCacheSize(cacheSize, cacheSizeUnit)
-	switch cacheType {
-	case "lru":
-		logger.Info("Create LRU Cache",
-			zap.Float64("cacheSize", cacheSizeMegabytes),
-		)
-		cacheInstance = &cache.SimpleCache{
-			MaxSize: cacheSizeMegabytes,
-		}
-		cache.Init(cacheInstance, cache.LRUQueue, log, redirect, watermarks)
-	case "lfu":
-		logger.Info("Create LFU Cache",
-			zap.Float64("cacheSize", cacheSizeMegabytes),
-		)
-		cacheInstance = &cache.SimpleCache{
-			MaxSize: cacheSizeMegabytes,
-		}
-		cache.Init(cacheInstance, cache.LFUQueue, log, redirect, watermarks)
-	case "sizeBig":
-		logger.Info("Create Size Big Cache",
-			zap.Float64("cacheSize", cacheSizeMegabytes),
-		)
-		cacheInstance = &cache.SimpleCache{
-			MaxSize: cacheSizeMegabytes,
-		}
-		cache.Init(cacheInstance, cache.SizeBigQueue, log, redirect, watermarks)
-	case "sizeSmall":
-		logger.Info("Create Size Small Cache",
-			zap.Float64("cacheSize", cacheSizeMegabytes),
-		)
-		cacheInstance = &cache.SimpleCache{
-			MaxSize: cacheSizeMegabytes,
-		}
-		cache.Init(cacheInstance, cache.SizeSmallQueue, log, redirect, watermarks)
-	case "lruDatasetVerifier":
-		logger.Info("Create lruDatasetVerifier Cache",
-			zap.Float64("cacheSize", cacheSizeMegabytes),
-		)
-		cacheInstance = &cache.LRUDatasetVerifier{
-			SimpleCache: cache.SimpleCache{
-				MaxSize: cacheSizeMegabytes,
-			},
-		}
-	case "aiNN":
-		logger.Info("Create aiNN Cache",
-			zap.Float64("cacheSize", cacheSizeMegabytes),
-		)
-		cacheInstance = &cache.AINN{
-			SimpleCache: cache.SimpleCache{
-				MaxSize: cacheSizeMegabytes,
-			},
-		}
-	case "aiRL":
-		logger.Info("Create aiRL Cache",
-			zap.Float64("cacheSize", cacheSizeMegabytes),
-		)
-		cacheInstance = &cache.AIRL{
-			SimpleCache: cache.SimpleCache{
-				MaxSize: cacheSizeMegabytes,
-			},
-		}
-	case "weightFunLRU":
-		logger.Info("Create Weight Function Cache",
-			zap.Float64("cacheSize", cacheSizeMegabytes),
-		)
-
-		var (
-			selFunctionType cache.FunctionType
-		)
-
-		switch weightFunc {
-		case "FuncAdditive":
-			selFunctionType = cache.FuncAdditive
-		case "FuncAdditiveExp":
-			selFunctionType = cache.FuncAdditiveExp
-		case "FuncMultiplicative":
-			selFunctionType = cache.FuncMultiplicative
-		case "FuncWeightedRequests":
-			selFunctionType = cache.FuncWeightedRequests
-		default:
-			fmt.Println("ERR: You need to specify a correct weight function.")
-			os.Exit(-1)
-		}
-
-		cacheInstance = &cache.WeightFun{
-			SimpleCache: cache.SimpleCache{
-				MaxSize: cacheSizeMegabytes,
-			},
-			Parameters: cache.WeightFunctionParameters{
-				Alpha: weightAlpha,
-				Beta:  weightBeta,
-				Gamma: weightGamma,
-			},
-			SelFunctionType: selFunctionType,
-		}
-		cache.Init(cacheInstance, cache.LRUQueue, log, redirect, watermarks)
-	default:
-		fmt.Printf("ERR: '%s' is not a valid cache type...\n", cacheType)
-		os.Exit(-2)
-	}
-	return cacheInstance
 }
