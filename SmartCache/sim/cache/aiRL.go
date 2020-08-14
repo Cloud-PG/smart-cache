@@ -802,7 +802,7 @@ func (cache *AIRL) delayedRewardEvictionAgent(filename int64, inCacheTick int64,
 			reward := 0.0
 			if hit {
 				if memory.Action == qlearn.ActionNotDelete {
-					reward += 1.
+					reward += 4.
 				} else {
 					reward += -1.
 				}
@@ -950,12 +950,13 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) 
 
 		// fmt.Println(cache.additionAgentBadQValue, cache.evictionAgentBadQValue)
 
-		if cache.additionAgentBadQValue >= maxBadQValueInRow || cache.evictionAgentBadQValue >= maxBadQValueInRow {
+		if cache.additionAgentBadQValue >= maxBadQValueInRow {
 			if cache.additionAgentOK {
 				cache.additionAgentBadQValue = 0
 				cache.additionAgent.UnleashEpsilon()
 			}
-
+		}
+		if cache.evictionAgentBadQValue >= maxBadQValueInRow {
 			if cache.evictionAgentOK {
 				cache.evictionAgentBadQValue = 0
 				cache.evictionAgent.UnleashEpsilon()
