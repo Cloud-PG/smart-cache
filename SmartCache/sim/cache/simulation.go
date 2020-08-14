@@ -3,15 +3,21 @@ package cache
 import (
 	"compress/gzip"
 	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"os"
 	"path"
+	"path/filepath"
+	"runtime/pprof"
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
 
@@ -593,4 +599,425 @@ func InitInstance(cacheType string, cacheInstance Cache, param InitParameters) {
 		fmt.Printf("ERR: '%s' is not a valid cache type...\n", cacheType)
 		os.Exit(-2)
 	}
+}
+
+type SimulationParams struct {
+	DataPath           string
+	OutFile            string
+	BaseName           string
+	ResultRunStatsName string
+	DumpFilename       string
+	LoadDump           bool
+	LoadDumpFileName   string
+	Dump               bool
+	DumpFileName       string
+	DumpFilesAndStats  bool
+	ColdStart          bool
+	ColdStartNoStats   bool
+	AIRLEpsilonStart   float64
+	AIRLEpsilonDecay   float64
+	CPUprofile         string
+	MEMprofile         string
+	WindowSize         int
+	WindowStart        int
+	WindowStop         int
+	OutputUpdateDelay  float64
+	RecordFilter       Filter
+	DataTypeFilter     Filter
+}
+
+func Simulate(cacheType string, cacheInstance Cache, param SimulationParams) {
+	// Simulation variables
+	var (
+		numDailyRecords    int64
+		numInvalidRecords  int64
+		numJumpedRecords   int64
+		numFilteredRecords int64
+		totNumRecords      int64
+		totIterations      uint64
+		numIterations      uint64
+		windowStepCounter  int
+		windowCounter      int
+		succesJobFilter    = SuccessJob{}
+		redirectedData     float64
+		numRedirected      int64
+	)
+
+	if param.LoadDump {
+		logger.Info("Loading cache dump", zap.String("filename", param.LoadDumpFileName))
+
+		latestCacheRun := GetSimulationRunNum(filepath.Dir(param.LoadDumpFileName))
+
+		renameErr := os.Rename(
+			param.OutFile,
+			fmt.Sprintf("%s_run-%02d.csv",
+				strings.Split(param.OutFile, ".")[0],
+				latestCacheRun,
+			),
+		)
+		if renameErr != nil {
+			panic(renameErr)
+		}
+
+		loadedDump := Load(cacheInstance, param.LoadDumpFileName)
+
+		if cacheType == "aiRL" {
+			Loads(cacheInstance, loadedDump, param.AIRLEpsilonStart, param.AIRLEpsilonDecay)
+		} else {
+			Loads(cacheInstance, loadedDump)
+		}
+
+		logger.Info("Cache dump loaded!")
+		if param.ColdStart {
+			if param.ColdStartNoStats {
+				Clear(cacheInstance)
+				logger.Info("Cache Files deleted... COLD START with NO STATISTICS")
+			} else {
+				ClearFiles(cacheInstance)
+				logger.Info("Cache Files deleted... COLD START")
+			}
+		} else {
+			logger.Info("Cache Files stored... HOT START")
+		}
+	}
+
+	// Open simulation files
+	fileStats, statErr := os.Stat(param.DataPath)
+	if statErr != nil {
+		fmt.Printf("ERR: Cannot open source %s.\n", param.DataPath)
+		panic(statErr)
+	}
+
+	var iterator chan CSVRecord
+
+	switch mode := fileStats.Mode(); {
+	case mode.IsRegular():
+		iterator = OpenSimFile(param.DataPath)
+	case mode.IsDir():
+		curFolder, _ := os.Open(param.DataPath)
+		defer func() {
+			closeErr := curFolder.Close()
+			if closeErr != nil {
+				panic(closeErr)
+			}
+		}()
+		iterator = OpenSimFolder(curFolder)
+	}
+
+	csvSimOutput := OutputCSV{}
+	csvSimOutput.Create(param.OutFile, false)
+	defer csvSimOutput.Close()
+
+	csvHeaderColumns := []string{"date",
+		"num req",
+		"num hit",
+		"num added",
+		"num deleted",
+		"num redirected",
+		"cache size",
+		"size",
+		"occupancy",
+		"bandwidth",
+		"bandwidth usage",
+		"hit rate",
+		"weighted hit rate",
+		"written data",
+		"read data",
+		"read on hit data",
+		"read on miss data",
+		"deleted data",
+		"avg free space",
+		"std dev free space",
+		"CPU efficiency",
+		"CPU hit efficiency",
+		"CPU miss efficiency",
+		"CPU efficiency upper bound",
+		"CPU efficiency lower bound",
+	}
+	if cacheType == "aiRL" {
+		csvHeaderColumns = append(csvHeaderColumns, "Addition epsilon")
+		csvHeaderColumns = append(csvHeaderColumns, "Eviction epsilon")
+		csvHeaderColumns = append(csvHeaderColumns, "Addition qvalue function")
+		csvHeaderColumns = append(csvHeaderColumns, "Eviction qvalue function")
+		csvHeaderColumns = append(csvHeaderColumns, "Eviction calls")
+		csvHeaderColumns = append(csvHeaderColumns, "Eviction forced calls")
+		csvHeaderColumns = append(csvHeaderColumns, "Action store")
+		csvHeaderColumns = append(csvHeaderColumns, "Action not store")
+		csvHeaderColumns = append(csvHeaderColumns, "Action delete all")
+		csvHeaderColumns = append(csvHeaderColumns, "Action delete half")
+		csvHeaderColumns = append(csvHeaderColumns, "Action delete quarter")
+		csvHeaderColumns = append(csvHeaderColumns, "Action delete one")
+		csvHeaderColumns = append(csvHeaderColumns, "Action not delete")
+	}
+	csvSimOutput.Write(csvHeaderColumns)
+
+	simBeginTime := time.Now()
+	start := time.Now()
+	var latestTime time.Time
+
+	if param.CPUprofile != "" {
+		profileOut, err := os.Create(param.CPUprofile)
+		if err != nil {
+			fmt.Printf("ERR: Can not create CPU profile file %s.\n", err)
+			os.Exit(-1)
+		}
+		logger.Info("Enable CPU profiliing", zap.String("filename", param.CPUprofile))
+		startProfileErr := pprof.StartCPUProfile(profileOut)
+		if startProfileErr != nil {
+			panic(startProfileErr)
+		}
+		defer pprof.StopCPUProfile()
+	}
+
+	logger.Info("Simulation START")
+
+	for record := range iterator {
+
+		numIterations++
+
+		// --------------------- Make daily output ---------------------
+		if latestTime.IsZero() {
+			latestTime = time.Unix(record.Day, 0.)
+		}
+
+		curTime := time.Unix(record.Day, 0.)
+
+		if curTime.Sub(latestTime).Hours() >= 24. {
+			if windowCounter >= param.WindowStart {
+				csvRow := []string{
+					latestTime.String(),
+					fmt.Sprintf("%d", NumRequests(cacheInstance)),
+					fmt.Sprintf("%d", NumHits(cacheInstance)),
+					fmt.Sprintf("%d", NumAdded(cacheInstance)),
+					fmt.Sprintf("%d", NumDeleted(cacheInstance)),
+					fmt.Sprintf("%d", NumRedirected(cacheInstance)),
+					fmt.Sprintf("%f", GetMaxSize(cacheInstance)),
+					fmt.Sprintf("%f", Size(cacheInstance)),
+					fmt.Sprintf("%f", Occupancy(cacheInstance)),
+					fmt.Sprintf("%f", Bandwidth(cacheInstance)),
+					fmt.Sprintf("%f", BandwidthUsage(cacheInstance)),
+					fmt.Sprintf("%0.2f", HitRate(cacheInstance)),
+					fmt.Sprintf("%0.2f", WeightedHitRate(cacheInstance)),
+					fmt.Sprintf("%f", DataWritten(cacheInstance)),
+					fmt.Sprintf("%f", DataRead(cacheInstance)),
+					fmt.Sprintf("%f", DataReadOnHit(cacheInstance)),
+					fmt.Sprintf("%f", DataReadOnMiss(cacheInstance)),
+					fmt.Sprintf("%f", DataDeleted(cacheInstance)),
+					fmt.Sprintf("%f", AvgFreeSpace(cacheInstance)),
+					fmt.Sprintf("%f", StdDevFreeSpace(cacheInstance)),
+					fmt.Sprintf("%f", CPUEff(cacheInstance)),
+					fmt.Sprintf("%f", CPUHitEff(cacheInstance)),
+					fmt.Sprintf("%f", CPUMissEff(cacheInstance)),
+					fmt.Sprintf("%f", CPUEffUpperBound(cacheInstance)),
+					fmt.Sprintf("%f", CPUEffLowerBound(cacheInstance)),
+				}
+				if cacheType == "aiRL" {
+					csvRow = append(csvRow, strings.Split(ExtraOutput(cacheInstance, "epsilonStats"), ",")...)
+					csvRow = append(csvRow, strings.Split(ExtraOutput(cacheInstance, "valueFunctions"), ",")...)
+					csvRow = append(csvRow, strings.Split(ExtraOutput(cacheInstance, "evictionStats"), ",")...)
+					csvRow = append(csvRow, strings.Split(ExtraOutput(cacheInstance, "actionStats"), ",")...)
+				}
+				csvSimOutput.Write(csvRow)
+			}
+			ClearStats(cacheInstance)
+			// Update time window
+			latestTime = curTime
+			windowStepCounter++
+		}
+
+		if windowStepCounter == param.WindowSize {
+			windowCounter++
+			windowStepCounter = 0
+			numDailyRecords = 0
+		}
+		if windowCounter == param.WindowStop {
+			break
+		}
+
+		totNumRecords++
+
+		if windowCounter >= param.WindowStart {
+			if succesJobFilter.Check(record) == false {
+				numFilteredRecords++
+				continue
+			}
+			if param.DataTypeFilter != nil {
+				if param.DataTypeFilter.Check(record) == false {
+					numFilteredRecords++
+					continue
+				}
+			}
+			if param.RecordFilter != nil {
+				if param.RecordFilter.Check(record) == false {
+					numFilteredRecords++
+					continue
+				}
+			}
+
+			sizeInMbytes := record.SizeM // Size in Megabytes
+
+			cpuEff := (record.CPUTime / (record.CPUTime + record.IOTime)) * 100.
+			// Filter records with invalid CPU efficiency
+			if cpuEff < 0. {
+				numInvalidRecords++
+				continue
+			} else if math.IsInf(cpuEff, 0) {
+				numInvalidRecords++
+				continue
+			} else if math.IsNaN(cpuEff) {
+				numInvalidRecords++
+				continue
+			} else if cpuEff > 100. {
+				numInvalidRecords++
+				continue
+			}
+
+			_, redirected := GetFile(
+				cacheInstance,
+				record.Filename,
+				sizeInMbytes,
+				record.Protocol,
+				cpuEff,
+				record.Day,
+				record.SiteName,
+				record.UserID,
+				record.FileType,
+			)
+
+			if redirected {
+				redirectedData += sizeInMbytes
+				numRedirected++
+				continue
+			}
+
+			numDailyRecords++
+
+			if time.Now().Sub(start).Seconds() >= param.OutputUpdateDelay {
+				elapsedTime := time.Now().Sub(simBeginTime)
+				logger.Info("Simulation",
+					zap.String("cache", param.BaseName),
+					zap.String("elapsedTime", fmt.Sprintf("%02d:%02d:%02d",
+						int(elapsedTime.Hours()),
+						int(elapsedTime.Minutes())%60,
+						int(elapsedTime.Seconds())%60,
+					)),
+					zap.Int("window", windowCounter),
+					zap.Int("step", windowStepCounter),
+					zap.Int("windowSize", param.WindowSize),
+					zap.Int64("numDailyRecords", numDailyRecords),
+					zap.Float64("hitRate", HitRate(cacheInstance)),
+					zap.Float64("capacity", Occupancy(cacheInstance)),
+					zap.Float64("redirectedData", redirectedData),
+					zap.Int64("numRedirected", numRedirected),
+					zap.String("extra", ExtraStats(cacheInstance)),
+					zap.Float64("it/s", float64(numIterations)/time.Now().Sub(start).Seconds()),
+				)
+				totIterations += numIterations
+				numIterations = 0
+				start = time.Now()
+			}
+
+		} else {
+			numJumpedRecords++
+			if time.Now().Sub(start).Seconds() >= param.OutputUpdateDelay {
+				logger.Info("Jump records",
+					zap.Int64("numDailyRecords", numDailyRecords),
+					zap.Int64("numJumpedRecords", numJumpedRecords),
+					zap.Int64("numFilteredRecords", numFilteredRecords),
+					zap.Int64("numInvalidRecords", numInvalidRecords),
+					zap.Int("window", windowCounter),
+				)
+				start = time.Now()
+			}
+		}
+	}
+
+	if param.MEMprofile != "" {
+		profileOut, err := os.Create(param.MEMprofile)
+		if err != nil {
+			logger.Error("Cannot create Memory profile file",
+				zap.Error(err),
+				zap.String("filename", param.MEMprofile),
+			)
+			os.Exit(-1)
+		}
+		logger.Info("Write memprofile", zap.String("filename", param.MEMprofile))
+		profileWriteErr := pprof.WriteHeapProfile(profileOut)
+		if profileWriteErr != nil {
+			panic(profileWriteErr)
+		}
+		profileCloseErr := profileOut.Close()
+		if profileCloseErr != nil {
+			panic(profileCloseErr)
+		}
+		return
+	}
+
+	elapsedTime := time.Now().Sub(simBeginTime)
+	elTH := int(elapsedTime.Hours())
+	elTM := int(elapsedTime.Minutes()) % 60
+	elTS := int(elapsedTime.Seconds()) % 60
+	avgSpeed := float64(totIterations) / elapsedTime.Seconds()
+	logger.Info("Simulation end...",
+		zap.String("elapsedTime", fmt.Sprintf("%02d:%02d:%02d", elTH, elTM, elTS)),
+		zap.Float64("avg it/s", avgSpeed),
+		zap.Int64("totRecords", totNumRecords),
+		zap.Int64("numJumpedRecords", numJumpedRecords),
+		zap.Int64("numFilteredRecords", numFilteredRecords),
+		zap.Int64("numInvalidRecords", numInvalidRecords),
+	)
+	// Save run statistics
+	statFile, errCreateStat := os.Create(param.ResultRunStatsName)
+	defer func() {
+		closeErr := statFile.Close()
+		if closeErr != nil {
+			panic(closeErr)
+		}
+	}()
+	if errCreateStat != nil {
+		panic(errCreateStat)
+	}
+	jsonBytes, errMarshal := json.Marshal(SimulationStats{
+		TimeElapsed:           fmt.Sprintf("%02d:%02d:%02d", elTH, elTM, elTS),
+		Extra:                 ExtraStats(cacheInstance),
+		TotNumRecords:         totNumRecords,
+		TotFilteredRecords:    numFilteredRecords,
+		TotJumpedRecords:      numJumpedRecords,
+		TotInvalidRecords:     numInvalidRecords,
+		AvgSpeed:              fmt.Sprintf("Num.Records/s = %0.2f", avgSpeed),
+		TotRedirectedRecords:  numRedirected,
+		SizeRedirectedRecords: redirectedData,
+	})
+	if errMarshal != nil {
+		panic(errMarshal)
+	}
+	_, statFileWriteErr := statFile.Write(jsonBytes)
+	if statFileWriteErr != nil {
+		panic(statFileWriteErr)
+	}
+
+	if param.Dump {
+		Dump(cacheInstance, param.DumpFileName, param.DumpFilesAndStats)
+	}
+
+	if cacheType == "aiRL" {
+		// Save tables
+		logger.Info("Save addition table...")
+		ExtraOutput(cacheInstance, "additionQTable")
+		logger.Info("Save eviction table...")
+		ExtraOutput(cacheInstance, "evictionQTable")
+	}
+
+	_ = Terminate(cacheInstance)
+
+	errViperWrite := viper.WriteConfigAs("config.yaml")
+	if errViperWrite != nil {
+		panic(errViperWrite)
+	}
+
+	logger.Info("Simulation DONE!")
+	_ = logger.Sync()
+	// TODO: fix error
+	// -> https://github.com/uber-go/zap/issues/772
+	// -> https://github.com/uber-go/zap/issues/328
 }
