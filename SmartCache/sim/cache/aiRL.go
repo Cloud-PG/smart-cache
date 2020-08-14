@@ -803,9 +803,18 @@ func (cache *AIRL) delayedRewardEvictionAgent(filename int64, inCacheTick int64,
 			if hit {
 				if memory.Action == qlearn.ActionNotDelete {
 					reward += 1.
+				} else {
+					reward += -1.
 				}
 			} else { // MISS
-				if memory.Action != qlearn.ActionNotDelete {
+				switch memory.Action {
+				case qlearn.ActionDeleteAll:
+					reward += -4.
+				case qlearn.ActionDeleteHalf:
+					reward += -3.
+				case qlearn.ActionDeleteQuarter:
+					reward += -2.
+				case qlearn.ActionDeleteOne:
 					reward += -1.
 				}
 			}
@@ -836,31 +845,26 @@ func (cache *AIRL) delayedRewardAdditionAgent(filename int64) {
 		if prevMemory.Action != qlearn.ActionNONE {
 			reward := 0.0
 
-			if !prevMemory.Hit && !nextMemory.Hit && prevMemory.Action == qlearn.ActionNotStore {
+			// MISS -> MISS
+			if !prevMemory.Hit && !nextMemory.Hit {
 				reward += -1.
 			}
-			if !prevMemory.Hit && nextMemory.Hit && prevMemory.Action == qlearn.ActionStore {
+			// MISS -> HIT
+			if !prevMemory.Hit && nextMemory.Hit {
 				reward += 1.
 			}
-			if prevMemory.Hit && nextMemory.Hit {
+			// HIT -> HIT
+			if prevMemory.Hit && nextMemory.Hit && prevMemory.Action == qlearn.ActionStore {
 				reward += 1.
-			}
-			if prevMemory.Hit && !nextMemory.Hit {
-				if prevMemory.Action == qlearn.ActionNotStore {
-					reward += 1.
-				} else { // prev Action STORE
-					reward += -1.
-				}
 			}
 			// Update table
 			cache.additionAgent.UpdateTable(prevMemory.State, nextMemory.State, prevMemory.Action, reward)
 			// Update epsilon
 			cache.additionAgent.UpdateEpsilon()
-
-			// Remove oldest memory
-			cache.additionAgent.ShiftMemory(filename)
 		}
 	}
+	// Remove oldest memory
+	cache.additionAgent.ShiftMemory(filename)
 }
 
 func (cache *AIRL) rewardEvictionAfterForcedCall(added bool) {
