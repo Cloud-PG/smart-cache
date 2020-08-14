@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	maxBadQValueInRow = 28
+	maxBadQValueInRow = 8
 )
 
 // AIRL cache
@@ -846,16 +846,22 @@ func (cache *AIRL) delayedRewardAdditionAgent(filename int64) {
 			reward := 0.0
 
 			// MISS -> MISS
-			if !prevMemory.Hit && !nextMemory.Hit {
+			if !prevMemory.Hit && !nextMemory.Hit && prevMemory.Action == qlearn.ActionStore {
 				reward += -1.
+			} else {
+				reward += 1.
 			}
 			// MISS -> HIT
-			if !prevMemory.Hit && nextMemory.Hit {
-				reward += 1.
+			if !prevMemory.Hit && nextMemory.Hit && prevMemory.Action == qlearn.ActionStore {
+				reward += 8.
+			} else {
+				reward += -1.
 			}
 			// HIT -> HIT
 			if prevMemory.Hit && nextMemory.Hit && prevMemory.Action == qlearn.ActionStore {
-				reward += 1.
+				reward += 8.
+			} else {
+				reward += -1.
 			}
 			// Update table
 			cache.additionAgent.UpdateTable(prevMemory.State, nextMemory.State, prevMemory.Action, reward)
@@ -953,13 +959,21 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) 
 		if cache.additionAgentBadQValue >= maxBadQValueInRow {
 			if cache.additionAgentOK {
 				cache.additionAgentBadQValue = 0
-				cache.additionAgent.UnleashEpsilon()
+				cache.additionAgent.UnleashEpsilon(nil)
+			}
+			if cache.evictionAgentOK {
+				cache.evictionAgentBadQValue = 0
+				cache.evictionAgent.UnleashEpsilon(0.5)
 			}
 		}
 		if cache.evictionAgentBadQValue >= maxBadQValueInRow {
+			if cache.additionAgentOK {
+				cache.additionAgentBadQValue = 0
+				cache.additionAgent.UnleashEpsilon(0.5)
+			}
 			if cache.evictionAgentOK {
 				cache.evictionAgentBadQValue = 0
-				cache.evictionAgent.UnleashEpsilon()
+				cache.evictionAgent.UnleashEpsilon(nil)
 			}
 		}
 	}

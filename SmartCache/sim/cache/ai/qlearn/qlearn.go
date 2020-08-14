@@ -183,7 +183,7 @@ type Agent struct {
 	Epsilon          float64                  `json:"epsilon"`
 	MaxEpsilon       float64                  `json:"maxEpsilon"`
 	MinEpsilon       float64                  `json:"minEpsilon"`
-	StepNum          int32                    `json:"episodeCounter"`
+	StepNum          int64                    `json:"episodeCounter"`
 	RGenerator       *rand.Rand               `json:"rGenerator"`
 	UpdateAlgorithm  RLUpdateAlg              `json:"updateAlgorithm"`
 	QValue           float64                  `json:"qValue"`
@@ -193,8 +193,8 @@ type Agent struct {
 func (agent *Agent) Init(featureManager *featuremap.FeatureManager, role AgentRole, initEpsilon float64, decayRateEpsilon float64) {
 	logger = zap.L()
 
-	agent.LearningRate = 0.9 // also named Alpha
-	agent.DiscountFactor = 0.5
+	agent.LearningRate = 0.75 // also named Alpha
+	agent.DiscountFactor = 0.33
 	agent.DecayRateEpsilon = decayRateEpsilon
 	agent.Epsilon = initEpsilon
 	agent.MaxEpsilon = 1.0
@@ -259,9 +259,15 @@ func (agent *Agent) ResetQValue() {
 }
 
 // UnleashEpsilon set Epsilon to 1.0
-func (agent *Agent) UnleashEpsilon() {
+func (agent *Agent) UnleashEpsilon(newEpsilon interface{}) {
 	agent.Epsilon = 1.0
 	agent.StepNum = 0
+	if newEpsilon != nil {
+		targetEpsilon := newEpsilon.(float64)
+		for agent.Epsilon > targetEpsilon {
+			agent.UpdateEpsilon()
+		}
+	}
 }
 
 // GetRandomFloat generates a random number
