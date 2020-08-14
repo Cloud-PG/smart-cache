@@ -143,7 +143,7 @@ def aggregate_results(folder: str):
 
 
 def _measure_throughput(df: 'pd.DataFrame') -> 'pd.Series':
-    return df['read on hit data'] / df['written data']
+    return df['read on hit data'] - df['written data']
 
 
 def _measure_cost(df: 'pd.DataFrame') -> 'pd.Series':
@@ -189,16 +189,15 @@ def _get_measures(cache_filename: str, df: 'pd.DataFrame') -> list:
     measures = [cache_filename]
 
     cache_size = df['cache size'][0]
-    bandwidth = df['bandwidth'][0]
 
     # Throughput
     measures.append(
-        _measure_throughput(df).mean()
+        _measure_throughput(df).mean() / cache_size
     )
 
     # Cost
     measures.append(
-        (_measure_cost(df).mean() / cache_size) * 100.
+        _measure_cost(df).mean() / cache_size
     )
 
     # Bandwidth
