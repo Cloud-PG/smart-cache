@@ -48,8 +48,6 @@ func configureViper(configFilenameWithNoExt string) {
 	viper.SetDefault("sim.cache.watermarks", false)
 	viper.SetDefault("sim.coldstart", false)
 	viper.SetDefault("sim.coldstartnostats", false)
-	viper.SetDefault("sim.redirectreq", false)
-	viper.SetDefault("sim.bandwidth", 10.0)
 	viper.SetDefault("sim.log", false)
 
 	viper.SetDefault("sim.cpuprofile", "")
@@ -58,6 +56,8 @@ func configureViper(configFilenameWithNoExt string) {
 
 	viper.SetDefault("sim.cache.size.value", 100.)
 	viper.SetDefault("sim.cache.size.unit", "T")
+	viper.SetDefault("sim.cache.bandwidth.value", 10.0)
+	viper.SetDefault("sim.cache.bandwidth.redirect", false)
 
 	viper.SetDefault("sim.weightfunc.name", "FuncAdditiveExp")
 	viper.SetDefault("sim.weightfunc.alpha", 1.0)
@@ -217,10 +217,10 @@ func simCommand() *cobra.Command {
 			simOverwrite = viper.GetBool("sim.overwrite")
 			logger.Info("CONF_VAR", zap.Bool("simOverwrite", simOverwrite))
 
-			simBandwidth = viper.GetFloat64("sim.bandwidth")
+			simBandwidth = viper.GetFloat64("sim.cache.bandwidth.value")
 			logger.Info("CONF_VAR", zap.Float64("simBandwidth", simBandwidth))
 
-			simRedirectReq = viper.GetBool("sim.redirectreq")
+			simRedirectReq = viper.GetBool("sim.cache.bandwidth.redirect")
 			logger.Info("CONF_VAR", zap.Bool("simRedirectReq", simRedirectReq))
 
 			simCacheWatermarks = viper.GetBool("sim.cache.watermarks")
