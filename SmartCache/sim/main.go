@@ -362,7 +362,7 @@ func simCommand() *cobra.Command {
 				simRegion,
 			}, "_")
 
-			if cacheType == "weightedLRU" {
+			if cacheType == "weightFunLRU" {
 				parameters := strings.Join([]string{
 					fmt.Sprintf("%0.2f", weightAlpha),
 					fmt.Sprintf("%0.2f", weightBeta),
