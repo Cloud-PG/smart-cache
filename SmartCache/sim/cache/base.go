@@ -79,10 +79,11 @@ type Cache interface {
 	NumAdded() int64
 	NumDeleted() int64
 	NumRedirected() int64
+	RedirectedSize() float64
 
 	Check(int64) bool
 	CheckWatermark() bool
-	CheckRedirect() bool
+	CheckRedirect(filename int64, size float64) bool
 	BeforeRequest(request *Request, hit bool) (*FileStats, bool)
 	UpdatePolicy(request *Request, fileStats *FileStats, hit bool) bool
 	AfterRequest(request *Request, fileStats *FileStats, hit bool, added bool)
@@ -136,7 +137,7 @@ func GetFile(cache Cache, vars ...interface{}) (bool, bool) {
 	// Check Redirect
 	redirect := false
 	if !hit {
-		redirect = CheckRedirect(cache)
+		redirect = CheckRedirect(cache, cacheRequest.Filename, cacheRequest.Size)
 	}
 	if redirect {
 		return false, redirect
@@ -298,8 +299,8 @@ func Check(cache Cache, filename int64) bool {
 }
 
 // CheckRedirect the current cache instance
-func CheckRedirect(cache Cache) bool {
-	return cache.CheckRedirect()
+func CheckRedirect(cache Cache, filename int64, size float64) bool {
+	return cache.CheckRedirect(filename, size)
 }
 
 // CheckWatermark of the current cache instance
@@ -340,6 +341,11 @@ func NumRequests(cache Cache) int64 {
 // NumRedirected of the current cache instance
 func NumRedirected(cache Cache) int64 {
 	return cache.NumRedirected()
+}
+
+// RedirectedSize of the current cache instance
+func RedirectedSize(cache Cache) float64 {
+	return cache.RedirectedSize()
 }
 
 // NumAdded of the current cache instance

@@ -57,6 +57,7 @@ type SimpleCache struct {
 	curTime                            time.Time
 	region                             string
 	bandwidth                          float64
+	redirectSize                       float64
 	tick                               int64
 	canRedirect                        bool
 	useWatermarks                      bool
@@ -119,28 +120,7 @@ func (cache *SimpleCache) ClearFiles() {
 func (cache *SimpleCache) Clear() {
 	cache.stats.Init()
 	cache.ClearFiles()
-
-	cache.hit = 0.
-	cache.miss = 0.
-	cache.dataWritten = 0.
-	cache.dataRead = 0.
-	cache.dataReadOnHit = 0.
-	cache.dataReadOnMiss = 0.
-	cache.dataDeleted = 0.
-	cache.dailyfreeSpace = cache.dailyfreeSpace[:0]
-	cache.sumDailyFreeSpace = 0.
-	cache.hitCPUEff = 0.
-	cache.missCPUEff = 0.
-	cache.upperCPUEff = 0.
-	cache.lowerCPUEff = 0.
-	cache.numDailyHit = 0
-	cache.numDailyMiss = 0
-	cache.numReq = 0
-	cache.numAdded = 0
-	cache.numDeleted = 0
-	cache.numRedirected = 0
-	cache.numLocal = 0
-	cache.numRemote = 0
+	cache.ClearStats()
 	cache.tick = 0
 }
 
@@ -167,6 +147,7 @@ func (cache *SimpleCache) ClearStats() {
 	cache.numRedirected = 0
 	cache.numLocal = 0
 	cache.numRemote = 0
+	cache.redirectSize = 0.
 }
 
 // Dumps the SimpleCache cache
@@ -459,12 +440,13 @@ func (cache *SimpleCache) Free(amount float64, percentage bool) float64 {
 }
 
 // CheckRedirect checks the cache can redirect requests on miss
-func (cache *SimpleCache) CheckRedirect() bool {
+func (cache *SimpleCache) CheckRedirect(filename int64, size float64) bool {
 	redirect := false
 	if cache.canRedirect {
 		if cache.BandwidthUsage() >= 95. {
 			redirect = true
 			cache.numRedirected++
+			cache.redirectSize += size
 		}
 	}
 	return redirect
@@ -638,6 +620,11 @@ func (cache *SimpleCache) NumRequests() int64 {
 // NumRedirected returns the # of redirected files
 func (cache *SimpleCache) NumRedirected() int64 {
 	return cache.numRedirected
+}
+
+// RedirectedSize returns the size of all redirected files
+func (cache *SimpleCache) RedirectedSize() float64 {
+	return cache.redirectSize
 }
 
 // NumAdded returns the # of Added files
