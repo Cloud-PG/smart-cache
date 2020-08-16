@@ -144,11 +144,13 @@ def aggregate_results(folder: str):
 
 
 def _measure_throughput(df: 'pd.DataFrame') -> 'pd.Series':
-    return df['read on hit data'] - df['written data']
+    cache_size = df['cache size'][0]
+    return (df['read on hit data'] - df['written data'])/cache_size
 
 
 def _measure_cost(df: 'pd.DataFrame') -> 'pd.Series':
-    return df['written data'] + df['deleted data']
+    cache_size = df['cache size'][0]
+    return (df['written data'] + df['deleted data'])/cache_size
 
 
 def _measure_cpu_eff(df: 'pd.DataFrame') -> 'pd.Series':
@@ -156,15 +158,22 @@ def _measure_cpu_eff(df: 'pd.DataFrame') -> 'pd.Series':
 
 
 def _measure_avg_free_space(df: 'pd.DataFrame') -> 'pd.Series':
-    return df['avg free space']
+    cache_size = df['cache size'][0]
+    return (df['avg free space'] / cache_size) * 100.
 
 
 def _measure_std_dev_free_space(df: 'pd.DataFrame') -> 'pd.Series':
-    return df['std dev free space']
+    cache_size = df['cache size'][0]
+    return (df['std dev free space'] / cache_size) * 100.
 
 
 def _measure_bandwidth(df: 'pd.DataFrame') -> 'pd.Series':
     return (df['read on miss data'] / df['bandwidth']) * 100.
+
+
+def _measure_redirect_volume(df: 'pd.DataFrame') -> 'pd.Series':
+    cache_size = df['cache size'][0]
+    return (df['size redirected'] / cache_size) * 100.
 
 
 def _measure_hit_rate(df: 'pd.DataFrame') -> 'pd.Series':
@@ -182,6 +191,7 @@ _MEASURES = {
     'Avg. Free Space': _measure_avg_free_space,
     'Std. Dev. Free Space': _measure_std_dev_free_space,
     'Bandwidth': _measure_bandwidth,
+    'Redirect Vol.': _measure_redirect_volume,
     'Hit rate': _measure_hit_rate,
 }
 
@@ -189,16 +199,14 @@ _MEASURES = {
 def _get_measures(cache_filename: str, df: 'pd.DataFrame') -> list:
     measures = [cache_filename]
 
-    cache_size = df['cache size'][0]
-
     # Throughput
     measures.append(
-        _measure_throughput(df).mean() / cache_size
+        _measure_throughput(df).mean()
     )
 
     # Cost
     measures.append(
-        _measure_cost(df).mean() / cache_size
+        _measure_cost(df).mean()
     )
 
     # Bandwidth
@@ -206,14 +214,19 @@ def _get_measures(cache_filename: str, df: 'pd.DataFrame') -> list:
         _measure_bandwidth(df).mean()
     )
 
+    # Redirect Vol.
+    measures.append(
+        _measure_redirect_volume(df).mean()
+    )
+
     # Avg. Free Space
     measures.append(
-        (_measure_avg_free_space(df).mean() / cache_size) * 100.
+        _measure_avg_free_space(df).mean()
     )
 
     # Std. Dev. Free Space
     measures.append(
-        (_measure_std_dev_free_space(df).mean() / cache_size) * 100.
+        _measure_std_dev_free_space(df).mean()
     )
 
     # Hit rate
@@ -509,14 +522,6 @@ def dashboard(results: 'Results'):
     app.run_server(debug=True)
 
 
-"""
-
-
-
-,
-"""
-
-
 def _add_columns(fig: 'go.Figure', df: 'pd.DataFrame', name: str, column: str):
     """Add a specific column to plot as trace line
 
@@ -648,7 +653,7 @@ def make_table(files2plot: list, prefix: str) -> 'dbc.Table':
         columns=[
             "file", "Throughput", "Cost", "Bandwidth",
             "Avg. Free Space", "Std. Dev. Free Space",
-            "Hit rate", "CPU Eff."
+            "Redirect Vol.", "Hit rate", "CPU Eff."
         ]
     )
     df = df.sort_values(
