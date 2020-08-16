@@ -23,6 +23,7 @@ _COLUMNS = [
     'num added',
     'num deleted',
     'num redirected',
+    'size redirected',
     'cache size',
     'size',
     'occupancy',
