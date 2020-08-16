@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 echo "===> $0" &&
-python -m SmartCache.sim.utils compile --fast "true" && #--release "true" &&
+python -m SmartCache.sim.utils compile --release "true" &&
 
 pushd ../../config/simulations/weight_function_italian_dataset/100T &&
 python make_configs.py
@@ -16,7 +16,7 @@ WEIGHT_CONFIGS=../../config/simulations/weight_function_italian_dataset/100T/wei
 for conf in $WEIGHT_CONFIGS
 do
   echo "==> $conf"
-  simulation sim $conf
+  simulator sim $conf
 done
 
 ### ----- Plot results -----

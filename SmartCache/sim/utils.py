@@ -26,10 +26,15 @@ def get_logger(filename: str = __name__, level: str = 'INFO') -> 'logger.Logger'
     return logger
 
 
-def get_simulator_exe(force_creation: bool = False, release: bool = False, fast: bool = False) -> str:
-    logger = get_logger(__name__)
+def get_simulator_path() -> 'pathlib.Path':
     cur_dir = pathlib.Path(__file__).parent.absolute()
     sim_path = cur_dir.joinpath('bin', SIM_NAME)
+    return cur_dir, sim_path
+
+
+def get_simulator_exe(force_creation: bool = False, release: bool = False, fast: bool = False) -> str:
+    logger = get_logger(__name__)
+    cur_dir, sim_path = get_simulator_path()
     logger.info(f"[BUILD]->[Sim Path][{sim_path}]")
     if force_creation or not path.exists(sim_path) or not path.isfile(sim_path):
         command = """go build {}-v -o bin -ldflags "{}-X main.buildstamp=`date -u '+%Y-%m-%d_%I:%M:%S%p'` -X main.githash=`git rev-parse HEAD`" ./..."""
@@ -59,7 +64,7 @@ if __name__ == "__main__":
     parser.register('type', 'bool', str2bool)  # add type keyword to registries
 
     parser.add_argument(
-        'command', type=str, choices=["compile"],
+        'command', type=str, choices=["compile", "simPath"],
         help='the command to execute'
     )
     parser.add_argument(
@@ -74,3 +79,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     if args.command == "compile":
         get_simulator_exe(True, args.release, args.fast)
+    elif args.command == "simPath":
+        _, simPath = get_simulator_path()
+        print(simPath.as_posix())
