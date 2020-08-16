@@ -55,7 +55,8 @@ def main():
                         )
                         conf_num += 1
                         print(
-                            f"==> Written config {conf_num}/{tot_configs} of {function}"
+                            f"==> Written config {conf_num}/{tot_configs} of {function}",
+                            end="\r"
                         )
 
 
