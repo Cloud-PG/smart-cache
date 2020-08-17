@@ -8,21 +8,21 @@ simulator sim ../../config/simulations/synthetic_dataset/high_frequency_dataset/
 simulator sim ../../config/simulations/synthetic_dataset/high_frequency_dataset/lfu.yml &&
 simulator sim ../../config/simulations/synthetic_dataset/high_frequency_dataset/sizeBig.yml &&
 simulator sim ../../config/simulations/synthetic_dataset/high_frequency_dataset/sizeSmall.yml &&
-simulator sim ../../config/simulations/synthetic_dataset/high_frequency_dataset/scdl.yml &&
+simulator sim ../../config/simulations/synthetic_dataset/high_frequency_dataset/scdl2.yml &&
 
 # Recency Focused Datset
 simulator sim ../../config/simulations/synthetic_dataset/recency_focused_dataset/lru.yml &&
 simulator sim ../../config/simulations/synthetic_dataset/recency_focused_dataset/lfu.yml &&
 simulator sim ../../config/simulations/synthetic_dataset/recency_focused_dataset/sizeBig.yml &&
 simulator sim ../../config/simulations/synthetic_dataset/recency_focused_dataset/sizeSmall.yml &&
-simulator sim ../../config/simulations/synthetic_dataset/recency_focused_dataset/scdl.yml &&
+simulator sim ../../config/simulations/synthetic_dataset/recency_focused_dataset/scdl2.yml &&
 
 # Size Focused Datset
 simulator sim ../../config/simulations/synthetic_dataset/size_focused_dataset/lru.yml &&
 simulator sim ../../config/simulations/synthetic_dataset/size_focused_dataset/lfu.yml &&
 simulator sim ../../config/simulations/synthetic_dataset/size_focused_dataset/sizeBig.yml &&
 simulator sim ../../config/simulations/synthetic_dataset/size_focused_dataset/sizeSmall.yml &&
-simulator sim ../../config/simulations/synthetic_dataset/size_focused_dataset/scdl.yml &&
+simulator sim ../../config/simulations/synthetic_dataset/size_focused_dataset/scdl2.yml
 
 ### ----- Plot results -----
 

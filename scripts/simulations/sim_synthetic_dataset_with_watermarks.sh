@@ -8,21 +8,21 @@ simulator sim ../../config/simulations/synthetic_dataset_with_watermarks/high_fr
 simulator sim ../../config/simulations/synthetic_dataset_with_watermarks/high_frequency_dataset/lfu.yml &&
 simulator sim ../../config/simulations/synthetic_dataset_with_watermarks/high_frequency_dataset/sizeBig.yml &&
 simulator sim ../../config/simulations/synthetic_dataset_with_watermarks/high_frequency_dataset/sizeSmall.yml &&
-simulator sim ../../config/simulations/synthetic_dataset_with_watermarks/high_frequency_dataset/scdl.yml &&
+simulator sim ../../config/simulations/synthetic_dataset_with_watermarks/high_frequency_dataset/scdl2.yml &&
 
 # Recency Focused Datset
 simulator sim ../../config/simulations/synthetic_dataset_with_watermarks/recency_focused_dataset/lru.yml &&
 simulator sim ../../config/simulations/synthetic_dataset_with_watermarks/recency_focused_dataset/lfu.yml &&
 simulator sim ../../config/simulations/synthetic_dataset_with_watermarks/recency_focused_dataset/sizeBig.yml &&
 simulator sim ../../config/simulations/synthetic_dataset_with_watermarks/recency_focused_dataset/sizeSmall.yml &&
-simulator sim ../../config/simulations/synthetic_dataset_with_watermarks/recency_focused_dataset/scdl.yml &&
+simulator sim ../../config/simulations/synthetic_dataset_with_watermarks/recency_focused_dataset/scdl2.yml &&
 
 # Size Focused Datset
 simulator sim ../../config/simulations/synthetic_dataset_with_watermarks/size_focused_dataset/lru.yml &&
 simulator sim ../../config/simulations/synthetic_dataset_with_watermarks/size_focused_dataset/lfu.yml &&
 simulator sim ../../config/simulations/synthetic_dataset_with_watermarks/size_focused_dataset/sizeBig.yml &&
 simulator sim ../../config/simulations/synthetic_dataset_with_watermarks/size_focused_dataset/sizeSmall.yml &&
-simulator sim ../../config/simulations/synthetic_dataset_with_watermarks/size_focused_dataset/scdl.yml &&
+simulator sim ../../config/simulations/synthetic_dataset_with_watermarks/size_focused_dataset/scdl2.yml
 
 ### ----- Plot results -----
 

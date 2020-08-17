@@ -8,7 +8,7 @@ simulator sim ../../config/simulations/us_dataset/200T/lfu.yml &&
 simulator sim ../../config/simulations/us_dataset/200T/sizeBig.yml &&
 simulator sim ../../config/simulations/us_dataset/200T/sizeSmall.yml &&
 
-simulator sim ../../config/simulations/us_dataset/200T/scdl.yml &&
+simulator sim ../../config/simulations/us_dataset/200T/scdl2.yml
 
 ### ----- Plot results -----
 

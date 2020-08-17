@@ -8,7 +8,7 @@ simulator sim ../../config/simulations/italian_dataset_no_k/100T/lfu.yml &&
 simulator sim ../../config/simulations/italian_dataset_no_k/100T/sizeBig.yml &&
 simulator sim ../../config/simulations/italian_dataset_no_k/100T/sizeSmall.yml &&
 
-simulator sim ../../config/simulations/italian_dataset_no_k/100T/scdl.yml &&
+simulator sim ../../config/simulations/italian_dataset_no_k/100T/scdl2.yml
 
 ### ----- Plot results -----
 
