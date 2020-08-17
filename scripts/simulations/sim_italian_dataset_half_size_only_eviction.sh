@@ -12,7 +12,7 @@ simulator sim ../../config/simulations/italian_dataset_only_eviction/50T/scdl.ym
 
 ### ----- Plot results -----
 
-python -m SmartCache.sim.simulator plot ../../results/sim_italian_dataset_only_eviction/50T --plot-resolution 1280,800 --cache-bandwidth 10 --export-table 'true'
+# python -m SmartCache.sim.simulator plot ../../results/sim_italian_dataset_only_eviction/50T --plot-resolution 1280,800 --cache-bandwidth 10 --export-table 'true'
 
 ### ----- Plot tables -----
 

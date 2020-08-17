@@ -26,11 +26,11 @@ simulator sim ../../config/simulations/synthetic_dataset_with_watermarks/size_fo
 
 ### ----- Plot results -----
 
-python -m SmartCache.sim.simulator plot ../../results/sim_synthetic_dataset_with_watermarks/HighFrequencyDataset --plot-resolution 1280,800 --cache-bandwidth 10 --export-table 'true' &&
+# python -m SmartCache.sim.simulator plot ../../results/sim_synthetic_dataset_with_watermarks/HighFrequencyDataset --plot-resolution 1280,800 --cache-bandwidth 10 --export-table 'true' &&
 
-python -m SmartCache.sim.simulator plot ../../results/sim_synthetic_dataset/SizeFocusedDataset --plot-resolution 1280,800 --cache-bandwidth 1 --export-table 'true' &&
+# python -m SmartCache.sim.simulator plot ../../results/sim_synthetic_dataset/SizeFocusedDataset --plot-resolution 1280,800 --cache-bandwidth 1 --export-table 'true' &&
 
-python -m SmartCache.sim.simulator plot ../../results/sim_synthetic_dataset/RecencyFocusedDataset --plot-resolution 1280,800 --cache-bandwidth 1 --export-table 'true'
+# python -m SmartCache.sim.simulator plot ../../results/sim_synthetic_dataset/RecencyFocusedDataset --plot-resolution 1280,800 --cache-bandwidth 1 --export-table 'true'
 
 ### ----- Plot tables -----
 

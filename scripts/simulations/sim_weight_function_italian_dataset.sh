@@ -21,7 +21,7 @@ done
 
 ### ----- Plot results -----
 
-# python -m SmartCache.sim.simulator plot ../../results/sim_weight_function_italian_dataset/100T --plot-resolution 1280,800 --cache-bandwidth 10 --export-table 'true'
+# # python -m SmartCache.sim.simulator plot ../../results/sim_weight_function_italian_dataset/100T --plot-resolution 1280,800 --cache-bandwidth 10 --export-table 'true'
 
 ### ----- Plot tables -----
 
