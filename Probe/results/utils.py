@@ -66,7 +66,7 @@ _LAYOUT = Layout(
     xaxis={'gridcolor': 'black'},
 )
 
-_ALGORITHMS = ['lru', 'lfu', 'sizeSmall', 'sizeBig', 'aiRL']
+_ALGORITHMS = ['lru', 'lfu', 'sizeSmall', 'sizeBig']
 
 
 class Element(object):
@@ -86,6 +86,13 @@ class Element(object):
             elif component.find("_") != -1 and \
                     component.split("_")[0] in _ALGORITHMS:
                 yield component.split("_")[0]
+            elif component.find("aiRL") != -1:
+                cur_type = component.split("aiRL_")[1].split("_", 1)[0]
+                if cur_type == "SCDL":
+                    yield "SCDL"
+                elif cur_type == "SCDL2":
+                    yield "SCDL2"
+                yield "aiRL"
             else:
                 yield component
 
@@ -758,8 +765,8 @@ def make_table(files2plot: list, prefix: str) -> 'pd.DataFrame':
         table,
         columns=[
             "file", "Throughput", "Cost", "Bandwidth",
-            "Avg. Free Space", "Std. Dev. Free Space",
-            "Redirect Vol.", "Hit rate", "CPU Eff."
+            "Redirect Vol.", "Avg. Free Space", 
+            "Std. Dev. Free Space", "Hit rate", "CPU Eff."
         ]
     )
     df = df.sort_values(
