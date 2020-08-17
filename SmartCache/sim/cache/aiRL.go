@@ -13,13 +13,20 @@ import (
 	"go.uber.org/zap"
 )
 
+type aiRLType int
+
 const (
 	maxBadQValueInRow = 8
+	// SCDL type
+	SCDL aiRLType = iota - 2
+	// SCDL2 type
+	SCDL2
 )
 
 // AIRL cache
 type AIRL struct {
 	SimpleCache
+	rlType                            aiRLType
 	additionAgentOK                   bool
 	evictionAgentOK                   bool
 	additionAgentBadQValue            int
@@ -58,27 +65,74 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 
 	useK := args[3].(bool)
 	evictionk := args[4].(int64)
-	additionFeatureMap := args[5].(string)
-	evictionFeatureMap := args[6].(string)
-	initEpsilon := args[7].(float64)
-	decayRateEpsilon := args[8].(float64)
-
-	cache.evictionUseK = useK
-	cache.evictionAgentK = evictionk
-	cache.evictionAgentStep = cache.evictionAgentK
-	cache.evictionRO = 0.42
+	rlType := args[5].(string)
+	additionFeatureMap := args[6].(string)
+	evictionFeatureMap := args[7].(string)
+	initEpsilon := args[8].(float64)
+	decayRateEpsilon := args[9].(float64)
 
 	cache.actionCounters = make(map[qlearn.ActionType]int)
 
+	logger.Info("Feature maps", zap.String("addition map", additionFeatureMap), zap.String("eviction map", evictionFeatureMap))
+
+	switch rlType {
+	case "SCDL":
+		cache.rlType = SCDL
+		if additionFeatureMap == "" {
+			panic("ERROR: SCDL needs the addition feature map...")
+		}
+	case "SCDL2":
+		cache.rlType = SCDL2
+
+		cache.evictionUseK = useK
+		cache.evictionAgentK = evictionk
+		cache.evictionAgentStep = cache.evictionAgentK
+		cache.evictionRO = 0.42
+
+		if evictionFeatureMap != "" {
+			logger.Info("Create eviction feature manager")
+			cache.evictionFeatureManager = featuremap.Parse(evictionFeatureMap)
+			logger.Info("Create eviction agent")
+			cache.evictionAgent.Init(
+				&cache.evictionFeatureManager,
+				qlearn.EvictionAgent,
+				initEpsilon,
+				decayRateEpsilon,
+			)
+			cache.evictionCategoryManager = CategoryManager{}
+			cache.evictionCategoryManager.Init(
+				cache.evictionFeatureManager.Features,
+				cache.evictionFeatureManager.FeatureIdxWeights,
+				cache.evictionFeatureManager.FileFeatures,
+				cache.evictionFeatureManager.FileFeatureIdxWeights,
+				cache.evictionFeatureManager.FileFeatureIdxMap,
+			)
+			if cache.logSimulation {
+				cache.evictionAgentChoicesLogFile = &OutputCSV{}
+				cache.evictionAgentChoicesLogFile.Create("evictionAgentChoiceLog.csv", true)
+				cache.evictionAgentChoicesLogFile.Write(choicesLogHeader)
+				cache.evictionAgentChoicesLogFileBuffer = make([][]string, 0)
+			}
+			cache.evictionCheckNextStateMap = make(map[[8]byte]bool)
+			cache.evictionAgentOK = true
+		} else {
+			cache.evictionAgentOK = false
+		}
+
+		// Eviction agent action counters
+		cache.actionCounters[qlearn.ActionDeleteAll] = 0
+		cache.actionCounters[qlearn.ActionDeleteHalf] = 0
+		cache.actionCounters[qlearn.ActionDeleteQuarter] = 0
+		cache.actionCounters[qlearn.ActionDeleteOne] = 0
+		cache.actionCounters[qlearn.ActionNotDelete] = 0
+
+	default:
+		panic("ERROR: RL type is not valid...")
+	}
+
+	// Addition agent action counters
 	cache.actionCounters[qlearn.ActionStore] = 0
 	cache.actionCounters[qlearn.ActionNotStore] = 0
-	cache.actionCounters[qlearn.ActionDeleteAll] = 0
-	cache.actionCounters[qlearn.ActionDeleteHalf] = 0
-	cache.actionCounters[qlearn.ActionDeleteQuarter] = 0
-	cache.actionCounters[qlearn.ActionDeleteOne] = 0
-	cache.actionCounters[qlearn.ActionNotDelete] = 0
-
-	logger.Info("Feature maps", zap.String("addition map", additionFeatureMap), zap.String("eviction map", evictionFeatureMap))
 
 	if additionFeatureMap != "" {
 		logger.Info("Create addition feature manager")
@@ -99,36 +153,6 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 		cache.additionAgentOK = true
 	} else {
 		cache.additionAgentOK = false
-	}
-
-	if evictionFeatureMap != "" {
-		logger.Info("Create eviction feature manager")
-		cache.evictionFeatureManager = featuremap.Parse(evictionFeatureMap)
-		logger.Info("Create eviction agent")
-		cache.evictionAgent.Init(
-			&cache.evictionFeatureManager,
-			qlearn.EvictionAgent,
-			initEpsilon,
-			decayRateEpsilon,
-		)
-		cache.evictionCategoryManager = CategoryManager{}
-		cache.evictionCategoryManager.Init(
-			cache.evictionFeatureManager.Features,
-			cache.evictionFeatureManager.FeatureIdxWeights,
-			cache.evictionFeatureManager.FileFeatures,
-			cache.evictionFeatureManager.FileFeatureIdxWeights,
-			cache.evictionFeatureManager.FileFeatureIdxMap,
-		)
-		if cache.logSimulation {
-			cache.evictionAgentChoicesLogFile = &OutputCSV{}
-			cache.evictionAgentChoicesLogFile.Create("evictionAgentChoiceLog.csv", true)
-			cache.evictionAgentChoicesLogFile.Write(choicesLogHeader)
-			cache.evictionAgentChoicesLogFileBuffer = make([][]string, 0)
-		}
-		cache.evictionCheckNextStateMap = make(map[[8]byte]bool)
-		cache.evictionAgentOK = true
-	} else {
-		cache.evictionAgentOK = false
 	}
 
 	logger.Info("Table creation done")
@@ -837,39 +861,27 @@ func (cache *AIRL) delayedRewardEvictionAgent(filename int64, inCacheTick int64,
 	}
 }
 
-func (cache *AIRL) delayedRewardAdditionAgent(filename int64) {
+func (cache *AIRL) delayedRewardAdditionAgent(filename int64, hit bool) {
 	memories, inMemory := cache.additionAgent.Memory[filename]
 
-	if inMemory && len(memories) == 2 {
-		prevMemory, nextMemory := memories[0], memories[1]
-		if prevMemory.Action != qlearn.ActionNONE {
+	if inMemory {
+		for idx := 0; idx < len(memories)-2; idx++ {
+			prevMemory, nextMemory := memories[idx], memories[idx+1]
 			reward := 0.0
 
-			// MISS -> MISS
-			if !prevMemory.Hit && !nextMemory.Hit && prevMemory.Action == qlearn.ActionStore {
-				reward += -1.
-			} else {
-				reward += 1.
+			if prevMemory.Action != qlearn.ActionNONE {
+				if hit { // HIT
+					reward += 1.
+				} else { // MISS
+					reward += -1.
+				}
+				// Update table
+				cache.additionAgent.UpdateTable(prevMemory.State, nextMemory.State, prevMemory.Action, reward)
+				// Update epsilon
+				cache.additionAgent.UpdateEpsilon()
 			}
-			// MISS -> HIT
-			if !prevMemory.Hit && nextMemory.Hit && prevMemory.Action == qlearn.ActionStore {
-				reward += 1.
-			} else {
-				reward += -1.
-			}
-			// HIT -> HIT
-			if prevMemory.Hit && nextMemory.Hit && prevMemory.Action == qlearn.ActionStore {
-				reward += 1.
-			} else {
-				reward += -1.
-			}
-			// Update table
-			cache.additionAgent.UpdateTable(prevMemory.State, nextMemory.State, prevMemory.Action, reward)
-			// Update epsilon
-			cache.additionAgent.UpdateEpsilon()
+
 		}
-		// Remove oldest memory
-		cache.additionAgent.ShiftMemory(filename)
 	}
 }
 
@@ -1248,7 +1260,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 // AfterRequest of the cache
 func (cache *AIRL) AfterRequest(request *Request, fileStats *FileStats, hit bool, added bool) {
 	if cache.additionAgentOK {
-		cache.delayedRewardAdditionAgent(request.Filename)
+		cache.delayedRewardAdditionAgent(request.Filename, hit)
 	}
 	if cache.evictionAgentOK {
 		cache.delayedRewardEvictionAgent(request.Filename, fileStats.InCacheTick, hit)

@@ -522,6 +522,7 @@ type InitParameters struct {
 	WeightGamma            float64
 	SimUseK                bool
 	AIRLEvictionK          int64
+	AIRLType               string
 	AIRLAdditionFeatureMap string
 	AIRLEvictionFeatureMap string
 	AIRLEpsilonStart       float64
@@ -583,6 +584,7 @@ func InitInstance(cacheType string, cacheInstance Cache, param InitParameters) {
 			param.Watermarks,
 			param.SimUseK,
 			param.AIRLEvictionK,
+			param.AIRLType,
 			param.AIRLAdditionFeatureMap,
 			param.AIRLEvictionFeatureMap,
 			param.AIRLEpsilonStart,
@@ -894,8 +896,8 @@ func Simulate(cacheType string, cacheInstance Cache, param SimulationParams) {
 
 			numDailyRecords++
 
-			if time.Now().Sub(start).Seconds() >= param.OutputUpdateDelay {
-				elapsedTime := time.Now().Sub(simBeginTime)
+			if time.Since(start).Seconds() >= param.OutputUpdateDelay {
+				elapsedTime := time.Since(simBeginTime)
 				logger.Info("Simulation",
 					zap.String("cache", param.BaseName),
 					zap.String("elapsedTime", fmt.Sprintf("%02d:%02d:%02d",
@@ -912,7 +914,7 @@ func Simulate(cacheType string, cacheInstance Cache, param SimulationParams) {
 					zap.Float64("redirectedData", redirectedData),
 					zap.Int64("numRedirected", numRedirected),
 					zap.String("extra", ExtraStats(cacheInstance)),
-					zap.Float64("it/s", float64(numIterations)/time.Now().Sub(start).Seconds()),
+					zap.Float64("it/s", float64(numIterations)/time.Since(start).Seconds()),
 				)
 				totIterations += numIterations
 				numIterations = 0
@@ -921,7 +923,7 @@ func Simulate(cacheType string, cacheInstance Cache, param SimulationParams) {
 
 		} else {
 			numJumpedRecords++
-			if time.Now().Sub(start).Seconds() >= param.OutputUpdateDelay {
+			if time.Since(start).Seconds() >= param.OutputUpdateDelay {
 				logger.Info("Jump records",
 					zap.Int64("numDailyRecords", numDailyRecords),
 					zap.Int64("numJumpedRecords", numJumpedRecords),
@@ -955,7 +957,7 @@ func Simulate(cacheType string, cacheInstance Cache, param SimulationParams) {
 		return
 	}
 
-	elapsedTime := time.Now().Sub(simBeginTime)
+	elapsedTime := time.Since(simBeginTime)
 	elTH := int(elapsedTime.Hours())
 	elTM := int(elapsedTime.Minutes()) % 60
 	elTS := int(elapsedTime.Seconds()) % 60

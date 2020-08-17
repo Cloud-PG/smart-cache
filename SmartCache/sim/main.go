@@ -69,6 +69,7 @@ func configureViper(configFilenameWithNoExt string) {
 	viper.SetDefault("sim.ai.rl.epsilon.decay", 0.0000042)
 
 	viper.SetDefault("sim.ai.featuremap", "")
+	viper.SetDefault("sim.ai.rl.type", "SCDL2")
 	viper.SetDefault("sim.ai.rl.addition.featuremap", "")
 	viper.SetDefault("sim.ai.rl.eviction.featuremap", "")
 	viper.SetDefault("sim.ai.rl.eviction.k", 32)
@@ -116,6 +117,7 @@ func simCommand() *cobra.Command {
 		// ai
 		aiFeatureMap           string
 		aiModel                string
+		aiRLType               string
 		aiRLAdditionFeatureMap string
 		aiRLEvictionFeatureMap string
 		aiRLEpsilonStart       float64
@@ -318,6 +320,9 @@ func simCommand() *cobra.Command {
 			aiModel = viper.GetString("sim.ai.model")
 			logger.Info("CONF_VAR", zap.String("aiModel", aiModel))
 
+			aiRLType = viper.GetString("sim.ai.rl.type")
+			logger.Info("CONF_VAR", zap.String("aiRLType", aiRLType))
+
 			aiRLAdditionFeatureMap = viper.GetString("sim.ai.rl.addition.featuremap")
 			if aiRLAdditionFeatureMap != "" {
 				aiRLAdditionFeatureMap, errAbs = filepath.Abs(aiRLAdditionFeatureMap)
@@ -355,14 +360,10 @@ func simCommand() *cobra.Command {
 			cacheSizeString := fmt.Sprintf("%0.0f%s", cacheSize, strings.ToUpper(cacheSizeUnit))
 			cacheBandwidthString := fmt.Sprintf("%0.0fGbit", simBandwidth)
 
-			baseName := strings.Join([]string{
-				cacheType,
-				cacheSizeString,
-				cacheBandwidthString,
-				simRegion,
-			}, "_")
+			var baseName string
 
-			if cacheType == "weightFunLRU" {
+			switch cacheType {
+			case "weightFunLRU":
 				parameters := strings.Join([]string{
 					fmt.Sprintf("%0.2f", weightAlpha),
 					fmt.Sprintf("%0.2f", weightBeta),
@@ -372,6 +373,21 @@ func simCommand() *cobra.Command {
 					baseName,
 					weightFunc,
 					parameters,
+				}, "_")
+			case "aiRL":
+				baseName = strings.Join([]string{
+					cacheType,
+					aiRLType,
+					cacheSizeString,
+					cacheBandwidthString,
+					simRegion,
+				}, "_")
+			default:
+				baseName = strings.Join([]string{
+					cacheType,
+					cacheSizeString,
+					cacheBandwidthString,
+					simRegion,
 				}, "_")
 			}
 
@@ -454,6 +470,7 @@ func simCommand() *cobra.Command {
 					WeightGamma:            weightGamma,
 					SimUseK:                simUseK,
 					AIRLEvictionK:          aiRLEvictionK,
+					AIRLType:               aiRLType,
 					AIRLAdditionFeatureMap: aiRLAdditionFeatureMap,
 					AIRLEvictionFeatureMap: aiRLEvictionFeatureMap,
 					AIRLEpsilonStart:       aiRLEpsilonStart,
