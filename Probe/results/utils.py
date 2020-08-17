@@ -11,6 +11,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from dash.dependencies import Input, Output, State
 from plotly.graph_objs import Layout
+from tqdm import tqdm
 
 _SIM_RESULT_FILENAME = "/simulation_results.csv"
 
@@ -65,13 +66,28 @@ _LAYOUT = Layout(
     xaxis={'gridcolor': 'black'},
 )
 
+_ALGORITHMS = ['lru', 'lfu', 'sizeSmall', 'sizeBig', 'aiRL']
+
 
 class Element(object):
 
     def __init__(self, components: list, filename: str, df: 'pd.DataFrame'):
         self._df = df
         self._filename = filename
-        self._components = set([elm for elm in components])
+        self._components = set([
+            elm for elm in self.__parse_components(components)
+        ])
+
+    @staticmethod
+    def __parse_components(components: list) -> list:
+        for component in components:
+            if component.find("weightFunLRU") != -1:
+                yield component.rsplit("_", 3)[0]
+            elif component.find("_") != -1 and \
+                    component.split("_")[0] in _ALGORITHMS:
+                yield component.split("_")[0]
+            else:
+                yield component
 
     @property
     def filename(self):
@@ -125,9 +141,9 @@ def aggregate_results(folder: str):
     abs_target_folder = pathlib.Path(folder).resolve()
     results = Results()
     all_columns = set(_COLUMNS)
-    for result_path in list(
+    for result_path in tqdm(list(
         abs_target_folder.glob("**/simulation_results.csv")
-    ):
+    ), desc="Opening results"):
         df = pd.read_csv(result_path)
         cur_columns = set(df.columns)
         if cur_columns.issubset(all_columns):
@@ -304,6 +320,13 @@ def dashboard(results: 'Results'):
     _TAB_FILES = dbc.Card(
         dbc.CardBody(
             [
+                dbc.Button(
+                    "Unselect all", color="warning", block=True, id="unselect-files",
+                ),
+                dbc.Button(
+                    "Select all", color="success", block=True, id="select-files",
+                ),
+                html.Hr(),
                 dcc.Checklist(
                     options=[
                         {'label': f" {filename}", 'value': filename}
@@ -320,6 +343,13 @@ def dashboard(results: 'Results'):
     _TAB_FILTERS = dbc.Card(
         dbc.CardBody(
             [
+                dcc.Input(
+                    id="num-of-results",
+                    type="number",
+                    placeholder="Max number of results",
+                    value=0,
+                ),
+                html.Hr(),
                 html.H2("All"),
                 dcc.Checklist(
                     options=[
@@ -394,8 +424,27 @@ def dashboard(results: 'Results'):
         _TABS,
     ], style={'padding': "1em"})
 
-    def selection2hash(files: list, filters_all: list, filters_any: list) -> str:
-        return str(hash(" ".join(files + filters_all + filters_any)))
+    def selection2hash(files: list, filters_all: list, filters_any: list, num_of_results: int) -> str:
+        return str(hash(" ".join(files + filters_all + filters_any + [str(num_of_results)])))
+
+    @app.callback(
+        dash.dependencies.Output('selected-files', 'value'),
+        [
+            dash.dependencies.Input('unselect-files', 'n_clicks'),
+            dash.dependencies.Input('select-files', 'n_clicks'),
+        ],
+    )
+    def unselect_all_files(unselect_n_clicks, select_n_clicks):
+        # Ref: https://dash.plotly.com/advanced-callbacks
+        changed_id = [
+            p['prop_id'].split('.')[0]
+            for p in dash.callback_context.triggered
+        ][0]
+        if changed_id == 'unselect-files':
+            return []
+        elif changed_id == 'select-files':
+            return results.files
+        return results.files
 
     @app.callback(
         [
@@ -412,10 +461,12 @@ def dashboard(results: 'Results'):
             State("selected-files", "value"),
             State("selected-filters-all", "value"),
             State("selected-filters-any", "value"),
+            State("num-of-results", "value")
         ]
     )
-    def switch_tab(at, files, filters_all, filters_any):
-        cur_hash = selection2hash(files, filters_all, filters_any)
+    def switch_tab(at, files, filters_all, filters_any, num_of_results):
+        cur_hash = selection2hash(
+            files, filters_all, filters_any, num_of_results)
         if at == "tab-files":
             return ("", "", "", "")
 
@@ -428,7 +479,6 @@ def dashboard(results: 'Results'):
             else:
                 figures = []
                 for column in _COLUMNS[1:]:
-
                     files2plot = get_files2plot(
                         results,
                         files,
@@ -437,6 +487,16 @@ def dashboard(results: 'Results'):
                         column,
                     )
                     prefix = get_prefix(files2plot)
+                    if num_of_results != 0:
+                        table = make_table(files2plot, prefix)
+                        new_file2plot = get_top_n(
+                            table, num_of_results, prefix)
+                        files2plot = [
+                            (file_, df)
+                            for file_, df in files2plot
+                            if file_ in new_file2plot
+                        ]
+                        prefix = get_prefix(files2plot)
                     figures.append(dcc.Graph(
                         figure=make_line_figures(
                             files2plot,
@@ -455,17 +515,26 @@ def dashboard(results: 'Results'):
                 return ("", _CACHE['measures'][cur_hash], "", "")
             else:
                 figures = []
-                for measure, function in sorted(
-                        _MEASURES.items(), key=lambda elm: elm[0]
-                ):
-
-                    files2plot = get_files2plot(
+                files2plot = get_files2plot(
                         results,
                         files,
                         filters_all,
                         filters_any,
                     )
+                prefix = get_prefix(files2plot)
+                if num_of_results != 0:
+                    table = make_table(files2plot, prefix)
+                    new_file2plot = get_top_n(
+                        table, num_of_results, prefix)
+                    files2plot = [
+                        (file_, df)
+                        for file_, df in files2plot
+                        if file_ in new_file2plot
+                    ]
                     prefix = get_prefix(files2plot)
+                for measure, function in sorted(
+                        _MEASURES.items(), key=lambda elm: elm[0]
+                ):
                     figures.append(dcc.Graph(
                         figure=make_line_figures(
                             files2plot,
@@ -492,6 +561,15 @@ def dashboard(results: 'Results'):
                     agents=True
                 )
                 prefix = get_prefix(files2plot)
+                if num_of_results != 0:
+                    table = make_table(files2plot, prefix)
+                    new_file2plot = get_top_n(table, num_of_results, prefix)
+                    files2plot = [
+                        (file_, df)
+                        for file_, df in files2plot
+                        if file_ in new_file2plot
+                    ]
+                    prefix = get_prefix(files2plot)
                 figures.extend(
                     make_agent_figures(
                         files2plot,
@@ -513,7 +591,19 @@ def dashboard(results: 'Results'):
                 )
                 prefix = get_prefix(files2plot)
                 table = make_table(files2plot, prefix)
+                if num_of_results != 0:
+                    new_file2plot = get_top_n(table, num_of_results, prefix)
+                    files2plot = [
+                        (file_, df)
+                        for file_, df in files2plot
+                        if file_ in new_file2plot
+                    ]
+                    prefix = get_prefix(files2plot)
+                    table = make_table(files2plot, prefix)
 
+                table = dbc.Table.from_dataframe(
+                    table, striped=True, bordered=True, hover=True
+                )
                 _CACHE['tables'][cur_hash] = table
                 return ("", "", "", table)
         else:
@@ -631,7 +721,23 @@ def make_line_figures(files2plot: list, prefix: str, title: str,
     return fig
 
 
-def make_table(files2plot: list, prefix: str) -> 'dbc.Table':
+def get_top_n(df: 'pd.DataFrame', n: int, prefix: str) -> list:
+    """Returns the top n files from a table ordered results
+
+    :param df: the table dataframe
+    :type df: pd.DataFrame
+    :param n: the number of results to extract
+    :type n: int
+    :return: list of file names
+    :rtype: list
+    """
+    return [
+        f"{prefix}{filename}{_SIM_RESULT_FILENAME}"
+        for filename in df[:n].file.to_list()
+    ]
+
+
+def make_table(files2plot: list, prefix: str) -> 'pd.DataFrame':
     """Make html table from files to plot
 
     :param files2plot: list of files to plot with their dataframes
@@ -661,6 +767,4 @@ def make_table(files2plot: list, prefix: str) -> 'dbc.Table':
         ascending=[False, True, False],
     )
     df = df.round(2)
-    return dbc.Table.from_dataframe(
-        df, striped=True, bordered=True, hover=True
-    )
+    return df
