@@ -853,13 +853,13 @@ func (cache *AIRL) delayedRewardAdditionAgent(filename int64) {
 			}
 			// MISS -> HIT
 			if !prevMemory.Hit && nextMemory.Hit && prevMemory.Action == qlearn.ActionStore {
-				reward += 8.
+				reward += 1.
 			} else {
 				reward += -1.
 			}
 			// HIT -> HIT
 			if prevMemory.Hit && nextMemory.Hit && prevMemory.Action == qlearn.ActionStore {
-				reward += 8.
+				reward += 1.
 			} else {
 				reward += -1.
 			}
