@@ -875,6 +875,15 @@ func (cache *AIRL) delayedRewardAdditionAgent(filename int64, hit bool) {
 				} else { // MISS
 					reward += -1.
 				}
+				if !prevMemory.Hit && nextMemory.Hit {
+					reward += 1.
+				} else if prevMemory.Hit && nextMemory.Hit {
+					reward += 1.
+				} else if !prevMemory.Hit && !nextMemory.Hit {
+					reward += -1.
+				} else if prevMemory.Hit && !nextMemory.Hit {
+					reward += -1.
+				}
 				// Update table
 				cache.additionAgent.UpdateTable(prevMemory.State, nextMemory.State, prevMemory.Action, reward)
 				// Update epsilon
