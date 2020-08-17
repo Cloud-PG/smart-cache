@@ -105,9 +105,6 @@ else:
 
 print(data_directory)
 
-input_len = 6
-#input_len = 7 + total_campaigns + total_sites
-
 out_directory = args.out_dir
 BATCH_SIZE = args.batch_size
 learning_rate = args.lr
@@ -180,9 +177,9 @@ if args.load_weights_from_file == True:
     print('EVICT WEIGHTS LOADED')
 ###### START LOOPING #######################################################################################################
 
-if args.region == 'it':
-    environment = cache_env_cpp.env(
-        startMonth, endMonth, data_directory, out_directory, out_name, time_span_add, time_span_evict, purge_delta, output_activation, cache_size, 2019)
+#if args.region == 'it':
+environment = cache_env_cpp.env(
+    startMonth, endMonth, data_directory, out_directory, out_name, time_span_add, time_span_evict, purge_delta, output_activation, cache_size, 2019)
 
 
 def write_stats():
@@ -532,7 +529,7 @@ while end == False and test == False:
             elif annealing_type == 'linear':
                 eps_add = eps_add_max - slope_add * step_add_decay
         cur_values = environment._curValues
-        if debug == True:
+        if debug == True and step_add % 10000 == 0:
             print(cur_values)
         if step_add % 10000000 == 0:
             print('epsilon = ' + str(eps_add))
@@ -630,12 +627,12 @@ while end == False and test == False:
                 daily_res_evict_actions.clear()
                 daily_notres_evict_actions.clear()      
         
-        if debug == True and step_add % 1 == 0 and hit == False:
+        if debug == True and step_add % 10000 == 0 and hit == False:
             print('Request: ' + str(environment._curRequest) + ' / ' + str(environment._df_length) + ' - ACTION: ' +  str(action) + '  -  Occupancy: ' + str(round(environment._cache.capacity(),2)) 
                 + '%  -  ' + 'Hit rate: ' + str(round(environment._cache._hit/(environment._cache._hit + environment._cache._miss)*100,2)) +'%', '\r' )
             print()
         
-        elif debug == True and step_add % 1 == 0 and hit == True:
+        elif debug == True and step_add % 10000 == 0 and hit == True:
             print('Request: ' + str(environment._curRequest) + ' / ' + str(environment._df_length) + ' - HIT' + ' -  Occupancy: ' + str(round(environment._cache.capacity(),2)) 
                 + '%  -  ' + 'Hit rate: ' + str(round(environment._cache._hit/(environment._cache._hit + environment._cache._miss)*100,2)) +'%' , '\r')
             print()
@@ -682,11 +679,11 @@ while end == False and test == False:
             train_cur_vals ,train_actions, train_rewards, train_next_vals = np.split(batch, [input_len, input_len + 1, input_len + 2] , axis = 1)
             #train_cur_vals ,train_actions, train_rewards = np.split(batch, [input_len, input_len + 1] , axis = 1)
             target = model_add.predict_on_batch(train_cur_vals)
-            if debug == True and step_add % 1 == 0:
+            if debug == True and step_add % 10000 == 0:
             #if debug == True and step_add == warm_up_steps_add + 1:
-                #print('PREDICT ON BATCH')
-                #print(batch)
-                #print(target)
+                print('PREDICT ON BATCH')
+                print(batch)
+                print(target)
                 print()
             if use_target_model == False:
                 predictions = model_add.predict_on_batch(train_next_vals)
@@ -719,7 +716,7 @@ while end == False and test == False:
             elif annealing_type == 'linear':
                 eps_evict = eps_evict_max - slope_evict * step_evict_decay
         cur_values = environment._curValues
-        if debug == True:
+        if debug == True and step_evict % 10000 == 0:
             print(cur_values)
         if step_evict % 100000000 == 0:
             print('epsilon = ' + str(eps_evict))
@@ -751,7 +748,7 @@ while end == False and test == False:
             else:
                 daily_notres_evict_actions.append(action) 
 
-        if debug == True and step_evict % 1 == 0:
+        if debug == True and step_evict % 10000 == 0:
             print('Freeing memory ' + str(environment._cached_files_index) + '/' + str(len(environment._cache._cached_files_keys)) +  ' - action: ' + str(action)
                     + '  -  Occupancy: ' + str(round(environment._cache.capacity(),2)) + '%') 
             print()
@@ -783,11 +780,11 @@ while end == False and test == False:
             #train_cur_vals ,train_actions, train_rewards = np.split(batch, [input_len, input_len+1] , axis = 1)
             target = model_evict.predict_on_batch(train_cur_vals)
             
-            #if debug == True and step_evict % 100 == 0:
-                #print('PREDICT ON BATCH')
-                #print(batch)
-                #print(target)
-                #print()
+            if debug == True and step_evict % 10000 == 0:
+                print('PREDICT ON BATCH')
+                print(batch)
+                print(target)
+                print()
             if use_target_model == False:
                 predictions = model_evict.predict_on_batch(train_next_vals)
                 #predictions = model_evict.predict_on_batch(train_cur_vals)

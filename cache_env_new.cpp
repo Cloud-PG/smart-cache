@@ -153,9 +153,11 @@ class cache {
             FileStats stats;
             stats = _stats.get_or_set(filename, size, datatype, request);  
             if (hit == true) 
-                stats._hit += 1;
+                //stats._hit += 1;
+                _stats._files[filename]._hit += 1;
             else
-                stats._miss += 1;     
+                //stats._miss += 1;
+                _stats._files[filename]._miss    += 1;     
             return stats;  
         };               
         inline bool update_policy(int filename, FileStats file_stats, bool hit, int action){   
@@ -328,8 +330,6 @@ class env{
 };
 
 void env::update_windows_getting_eventual_rewards_accumulate(int curFilename, int action){
-    //cout<<"request_window "<<_request_window_elements.size()<<endl;
-    //cout<<"eviction_window "<<_eviction_window_elements.size()<<endl;
     if (_adding_or_evicting == 0){
         float size = _curValues[0];
         float coeff;
@@ -359,8 +359,6 @@ void env::update_windows_getting_eventual_rewards_accumulate(int curFilename, in
                     vector<float> to_add = (it->second)[i].concat_with_next_values(_cache.capacity(), _cache.hit_rate());
                     _add_memory_vector.push_back(to_add);
                     toDelete.push_back(i);
-                    //_request_window_elements[curFilename].erase(_request_window_elements[curFilename].begin() + i);
-                    //it_vec = _request_window_elements[curFilename].erase(it_vec);
                 }
                 else{  //is not invalidated yet
                     (it->second)[i].reward = (it->second)[i].reward + 1;
@@ -378,14 +376,13 @@ void env::update_windows_getting_eventual_rewards_accumulate(int curFilename, in
             to_add_vector.push_back(to_add_obj);
             _request_window_elements[curFilename] = to_add_vector;
         }
+
         //######### GIVING REWARD TO EVICTION AND REMOVING FROM WINDOW ################################################################################################
 
-        //unordered_map<int,vector<WindowElement>>::iterator it;
         it = _eviction_window_elements.find(curFilename);
         if(it != _eviction_window_elements.end()){  //is pending
             vector<int> toDelete;
             for(int i=0; i < it->second.size(); i++){
-                //WindowElement obj = it->second[i];
                 if ((_curRequest_from_start - (it->second)[i].counter) >= _time_span_evict){ //is invalidated
                     if ((it->second)[i].reward != 0){   //some hits
                         if ((it->second)[i].action == 0) (it->second)[i].reward = + (it->second)[i].reward * coeff;
@@ -396,12 +393,9 @@ void env::update_windows_getting_eventual_rewards_accumulate(int curFilename, in
                         else (it->second)[i].reward = + 1 * coeff;
                     }
                     toDelete.push_back(i);
-                    //_cache._daily_rewards_evict.push_back((it->second)[i].reward);
                     _cache._cumulative_reward_evict += (it->second)[i].reward;
                     vector<float> to_add = (it->second)[i].concat_with_next_values(_cache.capacity(), _cache.hit_rate());
                     _evict_memory_vector.push_back(to_add);
-                    //_eviction_window_elements[curFilename].erase(_request_window_elements[curFilename].begin() + i);
-                    //it->second.erase(it->second.begin() + i);
                 }
 
                 else{  //is not invalidated yet
@@ -436,7 +430,6 @@ void env::look_for_invalidated_add_evict_accumulate(){
         vector<int> toDelete_vector;
         for(int i=0; i < elem.second.size(); i++){
             int curFilename = elem.first;
-            //WindowElement obj = elem.second[i];
             float size = elem.second[i].cur_values[0];
             if (_output_activation == 1) coeff = size;
             else{
@@ -449,23 +442,18 @@ void env::look_for_invalidated_add_evict_accumulate(){
                 if (elem.second[i].reward != 0){  //some hits
                     if(elem.second[i].action == 0) elem.second[i].reward = + elem.second[i].reward * coeff;
                     else elem.second[i].reward = - elem.second[i].reward * coeff;
-                    //cout<<coeff<<" "<<elem.second[i].action<<" "<<elem.second[i].reward<<endl;
 
                 }
                 else{                  //no hits at all
                     if (elem.second[i].action == 0) elem.second[i].reward = - 1 * coeff;
                     else elem.second[i].reward = + 1 * coeff;
-                    //cout<<coeff<<" "<<obj.action<<" "<<obj.reward<<endl;
 
                 }
-                //_cache._daily_rewards_add.push_back(elem.second[i].reward);
                 _cache._cumulative_reward_add += (elem.second)[i].reward;
                 vector<float> to_add = elem.second[i].concat_with_next_values(_cache.capacity(), _cache.hit_rate());
                 _add_memory_vector.push_back(to_add);
                 toDelete_vector.push_back(i);
-                //_request_window_elements[curFilename].erase(_request_window_elements[curFilename].begin() + i);
                 if (elem.second.size() == 0)
-                //elem.second.erase(elem.second.begin() + i);
                     toDelete_filenames.insert(elem.first);
             }
         }
@@ -482,7 +470,6 @@ void env::look_for_invalidated_add_evict_accumulate(){
         vector<int> toDelete_vector;
         for(int i=0; i < elem.second.size(); i++){
             int curFilename = elem.first;
-            //WindowElement obj = elem.second[i];
             float size = elem.second[i].cur_values[0];
             if (_output_activation == 1) coeff = size;
             else{
@@ -500,16 +487,12 @@ void env::look_for_invalidated_add_evict_accumulate(){
                     if (elem.second[i].action == 0) elem.second[i].reward = - 1 * coeff;
                     else elem.second[i].reward = + 1 * coeff;
                 }
-                //_cache._daily_rewards_evict.push_back(elem.second[i].reward);
                 _cache._cumulative_reward_evict += (elem.second)[i].reward;
                 vector<float> to_add = elem.second[i].concat_with_next_values(_cache.capacity(), _cache.hit_rate());
                 _evict_memory_vector.push_back(to_add);
                 toDelete_vector.push_back(i);
-                //_eviction_window_elements[curFilename].erase(_eviction_window_elements[curFilename].begin() + i);
                 if (elem.second.size() == 0)
-                //elem.second.erase(elem.second.begin() + i);
                     toDelete_filenames.insert(elem.first);
-                //toDelete.insert(curFilename);
             }
         }
         for(int j = 0; j < toDelete_vector.size(); j++){
@@ -518,7 +501,6 @@ void env::look_for_invalidated_add_evict_accumulate(){
     }
     for (auto const& filename: toDelete_filenames)
         _eviction_window_elements.erase(filename);
-    //    }
 };  
 
 void env::purge(){
