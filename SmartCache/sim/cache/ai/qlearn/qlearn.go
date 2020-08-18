@@ -168,6 +168,7 @@ type Choice struct {
 	DeltaT    int64      `json:"deltaT"`
 	Occupancy float64    `json:"occupancy"`
 	Hit       bool       `json:"hit"`
+	Size      float64    `json:"Size"`
 	Frequency int64      `json:"frequency"`
 }
 
@@ -402,8 +403,8 @@ func (agent *Agent) UpdateEpsilon() {
 	}
 }
 
-// ToMemory insert made actions in memory
-func (agent *Agent) ToMemory(key interface{}, choices ...Choice) {
+// SaveMemory insert made actions in memory
+func (agent *Agent) SaveMemory(key interface{}, choices ...Choice) {
 	pastChoices, inMemory := agent.Memory[key]
 	if inMemory {
 		pastChoices = append(pastChoices, choices...)
@@ -413,6 +414,23 @@ func (agent *Agent) ToMemory(key interface{}, choices ...Choice) {
 		newChoices = append(newChoices, choices...)
 		agent.Memory[key] = newChoices
 	}
+}
+
+// Remember returns some memories and then delete them
+func (agent *Agent) Remember(key interface{}) []Choice {
+	pastChoices, inMemory := agent.Memory[key]
+	var memories []Choice
+	if inMemory {
+		if len(pastChoices) < 8 {
+			return memories
+		}
+		memories = make([]Choice, len(pastChoices))
+		copy(memories, pastChoices)
+		delete(agent.Memory, key)
+	} else {
+		panic("ERROR: Wrong key passed, no memories...")
+	}
+	return memories
 }
 
 // RemoveBeforeTick remove the oldest memory
