@@ -919,14 +919,16 @@ func (cache *AIRL) delayedRewardAdditionAgent(filename int64, hit bool) {
 						if !prevMemory.Hit && nextMemory.Hit {
 							reward += 2.
 						} else if prevMemory.Hit && nextMemory.Hit {
-							reward += 1.
+							reward += 4.
 						}
 					} else { // MISS
-						reward += -1.
-						if !prevMemory.Hit && !nextMemory.Hit {
+						if prevMemory.Action == qlearn.ActionNotStore {
 							reward += -1.
-						} else if prevMemory.Hit && !nextMemory.Hit {
-							reward += -2.
+							if !prevMemory.Hit && !nextMemory.Hit {
+								reward += -1.
+							} else if prevMemory.Hit && !nextMemory.Hit {
+								reward += -1.
+							}
 						}
 					}
 					// Update table
