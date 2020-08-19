@@ -848,7 +848,7 @@ func (cache *AIRL) delayedRewardEvictionAgent(filename int64, inCacheTick int64,
 
 			reward := 0.0
 			if hit {
-				reward += 4.
+				reward += 1.
 			} else { // MISS
 				reward += -1.
 			}
@@ -917,9 +917,9 @@ func (cache *AIRL) delayedRewardAdditionAgent(filename int64, hit bool) {
 					if hit { // HIT
 						reward += 1.
 						if !prevMemory.Hit && nextMemory.Hit {
-							reward += 2.
+							reward += 1.
 						} else if prevMemory.Hit && nextMemory.Hit {
-							reward += 4.
+							reward += 1.
 						}
 					} else { // MISS
 						if prevMemory.Action == qlearn.ActionNotStore {
