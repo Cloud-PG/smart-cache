@@ -24,7 +24,7 @@ simulator sim ../../config/simulations/synthetic_dataset/size_focused_dataset/lr
 simulator sim ../../config/simulations/synthetic_dataset/size_focused_dataset/lfu.yml &&
 simulator sim ../../config/simulations/synthetic_dataset/size_focused_dataset/sizeBig.yml &&
 simulator sim ../../config/simulations/synthetic_dataset/size_focused_dataset/sizeSmall.yml &&
-simulator sim ../../config/simulations/synthetic_dataset/size_focused_dataset/scdl1.yml &&
+simulator sim ../../config/simulations/synthetic_dataset/size_focused_dataset/scdl.yml &&
 simulator sim ../../config/simulations/synthetic_dataset/size_focused_dataset/scdl2.yml
 
 ### ----- Plot results -----
