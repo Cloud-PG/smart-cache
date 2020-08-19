@@ -823,46 +823,41 @@ func (cache *AIRL) delayedRewardEvictionAgent(filename int64, inCacheTick int64,
 	memories, inMemory := cache.evictionAgent.Memory[filename]
 
 	if inMemory {
-		for idx := len(memories) - 1; idx > -1; idx-- {
-			memory := memories[idx]
-			if memory.Tick < inCacheTick {
-				break
+		for idx := 0; idx < len(memories)-1; idx++ {
+			var (
+				prevMemory, nextMemory qlearn.Choice
+			)
+			prevMemory = memories[idx]
+
+			if idx == len(memories)-1 {
+				for catState := range cache.evictionCategoryManager.GetStateFromCategories(
+					false,
+					cache.evictionAgent,
+					cache.Occupancy(),
+					cache.HitRate(),
+					cache.MaxSize,
+				) {
+					if cache.checkEvictionNextState(prevMemory.State, catState.Idx) {
+						nextMemory.State = catState.Idx
+					}
+				}
+				continue // No next state found
+			} else {
+				nextMemory = memories[idx+1]
 			}
+
 			reward := 0.0
 			if hit {
-				if memory.Action == qlearn.ActionNotDelete {
-					reward += 4.
-				} else {
-					reward += -1.
-				}
+				reward += 4.
 			} else { // MISS
-				switch memory.Action {
-				case qlearn.ActionDeleteAll:
-					reward += -4.
-				case qlearn.ActionDeleteHalf:
-					reward += -3.
-				case qlearn.ActionDeleteQuarter:
-					reward += -2.
-				case qlearn.ActionDeleteOne:
-					reward += -1.
-				}
+				reward += -1.
 			}
-			for catState := range cache.evictionCategoryManager.GetStateFromCategories(
-				false,
-				cache.evictionAgent,
-				cache.Occupancy(),
-				cache.HitRate(),
-				cache.MaxSize,
-			) {
-				if cache.checkEvictionNextState(memory.State, catState.Idx) {
-					// Update table
-					cache.evictionAgent.UpdateTable(memory.State, catState.Idx, memory.Action, reward)
-					// Update epsilon
-					cache.evictionAgent.UpdateEpsilon()
-				}
-			}
+
+			// Update table
+			cache.evictionAgent.UpdateTable(prevMemory.State, nextMemory.State, prevMemory.Action, reward)
+			// Update epsilon
+			cache.evictionAgent.UpdateEpsilon()
 		}
-		cache.evictionAgent.RemoveBeforeTick(filename, inCacheTick)
 	}
 }
 
@@ -875,7 +870,7 @@ func (cache *AIRL) delayedRewardAdditionAgent(filename int64, hit bool) {
 			lastMemories := cache.additionAgent.Remember(SCDL)
 			for _, memory := range lastMemories {
 				reward := 0.0
-				if !memory.Hit {
+				if !memory.Hit { // MISS
 					if memory.Action == qlearn.ActionNotStore {
 						if cache.dataReadOnMiss/cache.bandwidth < 0.5 || cache.dataWritten/cache.dataRead < 0.1 {
 							reward -= memory.Size / 1024.
@@ -884,7 +879,6 @@ func (cache *AIRL) delayedRewardAdditionAgent(filename int64, hit bool) {
 							reward += memory.Size / 1024.
 						}
 					} else if memory.Action == qlearn.ActionStore {
-
 						if cache.dataReadOnMiss/cache.bandwidth > 0.75 || cache.dataWritten/cache.dataRead > 0.5 {
 							reward -= memory.Size / 1024.
 						}
@@ -898,7 +892,7 @@ func (cache *AIRL) delayedRewardAdditionAgent(filename int64, hit bool) {
 					if reward == 0. {
 						reward += memory.Size / 1024.
 					}
-				} else {
+				} else { // HIT
 					if cache.dataReadOnHit/cache.dataRead < 0.3 {
 						reward -= memory.Size / 1024.
 					}

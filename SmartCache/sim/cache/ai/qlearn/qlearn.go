@@ -404,14 +404,19 @@ func (agent *Agent) UpdateEpsilon() {
 }
 
 // SaveMemory insert made actions in memory
-func (agent *Agent) SaveMemory(key interface{}, choices ...Choice) {
+func (agent *Agent) SaveMemory(key interface{}, choice Choice) {
 	pastChoices, inMemory := agent.Memory[key]
 	if inMemory {
-		pastChoices = append(pastChoices, choices...)
+		if len(pastChoices) < 16 { // MAX stored past choices is 16
+			pastChoices = append(pastChoices, choice)
+		} else {
+			pastChoices = pastChoices[1:]
+			pastChoices = append(pastChoices, choice)
+		}
 		agent.Memory[key] = pastChoices
 	} else {
 		newChoices := make([]Choice, 0)
-		newChoices = append(newChoices, choices...)
+		newChoices = append(newChoices, choice)
 		agent.Memory[key] = newChoices
 	}
 }
@@ -431,23 +436,6 @@ func (agent *Agent) Remember(key interface{}) []Choice {
 		panic("ERROR: Wrong key passed, no memories...")
 	}
 	return memories
-}
-
-// RemoveBeforeTick remove the oldest memory
-func (agent *Agent) RemoveBeforeTick(key interface{}, tick int64) {
-	pastChoices, inMemory := agent.Memory[key]
-	if inMemory {
-		targetIdx := -1
-		for idx := len(pastChoices) - 1; idx > -1; idx-- {
-			choice := pastChoices[idx]
-			if choice.Tick < tick {
-				targetIdx = idx
-				break
-			}
-		}
-		pastChoices = pastChoices[targetIdx+1:]
-		agent.Memory[key] = pastChoices
-	}
 }
 
 //##############################################################################
