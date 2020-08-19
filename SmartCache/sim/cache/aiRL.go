@@ -848,7 +848,7 @@ func (cache *AIRL) delayedRewardEvictionAgent(filename int64, inCacheTick int64,
 
 			reward := 0.0
 			if hit {
-				reward += 1.
+				reward += 2.
 			} else { // MISS
 				reward += -1.
 			}
