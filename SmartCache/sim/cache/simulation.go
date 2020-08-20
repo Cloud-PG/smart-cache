@@ -527,6 +527,8 @@ type InitParameters struct {
 	AIRLEvictionFeatureMap string
 	AIRLEpsilonStart       float64
 	AIRLEpsilonDecay       float64
+	MaxNumDayDiff          float64
+	DeltaDaysStep          float64
 }
 
 func InitInstance(cacheType string, cacheInstance Cache, param InitParameters) {
@@ -534,25 +536,44 @@ func InitInstance(cacheType string, cacheInstance Cache, param InitParameters) {
 	switch cacheType {
 	case "lru":
 		logger.Info("Init LRU Cache")
-		InitCache(cacheInstance, LRUQueue, param.Log, param.RedirectReq, param.Watermarks)
+		InitCache(cacheInstance, LRUQueue, param.Log,
+			param.RedirectReq, param.Watermarks,
+			param.MaxNumDayDiff, param.DeltaDaysStep,
+		)
 	case "lfu":
 		logger.Info("Init LFU Cache")
-		InitCache(cacheInstance, LFUQueue, param.Log, param.RedirectReq, param.Watermarks)
+		InitCache(cacheInstance, LFUQueue, param.Log,
+			param.RedirectReq, param.Watermarks,
+			param.MaxNumDayDiff, param.DeltaDaysStep,
+		)
 	case "sizeBig":
 		logger.Info("Init Size Big Cache")
-		InitCache(cacheInstance, SizeBigQueue, param.Log, param.RedirectReq, param.Watermarks)
+		InitCache(cacheInstance, SizeBigQueue, param.Log,
+			param.RedirectReq, param.Watermarks,
+			param.MaxNumDayDiff, param.DeltaDaysStep,
+		)
 	case "sizeSmall":
-		InitCache(cacheInstance, SizeSmallQueue, param.Log, param.RedirectReq, param.Watermarks)
+		InitCache(cacheInstance, SizeSmallQueue, param.Log,
+			param.RedirectReq, param.Watermarks,
+			param.MaxNumDayDiff, param.DeltaDaysStep,
+		)
 	case "lruDatasetVerifier":
 		logger.Info("Init lruDatasetVerifier Cache")
-		InitCache(cacheInstance, param.Log, param.RedirectReq, param.Watermarks, param.Dataset2TestPath)
+		InitCache(cacheInstance, param.Log,
+			param.RedirectReq, param.Watermarks, param.Dataset2TestPath,
+			param.MaxNumDayDiff, param.DeltaDaysStep,
+		)
 	case "aiNN":
 		logger.Info("Init aiNN Cache")
 		if param.AIFeatureMap == "" {
 			fmt.Println("ERR: No feature map indicated...")
 			os.Exit(-1)
 		}
-		InitCache(cacheInstance, param.Log, param.RedirectReq, param.Watermarks, param.AIFeatureMap, param.AIModel)
+		InitCache(cacheInstance, param.Log,
+			param.RedirectReq, param.Watermarks,
+			param.MaxNumDayDiff, param.DeltaDaysStep,
+			param.AIFeatureMap, param.AIModel,
+		)
 	case "aiRL":
 		logger.Info("Init aiRL Cache")
 		if param.AIRLAdditionFeatureMap == "" {
@@ -582,6 +603,8 @@ func InitInstance(cacheType string, cacheInstance Cache, param InitParameters) {
 			param.Log,
 			param.RedirectReq,
 			param.Watermarks,
+			param.MaxNumDayDiff,
+			param.DeltaDaysStep,
 			param.SimUseK,
 			param.AIRLEvictionK,
 			param.AIRLType,
@@ -596,7 +619,10 @@ func InitInstance(cacheType string, cacheInstance Cache, param InitParameters) {
 		)
 	case "weightFunLRU":
 		logger.Info("Init Weight Function Cache")
-		InitCache(cacheInstance, LRUQueue, param.Log, param.RedirectReq, param.Watermarks)
+		InitCache(cacheInstance, LRUQueue, param.Log,
+			param.RedirectReq, param.Watermarks,
+			param.MaxNumDayDiff, param.DeltaDaysStep,
+		)
 	default:
 		fmt.Printf("ERR: '%s' is not a valid cache type...\n", cacheType)
 		os.Exit(-2)

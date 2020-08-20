@@ -58,6 +58,8 @@ func configureViper(configFilenameWithNoExt string) {
 	viper.SetDefault("sim.cache.size.unit", "T")
 	viper.SetDefault("sim.cache.bandwidth.value", 10.0)
 	viper.SetDefault("sim.cache.bandwidth.redirect", false)
+	viper.SetDefault("sim.cache.stats.maxNumDayDiff", 6.0)
+	viper.SetDefault("sim.cache.stats.deltaDaysStep", 7.0)
 
 	viper.SetDefault("sim.weightfunc.name", "FuncAdditiveExp")
 	viper.SetDefault("sim.weightfunc.alpha", 1.0)
@@ -129,6 +131,9 @@ func simCommand() *cobra.Command {
 		cacheSizeUnit string
 		// dataset
 		dataset2TestPath string
+		// Stats
+		maxNumDayDiff float64
+		deltaDaysStep float64
 	)
 
 	simCmd := &cobra.Command{
@@ -227,6 +232,12 @@ func simCommand() *cobra.Command {
 
 			simCacheWatermarks = viper.GetBool("sim.cache.watermarks")
 			logger.Info("CONF_VAR", zap.Bool("simCacheWatermarks", simCacheWatermarks))
+
+			maxNumDayDiff = viper.GetFloat64("sim.cache.stats.maxNumDayDiff")
+			logger.Info("CONF_VAR", zap.Float64("maxNumDayDiff", maxNumDayDiff))
+
+			deltaDaysStep = viper.GetFloat64("sim.cache.stats.deltaDaysStep")
+			logger.Info("CONF_VAR", zap.Float64("deltaDaysStep", deltaDaysStep))
 
 			simColdStart = viper.GetBool("sim.coldstart")
 			logger.Info("CONF_VAR", zap.Bool("simColdStart", simColdStart))
@@ -475,6 +486,8 @@ func simCommand() *cobra.Command {
 					AIRLEvictionFeatureMap: aiRLEvictionFeatureMap,
 					AIRLEpsilonStart:       aiRLEpsilonStart,
 					AIRLEpsilonDecay:       aiRLEpsilonDecay,
+					MaxNumDayDiff:          maxNumDayDiff,
+					DeltaDaysStep:          deltaDaysStep,
 				},
 			)
 

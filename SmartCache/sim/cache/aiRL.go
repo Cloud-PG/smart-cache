@@ -59,18 +59,20 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 	logger = zap.L()
 
 	cache.SimpleCache.Init(NoQueue,
-		args[0].(bool), // log
-		args[1].(bool), // redirect
-		args[2].(bool), // watermarks
+		args[0], // log
+		args[1], // redirect
+		args[2], // watermarks
+		args[3], // watermarks
+		args[4], // watermarks
 	)
 
-	useK := args[3].(bool)
-	evictionk := args[4].(int64)
-	rlType := args[5].(string)
-	additionFeatureMap := args[6].(string)
-	evictionFeatureMap := args[7].(string)
-	initEpsilon := args[8].(float64)
-	decayRateEpsilon := args[9].(float64)
+	useK := args[5].(bool)
+	evictionk := args[6].(int64)
+	rlType := args[7].(string)
+	additionFeatureMap := args[8].(string)
+	evictionFeatureMap := args[9].(string)
+	initEpsilon := args[10].(float64)
+	decayRateEpsilon := args[11].(float64)
 
 	cache.actionCounters = make(map[qlearn.ActionType]int)
 

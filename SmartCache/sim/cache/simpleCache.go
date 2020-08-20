@@ -64,6 +64,8 @@ type SimpleCache struct {
 	choicesLogFile                     *OutputCSV
 	choicesBuffer                      [][]string
 	logSimulation                      bool
+	maxNumDayDiff                      float64
+	deltaDaysStep                      float64
 }
 
 // Init the LRU struct
@@ -72,8 +74,10 @@ func (cache *SimpleCache) Init(vars ...interface{}) interface{} {
 	cache.logSimulation = vars[1].(bool)
 	cache.canRedirect = vars[2].(bool)
 	cache.useWatermarks = vars[3].(bool)
+	cache.maxNumDayDiff = vars[4].(float64)
+	cache.deltaDaysStep = vars[5].(float64)
 
-	cache.stats.Init()
+	cache.stats.Init(cache.maxNumDayDiff, cache.deltaDaysStep)
 	cache.files.Init(cache.ordType)
 
 	cache.dailyfreeSpace = make([]float64, 0)
@@ -118,7 +122,7 @@ func (cache *SimpleCache) ClearFiles() {
 
 // Clear the LRU struct
 func (cache *SimpleCache) Clear() {
-	cache.stats.Init()
+	cache.stats.Init(cache.maxNumDayDiff, cache.deltaDaysStep)
 	cache.ClearFiles()
 	cache.ClearStats()
 	cache.tick = 0

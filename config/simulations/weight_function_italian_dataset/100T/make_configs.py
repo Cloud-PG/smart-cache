@@ -11,6 +11,9 @@ sim:
   region: it
   overwrite: true
   cache:
+    stats:
+      maxNumDayDiff: 14.0
+      deltaDaysStep: 7.0
     type: weightFunLRU
     watermarks: false
     size:

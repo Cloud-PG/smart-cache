@@ -6,25 +6,22 @@ import (
 	"go.uber.org/zap"
 )
 
-const (
-	// MaxNumDayDiff limit to stay in the stats
-	MaxNumDayDiff = 4.
-	// DeltaDaysStep limit the clean action of the stats
-	DeltaDaysStep = 6.
-)
-
 // Stats collector of statistics for weight function cache
 type Stats struct {
 	fileStats       map[int64]*FileStats
 	weightSum       float64
 	firstUpdateTime time.Time
 	lastUpdateTime  time.Time
+	maxNumDayDiff   float64 // MaxNumDayDiff limit to stay in the stats
+	deltaDaysStep   float64 // DeltaDaysStep limit the clean action of the stats
 }
 
 // Init initialize Stats
-func (statStruct *Stats) Init() {
+func (statStruct *Stats) Init(maxNumDayDiff float64, deltaDaysStep float64) {
 	statStruct.fileStats = make(map[int64]*FileStats)
 	statStruct.weightSum = 0.0
+	statStruct.maxNumDayDiff = maxNumDayDiff
+	statStruct.deltaDaysStep = deltaDaysStep
 }
 
 // Clear Stats after load
@@ -41,7 +38,7 @@ func (statStruct *Stats) Clear() {
 // Dirty indicates if the stats needs a purge
 func (statStruct Stats) Dirty() bool {
 	numDays := statStruct.lastUpdateTime.Sub(statStruct.firstUpdateTime).Hours() / 24.
-	if numDays >= DeltaDaysStep {
+	if numDays >= statStruct.deltaDaysStep {
 		logger.Debug("Dirty Stats", zap.Float64("numDays", numDays),
 			zap.String("lastTime", statStruct.lastUpdateTime.Format(time.UnixDate)),
 			zap.String("firstTime", statStruct.firstUpdateTime.Format(time.UnixDate)),
@@ -55,7 +52,7 @@ func (statStruct Stats) Dirty() bool {
 func (statStruct *Stats) Purge() {
 	numDeletedFiles := 0
 	for filename, stats := range statStruct.fileStats {
-		if !stats.InCache && stats.DiffLastUpdate(statStruct.lastUpdateTime) >= MaxNumDayDiff {
+		if !stats.InCache && stats.DiffLastUpdate(statStruct.lastUpdateTime) >= statStruct.maxNumDayDiff {
 			logger.Debug("Purge", zap.Bool("in cache", stats.InCache))
 			statStruct.weightSum -= stats.Weight
 			delete(statStruct.fileStats, filename)

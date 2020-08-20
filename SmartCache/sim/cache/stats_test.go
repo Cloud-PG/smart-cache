@@ -8,7 +8,7 @@ import (
 
 func TestCreateStats(t *testing.T) {
 	stats := Stats{}
-	stats.Init()
+	stats.Init(4., 6.)
 
 	curTime := time.Now()
 	fileStats, newFile := stats.GetOrCreate(0, float64(32.0), curTime)
