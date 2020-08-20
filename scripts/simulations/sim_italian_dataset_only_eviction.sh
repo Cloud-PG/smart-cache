@@ -8,6 +8,7 @@ simulator sim ../../config/simulations/italian_dataset_only_eviction/100T/lfu.ym
 simulator sim ../../config/simulations/italian_dataset_only_eviction/100T/sizeBig.yml &&
 simulator sim ../../config/simulations/italian_dataset_only_eviction/100T/sizeSmall.yml &&
 
+simulator sim ../../config/simulations/italian_dataset_only_eviction/100T/scdl.yml &&
 simulator sim ../../config/simulations/italian_dataset_only_eviction/100T/scdl2.yml
 
 ### ----- Plot results -----
