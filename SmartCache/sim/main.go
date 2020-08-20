@@ -370,7 +370,7 @@ func simCommand() *cobra.Command {
 					fmt.Sprintf("%0.2f", weightGamma),
 				}, "_")
 				baseName = strings.Join([]string{
-					baseName,
+					cacheType,
 					weightFunc,
 					parameters,
 				}, "_")
