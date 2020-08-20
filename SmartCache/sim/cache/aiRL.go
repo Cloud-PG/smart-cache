@@ -849,9 +849,25 @@ func (cache *AIRL) delayedRewardEvictionAgent(filename int64, inCacheTick int64,
 
 			reward := 0.0
 			if hit {
-				reward += 2.
+				reward += 1.
+				if prevMemory.Action == qlearn.ActionNotDelete {
+					reward += 1.
+				}
+				if !prevMemory.Hit && nextMemory.Hit {
+					reward += 1.
+				} else if prevMemory.Hit && nextMemory.Hit {
+					reward += 1.
+				}
 			} else { // MISS
 				reward += -1.
+				if prevMemory.Action != qlearn.ActionNotDelete {
+					reward += -1.
+					if !prevMemory.Hit && !nextMemory.Hit {
+						reward += -1.
+					} else if prevMemory.Hit && !nextMemory.Hit {
+						reward += -1.
+					}
+				}
 			}
 
 			// Update table
