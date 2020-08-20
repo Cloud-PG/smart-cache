@@ -9,6 +9,7 @@ import (
 	"os"
 	"simulator/v2/cache/ai/featuremap"
 	"simulator/v2/cache/ai/qlearn"
+	"strings"
 
 	"go.uber.org/zap"
 )
@@ -75,13 +76,13 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 
 	logger.Info("Feature maps", zap.String("addition map", additionFeatureMap), zap.String("eviction map", evictionFeatureMap))
 
-	switch rlType {
-	case "SCDL":
+	switch strings.ToLower(rlType) {
+	case "scdl":
 		cache.rlType = SCDL
 		if additionFeatureMap == "" {
 			panic("ERROR: SCDL needs the addition feature map...")
 		}
-	case "SCDL2":
+	case "scdl2":
 		cache.rlType = SCDL2
 
 		cache.evictionUseK = useK
