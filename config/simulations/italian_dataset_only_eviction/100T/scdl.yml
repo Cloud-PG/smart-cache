@@ -22,5 +22,5 @@ sim:
       type: SCDL
       epsilon:
         decay: 0.000001
-      # addition:
-      #   featuremap: ../../../../featureMaps/rlAdditionFeatureMap.json
+      addition:
+        featuremap: ../../../../featureMaps/rlAdditionFeatureMap.json
