@@ -194,8 +194,8 @@ type Agent struct {
 func (agent *Agent) Init(featureManager *featuremap.FeatureManager, role AgentRole, initEpsilon float64, decayRateEpsilon float64) {
 	logger = zap.L()
 
-	agent.LearningRate = 0.75 // also named Alpha
-	agent.DiscountFactor = 0.33
+	agent.LearningRate = 0.9 // also named Alpha
+	agent.DiscountFactor = 0.5
 	agent.DecayRateEpsilon = decayRateEpsilon
 	agent.Epsilon = initEpsilon
 	agent.MaxEpsilon = 1.0
