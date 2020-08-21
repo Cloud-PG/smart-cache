@@ -336,3 +336,6 @@ scripts/DataAnalysis/datasets/
 
 # Minio certs
 minio/CAs
+
+# TASK temp
+**/.task/

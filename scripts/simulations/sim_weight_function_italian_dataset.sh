@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 
-echo "===> $0" &&
-python -m SmartCache.sim.utils compile --release "true" &&
+# echo "===> $0" &&
+# python -m SmartCache.sim.utils compile --release "true" &&
 
-pushd ../../config/simulations/weight_function_italian_dataset/100T &&
-python make_configs.py
-popd &&
+# pushd ../../config/simulations/weight_function_italian_dataset/100T &&
+# python make_configs.py
+# popd &&
 
 simulator sim ../../config/simulations/weight_function_italian_dataset/100T/lru.yml &&
 simulator sim ../../config/simulations/weight_function_italian_dataset/100T/lfu.yml &&
