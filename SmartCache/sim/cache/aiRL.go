@@ -17,7 +17,7 @@ import (
 type aiRLType int
 
 const (
-	maxBadQValueInRow = 8
+	maxBadQValueInRow = 28
 	// SCDL type
 	SCDL aiRLType = iota - 2
 	// SCDL2 type
