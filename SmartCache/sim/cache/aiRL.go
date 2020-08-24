@@ -58,14 +58,6 @@ type AIRL struct {
 func (cache *AIRL) Init(args ...interface{}) interface{} {
 	logger = zap.L()
 
-	cache.SimpleCache.Init(NoQueue,
-		args[0], // log
-		args[1], // redirect
-		args[2], // watermarks
-		args[3], // watermarks
-		args[4], // watermarks
-	)
-
 	useK := args[5].(bool)
 	evictionk := args[6].(int64)
 	rlType := args[7].(string)
@@ -81,11 +73,28 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 	switch strings.ToLower(rlType) {
 	case "scdl":
 		cache.rlType = SCDL
+
+		cache.SimpleCache.Init(LRUQueue,
+			args[0], // log
+			args[1], // redirect
+			args[2], // watermarks
+			args[3], // watermarks
+			args[4], // watermarks
+		)
+
 		if additionFeatureMap == "" {
 			panic("ERROR: SCDL needs the addition feature map...")
 		}
 	case "scdl2":
 		cache.rlType = SCDL2
+
+		cache.SimpleCache.Init(NoQueue,
+			args[0], // log
+			args[1], // redirect
+			args[2], // watermarks
+			args[3], // watermarks
+			args[4], // watermarks
+		)
 
 		cache.evictionUseK = useK
 		cache.evictionAgentK = evictionk
@@ -855,6 +864,9 @@ func (cache *AIRL) delayedRewardEvictionAgent(filename int64, hit bool) {
 				if prevMemory.Frequency < nextMemory.Frequency {
 					reward += 1.
 				}
+				if prevMemory.Occupancy == nextMemory.Occupancy {
+					reward += 1.
+				}
 			} else { // MISS
 				reward += -1.
 				if prevMemory.Occupancy < nextMemory.Occupancy {
@@ -1369,6 +1381,10 @@ func (cache *AIRL) Free(amount float64, percentage bool) float64 {
 
 // CheckWatermark checks the watermark levels and resolve the situation
 func (cache *AIRL) CheckWatermark() bool {
+	switch cache.rlType {
+	case SCDL:
+		return cache.SimpleCache.CheckWatermark()
+	}
 	return true
 }
 
