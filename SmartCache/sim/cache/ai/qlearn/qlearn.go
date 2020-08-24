@@ -425,15 +425,10 @@ func (agent *Agent) SaveMemory(key interface{}, choice Choice) {
 func (agent *Agent) Remember(key interface{}) []Choice {
 	pastChoices, inMemory := agent.Memory[key]
 	var memories []Choice
-	if inMemory {
-		if len(pastChoices) < 8 {
-			return memories
-		}
+	if inMemory && len(pastChoices) > 8 {
 		memories = make([]Choice, len(pastChoices))
 		copy(memories, pastChoices)
 		delete(agent.Memory, key)
-	} else {
-		panic("ERROR: Wrong key passed, no memories...")
 	}
 	return memories
 }

@@ -118,24 +118,18 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 			}
 			cache.evictionCheckNextStateMap = make(map[[8]byte]bool)
 			cache.evictionAgentOK = true
+			// Eviction agent action counters
+			cache.actionCounters[qlearn.ActionDeleteAll] = 0
+			cache.actionCounters[qlearn.ActionDeleteHalf] = 0
+			cache.actionCounters[qlearn.ActionDeleteQuarter] = 0
+			cache.actionCounters[qlearn.ActionDeleteOne] = 0
+			cache.actionCounters[qlearn.ActionNotDelete] = 0
 		} else {
 			cache.evictionAgentOK = false
 		}
-
-		// Eviction agent action counters
-		cache.actionCounters[qlearn.ActionDeleteAll] = 0
-		cache.actionCounters[qlearn.ActionDeleteHalf] = 0
-		cache.actionCounters[qlearn.ActionDeleteQuarter] = 0
-		cache.actionCounters[qlearn.ActionDeleteOne] = 0
-		cache.actionCounters[qlearn.ActionNotDelete] = 0
-
 	default:
 		panic("ERROR: RL type is not valid...")
 	}
-
-	// Addition agent action counters
-	cache.actionCounters[qlearn.ActionStore] = 0
-	cache.actionCounters[qlearn.ActionNotStore] = 0
 
 	if additionFeatureMap != "" {
 		logger.Info("Create addition feature manager")
@@ -154,6 +148,9 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 			cache.additionAgentChoicesLogFileBuffer = make([][]string, 0)
 		}
 		cache.additionAgentOK = true
+		// Addition agent action counters
+		cache.actionCounters[qlearn.ActionStore] = 0
+		cache.actionCounters[qlearn.ActionNotStore] = 0
 	} else {
 		cache.additionAgentOK = false
 	}
@@ -175,7 +172,7 @@ func (cache *AIRL) ClearStats() {
 	cache.actionCounters[qlearn.ActionDeleteQuarter] = 0
 	cache.actionCounters[qlearn.ActionDeleteOne] = 0
 	cache.actionCounters[qlearn.ActionNotDelete] = 0
-	if !cache.evictionUseK {
+	if cache.evictionAgentOK && !cache.evictionUseK {
 		cache.callEvictionAgent(false)
 	}
 }
@@ -877,53 +874,52 @@ func (cache *AIRL) delayedRewardEvictionAgent(filename int64, hit bool) {
 }
 
 func (cache *AIRL) delayedRewardAdditionAgent(filename int64, hit bool) {
-	memories, inMemory := cache.additionAgent.Memory[filename]
-
-	if inMemory {
-		switch cache.rlType {
-		case SCDL:
-			lastMemories := cache.additionAgent.Remember(SCDL)
-			for _, memory := range lastMemories {
-				reward := 0.0
-				if !memory.Hit { // MISS
-					if memory.Action == qlearn.ActionNotStore {
-						if cache.dataReadOnMiss/cache.bandwidth < 0.5 || cache.dataWritten/cache.dataRead < 0.1 {
-							reward -= memory.Size / 1024.
-						}
-						if reward == 0. {
-							reward += memory.Size / 1024.
-						}
-					} else if memory.Action == qlearn.ActionStore {
-						if cache.dataReadOnMiss/cache.bandwidth > 0.75 || cache.dataWritten/cache.dataRead > 0.5 {
-							reward -= memory.Size / 1024.
-						}
-						if reward == 0. {
-							reward += memory.Size / 1024.
-						}
-					}
-					if cache.dataReadOnMiss/cache.dataRead > 0.5 {
+	switch cache.rlType {
+	case SCDL:
+		lastMemories := cache.additionAgent.Remember(SCDL)
+		for _, memory := range lastMemories {
+			reward := 0.0
+			if !memory.Hit { // MISS
+				if memory.Action == qlearn.ActionNotStore {
+					if cache.dataReadOnMiss/cache.bandwidth < 0.5 || cache.dataWritten/cache.dataRead < 0.1 {
 						reward -= memory.Size / 1024.
 					}
 					if reward == 0. {
 						reward += memory.Size / 1024.
 					}
-				} else { // HIT
-					if cache.dataReadOnHit/cache.dataRead < 0.3 {
-						reward -= memory.Size / 1024.
-					}
-					if cache.dataWritten/cache.dataRead > 0.3 {
+				} else if memory.Action == qlearn.ActionStore {
+					if cache.dataReadOnMiss/cache.bandwidth > 0.75 || cache.dataWritten/cache.dataRead > 0.5 {
 						reward -= memory.Size / 1024.
 					}
 					if reward == 0. {
 						reward += memory.Size / 1024.
 					}
 				}
-				// Update table
-				cache.additionAgent.UpdateTable(memory.State, memory.State, memory.Action, reward)
-				// Update epsilon
-				cache.additionAgent.UpdateEpsilon()
+				if cache.dataReadOnMiss/cache.dataRead > 0.5 {
+					reward -= memory.Size / 1024.
+				}
+				if reward == 0. {
+					reward += memory.Size / 1024.
+				}
+			} else { // HIT
+				if cache.dataReadOnHit/cache.dataRead < 0.3 {
+					reward -= memory.Size / 1024.
+				}
+				if cache.dataWritten/cache.dataRead > 0.3 {
+					reward -= memory.Size / 1024.
+				}
+				if reward == 0. {
+					reward += memory.Size / 1024.
+				}
 			}
-		case SCDL2:
+			// Update table
+			cache.additionAgent.UpdateTable(memory.State, memory.State, memory.Action, reward)
+			// Update epsilon
+			cache.additionAgent.UpdateEpsilon()
+		}
+	case SCDL2:
+		memories, inMemory := cache.additionAgent.Memory[filename]
+		if inMemory {
 			for idx := 0; idx < len(memories)-2; idx++ {
 				prevMemory, nextMemory := memories[idx], memories[idx+1]
 				reward := 0.0
@@ -1415,6 +1411,7 @@ func (cache *AIRL) ExtraOutput(info string) string {
 			result = cache.additionAgent.QTableToString()
 			writeQTable("additionQTable.csv", result)
 		} else {
+			logger.Info("No Addition Table...")
 			result = ""
 		}
 	case "evictionQTable":
@@ -1422,6 +1419,7 @@ func (cache *AIRL) ExtraOutput(info string) string {
 			result = cache.evictionAgent.QTableToString()
 			writeQTable("evictionQTable.csv", result)
 		} else {
+			logger.Info("No Eviction Table...")
 			result = ""
 		}
 	case "valueFunctions":
