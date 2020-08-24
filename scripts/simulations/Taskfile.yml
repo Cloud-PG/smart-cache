@@ -48,6 +48,29 @@ tasks:
       - task: italian-dataset-no-k
       - task: italian-dataset-only-eviction
       - task: italian-dataset-only-eviction-no-k
+      - task: us-dataset
+      - task: us-dataset-with-watermakrs
+
+  only-synthetic-simulations:
+    desc: Run only synthetic simulations
+    cmds:
+      - task: synthetic-dataset
+      - task: synthetic-dataset-with-watermarks
+
+  only-it-simulations:
+    desc: Run only IT simulations
+    cmds:
+      - task: italian-dataset
+      - task: italian-dataset-with-watermarks
+      - task: italian-dataset-no-k
+      - task: italian-dataset-only-eviction
+      - task: italian-dataset-only-eviction-no-k
+
+  only-us-simulations:
+    desc: Run only US simulations
+    cmds:
+      - task: us-dataset
+      - task: us-dataset-with-watermakrs
 
   synthetic-dataset:
     desc: Run only synthetic dataset simulations
@@ -105,6 +128,48 @@ tasks:
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/size_focused_dataset/scdl.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/size_focused_dataset/scdl2.yml"
 
+  us-dataset:
+    desc: Run only us dataset simulations
+    deps:
+      - release
+    cmds:
+      - echo "Italian dataset simulations"
+      # 200T
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/200T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/200T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/200T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/200T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/200T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/200T/scdl2.yml"
+      # 100T
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/100T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/100T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/100T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/100T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/100T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/100T/scdl2.yml"
+
+  us-dataset-with-watermakrs:
+    desc: Run only us dataset with watermakrs simulations
+    deps:
+      - release
+    cmds:
+      - echo "Italian dataset simulations"
+      # 200T
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/200T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/200T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/200T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/200T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/200T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/200T/scdl2.yml"
+      # 100T
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/100T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/100T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/100T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/100T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/100T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/100T/scdl2.yml"
+
   italian-dataset:
     desc: Run only italian dataset simulations
     deps:
@@ -160,7 +225,7 @@ tasks:
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/10T/sizeSmall.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/10T/scdl.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/10T/scdl2.yml"
-  
+
   italian-dataset-no-k:
     desc: Run only italian dataset no k simulations
     deps:
