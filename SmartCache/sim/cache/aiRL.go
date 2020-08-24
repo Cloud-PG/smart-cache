@@ -17,7 +17,7 @@ import (
 type aiRLType int
 
 const (
-	maxBadQValueInRow = 28
+	maxBadQValueInRow = 8
 	// SCDL type
 	SCDL aiRLType = iota - 2
 	// SCDL2 type
@@ -1050,13 +1050,13 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) 
 			}
 			if cache.evictionAgentOK {
 				cache.evictionAgentBadQValue = 0
-				cache.evictionAgent.UnleashEpsilon(0.5)
+				cache.evictionAgent.UnleashEpsilon(0.25)
 			}
 		}
 		if cache.evictionAgentBadQValue >= maxBadQValueInRow {
 			if cache.additionAgentOK {
 				cache.additionAgentBadQValue = 0
-				cache.additionAgent.UnleashEpsilon(0.5)
+				cache.additionAgent.UnleashEpsilon(0.25)
 			}
 			if cache.evictionAgentOK {
 				cache.evictionAgentBadQValue = 0
