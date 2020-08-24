@@ -1,7 +1,7 @@
 --- # Simulation parameters
 sim:
   data: ../../../../datasets/source2018_numeric_it_with_avro_order/
-  outputFolder: ../../../../results/sim_italian_dataset_with_watermarks/100T
+  outputFolder: ../../../../results/sim_italian_dataset_with_watermarks_only_eviction_no_k/100T
   type: normal
   window:
     start: 0
@@ -19,10 +19,8 @@ sim:
       redirect: true
   ai:
     rl:
+      type: SCDL
       epsilon:
         decay: 0.00001
       addition:
         featuremap: ../../../../featureMaps/rlAdditionFeatureMap.json
-      eviction:
-        k: 512
-        featuremap: ../../../../featureMaps/rlEvictionFeatureMap.json

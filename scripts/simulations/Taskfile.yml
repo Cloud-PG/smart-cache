@@ -44,10 +44,13 @@ tasks:
       - task: synthetic-dataset
       - task: synthetic-dataset-with-watermarks
       - task: italian-dataset
-      - task: italian-dataset-with-watermarks
       - task: italian-dataset-no-k
       - task: italian-dataset-only-eviction
       - task: italian-dataset-only-eviction-no-k
+      - task: italian-dataset-with-watermarks
+      - task: italian-dataset-with-watermarks-no-k
+      - task: italian-dataset-with-watermarks-only-eviction
+      - task: italian-dataset-with-watermarks-only-eviction-no-k
       - task: us-dataset
       - task: us-dataset-with-watermakrs
 
@@ -61,10 +64,13 @@ tasks:
     desc: Run only IT simulations
     cmds:
       - task: italian-dataset
-      - task: italian-dataset-with-watermarks
       - task: italian-dataset-no-k
       - task: italian-dataset-only-eviction
       - task: italian-dataset-only-eviction-no-k
+      - task: italian-dataset-with-watermarks
+      - task: italian-dataset-with-watermarks-no-k
+      - task: italian-dataset-with-watermarks-only-eviction
+      - task: italian-dataset-with-watermarks-only-eviction-no-k
 
   only-us-simulations:
     desc: Run only US simulations
@@ -198,34 +204,6 @@ tasks:
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/10T/scdl.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/10T/scdl2.yml"
 
-  italian-dataset-with-watermarks:
-    desc: Run only italian dataset with watermarks simulations
-    deps:
-      - release
-    cmds:
-      - echo "Italian dataset with watermarks simulations"
-      # 100T
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/100T/lru.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/100T/lfu.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/100T/sizeBig.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/100T/sizeSmall.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/100T/scdl.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/100T/scdl2.yml"
-      # 50T
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/50T/lru.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/50T/lfu.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/50T/sizeBig.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/50T/sizeSmall.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/50T/scdl.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/50T/scdl2.yml"
-      # 10T
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/10T/lru.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/10T/lfu.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/10T/sizeBig.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/10T/sizeSmall.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/10T/scdl.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/10T/scdl2.yml"
-
   italian-dataset-no-k:
     desc: Run only italian dataset no k simulations
     deps:
@@ -295,6 +273,104 @@ tasks:
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_no_k_only_eviction/50T/sizeSmall.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_no_k_only_eviction/50T/scdl.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_no_k_only_eviction/50T/scdl2.yml"
+
+  italian-dataset-with-watermarks:
+    desc: Run only italian dataset with watermarks simulations
+    deps:
+      - release
+    cmds:
+      - echo "Italian dataset with watermarks simulations"
+      # 100T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/100T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/100T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/100T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/100T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/100T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/100T/scdl2.yml"
+      # 50T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/50T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/50T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/50T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/50T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/50T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/50T/scdl2.yml"
+      # 10T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/10T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/10T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/10T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/10T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/10T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/10T/scdl2.yml"
+
+  italian-dataset-with-watermarks-no-k:
+    desc: Run only italian dataset with watermarks and no k simulations
+    deps:
+      - release
+    cmds:
+      - echo "Italian dataset with watermarks simulations"
+      # 100T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_k/100T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_k/100T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_k/100T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_k/100T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_k/100T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_k/100T/scdl2.yml"
+      # 50T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_k/50T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_k/50T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_k/50T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_k/50T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_k/50T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_k/50T/scdl2.yml"
+      # 10T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_k/10T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_k/10T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_k/10T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_k/10T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_k/10T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_k/10T/scdl2.yml"
+
+  italian-dataset-with-watermarks-only-eviction:
+    desc: Run only italian dataset only eviction simulations
+    deps:
+      - release
+    cmds:
+      - echo "Italian dataset only eviction simulations"
+      # 100T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_eviction/100T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_eviction/100T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_eviction/100T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_eviction/100T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_eviction/100T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_eviction/100T/scdl2.yml"
+      # 50T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_eviction/50T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_eviction/50T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_eviction/50T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_eviction/50T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_eviction/50T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_eviction/50T/scdl2.yml"
+
+  italian-dataset-with-watermarks-only-eviction-no-k:
+    desc: Run only italian dataset only eviction no k simulations
+    deps:
+      - release
+    cmds:
+      - echo "Italian dataset only eviction no k simulations"
+      # 100T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_eviction_no_k/100T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_eviction_no_k/100T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_eviction_no_k/100T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_eviction_no_k/100T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_eviction_no_k/100T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_eviction_no_k/100T/scdl2.yml"
+      # 50T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_eviction_no_k/50T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_eviction_no_k/50T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_eviction_no_k/50T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_eviction_no_k/50T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_eviction_no_k/50T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_eviction_no_k/50T/scdl2.yml"
 
   make-weight-function-configs:
     desc: Make all weight function configuration files

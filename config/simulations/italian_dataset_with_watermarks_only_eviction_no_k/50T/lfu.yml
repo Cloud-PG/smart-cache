@@ -1,0 +1,18 @@
+--- # Simulation parameters
+sim:
+  data: ../../../../datasets/source2018_numeric_it_with_avro_order/
+  outputFolder: ../../../../results/sim_italian_dataset_with_watermarks_only_eviction_no_k/50T
+  type: normal
+  window:
+    start: 0
+    stop: 52
+  region: it
+  cache:
+    type: lfu
+    watermarks: true
+    size:
+      value: 50
+      unit: T
+    bandwidth: 
+      value: 10
+      redirect: true
