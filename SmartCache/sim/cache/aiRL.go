@@ -822,7 +822,7 @@ func (cache *AIRL) checkEvictionNextState(oldStateIdx int, newStateIdx int) bool
 	return isNext
 }
 
-func (cache *AIRL) delayedRewardEvictionAgent(filename int64, inCacheTick int64, hit bool) {
+func (cache *AIRL) delayedRewardEvictionAgent(filename int64, hit bool) {
 	memories, inMemory := cache.evictionAgent.Memory[filename]
 
 	if inMemory {
@@ -855,20 +855,16 @@ func (cache *AIRL) delayedRewardEvictionAgent(filename int64, inCacheTick int64,
 				if prevMemory.Action == qlearn.ActionNotDelete {
 					reward += 1.
 				}
-				if !prevMemory.Hit && nextMemory.Hit {
-					reward += 1.
-				} else if prevMemory.Hit && nextMemory.Hit {
+				if prevMemory.Frequency < nextMemory.Frequency {
 					reward += 1.
 				}
 			} else { // MISS
 				reward += -1.
-				if prevMemory.Action != qlearn.ActionNotDelete {
+				if prevMemory.Occupancy < nextMemory.Occupancy {
 					reward += -1.
-					if !prevMemory.Hit && !nextMemory.Hit {
-						reward += -1.
-					} else if prevMemory.Hit && !nextMemory.Hit {
-						reward += -1.
-					}
+				}
+				if prevMemory.Frequency < nextMemory.Frequency {
+					reward += -1.
 				}
 			}
 
@@ -1364,7 +1360,7 @@ func (cache *AIRL) AfterRequest(request *Request, fileStats *FileStats, hit bool
 			cache.delayedRewardAdditionAgent(request.Filename, hit)
 		}
 		if cache.evictionAgentOK {
-			cache.delayedRewardEvictionAgent(request.Filename, fileStats.InCacheTick, hit)
+			cache.delayedRewardEvictionAgent(request.Filename, hit)
 		}
 	}
 	cache.SimpleCache.AfterRequest(request, fileStats, hit, added)
