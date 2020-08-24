@@ -203,6 +203,10 @@ def _measure_hit_rate(df: 'pd.DataFrame') -> 'pd.Series':
     return df['hit rate']
 
 
+def _measure_hit_over_miss(df: 'pd.DataFrame') -> 'pd.Series':
+    return df['read on hit data'] / df['read on miss data']
+
+
 def _agent_epsilon(df: 'pd.DataFrame') -> 'pd.Series':
     return df['']
 
@@ -215,6 +219,7 @@ _MEASURES = {
     'Std. Dev. Free Space': _measure_std_dev_free_space,
     'Bandwidth': _measure_bandwidth,
     'Redirect Vol.': _measure_redirect_volume,
+    'Hit over Miss': _measure_hit_over_miss,
     'Hit rate': _measure_hit_rate,
 }
 
@@ -250,6 +255,11 @@ def _get_measures(cache_filename: str, df: 'pd.DataFrame') -> list:
     # Std. Dev. Free Space
     measures.append(
         _measure_std_dev_free_space(df).mean()
+    )
+
+    # Hit over Miss
+    measures.append(
+        _measure_hit_over_miss(df).mean()
     )
 
     # Hit rate
@@ -523,11 +533,11 @@ def dashboard(results: 'Results'):
             else:
                 figures = []
                 files2plot = get_files2plot(
-                        results,
-                        files,
-                        filters_all,
-                        filters_any,
-                    )
+                    results,
+                    files,
+                    filters_all,
+                    filters_any,
+                )
                 prefix = get_prefix(files2plot)
                 if num_of_results != 0:
                     table = make_table(files2plot, prefix)
@@ -765,8 +775,9 @@ def make_table(files2plot: list, prefix: str) -> 'pd.DataFrame':
         table,
         columns=[
             "file", "Throughput", "Cost", "Bandwidth",
-            "Redirect Vol.", "Avg. Free Space", 
-            "Std. Dev. Free Space", "Hit rate", "CPU Eff."
+            "Redirect Vol.", "Avg. Free Space",
+            "Std. Dev. Free Space", "Hit over Miss",
+            "Hit rate", "CPU Eff."
         ]
     )
     df = df.sort_values(
