@@ -15,7 +15,7 @@ sim:
       maxNumDayDiff: 14.0
       deltaDaysStep: 7.0
     type: weightFunLRU
-    watermarks: false
+    watermarks: true
     size:
       value: 100
       unit: T

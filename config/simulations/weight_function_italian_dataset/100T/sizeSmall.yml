@@ -9,7 +9,7 @@ sim:
   region: it
   cache:
     type: sizeSmall
-    watermarks: false
+    watermarks: true
     size:
       value: 100
       unit: T
