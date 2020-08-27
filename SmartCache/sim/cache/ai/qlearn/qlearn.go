@@ -48,6 +48,8 @@ const (
 	EvictionAgent AgentRole = iota - 2
 	// AdditionAgent indicates the table to accept file requests
 	AdditionAgent
+
+	maxStoredPastChoices = 32
 )
 
 var (
@@ -407,7 +409,7 @@ func (agent *Agent) UpdateEpsilon() {
 func (agent *Agent) SaveMemory(key interface{}, choice Choice) {
 	pastChoices, inMemory := agent.Memory[key]
 	if inMemory {
-		if len(pastChoices) < 16 { // MAX stored past choices is 16
+		if len(pastChoices) < maxStoredPastChoices {
 			pastChoices = append(pastChoices, choice)
 		} else {
 			pastChoices = pastChoices[1:]
@@ -422,15 +424,19 @@ func (agent *Agent) SaveMemory(key interface{}, choice Choice) {
 }
 
 // Remember returns some memories and then delete them
-func (agent *Agent) Remember(key interface{}) []Choice {
+func (agent *Agent) Remember(key interface{}) ([]Choice, bool) {
 	pastChoices, inMemory := agent.Memory[key]
-	var memories []Choice
-	if inMemory && len(pastChoices) > 8 {
+	var (
+		memories []Choice
+		present  bool
+	)
+	if inMemory && len(pastChoices) > (maxStoredPastChoices>>1) {
 		memories = make([]Choice, len(pastChoices))
 		copy(memories, pastChoices)
 		delete(agent.Memory, key)
+		present = true
 	}
-	return memories
+	return memories, present
 }
 
 //##############################################################################

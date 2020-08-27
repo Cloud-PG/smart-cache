@@ -872,46 +872,48 @@ func (cache *AIRL) delayedRewardEvictionAgent(filename int64, hit bool) {
 func (cache *AIRL) delayedRewardAdditionAgent(filename int64, hit bool) {
 	switch cache.rlType {
 	case SCDL:
-		lastMemories := cache.additionAgent.Remember(SCDL)
-		for _, memory := range lastMemories {
-			reward := 0.0
-			if !memory.Hit { // MISS
-				if memory.Action == qlearn.ActionNotStore {
-					if cache.dataReadOnMiss/cache.bandwidth < 0.5 || cache.dataWritten/cache.dataRead < 0.1 {
+		lastMemories, present := cache.additionAgent.Remember(SCDL)
+		if present {
+			for _, memory := range lastMemories {
+				reward := 0.0
+				if !memory.Hit { // MISS
+					if memory.Action == qlearn.ActionNotStore {
+						if cache.dataReadOnMiss/cache.bandwidth < 0.5 || cache.dataWritten/cache.dataRead < 0.1 {
+							reward -= memory.Size / 1024.
+						}
+						if reward == 0. {
+							reward += memory.Size / 1024.
+						}
+					} else if memory.Action == qlearn.ActionStore {
+						if cache.dataReadOnMiss/cache.bandwidth > 0.75 || cache.dataWritten/cache.dataRead > 0.5 {
+							reward -= memory.Size / 1024.
+						}
+						if reward == 0. {
+							reward += memory.Size / 1024.
+						}
+					}
+					if cache.dataReadOnMiss/cache.dataRead > 0.5 {
 						reward -= memory.Size / 1024.
 					}
 					if reward == 0. {
 						reward += memory.Size / 1024.
 					}
-				} else if memory.Action == qlearn.ActionStore {
-					if cache.dataReadOnMiss/cache.bandwidth > 0.75 || cache.dataWritten/cache.dataRead > 0.5 {
+				} else { // HIT
+					if cache.dataReadOnHit/cache.dataRead < 0.3 {
+						reward -= memory.Size / 1024.
+					}
+					if cache.dataWritten/cache.dataRead > 0.3 {
 						reward -= memory.Size / 1024.
 					}
 					if reward == 0. {
 						reward += memory.Size / 1024.
 					}
 				}
-				if cache.dataReadOnMiss/cache.dataRead > 0.5 {
-					reward -= memory.Size / 1024.
-				}
-				if reward == 0. {
-					reward += memory.Size / 1024.
-				}
-			} else { // HIT
-				if cache.dataReadOnHit/cache.dataRead < 0.3 {
-					reward -= memory.Size / 1024.
-				}
-				if cache.dataWritten/cache.dataRead > 0.3 {
-					reward -= memory.Size / 1024.
-				}
-				if reward == 0. {
-					reward += memory.Size / 1024.
-				}
+				// Update table
+				cache.additionAgent.UpdateTable(memory.State, memory.State, memory.Action, reward)
+				// Update epsilon
+				cache.additionAgent.UpdateEpsilon()
 			}
-			// Update table
-			cache.additionAgent.UpdateTable(memory.State, memory.State, memory.Action, reward)
-			// Update epsilon
-			cache.additionAgent.UpdateEpsilon()
 		}
 	case SCDL2:
 		memories, inMemory := cache.additionAgent.Memory[filename]
