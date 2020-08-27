@@ -38,7 +38,7 @@ type Request struct {
 
 // Cache is the base interface for the cache object
 type Cache interface {
-	Init(...interface{}) interface{}
+	Init(param InitParameters) interface{}
 	SetRegion(string)
 	SetBandwidth(float64)
 
@@ -154,8 +154,8 @@ func GetFile(cache Cache, vars ...interface{}) (bool, bool) {
 }
 
 // InitCache initializes the cache instance
-func InitCache(cache Cache, args ...interface{}) interface{} {
-	return cache.Init(args...)
+func InitCache(cache Cache, params InitParameters) interface{} {
+	return cache.Init(params)
 }
 
 // HitRate of the current cache instance

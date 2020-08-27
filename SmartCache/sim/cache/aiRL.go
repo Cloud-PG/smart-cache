@@ -55,16 +55,16 @@ type AIRL struct {
 }
 
 // Init the AIRL struct
-func (cache *AIRL) Init(args ...interface{}) interface{} {
+func (cache *AIRL) Init(params InitParameters) interface{} {
 	logger = zap.L()
 
-	useK := args[5].(bool)
-	evictionk := args[6].(int64)
-	rlType := args[7].(string)
-	additionFeatureMap := args[8].(string)
-	evictionFeatureMap := args[9].(string)
-	initEpsilon := args[10].(float64)
-	decayRateEpsilon := args[11].(float64)
+	useK := params.SimUseK
+	evictionk := params.AIRLEvictionK
+	rlType := params.AIRLType
+	additionFeatureMap := params.AIRLAdditionFeatureMap
+	evictionFeatureMap := params.AIRLEvictionFeatureMap
+	initEpsilon := params.AIRLEpsilonStart
+	decayRateEpsilon := params.AIRLEpsilonDecay
 
 	cache.actionCounters = make(map[qlearn.ActionType]int)
 
@@ -74,13 +74,8 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 	case "scdl":
 		cache.rlType = SCDL
 
-		cache.SimpleCache.Init(LRUQueue,
-			args[0], // log
-			args[1], // redirect
-			args[2], // watermarks
-			args[3], // watermarks
-			args[4], // watermarks
-		)
+		params.QueueType = LRUQueue
+		cache.SimpleCache.Init(params)
 
 		if additionFeatureMap == "" {
 			panic("ERROR: SCDL needs the addition feature map...")
@@ -88,13 +83,8 @@ func (cache *AIRL) Init(args ...interface{}) interface{} {
 	case "scdl2":
 		cache.rlType = SCDL2
 
-		cache.SimpleCache.Init(NoQueue,
-			args[0], // log
-			args[1], // redirect
-			args[2], // watermarks
-			args[3], // watermarks
-			args[4], // watermarks
-		)
+		params.QueueType = NoQueue
+		cache.SimpleCache.Init(params)
 
 		cache.evictionUseK = useK
 		cache.evictionAgentK = evictionk

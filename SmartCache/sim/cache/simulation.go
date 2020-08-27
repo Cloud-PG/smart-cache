@@ -511,12 +511,16 @@ func Create(cacheType string, cacheSize float64, cacheSizeUnit string, log bool,
 
 type InitParameters struct {
 	Log                    bool
+	QueueType              queueType
 	RedirectReq            bool
 	Watermarks             bool
+	HighWatermark          float64
+	LowWatermark           float64
 	Dataset2TestPath       string
 	AIFeatureMap           string
 	AIModel                string
-	FunctionType           string
+	FunctionTypeString     string
+	FunctionType           FunctionType
 	WeightAlpha            float64
 	WeightBeta             float64
 	WeightGamma            float64
@@ -531,98 +535,62 @@ type InitParameters struct {
 	DeltaDaysStep          float64
 }
 
-func InitInstance(cacheType string, cacheInstance Cache, param InitParameters) {
+func InitInstance(cacheType string, cacheInstance Cache, params InitParameters) {
 	logger := zap.L()
 	switch cacheType {
 	case "lru":
 		logger.Info("Init LRU Cache")
-		InitCache(cacheInstance, LRUQueue, param.Log,
-			param.RedirectReq, param.Watermarks,
-			param.MaxNumDayDiff, param.DeltaDaysStep,
-		)
+		params.QueueType = LRUQueue
+		InitCache(cacheInstance, params)
 	case "lfu":
 		logger.Info("Init LFU Cache")
-		InitCache(cacheInstance, LFUQueue, param.Log,
-			param.RedirectReq, param.Watermarks,
-			param.MaxNumDayDiff, param.DeltaDaysStep,
-		)
+		params.QueueType = LFUQueue
+		InitCache(cacheInstance, params)
 	case "sizeBig":
 		logger.Info("Init Size Big Cache")
-		InitCache(cacheInstance, SizeBigQueue, param.Log,
-			param.RedirectReq, param.Watermarks,
-			param.MaxNumDayDiff, param.DeltaDaysStep,
-		)
+		params.QueueType = SizeBigQueue
+		InitCache(cacheInstance, params)
 	case "sizeSmall":
-		InitCache(cacheInstance, SizeSmallQueue, param.Log,
-			param.RedirectReq, param.Watermarks,
-			param.MaxNumDayDiff, param.DeltaDaysStep,
-		)
+		params.QueueType = SizeSmallQueue
+		InitCache(cacheInstance, params)
 	case "lruDatasetVerifier":
 		logger.Info("Init lruDatasetVerifier Cache")
-		InitCache(cacheInstance, param.Log,
-			param.RedirectReq, param.Watermarks, param.Dataset2TestPath,
-			param.MaxNumDayDiff, param.DeltaDaysStep,
-		)
+		InitCache(cacheInstance, params)
 	case "aiNN":
 		logger.Info("Init aiNN Cache")
-		if param.AIFeatureMap == "" {
+		if params.AIFeatureMap == "" {
 			fmt.Println("ERR: No feature map indicated...")
 			os.Exit(-1)
 		}
-		InitCache(cacheInstance, param.Log,
-			param.RedirectReq, param.Watermarks,
-			param.MaxNumDayDiff, param.DeltaDaysStep,
-			param.AIFeatureMap, param.AIModel,
-		)
+		InitCache(cacheInstance, params)
 	case "aiRL":
 		logger.Info("Init aiRL Cache")
-		if param.AIRLAdditionFeatureMap == "" {
+		if params.AIRLAdditionFeatureMap == "" {
 			logger.Info("No addition feature map indicated...")
 		}
-		if param.AIRLEvictionFeatureMap == "" {
+		if params.AIRLEvictionFeatureMap == "" {
 			logger.Info("No eviction feature map indicated...")
 		}
 
-		var selFunctionType FunctionType
-		switch param.FunctionType {
+		switch params.FunctionTypeString {
 		case "FuncAdditive":
-			selFunctionType = FuncAdditive
+			params.FunctionType = FuncAdditive
 		case "FuncAdditiveExp":
-			selFunctionType = FuncAdditiveExp
+			params.FunctionType = FuncAdditiveExp
 		case "FuncMultiplicative":
-			selFunctionType = FuncMultiplicative
+			params.FunctionType = FuncMultiplicative
 		case "FuncWeightedRequests":
-			selFunctionType = FuncWeightedRequests
+			params.FunctionType = FuncWeightedRequests
 		default:
 			fmt.Println("ERR: You need to specify a correct weight function.")
 			os.Exit(-1)
 		}
 
-		InitCache(
-			cacheInstance,
-			param.Log,
-			param.RedirectReq,
-			param.Watermarks,
-			param.MaxNumDayDiff,
-			param.DeltaDaysStep,
-			param.SimUseK,
-			param.AIRLEvictionK,
-			param.AIRLType,
-			param.AIRLAdditionFeatureMap,
-			param.AIRLEvictionFeatureMap,
-			param.AIRLEpsilonStart,
-			param.AIRLEpsilonDecay,
-			selFunctionType,
-			param.WeightAlpha,
-			param.WeightBeta,
-			param.WeightGamma,
-		)
+		InitCache(cacheInstance, params)
 	case "weightFunLRU":
 		logger.Info("Init Weight Function Cache")
-		InitCache(cacheInstance, LRUQueue, param.Log,
-			param.RedirectReq, param.Watermarks,
-			param.MaxNumDayDiff, param.DeltaDaysStep,
-		)
+		params.QueueType = LRUQueue
+		InitCache(cacheInstance, params)
 	default:
 		fmt.Printf("ERR: '%s' is not a valid cache type...\n", cacheType)
 		os.Exit(-2)
@@ -867,18 +835,18 @@ func Simulate(cacheType string, cacheInstance Cache, param SimulationParams) {
 		totNumRecords++
 
 		if windowCounter >= param.WindowStart {
-			if succesJobFilter.Check(record) == false {
+			if !succesJobFilter.Check(record) {
 				numFilteredRecords++
 				continue
 			}
 			if param.DataTypeFilter != nil {
-				if param.DataTypeFilter.Check(record) == false {
+				if !param.DataTypeFilter.Check(record) {
 					numFilteredRecords++
 					continue
 				}
 			}
 			if param.RecordFilter != nil {
-				if param.RecordFilter.Check(record) == false {
+				if !param.RecordFilter.Check(record) {
 					numFilteredRecords++
 					continue
 				}

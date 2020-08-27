@@ -49,8 +49,8 @@ type SimpleCache struct {
 	dataReadOnHit, dataReadOnMiss      float64
 	dailyfreeSpace                     []float64
 	sumDailyFreeSpace                  float64
-	HighWaterMark                      float64
-	LowWaterMark                       float64
+	HighWatermark                      float64
+	LowWatermark                       float64
 	numDailyHit                        int64
 	numDailyMiss                       int64
 	prevTime                           time.Time
@@ -69,28 +69,23 @@ type SimpleCache struct {
 }
 
 // Init the LRU struct
-func (cache *SimpleCache) Init(vars ...interface{}) interface{} {
-	cache.ordType = vars[0].(queueType)
-	cache.logSimulation = vars[1].(bool)
-	cache.canRedirect = vars[2].(bool)
-	cache.useWatermarks = vars[3].(bool)
-	cache.maxNumDayDiff = vars[4].(float64)
-	cache.deltaDaysStep = vars[5].(float64)
+func (cache *SimpleCache) Init(param InitParameters) interface{} {
+	cache.ordType = param.QueueType
+	cache.logSimulation = param.Log
+	cache.canRedirect = param.RedirectReq
+	cache.useWatermarks = param.Watermarks
+	cache.HighWatermark = param.HighWatermark
+	cache.LowWatermark = param.LowWatermark
+	cache.maxNumDayDiff = param.MaxNumDayDiff
+	cache.deltaDaysStep = param.DeltaDaysStep
 
 	cache.stats.Init(cache.maxNumDayDiff, cache.deltaDaysStep)
 	cache.files.Init(cache.ordType)
 
 	cache.dailyfreeSpace = make([]float64, 0)
 
-	if cache.HighWaterMark == 0.0 {
-		cache.HighWaterMark = 95.0
-	}
-	if cache.LowWaterMark == 0.0 {
-		cache.LowWaterMark = 75.0
-	}
-
-	if cache.HighWaterMark < cache.LowWaterMark {
-		panic(fmt.Sprintf("High watermark is lower then Low waterrmark -> %f < %f", cache.HighWaterMark, cache.LowWaterMark))
+	if cache.HighWatermark < cache.LowWatermark {
+		panic(fmt.Sprintf("High watermark is lower then Low waterrmark -> %f < %f", cache.HighWatermark, cache.LowWatermark))
 	}
 
 	if cache.logSimulation {
@@ -461,10 +456,10 @@ func (cache *SimpleCache) CheckWatermark() bool {
 	ok := true
 	if cache.useWatermarks {
 		// fmt.Println("CHECK WATERMARKS")
-		if cache.Occupancy() >= cache.HighWaterMark {
+		if cache.Occupancy() >= cache.HighWatermark {
 			ok = false
 			cache.Free(
-				cache.Occupancy()-cache.LowWaterMark,
+				cache.Occupancy()-cache.LowWatermark,
 				true,
 			)
 		}

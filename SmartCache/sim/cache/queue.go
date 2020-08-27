@@ -20,7 +20,7 @@ type queueType int
 
 const (
 	// LRUQueue is the LRU queue type
-	LRUQueue queueType = iota - 5
+	LRUQueue queueType = iota - 6
 	// LFUQueue is the LFU queue type
 	LFUQueue
 	// SizeBigQueue is the SizeBig queue type

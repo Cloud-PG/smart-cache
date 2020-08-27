@@ -10,12 +10,12 @@ func TestWeightFunBaseMultipleInsert(t *testing.T) {
 	testCache := &WeightFun{
 		SimpleCache: SimpleCache{
 			MaxSize:       3.0,
-			HighWaterMark: 100.,
-			LowWaterMark:  100.,
+			HighWatermark: 100.,
+			LowWatermark:  100.,
 		},
 		SelFunctionType: FuncWeightedRequests,
 	}
-	testCache.Init(LRUQueue, false)
+	testCache.Init(InitParameters{QueueType: LRUQueue})
 
 	res, _ := GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
 	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
@@ -39,12 +39,12 @@ func TestWeightFunClear(t *testing.T) {
 	testCache := &WeightFun{
 		SimpleCache: SimpleCache{
 			MaxSize:       3.0,
-			HighWaterMark: 100.,
-			LowWaterMark:  100.,
+			HighWatermark: 100.,
+			LowWatermark:  100.,
 		},
 		SelFunctionType: FuncWeightedRequests,
 	}
-	testCache.Init(LRUQueue, false)
+	testCache.Init(InitParameters{QueueType: LRUQueue})
 
 	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
 	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
@@ -70,12 +70,12 @@ func TestWeightFunInsert(t *testing.T) {
 	testCache := &WeightFun{
 		SimpleCache: SimpleCache{
 			MaxSize:       5.0,
-			HighWaterMark: 100.,
-			LowWaterMark:  100.,
+			HighWatermark: 100.,
+			LowWatermark:  100.,
 		},
 		SelFunctionType: FuncWeightedRequests,
 	}
-	testCache.Init(LRUQueue, false)
+	testCache.Init(InitParameters{QueueType: LRUQueue})
 
 	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
 	GetFile(testCache, int64(1), size2, floatZero, floatZero, time.Now().Unix())
@@ -116,7 +116,7 @@ func TestWeightFunInsert(t *testing.T) {
 // 			MaxSize: maxSize,
 // 		},
 // 	}
-// 	testCache.Init(LRUQueue, false)
+// 	testCache.Init(InitParameters{QueueType: LRUQueue})
 
 // 	for n := 0; n < b.N; n++ {
 // 		GetFile(testCache, genRandomFilePath(5), rand.Float64()*maxSize, 0.0, 0.0)

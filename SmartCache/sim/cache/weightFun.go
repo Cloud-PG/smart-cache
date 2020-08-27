@@ -20,8 +20,8 @@ type WeightFun struct {
 }
 
 // Init the WeightFun struct
-func (cache *WeightFun) Init(args ...interface{}) interface{} {
-	cache.SimpleCache.Init(args...)
+func (cache *WeightFun) Init(params InitParameters) interface{} {
+	cache.SimpleCache.Init(params)
 	return cache
 }
 

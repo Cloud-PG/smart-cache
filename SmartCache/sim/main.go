@@ -46,6 +46,8 @@ func configureViper(configFilenameWithNoExt string) {
 	viper.SetDefault("sim.window.start", 0)
 	viper.SetDefault("sim.window.stop", 0)
 	viper.SetDefault("sim.cache.watermarks", false)
+	viper.SetDefault("sim.cache.watermark.high", 95.0)
+	viper.SetDefault("sim.cache.watermark.low", 75.0)
 	viper.SetDefault("sim.coldstart", false)
 	viper.SetDefault("sim.coldstartnostats", false)
 	viper.SetDefault("sim.log", false)
@@ -86,27 +88,29 @@ func simCommand() *cobra.Command {
 	var (
 		logLevel string
 		// Simulation
-		simOverwrite         bool
-		simBandwidth         float64
-		simRedirectReq       bool
-		simCacheWatermarks   bool
-		simColdStart         bool
-		simColdStartNoStats  bool
-		simDataPath          string
-		simDump              bool
-		simDumpFileName      string
-		simDumpFilesAndStats bool
-		simFileType          string
-		simLoadDump          bool
-		simLoadDumpFileName  string
-		simLog               bool
-		simOutputFolder      string
-		simRegion            string
-		simType              string
-		simUseK              bool
-		simWindowStart       int
-		simWindowStop        int
-		simWindowSize        int
+		simOverwrite          bool
+		simBandwidth          float64
+		simRedirectReq        bool
+		simCacheWatermarks    bool
+		simCacheHighWatermark float64
+		simCacheLowWatermark  float64
+		simColdStart          bool
+		simColdStartNoStats   bool
+		simDataPath           string
+		simDump               bool
+		simDumpFileName       string
+		simDumpFilesAndStats  bool
+		simFileType           string
+		simLoadDump           bool
+		simLoadDumpFileName   string
+		simLog                bool
+		simOutputFolder       string
+		simRegion             string
+		simType               string
+		simUseK               bool
+		simWindowStart        int
+		simWindowStop         int
+		simWindowSize         int
 		// Profiling
 		cpuprofile        string
 		memprofile        string
@@ -232,6 +236,12 @@ func simCommand() *cobra.Command {
 
 			simCacheWatermarks = viper.GetBool("sim.cache.watermarks")
 			logger.Info("CONF_VAR", zap.Bool("simCacheWatermarks", simCacheWatermarks))
+
+			simCacheHighWatermark = viper.GetFloat64("sim.cache.watermark.high")
+			logger.Info("CONF_VAR", zap.Float64("simCacheHighWatermark", simCacheHighWatermark))
+
+			simCacheLowWatermark = viper.GetFloat64("sim.cache.watermark.low")
+			logger.Info("CONF_VAR", zap.Float64("simCacheLowWatermark", simCacheLowWatermark))
 
 			maxNumDayDiff = viper.GetFloat64("sim.cache.stats.maxNumDayDiff")
 			logger.Info("CONF_VAR", zap.Float64("maxNumDayDiff", maxNumDayDiff))
@@ -472,10 +482,12 @@ func simCommand() *cobra.Command {
 					Log:                    simLog,
 					RedirectReq:            simRedirectReq,
 					Watermarks:             simCacheWatermarks,
+					HighWatermark:          simCacheHighWatermark,
+					LowWatermark:           simCacheLowWatermark,
 					Dataset2TestPath:       dataset2TestPath,
 					AIFeatureMap:           aiFeatureMap,
 					AIModel:                aiModel,
-					FunctionType:           weightFunc,
+					FunctionTypeString:     weightFunc,
 					WeightAlpha:            weightAlpha,
 					WeightBeta:             weightBeta,
 					WeightGamma:            weightGamma,
