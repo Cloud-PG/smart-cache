@@ -626,7 +626,10 @@ def dashboard(results: 'Results'):
         else:
             return ("", "", "", "")
 
-    app.run_server(debug=True)
+    app.run_server(
+        debug=True,
+        host="0.0.0.0",
+    )
 
 
 def _add_columns(fig: 'go.Figure', df: 'pd.DataFrame', name: str, column: str):
