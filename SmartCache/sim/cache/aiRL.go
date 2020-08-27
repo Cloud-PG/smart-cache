@@ -861,18 +861,12 @@ func (cache *AIRL) delayedRewardEvictionAgent(filename int64, hit bool) {
 				if prevMemory.Action == qlearn.ActionNotDelete {
 					reward += 1.
 				}
-				if prevMemory.Frequency < nextMemory.Frequency {
-					reward += 1.
-				}
-				if prevMemory.Occupancy == nextMemory.Occupancy && prevMemory.Action == qlearn.ActionNotDelete {
+				if prevMemory.Occupancy >= nextMemory.Occupancy && prevMemory.Action == qlearn.ActionNotDelete {
 					reward += 1.
 				}
 			} else { // MISS
 				reward += -1.
-				if prevMemory.Occupancy < nextMemory.Occupancy && prevMemory.Action != qlearn.ActionNotDelete {
-					reward += -1.
-				}
-				if prevMemory.Frequency < nextMemory.Frequency {
+				if prevMemory.Occupancy > nextMemory.Occupancy && prevMemory.Action != qlearn.ActionNotDelete {
 					reward += -1.
 				}
 			}
@@ -941,12 +935,10 @@ func (cache *AIRL) delayedRewardAdditionAgent(filename int64, hit bool) {
 						reward += 1.
 						if !prevMemory.Hit && nextMemory.Hit {
 							reward += 1.
-						} else if prevMemory.Hit && nextMemory.Hit {
-							reward += 1.
 						}
 					} else { // MISS
+						reward += -1.
 						if prevMemory.Action == qlearn.ActionNotStore {
-							reward += -1.
 							if !prevMemory.Hit && !nextMemory.Hit {
 								reward += -1.
 							} else if prevMemory.Hit && !nextMemory.Hit {
