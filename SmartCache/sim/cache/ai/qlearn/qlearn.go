@@ -162,6 +162,13 @@ func (table QTable) Features2Idxs(features ...interface{}) []int {
 	return featureIdxs
 }
 
+// ResetActions put to 0 all action values
+func (table *QTable) ResetActions() {
+	for idx := 0; idx < len(table.Actions); idx++ {
+		table.Actions[idx] = make([]float64, len(table.Actions[idx]))
+	}
+}
+
 // Choice of an agent
 type Choice struct {
 	State     int        `json:"state"`
@@ -259,6 +266,11 @@ func (agent *Agent) ResetParams(initEpsilon float64, decayRateEpsilon float64) {
 // ResetQValue clean the value function
 func (agent *Agent) ResetQValue() {
 	agent.QValue = 0.
+}
+
+// ResetTableAction clean QTable actions
+func (agent *Agent) ResetTableAction() {
+	agent.QTable.ResetActions()
 }
 
 // UnleashEpsilon set Epsilon to 1.0

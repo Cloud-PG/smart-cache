@@ -1038,6 +1038,7 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) 
 			if cache.additionAgentOK {
 				cache.additionAgentBadQValue = 0
 				cache.additionAgent.UnleashEpsilon(nil)
+				cache.additionAgent.ResetTableAction()
 			}
 			if cache.evictionAgentOK {
 				cache.evictionAgentBadQValue = 0
@@ -1052,6 +1053,7 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) 
 			if cache.evictionAgentOK {
 				cache.evictionAgentBadQValue = 0
 				cache.evictionAgent.UnleashEpsilon(nil)
+				cache.evictionAgent.ResetTableAction()
 			}
 		}
 	}
