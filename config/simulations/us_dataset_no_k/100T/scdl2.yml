@@ -1,16 +1,16 @@
 --- # Simulation parameters
 sim:
-  data: ../../../../datasets/source2018_numeric_it_with_avro_order/
-  outputFolder: ../../../../results/sim_italian_dataset_with_watermakrs_only_eviction/100T
+  data: ../../../../datasets/source2018_numeric_us_with_avro_order/
+  outputFolder: ../../../../results/sim_us_dataset_no_k/100T
   type: normal
   window:
     start: 0
     stop: 52
-  region: it
+  region: us
   overwrite: true
   cache:
     type: aiRL
-    watermarks: true
+    watermarks: false
     size:
       value: 100
       unit: T
@@ -20,9 +20,9 @@ sim:
   ai:
     rl:
       epsilon:
-        decay: 0.00001
-      # addition:
-      #   featuremap: ../../../../featureMaps/rlAdditionFeatureMap.json
+        decay: 0.000001
+      addition:
+        featuremap: ../../../../featureMaps/rlAdditionFeatureMap.json
       eviction:
-        k: 100000
+        use_k: false
         featuremap: ../../../../featureMaps/rlEvictionFeatureMap.json

@@ -1,28 +1,26 @@
 --- # Simulation parameters
 sim:
   data: ../../../../datasets/source2018_numeric_us_with_avro_order/
-  outputFolder: ../../../../results/sim_us_dataset/100T
+  outputFolder: ../../../../results/sim_us_dataset_with_watermarks_no_k/200T
   type: normal
   window:
     start: 0
     stop: 52
   region: us
-  overwrite: true
+  overwrite: false
   cache:
     type: aiRL
-    watermarks: false
+    watermarks: true
     size:
-      value: 100
+      value: 200
       unit: T
     bandwidth: 
       value: 10
       redirect: true
   ai:
     rl:
+      type: SCDL
       epsilon:
         decay: 0.000001
       addition:
         featuremap: ../../../../featureMaps/rlAdditionFeatureMap.json
-      eviction:
-        k: 100000
-        featuremap: ../../../../featureMaps/rlEvictionFeatureMap.json
