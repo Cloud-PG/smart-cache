@@ -158,7 +158,7 @@ func (cache *SimpleCache) Dumps(fileAndStats bool) [][]byte {
 	if fileAndStats {
 		// ----- Files -----
 		logger.Info("Dump cache files")
-		for _, file := range cache.files.Get() {
+		for _, file := range cache.files.GetQueue() {
 			dumpInfo, _ := json.Marshal(DumpInfo{Type: "FILES"})
 			dumpFile, _ := json.Marshal(file)
 			record, _ := json.Marshal(DumpRecord{
@@ -405,7 +405,7 @@ func (cache *SimpleCache) Free(amount float64, percentage bool) float64 {
 	}
 	if sizeToDelete > 0. {
 		deletedFiles := make([]int64, 0)
-		for _, curFile := range cache.files.Get(sizeToDelete) {
+		for _, curFile := range cache.files.GetWorstFilesUp2Size(sizeToDelete) {
 			logger.Debug("delete",
 				zap.Int64("filename", curFile.Filename),
 				zap.Float64("fileSize", curFile.Size),
@@ -433,7 +433,7 @@ func (cache *SimpleCache) Free(amount float64, percentage bool) float64 {
 			})
 			cache.numDeleted++
 		}
-		cache.files.Remove(deletedFiles, false)
+		cache.files.Remove(deletedFiles)
 	}
 	return totalDeleted
 }

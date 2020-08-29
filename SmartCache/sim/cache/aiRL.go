@@ -185,7 +185,7 @@ func (cache *AIRL) Dumps(fileAndStats bool) [][]byte {
 	if fileAndStats {
 		// ----- Files -----
 		logger.Info("Dump cache files")
-		for _, file := range cache.files.Get() {
+		for _, file := range cache.files.GetQueue() {
 			dumpInfo, _ := json.Marshal(DumpInfo{Type: "FILES"})
 			dumpFile, _ := json.Marshal(file)
 			record, _ := json.Marshal(DumpRecord{
@@ -792,7 +792,7 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 	}
 
 	// fmt.Println("[CATMANAGER] Deleted files -> ", deletedFiles)
-	cache.files.Remove(deletedFiles, false)
+	cache.files.Remove(deletedFiles)
 
 	return totalDeleted, deletedFiles
 }

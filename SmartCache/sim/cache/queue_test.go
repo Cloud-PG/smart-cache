@@ -10,62 +10,68 @@ const (
 	numTests = 1000
 	maxInt   = 1000
 	maxFloat = 10000.
+	numFiles = 10
 )
 
-func BenchmarkQueue(b *testing.B) {
-	b.RunParallel(func(pb *testing.PB) {
-		for pb.Next() {
-			r := rand.New(rand.NewSource(42))
+// func BenchmarkQueue(b *testing.B) {
+// 	b.RunParallel(func(pb *testing.PB) {
+// 		for pb.Next() {
+// 			r := rand.New(rand.NewSource(42))
 
-			man := Manager{}
-			man.Init(LRUQueue)
+// 			man := Manager{}
+// 			man.Init(LRUQueue)
 
-			for idx := 0; idx < numTests; idx++ {
-				man.Insert(
-					&FileSupportData{
-						Filename:  int64(idx),
-						Frequency: r.Int63n(maxInt),
-						Recency:   int64(numTests - idx),
-						Size:      r.Float64() * maxFloat,
-					},
-				)
-			}
-			for idx := 0; idx < numTests; idx++ {
-				man.Update(
-					&FileSupportData{
-						Filename:  int64(numTests),
-						Frequency: r.Int63n(maxInt),
-						Recency:   r.Int63n(maxInt),
-						Size:      r.Float64() * maxFloat,
-					},
-				)
-			}
-		}
-	})
-}
+// 			for idx := 0; idx < numTests; idx++ {
+// 				man.Insert(
+// 					&FileSupportData{
+// 						Filename:  int64(idx),
+// 						Frequency: r.Int63n(maxInt),
+// 						Recency:   int64(numTests - idx),
+// 						Size:      r.Float64() * maxFloat,
+// 					},
+// 				)
+// 			}
+// 			for idx := 0; idx < numTests; idx++ {
+// 				man.Update(
+// 					&FileSupportData{
+// 						Filename:  int64(numTests),
+// 						Frequency: r.Int63n(maxInt),
+// 						Recency:   r.Int63n(maxInt),
+// 						Size:      r.Float64() * maxFloat,
+// 					},
+// 				)
+// 			}
+// 		}
+// 	})
+// }
 
 func TestLRUQueueBehavior(t *testing.T) {
 	r := rand.New(rand.NewSource(42))
 	man := Manager{}
 	man.Init(LRUQueue)
 
-	files := []int64{1101, 1102, 1103, 1104, 1105, 1106}
+	files := make([]int64, numFiles)
+	for idx := 0; idx < numFiles; idx++ {
+		files[idx] = 100000 + int64(idx)
+	}
 
 	for _, filename := range files {
 		man.Insert(
 			&FileSupportData{
 				Filename:  filename,
-				Frequency: 0,
-				Recency:   r.Int63n(100),
-				Size:      r.Float64() * maxFloat,
+				Frequency: -1,
+				Recency:   r.Int63n(numFiles),
+				Size:      -1.,
 			},
 		)
 	}
 
-	toRemove := []int64{}
+	toRemove := make([]int64, len(files)/2)
+	toRemove = toRemove[:0]
 
-	for _, curFile := range man.Get() {
-		// fmt.Println(curFile.Filename, curFile.Recency)
+	// fmt.Println("INSERT")
+	for _, curFile := range man.GetFromWorst() {
+		// fmt.Println(curFile.Filename, "->", curFile.Recency)
 		inserted := false
 		for _, filename := range files {
 			if filename == curFile.Filename {
@@ -74,50 +80,97 @@ func TestLRUQueueBehavior(t *testing.T) {
 			}
 		}
 		if !inserted {
-			t.Log("File '", curFile.Filename, "' not inserted")
+			t.Log("ERROR: File '", curFile.Filename, "' not inserted...")
 			t.Fatal()
 		}
-		if len(toRemove) < 2 {
+		if len(toRemove) != cap(toRemove) && r.Int31n(2) == 1 {
 			toRemove = append(toRemove, curFile.Filename)
 		}
 	}
 
-	man.Remove(toRemove, false)
+	man.Remove(toRemove)
 
-	toUpdate := []int64{}
-	for _, curFile := range man.Get() {
-		// fmt.Println(curFile.Filename, curFile.Recency)
-		inserted := false
-		for _, filename := range files {
+	toUpdate := make([]int64, man.Len())
+	toUpdate = toUpdate[:0]
+
+	// fmt.Println("REMOVE ->", toRemove)
+	for _, curFile := range man.GetFromWorst() {
+		// fmt.Println(curFile.Filename, "->", curFile.Recency)
+		notDeleted := true
+		for _, filename := range toRemove {
 			if filename == curFile.Filename {
-				inserted = true
+				notDeleted = false
 				break
 			}
 		}
-		if !inserted {
-			t.Log("File '", curFile.Filename, "' not inserted")
+		if !notDeleted {
+			t.Log("ERROR: File '", curFile.Filename, "' not deleted...")
 			t.Fatal()
 		}
-		if len(toUpdate) < 2 {
+		if len(toUpdate) != cap(toUpdate) && r.Int31n(2) == 1 {
 			toUpdate = append(toUpdate, curFile.Filename)
 		}
 	}
 
-	// fmt.Println("UPDATE")
-	for _, filename := range toUpdate {
-		man.Update(
+	for numUpdate := 1; numUpdate < 11; numUpdate++ {
+		oldValues := make(map[int64]int64)
+		// fmt.Println("UPDATE ->", toUpdate)
+		for _, filename := range toUpdate {
+			oldValues[filename] = man.GetFileSupportData(filename).Recency
+			man.Update(
+				&FileSupportData{
+					Filename:  filename,
+					Frequency: -1,
+					Recency:   r.Int63n(numFiles) + numFiles*int64(numUpdate),
+					Size:      -1.,
+				},
+			)
+		}
+
+		var prevRecency int64 = -1
+		for _, curFile := range man.GetFromWorst() {
+			// fmt.Println(curFile.Filename, "->", curFile.Recency)
+			_, inToUpdate := oldValues[curFile.Filename]
+			if inToUpdate && curFile.Recency == oldValues[curFile.Filename] {
+				t.Log("ERROR: File '", curFile.Filename, "' not updated...")
+				t.Fatal()
+			}
+			if prevRecency != -1 && prevRecency > curFile.Recency {
+				t.Log("LRU order not valid")
+				t.Fatal()
+			}
+			prevRecency = curFile.Recency
+		}
+	}
+}
+
+func TestLFUQueueBehavior(t *testing.T) {
+	r := rand.New(rand.NewSource(28))
+	man := Manager{}
+	man.Init(LFUQueue)
+
+	files := make([]int64, numFiles)
+	for idx := 0; idx < numFiles; idx++ {
+		files[idx] = 100000 + int64(idx)
+	}
+
+	for _, filename := range files {
+		man.Insert(
 			&FileSupportData{
 				Filename:  filename,
-				Frequency: 0,
-				Recency:   r.Int63n(100),
-				Size:      r.Float64() * maxFloat,
+				Frequency: r.Int63n(numFiles),
+				Recency:   -1,
+				Size:      -1.,
 			},
 		)
 	}
 
-	var prevRecency int64 = -1
-	for _, curFile := range man.Get() {
-		// fmt.Println(curFile.Filename, curFile.Recency)
+	toRemove := make([]int64, len(files)/2)
+	toRemove = toRemove[:0]
+
+	// fmt.Println("INSERT")
+	for _, curFile := range man.GetFromWorst() {
+		// fmt.Println(curFile.Filename, "->", curFile.Recency)
 		inserted := false
 		for _, filename := range files {
 			if filename == curFile.Filename {
@@ -126,152 +179,264 @@ func TestLRUQueueBehavior(t *testing.T) {
 			}
 		}
 		if !inserted {
-			t.Log("File '", curFile.Filename, "' not inserted")
+			t.Log("ERROR: File '", curFile.Filename, "' not inserted...")
 			t.Fatal()
 		}
-		if prevRecency != -1 && prevRecency > curFile.Recency {
-			t.Log("LRU order not valid")
-			t.Fatal()
+		if len(toRemove) != cap(toRemove) && r.Int31n(2) == 1 {
+			toRemove = append(toRemove, curFile.Filename)
 		}
-		prevRecency = curFile.Recency
 	}
 
+	man.Remove(toRemove)
+
+	toUpdate := make([]int64, man.Len())
+	toUpdate = toUpdate[:0]
+
+	// fmt.Println("REMOVE ->", toRemove)
+	for _, curFile := range man.GetFromWorst() {
+		// fmt.Println(curFile.Filename, "->", curFile.Frequency)
+		notDeleted := true
+		for _, filename := range toRemove {
+			if filename == curFile.Filename {
+				notDeleted = false
+				break
+			}
+		}
+		if !notDeleted {
+			t.Log("ERROR: File '", curFile.Filename, "' not deleted...")
+			t.Fatal()
+		}
+		if len(toUpdate) != cap(toUpdate) && r.Int31n(2) == 1 {
+			toUpdate = append(toUpdate, curFile.Filename)
+		}
+	}
+
+	for numUpdate := 1; numUpdate < 11; numUpdate++ {
+		oldValues := make(map[int64]int64)
+		// fmt.Println("UPDATE ->", toUpdate)
+		for _, filename := range toUpdate {
+			oldValues[filename] = man.GetFileSupportData(filename).Frequency
+			man.Update(
+				&FileSupportData{
+					Filename:  filename,
+					Frequency: r.Int63n(numFiles) + numFiles*int64(numUpdate),
+					Recency:   -1,
+					Size:      -1.,
+				},
+			)
+		}
+
+		var prevFrequency int64 = -1
+		for _, curFile := range man.GetFromWorst() {
+			// fmt.Println(curFile.Filename, "->", curFile.Frequency)
+			_, inToUpdate := oldValues[curFile.Filename]
+			if inToUpdate && curFile.Frequency == oldValues[curFile.Filename] {
+				t.Log("ERROR: File '", curFile.Filename, "' not updated...")
+				t.Fatal()
+			}
+			if prevFrequency != -1 && prevFrequency > curFile.Frequency {
+				t.Log("LFU order not valid")
+				t.Fatal()
+			}
+			prevFrequency = curFile.Frequency
+		}
+	}
 }
 
-func TestLRUQueue(t *testing.T) {
+func TestSizeSmallQueueBehavior(t *testing.T) {
 	r := rand.New(rand.NewSource(42))
 	man := Manager{}
-	man.Init(LRUQueue)
+	man.Init(SizeSmallQueue)
 
-	insertedFiles := []int64{}
+	files := make([]int64, numFiles)
+	for idx := 0; idx < numFiles; idx++ {
+		files[idx] = 100000 + int64(idx)
+	}
 
-	for idx := 0; idx < numTests; idx++ {
-		curFile := int64(idx)
-		insertedFiles = append(insertedFiles, curFile)
+	for _, filename := range files {
 		man.Insert(
 			&FileSupportData{
-				Filename:  curFile,
-				Frequency: 0,
-				Recency:   int64(numTests - idx),
-				Size:      r.Float64() * maxFloat,
+				Filename:  filename,
+				Frequency: -1,
+				Recency:   r.Int63n(numFiles),
+				Size:      r.Float64() * 1024.,
 			},
 		)
 	}
 
-	man.Update(&FileSupportData{
-		Filename:  0,
-		Frequency: 0,
-		Recency:   0,
-		Size:      r.Float64() * maxFloat,
-	})
+	toRemove := make([]int64, len(files)/2)
+	toRemove = toRemove[:0]
 
-	prevRecency := int64(-1)
-	for _, curFile := range man.Get() {
-		// fmt.Println(curFile.Filename, curFile.Recency, prevRecency)
-		if prevRecency != -1 && prevRecency > curFile.Recency {
-			t.Log("LRU order not valid")
+	// fmt.Println("INSERT")
+	for _, curFile := range man.GetFromWorst() {
+		// fmt.Println(curFile.Filename, "->", curFile.Recency)
+		inserted := false
+		for _, filename := range files {
+			if filename == curFile.Filename {
+				inserted = true
+				break
+			}
+		}
+		if !inserted {
+			t.Log("ERROR: File '", curFile.Filename, "' not inserted...")
 			t.Fatal()
 		}
-		prevRecency = curFile.Recency
+		if len(toRemove) != cap(toRemove) && r.Int31n(2) == 1 {
+			toRemove = append(toRemove, curFile.Filename)
+		}
 	}
 
-	man.Remove(insertedFiles, false)
+	man.Remove(toRemove)
 
-	if man.Len() != 0 {
-		t.Log("Manager didn't remove all the files")
-		t.Fatal()
-	}
+	toUpdate := make([]int64, man.Len())
+	toUpdate = toUpdate[:0]
 
-}
-
-func TestLFUQueue(t *testing.T) {
-	r := rand.New(rand.NewSource(42))
-	man := Manager{}
-	man.Init(LFUQueue)
-
-	insertedFiles := []int64{}
-
-	for idx := 0; idx < numTests; idx++ {
-		curFile := int64(idx)
-		insertedFiles = append(insertedFiles, curFile)
-		man.Insert(
-			&FileSupportData{
-				Filename:  curFile,
-				Frequency: r.Int63n(100),
-				Recency:   int64(numTests - idx),
-				Size:      r.Float64() * maxFloat,
-			},
-		)
-	}
-
-	man.Update(&FileSupportData{
-		Filename:  0,
-		Frequency: 1000000,
-		Recency:   0,
-		Size:      r.Float64() * maxFloat,
-	})
-
-	prevFrequency := int64(-1)
-	for _, file := range man.Get() {
-		// fmt.Println(file.Filename, file.Frequency, prevFrequency)
-		if prevFrequency > file.Frequency {
-			t.Log("LFU order not valid")
+	// fmt.Println("REMOVE ->", toRemove)
+	for _, curFile := range man.GetFromWorst() {
+		// fmt.Println(curFile.Filename, "->", curFile.Size)
+		notDeleted := true
+		for _, filename := range toRemove {
+			if filename == curFile.Filename {
+				notDeleted = false
+				break
+			}
+		}
+		if !notDeleted {
+			t.Log("ERROR: File '", curFile.Filename, "' not deleted...")
 			t.Fatal()
 		}
-		prevFrequency = file.Frequency
+		if len(toUpdate) != cap(toUpdate) && r.Int31n(2) == 1 {
+			toUpdate = append(toUpdate, curFile.Filename)
+		}
 	}
 
-	man.Remove(insertedFiles, false)
+	for numUpdate := 1; numUpdate < 11; numUpdate++ {
+		oldValues := make(map[int64]float64)
+		// fmt.Println("UPDATE ->", toUpdate)
+		for _, filename := range toUpdate {
+			oldValues[filename] = man.GetFileSupportData(filename).Size
+			man.Update(
+				&FileSupportData{
+					Filename:  filename,
+					Frequency: -1,
+					Recency:   r.Int63n(numFiles) + numFiles*int64(numUpdate),
+					Size:      oldValues[filename] + r.Float64()*1024. + 1.0,
+				},
+			)
+		}
 
-	if man.Len() != 0 {
-		t.Log("Manager didn't remove all the files")
-		t.Fatal()
+		var prevSize float64 = -1.
+		for _, curFile := range man.GetFromWorst() {
+			// fmt.Println(curFile.Filename, "->", curFile.Size)
+			_, inToUpdate := oldValues[curFile.Filename]
+			if inToUpdate && curFile.Size <= oldValues[curFile.Filename] {
+				t.Log("ERROR: File '", curFile.Filename, "' not updated...")
+				t.Fatal()
+			}
+			if prevSize != -1 && prevSize > curFile.Size {
+				t.Log("SizeSmall order not valid")
+				t.Fatal()
+			}
+			prevSize = curFile.Size
+		}
 	}
-
 }
 
-func TestSizeQueue(t *testing.T) {
-	r := rand.New(rand.NewSource(42))
+func TestSizeBigQueueBehavior(t *testing.T) {
+	r := rand.New(rand.NewSource(73))
 	man := Manager{}
 	man.Init(SizeBigQueue)
 
-	insertedFiles := []int64{}
+	files := make([]int64, numFiles)
+	for idx := 0; idx < numFiles; idx++ {
+		files[idx] = 100000 + int64(idx)
+	}
 
-	for idx := 0; idx < numTests; idx++ {
-		curFile := int64(idx)
-		insertedFiles = append(insertedFiles, curFile)
+	for _, filename := range files {
 		man.Insert(
 			&FileSupportData{
-				Filename:  curFile,
-				Frequency: r.Int63n(100),
-				Recency:   int64(numTests - idx),
-				Size:      r.Float64() * maxFloat,
+				Filename:  filename,
+				Frequency: -1,
+				Recency:   r.Int63n(numFiles),
+				Size:      r.Float64() * 1024.,
 			},
 		)
 	}
 
-	man.Update(&FileSupportData{
-		Filename:  0,
-		Frequency: 0,
-		Recency:   0,
-		Size:      maxFloat + 100.,
-	})
+	toRemove := make([]int64, len(files)/2)
+	toRemove = toRemove[:0]
 
-	prevSize := float64(-1.0)
-	for _, curFile := range man.Get() {
-		// fmt.Println(curFile.Filename, curFile.Size, prevSize)
-		if prevSize != -1.0 && prevSize < curFile.Size {
-			t.Log("LRU order not valid")
+	// fmt.Println("INSERT")
+	for _, curFile := range man.GetFromWorst() {
+		// fmt.Println(curFile.Filename, "->", curFile.Recency)
+		inserted := false
+		for _, filename := range files {
+			if filename == curFile.Filename {
+				inserted = true
+				break
+			}
+		}
+		if !inserted {
+			t.Log("ERROR: File '", curFile.Filename, "' not inserted...")
 			t.Fatal()
 		}
-		prevSize = curFile.Size
+		if len(toRemove) != cap(toRemove) && r.Int31n(2) == 1 {
+			toRemove = append(toRemove, curFile.Filename)
+		}
 	}
 
-	man.Remove(insertedFiles, false)
+	man.Remove(toRemove)
 
-	if man.Len() != 0 {
-		t.Log("Manager didn't remove all the files")
-		t.Fatal()
+	toUpdate := make([]int64, man.Len())
+	toUpdate = toUpdate[:0]
+
+	// fmt.Println("REMOVE ->", toRemove)
+	for _, curFile := range man.GetFromWorst() {
+		// fmt.Println(curFile.Filename, "->", curFile.Size)
+		notDeleted := true
+		for _, filename := range toRemove {
+			if filename == curFile.Filename {
+				notDeleted = false
+				break
+			}
+		}
+		if !notDeleted {
+			t.Log("ERROR: File '", curFile.Filename, "' not deleted...")
+			t.Fatal()
+		}
+		if len(toUpdate) != cap(toUpdate) && r.Int31n(2) == 1 {
+			toUpdate = append(toUpdate, curFile.Filename)
+		}
 	}
 
+	for numUpdate := 1; numUpdate < 11; numUpdate++ {
+		oldValues := make(map[int64]float64)
+		// fmt.Println("UPDATE ->", toUpdate)
+		for _, filename := range toUpdate {
+			oldValues[filename] = man.GetFileSupportData(filename).Size
+			man.Update(
+				&FileSupportData{
+					Filename:  filename,
+					Frequency: -1,
+					Recency:   r.Int63n(numFiles) + numFiles*int64(numUpdate),
+					Size:      oldValues[filename] + r.Float64()*1024. + 1.0,
+				},
+			)
+		}
+
+		var prevSize float64 = -1.
+		for _, curFile := range man.GetFromWorst() {
+			// fmt.Println(curFile.Filename, "->", curFile.Size)
+			_, inToUpdate := oldValues[curFile.Filename]
+			if inToUpdate && curFile.Size <= oldValues[curFile.Filename] {
+				t.Log("ERROR: File '", curFile.Filename, "' not updated...")
+				t.Fatal()
+			}
+			if prevSize != -1 && prevSize < curFile.Size {
+				t.Log("SizeBig order not valid")
+				t.Fatal()
+			}
+			prevSize = curFile.Size
+		}
+	}
 }

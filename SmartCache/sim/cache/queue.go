@@ -16,6 +16,10 @@ type FileSupportData struct {
 	QueueIdx  int     `json:"queueIdx"`
 }
 
+func (sup *FileSupportData) Clean() {
+	sup.QueueIdx = -1
+}
+
 type queueType int
 
 const (
@@ -35,11 +39,10 @@ const (
 
 // Manager manages the files in cache
 type Manager struct {
-	files            map[int64]*FileSupportData
-	queue            []*FileSupportData
-	qType            queueType
-	buffer           []*FileSupportData
-	noQueueUpdateIdx int
+	files  map[int64]*FileSupportData
+	queue  []*FileSupportData
+	qType  queueType
+	buffer []*FileSupportData
 }
 
 // Init initialize the struct
@@ -48,7 +51,6 @@ func (man *Manager) Init(qType queueType) {
 	man.queue = make([]*FileSupportData, 0)
 	man.buffer = make([]*FileSupportData, 0)
 	man.qType = qType
-	man.noQueueUpdateIdx = -1
 }
 
 // Check if a file is in cache
@@ -63,104 +65,100 @@ func (man Manager) Len() int {
 }
 
 // GetFile returns a specific file support data
-func (man Manager) GetFile(id int64) *FileSupportData {
+func (man Manager) GetFileSupportData(id int64) *FileSupportData {
 	return man.files[id]
 }
 
-// Get values from a queue
-func (man Manager) Get(vars ...interface{}) []*FileSupportData {
-	var (
-		totSize float64
-		sended  float64
-	)
-	switch {
-	case len(vars) > 1:
-		panic("ERROR: too many passed arguments...")
-	case len(vars) > 0:
-		totSize = vars[0].(float64)
+// GetQueue values from a queue
+func (man Manager) GetQueue() []*FileSupportData {
+	// Filtering trick
+	// https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
+	man.buffer = man.buffer[:0]
+
+	man.buffer = make([]*FileSupportData, len(man.queue))
+	copy(man.buffer, man.queue)
+
+	return man.buffer
+}
+
+// GetFromWorst values from worst queue values
+func (man Manager) GetFromWorst() []*FileSupportData {
+	// Filtering trick
+	// https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
+	man.buffer = man.buffer[:0]
+
+	man.buffer = make([]*FileSupportData, len(man.queue))
+	copy(man.buffer, man.queue)
+	for left, right := 0, len(man.buffer)-1; left < right; left, right = left+1, right-1 {
+		man.buffer[left], man.buffer[right] = man.buffer[right], man.buffer[left]
 	}
+
+	return man.buffer
+}
+
+// GetWorstFilesUp2Size values from a queue until size is reached
+func (man Manager) GetWorstFilesUp2Size(totSize float64) []*FileSupportData {
+	var sended float64
 
 	// Filtering trick
 	// https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
 	man.buffer = man.buffer[:0]
 
-	if man.qType != NoQueue {
-		for idx := len(man.queue) - 1; idx > -1; idx-- {
-			curFile := man.queue[idx]
-			man.buffer = append(man.buffer, man.queue[idx])
-			if totSize != 0. {
-				sended += curFile.Size
-				if sended >= totSize {
-					break
-				}
+	for idx := len(man.queue) - 1; idx > -1; idx-- {
+		curFile := man.queue[idx]
+		man.buffer = append(man.buffer, man.queue[idx])
+		if totSize != 0. {
+			sended += curFile.Size
+			if sended >= totSize {
+				break
 			}
 		}
-	} else {
-		man.buffer = make([]*FileSupportData, len(man.queue))
-		copy(man.buffer, man.queue)
 	}
 
 	return man.buffer
 }
 
 // Remove a file already in queue
-func (man *Manager) Remove(files []int64, onUpdate bool) {
+func (man *Manager) Remove(files []int64) {
 	if len(files) > 0 {
 		// _, file, no, _ := runtime.Caller(1)
 		// fmt.Printf("called from %s#%d\n", file, no)
 		// fmt.Println("[QUEUE] REMOVE OnUpdate[", onUpdate, "]: ", files)
-		if man.qType != NoQueue && !onUpdate {
-			targetIdx := len(man.queue) - len(files)
-			for idx := targetIdx; idx < len(man.queue); idx++ {
-				man.queue[idx] = nil
-			}
-			man.queue = man.queue[:targetIdx]
-		} else if man.qType == NoQueue && onUpdate && man.noQueueUpdateIdx != -1 {
-			copy(man.queue[man.noQueueUpdateIdx:], man.queue[man.noQueueUpdateIdx+1:])
-			man.queue[len(man.queue)-1] = nil // or the zero value of T
-			man.queue = man.queue[:len(man.queue)-1]
-			man.noQueueUpdateIdx = -1
-			// fmt.Println("NOQUEUE --- ")
-		} else {
-			index2Remove := make([]int, len(files))
-			for idx, filename := range files {
-				// fmt.Println(man.files[filename].QueueIdx)
-				index2Remove[idx] = man.files[filename].QueueIdx
-			}
-			sort.Sort(sort.Reverse(sort.IntSlice(index2Remove)))
-			// fmt.Println(index2Remove)
-			// for idx := 0; idx < len(man.queue); idx++ {
-			// 	fmt.Println(man.queue[idx])
-			// }
-			// fmt.Println("---")
-			for _, curIdx := range index2Remove {
-				copy(man.queue[curIdx:], man.queue[curIdx+1:])
-				man.queue[len(man.queue)-1] = nil // or the zero value of T
-				man.queue = man.queue[:len(man.queue)-1]
-			}
-			if len(man.queue) != 0 {
-				// fmt.Println("START UPDATE IDX")
-				for idx := index2Remove[len(index2Remove)-1]; idx < len(man.queue); idx++ {
-					// fmt.Println(man.queue[idx].Filename, "from:", man.queue[idx].QueueIdx, "->", idx)
-					man.queue[idx].QueueIdx = idx
-				}
-				// fmt.Println("END UPDATE IDX")
-			}
+		index2Remove := make([]int, len(files))
+		for idx, filename := range files {
+			// fmt.Println(man.files[filename].QueueIdx)
+			index2Remove[idx] = man.files[filename].QueueIdx
 		}
-		for _, file := range files {
+		sort.Sort(sort.Reverse(sort.IntSlice(index2Remove)))
+		for idx, curIdx := range index2Remove {
+			copy(man.queue[curIdx:], man.queue[curIdx+1:])
+			man.queue[len(man.queue)-(idx+1)] = nil // or the zero value of T
+		}
+		man.queue = man.queue[:len(man.queue)-len(index2Remove)]
+		if len(man.queue) != 0 {
+			// fmt.Println("START UPDATE IDX")
+			for idx := index2Remove[len(index2Remove)-1]; idx < len(man.queue); idx++ {
+				// fmt.Println(man.queue[idx].Filename, "from:", man.queue[idx].QueueIdx, "->", idx)
+				man.queue[idx].QueueIdx = idx
+			}
+			// fmt.Println("END UPDATE IDX")
+		}
+		for _, filename := range files {
 			// fmt.Println("REMOVE MAP: ", file)
-			delete(man.files, file)
+			delete(man.files, filename)
 		}
 	}
 }
 
 // Insert a file into the queue manager
 func (man *Manager) Insert(file *FileSupportData) {
+	file.Clean()
+
 	// Force inserto check
-	// _, inCache := man.files[file.Filename]
-	// if inCache {
-	// 	panic("ERROR: File already in manager...")
-	// }
+	_, inCache := man.files[file.Filename]
+	if inCache {
+		panic("ERROR: File already in manager...")
+	}
 	// fmt.Println("[QUEUE] INSERT: ", file.Filename)
 
 	man.files[file.Filename] = file
@@ -168,15 +166,17 @@ func (man *Manager) Insert(file *FileSupportData) {
 	var insertIdx = -1
 	switch man.qType {
 	case NoQueue:
-		if man.noQueueUpdateIdx == -1 {
-			insertIdx = sort.Search(len(man.queue), func(idx int) bool { return man.queue[idx].Filename < file.Filename })
-		} else {
-			insertIdx = man.noQueueUpdateIdx
-		}
+		insertIdx = sort.Search(len(man.queue), func(idx int) bool {
+			return man.queue[idx].Filename < file.Filename
+		})
 	case LRUQueue:
-		insertIdx = sort.Search(len(man.queue), func(idx int) bool { return man.queue[idx].Recency < file.Recency })
+		insertIdx = sort.Search(len(man.queue), func(idx int) bool {
+			return man.queue[idx].Recency < file.Recency
+		})
 	case LFUQueue:
-		insertIdx = sort.Search(len(man.queue), func(idx int) bool { return man.queue[idx].Frequency < file.Frequency })
+		insertIdx = sort.Search(len(man.queue), func(idx int) bool {
+			return man.queue[idx].Frequency < file.Frequency
+		})
 	case SizeBigQueue:
 		insertIdx = sort.Search(len(man.queue), func(idx int) bool {
 			curFile := man.queue[idx]
@@ -195,7 +195,9 @@ func (man *Manager) Insert(file *FileSupportData) {
 			return curFile.Size < file.Size
 		})
 	case WeightQueue:
-		insertIdx = sort.Search(len(man.queue), func(idx int) bool { return man.queue[idx].Weight < file.Weight })
+		insertIdx = sort.Search(len(man.queue), func(idx int) bool {
+			return man.queue[idx].Weight < file.Weight
+		})
 	}
 	if insertIdx == len(man.queue) {
 		file.QueueIdx = len(man.queue)
@@ -206,22 +208,106 @@ func (man *Manager) Insert(file *FileSupportData) {
 		man.queue = append(man.queue, nil)
 		copy(man.queue[insertIdx+1:], man.queue[insertIdx:])
 		man.queue[insertIdx] = file
-		if man.qType == NoQueue && man.noQueueUpdateIdx != -1 {
-			man.queue[insertIdx].QueueIdx = insertIdx
-		} else {
-			for idx := insertIdx; idx < len(man.queue); idx++ {
-				man.queue[idx].QueueIdx = idx
-			}
+		for idx := insertIdx; idx < len(man.queue); idx++ {
+			man.queue[idx].QueueIdx = idx
 		}
 	}
 }
 
 // Update a file into the queue manager
 func (man *Manager) Update(file *FileSupportData) {
-	// fmt.Println("[QUEUE] UPDATE: ", file.Filename)
+	file.Clean()
+
+	curIdx := man.files[file.Filename].QueueIdx
+	file.QueueIdx = curIdx
+
+	man.files[file.Filename] = file
+
 	if man.qType == NoQueue {
-		man.noQueueUpdateIdx = man.files[file.Filename].QueueIdx
+		man.queue[curIdx] = file
+		return
 	}
-	man.Remove([]int64{file.Filename}, true)
-	man.Insert(file)
+
+	newIdx := -1
+	switch man.qType {
+	case LRUQueue:
+		// Get new index
+		newIdx = sort.Search(len(man.queue), func(idx int) bool {
+			return man.queue[idx].Recency < file.Recency
+		})
+	case LFUQueue:
+		// Get new index
+		newIdx = sort.Search(len(man.queue), func(idx int) bool {
+			return man.queue[idx].Frequency < file.Frequency
+		})
+	case SizeBigQueue:
+		// Get new index
+		newIdx = sort.Search(len(man.queue), func(idx int) bool {
+			curFile := man.queue[idx]
+			if curFile.Size == file.Size {
+				return curFile.Recency < file.Recency
+			}
+			return curFile.Size > file.Size
+
+		})
+	case SizeSmallQueue:
+		// Get new index
+		newIdx = sort.Search(len(man.queue), func(idx int) bool {
+			curFile := man.queue[idx]
+			if curFile.Size == file.Size {
+				return curFile.Recency < file.Recency
+			}
+			return curFile.Size < file.Size
+		})
+	case WeightQueue:
+		// Get new index
+		newIdx = sort.Search(len(man.queue), func(idx int) bool {
+			return man.queue[idx].Weight < file.Weight
+		})
+	}
+	// fmt.Println("UPDATE:", file.Filename, curIdx, "->", newIdx)
+	// fmt.Println("--- BEFORE ---")
+	// for idx, sup := range man.queue {
+	// 	fmt.Println("-[", idx, "]", sup.Filename, sup.Size)
+	// }
+	if newIdx != -1 {
+		if newIdx != curIdx {
+			if newIdx == len(man.queue) {
+				file.QueueIdx = len(man.queue)
+				man.queue = append(man.queue, file)
+			} else {
+				// Trick
+				// https://github.com/golang/go/wiki/SliceTricks#insert
+				man.queue = append(man.queue, nil)
+				copy(man.queue[newIdx+1:], man.queue[newIdx:])
+				man.queue[newIdx] = file
+			}
+
+			if newIdx < curIdx {
+				curIdx++
+			}
+
+			// Remove file in old position
+			copy(man.queue[curIdx:], man.queue[curIdx+1:])
+			man.queue[len(man.queue)-1] = nil
+			man.queue = man.queue[:len(man.queue)-1]
+
+			startFrom := 0
+			if newIdx > curIdx {
+				startFrom = curIdx
+			} else {
+				startFrom = newIdx
+			}
+			for idx := startFrom; idx < len(man.queue); idx++ {
+				man.queue[idx].QueueIdx = idx
+			}
+		} else {
+			man.queue[curIdx] = file
+		}
+	}
+	// fmt.Println("--- AFTER ---")
+	// for idx, sup := range man.queue {
+	// 	fmt.Println("-[", idx, "]", sup.Filename, sup.Size)
+	// }
+	// fmt.Println("--- DONE ---")
 }
