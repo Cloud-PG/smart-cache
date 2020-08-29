@@ -1443,7 +1443,7 @@ func (cache *AIRL) ExtraOutput(info string) string {
 				cache.stdDevNumCategories(),
 			)
 		} else {
-			logger.Info("No Category stats...")
+			// logger.Info("No Category stats...")
 			result = fmt.Sprintf("%d,%0.2f",
 				-1,
 				-1.,
