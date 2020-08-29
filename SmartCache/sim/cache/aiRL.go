@@ -1444,7 +1444,10 @@ func (cache *AIRL) ExtraOutput(info string) string {
 			)
 		} else {
 			logger.Info("No Category stats...")
-			result = ""
+			result = fmt.Sprintf("%d,%0.2f",
+				-1,
+				-1.,
+			)
 		}
 	case "additionQTable":
 		if cache.additionAgentOK {
