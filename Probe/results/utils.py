@@ -682,8 +682,7 @@ def make_agent_figures(files2plot: list, prefix: str) -> list:
                 prefix, "").replace(
                     _SIM_RESULT_FILENAME, "")
             for column in columns:
-                if column in df:
-                    _add_columns(fig_epsilon, df, name, column)
+                _add_columns(fig_epsilon, df, name, column)
         fig_epsilon.update_layout(
             title=plot,
             xaxis_title='day',
