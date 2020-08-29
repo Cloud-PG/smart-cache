@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"math"
 	"math/rand"
 	"os"
 	"simulator/v2/cache/ai/featuremap"
@@ -52,6 +53,8 @@ type AIRL struct {
 	evictionCategoryManager           CategoryManager
 	actionCounters                    map[qlearn.ActionType]int
 	bufferIdxVector                   []int
+	numDailyCategories                []int
+	sumNumDailyCategories             int
 }
 
 // Init the AIRL struct
@@ -89,7 +92,7 @@ func (cache *AIRL) Init(params InitParameters) interface{} {
 		cache.evictionUseK = useK
 		cache.evictionAgentK = evictionk
 		cache.evictionAgentStep = cache.evictionAgentK
-		cache.evictionRO = 0.42
+		cache.evictionRO = 1.0
 
 		if evictionFeatureMap != "" {
 			logger.Info("Create eviction feature manager")
@@ -123,6 +126,7 @@ func (cache *AIRL) Init(params InitParameters) interface{} {
 			cache.actionCounters[qlearn.ActionDeleteQuarter] = 0
 			cache.actionCounters[qlearn.ActionDeleteOne] = 0
 			cache.actionCounters[qlearn.ActionNotDelete] = 0
+			cache.numDailyCategories = make([]int, 0)
 		} else {
 			cache.evictionAgentOK = false
 		}
@@ -171,8 +175,13 @@ func (cache *AIRL) ClearStats() {
 	cache.actionCounters[qlearn.ActionDeleteQuarter] = 0
 	cache.actionCounters[qlearn.ActionDeleteOne] = 0
 	cache.actionCounters[qlearn.ActionNotDelete] = 0
-	if cache.evictionAgentOK && !cache.evictionUseK {
-		cache.callEvictionAgent(false)
+
+	if cache.evictionAgentOK {
+		cache.numDailyCategories = cache.numDailyCategories[:0]
+		cache.sumNumDailyCategories = 0
+		if !cache.evictionUseK {
+			cache.callEvictionAgent(false)
+		}
 	}
 }
 
@@ -402,6 +411,11 @@ func (catMan *CategoryManager) Init(features []featuremap.Obj, featureWeights []
 	catMan.lastStateAction = make(map[int]CatState)
 
 	catMan.fileFeatureIdxMap = fileFeatureIdxMap
+}
+
+// GetNumCategories returns the current number of categories in the cache
+func (catMan CategoryManager) GetNumCategories() int {
+	return len(catMan.categorySizesMap)
 }
 
 func (catMan *CategoryManager) deleteFileFromCategory(category int, file2Remove *FileSupportData) {
@@ -1352,6 +1366,9 @@ func (cache *AIRL) AfterRequest(request *Request, fileStats *FileStats, hit bool
 		}
 		if cache.evictionAgentOK {
 			cache.delayedRewardEvictionAgent(request.Filename, hit)
+			curNumCat := cache.evictionCategoryManager.GetNumCategories()
+			cache.numDailyCategories = append(cache.numDailyCategories, curNumCat)
+			cache.sumNumDailyCategories += curNumCat
 		}
 	}
 	cache.SimpleCache.AfterRequest(request, fileStats, hit, added)
@@ -1401,10 +1418,34 @@ func writeQTable(outFilename string, data string) {
 	}
 }
 
+func (cache *AIRL) meanNumCategories() int {
+	return cache.sumNumDailyCategories / len(cache.numDailyCategories)
+}
+
+func (cache *AIRL) stdDevNumCategories() float64 {
+	mean := cache.meanNumCategories()
+	var sum int
+	for _, value := range cache.numDailyCategories {
+		curDiff := value - mean
+		sum += curDiff * curDiff
+	}
+	return math.Sqrt(float64(sum) / float64(len(cache.numDailyCategories)-1))
+}
+
 // ExtraOutput for output specific information
 func (cache *AIRL) ExtraOutput(info string) string {
 	result := ""
 	switch info {
+	case "evictionCategoryStats":
+		if cache.evictionAgentOK {
+			result = fmt.Sprintf("%d,%0.2f",
+				cache.meanNumCategories(),
+				cache.stdDevNumCategories(),
+			)
+		} else {
+			logger.Info("No Category stats...")
+			result = ""
+		}
 	case "additionQTable":
 		if cache.additionAgentOK {
 			result = cache.additionAgent.QTableToString()

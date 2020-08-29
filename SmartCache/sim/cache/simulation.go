@@ -738,6 +738,8 @@ func Simulate(cacheType string, cacheInstance Cache, param SimulationParams) {
 		csvHeaderColumns = append(csvHeaderColumns, "Eviction qvalue function")
 		csvHeaderColumns = append(csvHeaderColumns, "Eviction calls")
 		csvHeaderColumns = append(csvHeaderColumns, "Eviction forced calls")
+		csvHeaderColumns = append(csvHeaderColumns, "Eviction mean num categories")
+		csvHeaderColumns = append(csvHeaderColumns, "Eviction std dev num categories")
 		csvHeaderColumns = append(csvHeaderColumns, "Action store")
 		csvHeaderColumns = append(csvHeaderColumns, "Action not store")
 		csvHeaderColumns = append(csvHeaderColumns, "Action delete all")
@@ -813,7 +815,9 @@ func Simulate(cacheType string, cacheInstance Cache, param SimulationParams) {
 					csvRow = append(csvRow, strings.Split(ExtraOutput(cacheInstance, "epsilonStats"), ",")...)
 					csvRow = append(csvRow, strings.Split(ExtraOutput(cacheInstance, "valueFunctions"), ",")...)
 					csvRow = append(csvRow, strings.Split(ExtraOutput(cacheInstance, "evictionStats"), ",")...)
+					csvRow = append(csvRow, strings.Split(ExtraOutput(cacheInstance, "evictionCategoryStats"), ",")...)
 					csvRow = append(csvRow, strings.Split(ExtraOutput(cacheInstance, "actionStats"), ",")...)
+
 				}
 				csvSimOutput.Write(csvRow)
 			}
