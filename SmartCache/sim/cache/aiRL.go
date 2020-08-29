@@ -1001,31 +1001,25 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) 
 
 	if !cache.curTime.Equal(cache.prevTime) {
 
-		if cache.additionAgent.Epsilon <= .2 {
+		if cache.additionAgent.Epsilon <= cache.additionAgent.MinEpsilon+0.01 {
 			if cache.additionAgentPrevQValue == 0. {
 				cache.additionAgentPrevQValue = cache.additionAgent.QValue
 			} else {
-				if cache.additionAgent.QValue <= cache.additionAgentPrevQValue {
+				if cache.additionAgent.QValue < cache.additionAgentPrevQValue {
 					cache.additionAgentBadQValue++
 				} else {
-					cache.additionAgentBadQValue = 0
-				}
-				if cache.additionAgentBadQValue < 0 {
 					cache.additionAgentBadQValue = 0
 				}
 				cache.additionAgentPrevQValue = cache.additionAgent.QValue
 			}
 		}
-		if cache.evictionAgent.Epsilon <= .2 {
+		if cache.evictionAgent.Epsilon <= cache.evictionAgent.MinEpsilon+0.01 {
 			if cache.evictionAgentPrevQValue == 0. {
 				cache.evictionAgentPrevQValue = cache.evictionAgent.QValue
 			} else {
-				if cache.evictionAgent.QValue <= cache.evictionAgentPrevQValue {
+				if cache.evictionAgent.QValue < cache.evictionAgentPrevQValue {
 					cache.evictionAgentBadQValue++
 				} else {
-					cache.evictionAgentBadQValue = 0
-				}
-				if cache.evictionAgentBadQValue < 0 {
 					cache.evictionAgentBadQValue = 0
 				}
 				cache.evictionAgentPrevQValue = cache.evictionAgent.QValue
@@ -1037,26 +1031,22 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) 
 		if cache.additionAgentBadQValue >= maxBadQValueInRow {
 			if cache.additionAgentOK {
 				cache.additionAgentBadQValue = 0
-				cache.additionAgent.UnleashEpsilon(nil)
 				if cache.additionAgent.QValue < 0. {
+					cache.additionAgent.UnleashEpsilon(nil)
 					cache.additionAgent.ResetTableAction()
+				} else {
+					cache.additionAgent.UnleashEpsilon(0.5)
 				}
-			}
-			if cache.evictionAgentOK {
-				cache.evictionAgentBadQValue = 0
-				cache.evictionAgent.UnleashEpsilon(0.25)
 			}
 		}
 		if cache.evictionAgentBadQValue >= maxBadQValueInRow {
-			if cache.additionAgentOK {
-				cache.additionAgentBadQValue = 0
-				cache.additionAgent.UnleashEpsilon(0.25)
-			}
 			if cache.evictionAgentOK {
 				cache.evictionAgentBadQValue = 0
-				cache.evictionAgent.UnleashEpsilon(nil)
 				if cache.evictionAgent.QValue < 0. {
+					cache.evictionAgent.UnleashEpsilon(nil)
 					cache.evictionAgent.ResetTableAction()
+				} else {
+					cache.evictionAgent.UnleashEpsilon(0.5)
 				}
 			}
 		}
