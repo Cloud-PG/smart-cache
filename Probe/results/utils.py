@@ -50,6 +50,8 @@ _COLUMNS = [
     'Eviction qvalue function',
     'Eviction calls',
     'Eviction forced calls',
+    'Eviction mean num categories',
+    'Eviction std dev num categories',
     'Action store',
     'Action not store',
     'Action delete all',
@@ -669,6 +671,7 @@ def make_agent_figures(files2plot: list, prefix: str) -> list:
         "Epsilon": ['Addition epsilon', 'Eviction epsilon'],
         "QValue": ['Addition qvalue function', 'Eviction qvalue function', ],
         "Eviction calls": ['Eviction calls', 'Eviction forced calls'],
+        "Eviction categories": ['Eviction mean num categories', 'Eviction std dev num categories']
         "Addition actions": ['Action store', 'Action not store'],
         "Eviction actions": ['Action delete all', 'Action delete half', 'Action delete quarter', 'Action delete one', 'Action not delete'],
     }
