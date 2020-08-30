@@ -517,16 +517,16 @@ void env::purge(){
 
 void env::set_curValues(float size, float frequency, float recency, float datatype, float occupancy, float hit_rate){
     _curValues.clear();
-    _curValues.push_back(size);
+    _curValues.push_back(size/10.);
     _curValues.push_back(frequency);
-    _curValues.push_back(recency);
+    _curValues.push_back(recency/30000.);
     _curValues.push_back(datatype);
     _curValues.push_back(occupancy);
     _curValues.push_back(hit_rate);
 }
 
 py::array env::get_random_batch(int batch_size){
-    srand(_seed);
+    //srand(_seed);
     //int randomNumbers[batch_size];
     int randomNumber;
     //int counter = 0;

@@ -210,7 +210,7 @@ def write_stats():
         writer = csv.writer(file)
         writer.writerow(
             [str(datetime.fromtimestamp(dataframe_.df.reqDay[0])) + ' +0000 UTC',
-                environment._cache._size,
+                Average(daily_sizes), #environment._cache._size,
                 environment._cache.hit_rate() * 100.0,
                 environment._cache._hit/environment._cache._miss * 100.0,
                 0,
@@ -247,6 +247,7 @@ def reset_stats():
     environment._cache._daily_anomalous_CPUeff_counter = 0
 
     occupancies = []
+    daily_sizes = []
 
     return
 
@@ -449,6 +450,9 @@ step_evict_decay = 0
 addition_counter = 0
 eviction_counter = 0
 
+daily_sizes = []
+daily_requests = []
+
 daily_reward = []
 daily_add_actions = []
 daily_evict_actions = []
@@ -557,6 +561,7 @@ while end == False and test == False:
             if environment._cache._dailyReadOnMiss / DailyBandwidth1Gbit * 100 < 95. or hit == True:
                 add_request(action)
                 curFilename, curSize = get_filename_and_size_of_current_request()
+                daily_sizes.append(environment._cache._size)
 
         if report_choices == True:
             daily_add_actions.append(action) 
@@ -682,6 +687,7 @@ while end == False and test == False:
             if debug == True and step_add % 10000 == 0:
             #if debug == True and step_add == warm_up_steps_add + 1:
                 print('PREDICT ON BATCH')
+                print(environment._adding_or_evicting)
                 print(batch)
                 print(target)
                 print()
@@ -782,6 +788,7 @@ while end == False and test == False:
             
             if debug == True and step_evict % 10000 == 0:
                 print('PREDICT ON BATCH')
+                print(environment._adding_or_evicting)
                 print(batch)
                 print(target)
                 print()
@@ -792,7 +799,7 @@ while end == False and test == False:
                     action_ = int(train_actions[i])
                     target[i,action_] = train_rewards[i] + gamma * mellowmax(mm_omega, predictions[i])  
             else:
-                predictions = target_model_add.predict_on_batch(train_next_vals)
+                predictions = target_model_evict.predict_on_batch(train_next_vals)
                 #predictions = target_model_add.predict_on_batch(train_cur_vals)
                 for i in range(0,BATCH_SIZE):  
                     action_ = int(train_actions[i])
