@@ -417,6 +417,42 @@ func (agent *Agent) UpdateEpsilon() {
 	}
 }
 
+// GetMemories returns made actions in memory
+func (agent *Agent) GetMemories(key interface{}) []Choice {
+	pastChoices, inMemory := agent.Memory[key]
+	if !inMemory {
+		panic("Error: Memory not present...")
+	}
+	return pastChoices
+}
+
+// DeleteMemory remove past choices in memory
+func (agent *Agent) DeleteMemory(key interface{}) {
+	delete(agent.Memory, key)
+}
+
+// ResetMemories clean all the agent memories
+func (agent *Agent) ResetMemories() {
+	for key := range agent.Memory {
+		delete(agent.Memory, key)
+	}
+	agent.Memory = make(map[interface{}][]Choice)
+}
+
+// SaveMemoryWithNoLimits insert made actions in memory with no limits on memory size
+func (agent *Agent) SaveMemoryWithNoLimits(key interface{}, choice Choice) {
+	pastChoices, inMemory := agent.Memory[key]
+	if inMemory {
+		pastChoices = pastChoices[1:]
+		pastChoices = append(pastChoices, choice)
+		agent.Memory[key] = pastChoices
+	} else {
+		newChoices := make([]Choice, 0)
+		newChoices = append(newChoices, choice)
+		agent.Memory[key] = newChoices
+	}
+}
+
 // SaveMemory insert made actions in memory
 func (agent *Agent) SaveMemory(key interface{}, choice Choice) {
 	pastChoices, inMemory := agent.Memory[key]

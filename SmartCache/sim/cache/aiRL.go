@@ -630,7 +630,7 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 					Category: catState.Category,
 					File:     curFile,
 				})
-				cache.evictionAgent.SaveMemory(curFile.Filename, qlearn.Choice{
+				cache.evictionAgent.SaveMemoryWithNoLimits(curFile.Filename, qlearn.Choice{
 					State:     catState.Idx,
 					Action:    catState.Action,
 					Tick:      cache.tick,
@@ -692,7 +692,7 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 					Category: catState.Category,
 					File:     curFile,
 				})
-				cache.evictionAgent.SaveMemory(curFile.Filename, qlearn.Choice{
+				cache.evictionAgent.SaveMemoryWithNoLimits(curFile.Filename, qlearn.Choice{
 					State:     catState.Idx,
 					Action:    catState.Action,
 					Tick:      cache.tick,
@@ -741,7 +741,7 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 				Category: catState.Category,
 				File:     curFile,
 			})
-			cache.evictionAgent.SaveMemory(curFile.Filename, qlearn.Choice{
+			cache.evictionAgent.SaveMemoryWithNoLimits(curFile.Filename, qlearn.Choice{
 				State:     catState.Idx,
 				Action:    catState.Action,
 				Tick:      cache.tick,
@@ -769,7 +769,7 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 		case qlearn.ActionNotDelete:
 			for _, curFile := range catState.Files {
 				curFileStats := cache.stats.Get(curFile.Filename)
-				cache.evictionAgent.SaveMemory(curFile.Filename, qlearn.Choice{
+				cache.evictionAgent.SaveMemoryWithNoLimits(curFile.Filename, qlearn.Choice{
 					State:     catState.Idx,
 					Action:    catState.Action,
 					Tick:      cache.tick,
@@ -778,7 +778,7 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 					Size:      curFile.Size,
 					Frequency: curFileStats.Frequency,
 				})
-				cache.evictionAgent.SaveMemory("NotDelete", qlearn.Choice{
+				cache.evictionAgent.SaveMemoryWithNoLimits("NotDelete", qlearn.Choice{
 					State:     catState.Idx,
 					Action:    catState.Action,
 					Tick:      cache.tick,
@@ -1048,6 +1048,7 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) 
 				if cache.additionAgent.QValue < 0. {
 					cache.additionAgent.UnleashEpsilon(nil)
 					cache.additionAgent.ResetTableAction()
+					cache.additionAgent.ResetMemories()
 				} else {
 					cache.additionAgent.UnleashEpsilon(0.5)
 				}
@@ -1059,6 +1060,7 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) 
 				if cache.evictionAgent.QValue < 0. {
 					cache.evictionAgent.UnleashEpsilon(nil)
 					cache.evictionAgent.ResetTableAction()
+					cache.evictionAgent.ResetMemories()
 				} else {
 					cache.evictionAgent.UnleashEpsilon(0.5)
 				}
@@ -1157,7 +1159,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				case SCDL:
 					cache.additionAgent.SaveMemory(SCDL, curChoice)
 				case SCDL2:
-					cache.additionAgent.SaveMemory(request.Filename, curChoice)
+					cache.additionAgent.SaveMemoryWithNoLimits(request.Filename, curChoice)
 				}
 				cache.toAdditionChoiceBuffer([]string{
 					fmt.Sprintf("%d", cache.tick),
@@ -1220,7 +1222,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					case SCDL:
 						cache.additionAgent.SaveMemory(SCDL, curChoice)
 					case SCDL2:
-						cache.additionAgent.SaveMemory(request.Filename, curChoice)
+						cache.additionAgent.SaveMemoryWithNoLimits(request.Filename, curChoice)
 					}
 					cache.toAdditionChoiceBuffer([]string{
 						fmt.Sprintf("%d", cache.tick),
@@ -1266,7 +1268,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			case SCDL:
 				cache.additionAgent.SaveMemory(SCDL, curChoice)
 			case SCDL2:
-				cache.additionAgent.SaveMemory(request.Filename, curChoice)
+				cache.additionAgent.SaveMemoryWithNoLimits(request.Filename, curChoice)
 			}
 
 			if cache.evictionAgentOK {
