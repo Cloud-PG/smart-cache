@@ -178,6 +178,10 @@ def _measure_cost(df: 'pd.DataFrame') -> 'pd.Series':
     return (df['written data'] + df['deleted data'])/cache_size
 
 
+def _measure_read_on_hit_ratio(df: 'pd.DataFrame') -> 'pd.Series':
+    return df['read on hit data']/df['read data']
+
+
 def _measure_cpu_eff(df: 'pd.DataFrame') -> 'pd.Series':
     return df['CPU efficiency']
 
@@ -216,6 +220,7 @@ def _agent_epsilon(df: 'pd.DataFrame') -> 'pd.Series':
 _MEASURES = {
     'Throughput': _measure_throughput,
     'Cost': _measure_cost,
+    'Read on hit ratio': _measure_read_on_hit_ratio,
     'CPU Eff.': _measure_cpu_eff,
     'Avg. Free Space': _measure_avg_free_space,
     'Std. Dev. Free Space': _measure_std_dev_free_space,
@@ -237,6 +242,11 @@ def _get_measures(cache_filename: str, df: 'pd.DataFrame') -> list:
     # Cost
     measures.append(
         _measure_cost(df).mean()
+    )
+
+    # Read on hit ratio
+    measures.append(
+        _measure_read_on_hit_ratio(df).mean()
     )
 
     # Bandwidth
@@ -780,7 +790,8 @@ def make_table(files2plot: list, prefix: str) -> 'pd.DataFrame':
     df = pd.DataFrame(
         table,
         columns=[
-            "file", "Throughput", "Cost", "Bandwidth",
+            "file", "Throughput", "Cost",
+            "Read on hit ratio", "Bandwidth",
             "Redirect Vol.", "Avg. Free Space",
             "Std. Dev. Free Space", "Hit over Miss",
             "Hit rate", "CPU Eff."
