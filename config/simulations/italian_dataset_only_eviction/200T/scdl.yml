@@ -1,0 +1,26 @@
+--- # Simulation parameters
+sim:
+  data: ../../../../datasets/source2018_numeric_it_with_avro_order/
+  outputFolder: ../../../../results/sim_italian_dataset_only_eviction/200T
+  type: normal
+  window:
+    start: 0
+    stop: 52
+  region: it
+  overwrite: false
+  cache:
+    type: aiRL
+    watermarks: false
+    size:
+      value: 200
+      unit: T
+    bandwidth: 
+      value: 10
+      redirect: true
+  ai:
+    rl:
+      type: SCDL
+      epsilon:
+        decay: 0.00001
+      addition:
+        featuremap: ../../../../featureMaps/rlAdditionFeatureMap.json
