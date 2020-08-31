@@ -1,7 +1,7 @@
 --- # Simulation parameters
 sim:
   data: ../../../../datasets/source2018_numeric_it_with_avro_order/
-  outputFolder: ../../../../results/sim_italian_dataset/10000T
+  outputFolder: ../../../../results/sim_italian_dataset/1000T
   type: normal
   window:
     start: 0
@@ -11,7 +11,7 @@ sim:
     type: sizeSmall
     watermarks: false
     size:
-      value: 10000
+      value: 1000
       unit: T
     bandwidth: 
       value: 10
