@@ -45,19 +45,17 @@
   },
   "percOcc": {
     "buckets": [
-      5.0,
-      10.0,
-      25.0,
       50.0,
       75.0,
       90.0,
-      99.0
+      95.0
     ],
     "openRight": true,
     "type": "float"
   },
   "hitRate": {
     "buckets": [
+      5.0,
       10.0,
       25.0,
       50.0,
