@@ -24,5 +24,5 @@ sim:
       addition:
         featuremap: ../../../../featureMaps/rlAdditionFeatureMap.json
       eviction:
-        k: 200000
+        k: 8096
         featuremap: ../../../../featureMaps/rlEvictionFeatureMap.json
