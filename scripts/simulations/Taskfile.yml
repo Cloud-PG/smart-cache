@@ -133,18 +133,32 @@ tasks:
       - release
     cmds:
       - echo "US dataset simulations"
+      # 1000T
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/1000T/lru.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/1000T/lfu.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/1000T/sizeBig.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/1000T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/1000T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/1000T/scdl2.yml"
+        # 500T
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/500T/lru.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/500T/lfu.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/500T/sizeBig.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/500T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/500T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/500T/scdl2.yml"
       # 200T
       - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/200T/lru.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/200T/lfu.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/200T/sizeBig.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/200T/sizeSmall.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/200T/lfu.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/200T/sizeBig.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/200T/sizeSmall.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/200T/scdl.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/200T/scdl2.yml"
       # 100T
       - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/100T/lru.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/100T/lfu.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/100T/sizeBig.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/100T/sizeSmall.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/100T/lfu.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/100T/sizeBig.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/100T/sizeSmall.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/100T/scdl.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/100T/scdl2.yml"
 
@@ -154,18 +168,32 @@ tasks:
       - release
     cmds:
       - echo "US dataset no k simulations"
+      # 1000T
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_no_k/1000T/lru.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_no_k/1000T/lfu.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_no_k/1000T/sizeBig.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_no_k/1000T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_no_k/1000T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_no_k/1000T/scdl2.yml"
+      # 500T
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_no_k/500T/lru.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_no_k/500T/lfu.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_no_k/500T/sizeBig.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_no_k/500T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_no_k/500T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_no_k/500T/scdl2.yml"
       # 200T
       - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_no_k/200T/lru.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_no_k/200T/lfu.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_no_k/200T/sizeBig.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_no_k/200T/sizeSmall.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_no_k/200T/lfu.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_no_k/200T/sizeBig.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_no_k/200T/sizeSmall.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_no_k/200T/scdl.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_no_k/200T/scdl2.yml"
       # 100T
       - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_no_k/100T/lru.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_no_k/100T/lfu.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_no_k/100T/sizeBig.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_no_k/100T/sizeSmall.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_no_k/100T/lfu.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_no_k/100T/sizeBig.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_no_k/100T/sizeSmall.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_no_k/100T/scdl.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_no_k/100T/scdl2.yml"
 
@@ -175,18 +203,32 @@ tasks:
       - release
     cmds:
       - echo "US dataset with watermarks simulations"
+      # 1000T
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/1000T/lru.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/1000T/lfu.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/1000T/sizeBig.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/1000T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/1000T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/1000T/scdl2.yml"
+      # 500T
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/500T/lru.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/500T/lfu.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/500T/sizeBig.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/500T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/500T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/500T/scdl2.yml"
       # 200T
       - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/200T/lru.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/200T/lfu.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/200T/sizeBig.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/200T/sizeSmall.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/200T/lfu.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/200T/sizeBig.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/200T/sizeSmall.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/200T/scdl.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/200T/scdl2.yml"
       # 100T
       - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/100T/lru.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/100T/lfu.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/100T/sizeBig.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/100T/sizeSmall.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/100T/lfu.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/100T/sizeBig.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/100T/sizeSmall.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/100T/scdl.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/100T/scdl2.yml"
 
@@ -196,18 +238,32 @@ tasks:
       - release
     cmds:
       - echo "US dataset with watermarks no k simulations"
+      # 1000T
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_no_k/1000T/lru.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_no_k/1000T/lfu.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_no_k/1000T/sizeBig.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_no_k/1000T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_no_k/1000T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_no_k/1000T/scdl2.yml"
+      # 500T
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_no_k/500T/lru.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_no_k/500T/lfu.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_no_k/500T/sizeBig.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_no_k/500T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_no_k/500T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_no_k/500T/scdl2.yml"
       # 200T
       - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_no_k/200T/lru.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_no_k/200T/lfu.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_no_k/200T/sizeBig.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_no_k/200T/sizeSmall.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_no_k/200T/lfu.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_no_k/200T/sizeBig.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_no_k/200T/sizeSmall.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_no_k/200T/scdl.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_no_k/200T/scdl2.yml"
       # 100T
       - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_no_k/100T/lru.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_no_k/100T/lfu.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_no_k/100T/sizeBig.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_no_k/100T/sizeSmall.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_no_k/100T/lfu.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_no_k/100T/sizeBig.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_no_k/100T/sizeSmall.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_no_k/100T/scdl.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_no_k/100T/scdl2.yml"
 
@@ -217,6 +273,27 @@ tasks:
       - release
     cmds:
       - echo "Italian dataset simulations"
+      # 1000T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/1000T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/1000T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/1000T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/1000T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/1000T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/1000T/scdl2.yml"
+      # 500T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/500T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/500T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/500T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/500T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/500T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/500T/scdl2.yml"
+      # 200T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/200T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/200T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/200T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/200T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/200T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/200T/scdl2.yml"
       # 100T
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/100T/lru.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/100T/lfu.yml"
@@ -245,6 +322,27 @@ tasks:
       - release
     cmds:
       - echo "Italian dataset no k simulations"
+      # 1000T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_no_k/1000T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_no_k/1000T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_no_k/1000T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_no_k/1000T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_no_k/1000T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_no_k/1000T/scdl2.yml"
+      # 500T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_no_k/500T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_no_k/500T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_no_k/500T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_no_k/500T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_no_k/500T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_no_k/500T/scdl2.yml"
+      # 200T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_no_k/200T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_no_k/200T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_no_k/200T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_no_k/200T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_no_k/200T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_no_k/200T/scdl2.yml"
       # 100T
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_no_k/100T/lru.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_no_k/100T/lfu.yml"
@@ -273,6 +371,13 @@ tasks:
       - release
     cmds:
       - echo "Italian dataset only eviction simulations"
+      # 200T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_only_eviction/200T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_only_eviction/200T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_only_eviction/200T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_only_eviction/200T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_only_eviction/200T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_only_eviction/200T/scdl2.yml"
       # 100T
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_only_eviction/100T/lru.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_only_eviction/100T/lfu.yml"
@@ -294,6 +399,13 @@ tasks:
       - release
     cmds:
       - echo "Italian dataset only eviction no k simulations"
+      # 200T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_only_eviction_no_k/200T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_only_eviction_no_k/200T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_only_eviction_no_k/200T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_only_eviction_no_k/200T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_only_eviction_no_k/200T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_only_eviction_no_k/200T/scdl2.yml"
       # 100T
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_only_eviction_no_k/100T/lru.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_only_eviction_no_k/100T/lfu.yml"
@@ -315,6 +427,27 @@ tasks:
       - release
     cmds:
       - echo "Italian dataset with watermarks simulations"
+      # 1000T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/1000T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/1000T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/1000T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/1000T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/1000T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/1000T/scdl2.yml"
+      # 500T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/500T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/500T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/500T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/500T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/500T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/500T/scdl2.yml"
+      # 200T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/200T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/200T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/200T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/200T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/200T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/200T/scdl2.yml"
       # 100T
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/100T/lru.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/100T/lfu.yml"
@@ -343,6 +476,27 @@ tasks:
       - release
     cmds:
       - echo "Italian dataset with watermarks no k simulations"
+      # 1000T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_k/1000T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_k/1000T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_k/1000T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_k/1000T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_k/1000T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_k/1000T/scdl2.yml"
+      # 500T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_k/500T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_k/500T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_k/500T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_k/500T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_k/500T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_k/500T/scdl2.yml"
+      # 200T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_k/200T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_k/200T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_k/200T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_k/200T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_k/200T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_k/200T/scdl2.yml"
       # 100T
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_k/100T/lru.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_k/100T/lfu.yml"
@@ -371,6 +525,13 @@ tasks:
       - release
     cmds:
       - echo "Italian dataset with watermakrs only eviction simulations"
+      # 200T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_eviction/200T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_eviction/200T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_eviction/200T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_eviction/200T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_eviction/200T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_eviction/200T/scdl2.yml"
       # 100T
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_eviction/100T/lru.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_eviction/100T/lfu.yml"
@@ -392,6 +553,13 @@ tasks:
       - release
     cmds:
       - echo "Italian dataset with watermarks only eviction no k simulations"
+      # 200T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_eviction_no_k/200T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_eviction_no_k/200T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_eviction_no_k/200T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_eviction_no_k/200T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_eviction_no_k/200T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_eviction_no_k/200T/scdl2.yml"
       # 100T
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_eviction_no_k/100T/lru.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_eviction_no_k/100T/lfu.yml"
