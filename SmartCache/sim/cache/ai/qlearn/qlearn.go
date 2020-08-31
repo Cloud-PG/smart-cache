@@ -443,7 +443,6 @@ func (agent *Agent) ResetMemories() {
 func (agent *Agent) SaveMemoryWithNoLimits(key interface{}, choice Choice) {
 	pastChoices, inMemory := agent.Memory[key]
 	if inMemory {
-		pastChoices = pastChoices[1:]
 		pastChoices = append(pastChoices, choice)
 		agent.Memory[key] = pastChoices
 	} else {
