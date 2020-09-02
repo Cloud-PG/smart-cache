@@ -137,6 +137,16 @@ func (man *Manager) updateIndexes(queue []int64, startFrom int) {
 
 // Remove a file already in queue
 func (man *Manager) Remove(files []int64) {
+	// fmt.Println("--- 2 REMOVE ---", files)
+	// fmt.Println("--- BEFORE ---")
+	// fmt.Println(man.orderedKeys)
+	// for key, queue := range man.queue {
+	// 	fmt.Println("-[", key, "]", queue)
+	// }
+	// for key, file := range man.files {
+	// 	fmt.Printf("-[ %d ] -> %#v\n", key, file)
+	// }
+
 	if len(files) > 0 {
 		// _, file, no, _ := runtime.Caller(1)
 		// fmt.Printf("called from %s#%d\n", file, no)
@@ -144,11 +154,16 @@ func (man *Manager) Remove(files []int64) {
 		queue2update := make(map[interface{}]int)
 
 		for _, filename := range files {
+			// fmt.Println("--- Removing ->", filename)
 			curFile := man.files[filename]
+			// fmt.Printf("--- file -> %#v\n", curFile)
 			key := curFile.QueueKey
 			idx := curFile.QueueIdx
+			// fmt.Println("--- Coords ->", key, idx)
 
 			curQueue := man.queue[key]
+
+			// fmt.Println(curQueue)
 
 			// Remove
 			if len(curQueue) == 1 {
@@ -236,7 +251,6 @@ func (man *Manager) Insert(file *FileSupportData) {
 	if inCache {
 		panic("ERROR: File already in manager...")
 	}
-	// fmt.Println("[QUEUE] INSERT: ", file.Filename)
 
 	key := man.getKey(file)
 
@@ -250,6 +264,7 @@ func (man *Manager) Insert(file *FileSupportData) {
 	file.QueueKey = key
 
 	man.files[file.Filename] = file
+	// fmt.Println("[QUEUE] INSERT: ", file)
 }
 
 // Update a file into the queue manager
@@ -265,6 +280,9 @@ func (man *Manager) Update(file *FileSupportData) {
 		man.Remove([]int64{file.Filename})
 		man.Insert(file)
 	} else {
+		curFile := man.files[file.Filename]
+		file.QueueKey = curFile.QueueKey
+		file.QueueIdx = curFile.QueueIdx
 		man.files[file.Filename] = file
 	}
 
