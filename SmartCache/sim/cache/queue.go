@@ -251,19 +251,19 @@ func (man *Manager) insertKey(key interface{}) {
 	var insertIdx = -1
 	switch man.qType {
 	case NoQueue, LRUQueue, LFUQueue:
-		insertIdx = sort.Search(len(man.queue), func(idx int) bool {
+		insertIdx = sort.Search(len(man.orderedKeys), func(idx int) bool {
 			return man.orderedKeys[idx].(int64) > key.(int64)
 		})
 	case SizeBigQueue:
-		insertIdx = sort.Search(len(man.queue), func(idx int) bool {
+		insertIdx = sort.Search(len(man.orderedKeys), func(idx int) bool {
 			return man.orderedKeys[idx].(float64) < key.(float64)
 		})
 	case SizeSmallQueue, WeightQueue:
-		insertIdx = sort.Search(len(man.queue), func(idx int) bool {
+		insertIdx = sort.Search(len(man.orderedKeys), func(idx int) bool {
 			return man.orderedKeys[idx].(float64) > key.(float64)
 		})
 	}
-	if insertIdx == len(man.queue) {
+	if insertIdx == len(man.orderedKeys) {
 		man.orderedKeys = append(man.orderedKeys, key)
 	} else {
 		// Trick
