@@ -161,31 +161,43 @@ func (man *Manager) Remove(files []int64) {
 		queue2update := make(map[interface{}]int)
 
 		for _, filename := range files {
-			// fmt.Println("--- Removing ->", filename)
-			curFile := man.files[filename]
-			// fmt.Printf("--- file -> %#v\n", curFile)
-			key := curFile.QueueKey
-			idx := curFile.QueueIdx
-			// fmt.Println("--- Coords ->", key, idx)
+			if man.qType != NoQueue {
+				// fmt.Println("--- Removing ->", filename)
+				curFile := man.files[filename]
+				// fmt.Printf("--- file -> %#v\n", curFile)
+				key := curFile.QueueKey
+				idx := curFile.QueueIdx
+				// fmt.Println("--- Coords ->", key, idx)
 
-			curQueue := man.queue[key]
+				curQueue := man.queue[key]
 
-			// fmt.Println(curQueue)
+				// fmt.Println(curQueue)
 
-			// Remove
-			if len(curQueue) == 1 {
-				curQueue = curQueue[:0]
+				// Remove
+				if len(curQueue) == 1 {
+					curQueue = curQueue[:0]
+				} else {
+					copy(curQueue[idx:], curQueue[idx+1:])
+					curQueue = curQueue[:len(curQueue)-1]
+				}
+				man.queue[key] = curQueue
+
+				curVal, inList := queue2update[key]
+				if !inList {
+					queue2update[key] = idx
+				} else if curVal > idx {
+					queue2update[key] = idx
+				}
 			} else {
-				copy(curQueue[idx:], curQueue[idx+1:])
-				curQueue = curQueue[:len(curQueue)-1]
-			}
-			man.queue[key] = curQueue
-
-			curVal, inList := queue2update[key]
-			if !inList {
-				queue2update[key] = idx
-			} else if curVal > idx {
-				queue2update[key] = idx
+				idx := sort.Search(len(man.orderedKeys), func(i int) bool {
+					return man.orderedKeys[i] == filename
+				})
+				if idx < len(man.orderedKeys) && man.orderedKeys[idx] == filename {
+					copy(man.orderedKeys[idx:], man.orderedKeys[idx+1:])
+					man.orderedKeys = man.orderedKeys[:len(man.orderedKeys)-1]
+				} else {
+					panic("ERROR: filename to delete was not in ordered keys...")
+				}
 			}
 
 			delete(man.files, filename)
@@ -266,9 +278,11 @@ func (man *Manager) Insert(file *FileSupportData) {
 		man.insertKey(key)
 	}
 
-	idx := man.insertInQueue(key, file.Filename)
-	file.QueueIdx = idx
-	file.QueueKey = key
+	if man.qType != NoQueue {
+		idx := man.insertInQueue(key, file.Filename)
+		file.QueueIdx = idx
+		file.QueueKey = key
+	}
 
 	man.files[file.Filename] = file
 	// fmt.Println("[QUEUE] INSERT: ", file)
@@ -287,9 +301,6 @@ func (man *Manager) Update(file *FileSupportData) {
 		man.Remove([]int64{file.Filename})
 		man.Insert(file)
 	} else {
-		curFile := man.files[file.Filename]
-		file.QueueKey = curFile.QueueKey
-		file.QueueIdx = curFile.QueueIdx
 		man.files[file.Filename] = file
 	}
 
