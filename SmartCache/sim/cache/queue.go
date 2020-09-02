@@ -74,16 +74,28 @@ func (man Manager) GetQueue() []*FileSupportData {
 	// https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
 	man.buffer = man.buffer[:0]
 
-	for ordIdx := len(man.orderedKeys) - 1; ordIdx > -1; ordIdx-- {
-		key := man.orderedKeys[ordIdx]
+	emptyQueueIdxs := make([]int, 0)
+	emptyQueueKeys := make([]interface{}, 0)
+
+	for queueIdx := len(man.orderedKeys) - 1; queueIdx > -1; queueIdx-- {
+		key := man.orderedKeys[queueIdx]
 		if man.qType != NoQueue {
 			curQueue := man.queue[key]
-			for _, filename := range curQueue {
-				man.buffer = append(man.buffer, man.files[filename])
+			if len(curQueue) > 0 {
+				for _, filename := range curQueue {
+					man.buffer = append(man.buffer, man.files[filename])
+				}
+			} else {
+				emptyQueueIdxs = append(emptyQueueIdxs, queueIdx)
+				emptyQueueKeys = append(emptyQueueKeys, key)
 			}
 		} else {
 			man.buffer = append(man.buffer, man.files[key.(int64)])
 		}
+	}
+
+	if len(emptyQueueIdxs) > 0 {
+		man.removeEmptyQueues(emptyQueueIdxs, emptyQueueKeys)
 	}
 
 	return man.buffer
@@ -95,16 +107,28 @@ func (man Manager) GetFromWorst() []*FileSupportData {
 	// https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
 	man.buffer = man.buffer[:0]
 
-	for _, key := range man.orderedKeys {
+	emptyQueueIdxs := make([]int, 0)
+	emptyQueueKeys := make([]interface{}, 0)
+
+	for queueIdx, key := range man.orderedKeys {
 		if man.qType != NoQueue {
 			curQueue := man.queue[key]
-			for idx := len(curQueue) - 1; idx > -1; idx-- {
-				filename := curQueue[idx]
-				man.buffer = append(man.buffer, man.files[filename])
+			if len(curQueue) > 0 {
+				for idx := len(curQueue) - 1; idx > -1; idx-- {
+					filename := curQueue[idx]
+					man.buffer = append(man.buffer, man.files[filename])
+				}
+			} else {
+				emptyQueueIdxs = append(emptyQueueIdxs, queueIdx)
+				emptyQueueKeys = append(emptyQueueKeys, key)
 			}
 		} else {
 			man.buffer = append(man.buffer, man.files[key.(int64)])
 		}
+	}
+
+	if len(emptyQueueIdxs) > 0 {
+		man.removeEmptyQueues(emptyQueueIdxs, emptyQueueKeys)
 	}
 
 	// for _, file := range man.buffer {
@@ -160,15 +184,19 @@ func (man Manager) GetWorstFilesUp2Size(totSize float64) []*FileSupportData {
 	}
 
 	if len(emptyQueueIdxs) > 0 {
-		for idx := len(emptyQueueIdxs) - 1; idx > -1; idx-- {
-			curIdx := emptyQueueIdxs[idx]
-			copy(man.orderedKeys[curIdx:], man.orderedKeys[curIdx+1:])
-			man.orderedKeys = man.orderedKeys[:len(man.orderedKeys)-1]
-			delete(man.queue, emptyQueueKeys[idx])
-		}
+		man.removeEmptyQueues(emptyQueueIdxs, emptyQueueKeys)
 	}
 
 	return man.buffer
+}
+
+func (man *Manager) removeEmptyQueues(emptyQueueIdxs []int, emptyQueueKeys []interface{}) {
+	for idx := len(emptyQueueIdxs) - 1; idx > -1; idx-- {
+		curIdx := emptyQueueIdxs[idx]
+		copy(man.orderedKeys[curIdx:], man.orderedKeys[curIdx+1:])
+		man.orderedKeys = man.orderedKeys[:len(man.orderedKeys)-1]
+		delete(man.queue, emptyQueueKeys[idx])
+	}
 }
 
 func (man *Manager) updateIndexes(queue []int64, startFrom int) {
