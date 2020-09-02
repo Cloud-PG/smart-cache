@@ -151,8 +151,12 @@ func (man *Manager) Remove(files []int64) {
 			curQueue := man.queue[key]
 
 			// Remove
-			copy(curQueue[idx:], curQueue[idx+1:])
-			curQueue = curQueue[:len(curQueue)-1]
+			if len(curQueue) == 1 {
+				curQueue = curQueue[:0]
+			} else {
+				copy(curQueue[idx:], curQueue[idx+1:])
+				curQueue = curQueue[:len(curQueue)-1]
+			}
 			man.queue[key] = curQueue
 
 			curVal, inList := queue2update[key]
