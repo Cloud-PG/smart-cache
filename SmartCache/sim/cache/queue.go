@@ -76,9 +76,13 @@ func (man Manager) GetQueue() []*FileSupportData {
 
 	for ordIdx := len(man.orderedKeys) - 1; ordIdx > -1; ordIdx-- {
 		key := man.orderedKeys[ordIdx]
-		curQueue := man.queue[key]
-		for _, filename := range curQueue {
-			man.buffer = append(man.buffer, man.files[filename])
+		if man.qType != NoQueue {
+			curQueue := man.queue[key]
+			for _, filename := range curQueue {
+				man.buffer = append(man.buffer, man.files[filename])
+			}
+		} else {
+			man.buffer = append(man.buffer, man.files[key.(int64)])
 		}
 	}
 
@@ -92,10 +96,14 @@ func (man Manager) GetFromWorst() []*FileSupportData {
 	man.buffer = man.buffer[:0]
 
 	for _, key := range man.orderedKeys {
-		curQueue := man.queue[key]
-		for idx := len(curQueue) - 1; idx > -1; idx-- {
-			filename := curQueue[idx]
-			man.buffer = append(man.buffer, man.files[filename])
+		if man.qType != NoQueue {
+			curQueue := man.queue[key]
+			for idx := len(curQueue) - 1; idx > -1; idx-- {
+				filename := curQueue[idx]
+				man.buffer = append(man.buffer, man.files[filename])
+			}
+		} else {
+			man.buffer = append(man.buffer, man.files[key.(int64)])
 		}
 	}
 
@@ -115,10 +123,24 @@ func (man Manager) GetWorstFilesUp2Size(totSize float64) []*FileSupportData {
 	man.buffer = man.buffer[:0]
 
 	for _, key := range man.orderedKeys {
-		curQueue := man.queue[key]
-		for idx := len(curQueue) - 1; idx > -1; idx-- {
-			filename := curQueue[idx]
-			curFile := man.files[filename]
+		if man.qType != NoQueue {
+			curQueue := man.queue[key]
+			for idx := len(curQueue) - 1; idx > -1; idx-- {
+				filename := curQueue[idx]
+				curFile := man.files[filename]
+				man.buffer = append(man.buffer, curFile)
+				if totSize != 0. {
+					sended += curFile.Size
+					if sended >= totSize {
+						break
+					}
+				}
+			}
+			if totSize != 0. && sended >= totSize {
+				break
+			}
+		} else {
+			curFile := man.files[key.(int64)]
 			man.buffer = append(man.buffer, curFile)
 			if totSize != 0. {
 				sended += curFile.Size
@@ -126,9 +148,6 @@ func (man Manager) GetWorstFilesUp2Size(totSize float64) []*FileSupportData {
 					break
 				}
 			}
-		}
-		if totSize != 0. && sended >= totSize {
-			break
 		}
 	}
 
