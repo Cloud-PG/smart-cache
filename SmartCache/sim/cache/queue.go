@@ -108,22 +108,29 @@ func (man Manager) GetFromWorst() []*FileSupportData {
 
 // GetWorstFilesUp2Size values from a queue until size is reached
 func (man Manager) GetWorstFilesUp2Size(totSize float64) []*FileSupportData {
-	// var sended float64
+	var sended float64
 
 	// Filtering trick
 	// https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
 	man.buffer = man.buffer[:0]
 
-	// for idx := len(man.queue) - 1; idx > -1; idx-- {
-	// 	curFile := man.queue[idx]
-	// 	man.buffer = append(man.buffer, man.queue[idx])
-	// 	if totSize != 0. {
-	// 		sended += curFile.Size
-	// 		if sended >= totSize {
-	// 			break
-	// 		}
-	// 	}
-	// }
+	for _, key := range man.orderedKeys {
+		curQueue := man.queue[key]
+		for idx := len(curQueue) - 1; idx > -1; idx-- {
+			filename := curQueue[idx]
+			curFile := man.files[filename]
+			man.buffer = append(man.buffer, curFile)
+			if totSize != 0. {
+				sended += curFile.Size
+				if sended >= totSize {
+					break
+				}
+			}
+		}
+		if totSize != 0. && sended >= totSize {
+			break
+		}
+	}
 
 	return man.buffer
 }
