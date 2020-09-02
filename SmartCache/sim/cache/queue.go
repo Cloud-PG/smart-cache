@@ -166,9 +166,15 @@ func (man *Manager) Remove(files []int64) {
 	// fmt.Println("--- 2 REMOVE ---", files)
 	// fmt.Println("--- BEFORE ---")
 	// fmt.Println(man.orderedKeys)
+	// fmt.Println("#-> QUEUE")
 	// for key, queue := range man.queue {
 	// 	fmt.Println("-[", key, "]", queue)
 	// }
+	// fmt.Println("#-> ORDERED KEYS")
+	// for key, queue := range man.orderedKeys {
+	// 	fmt.Println("-[", key, "]", queue)
+	// }
+	// fmt.Println("#-> FILES")
 	// for key, file := range man.files {
 	// 	fmt.Printf("-[ %d ] -> %#v\n", key, file)
 	// }
@@ -176,12 +182,12 @@ func (man *Manager) Remove(files []int64) {
 	if len(files) > 0 {
 		// _, file, no, _ := runtime.Caller(1)
 		// fmt.Printf("called from %s#%d\n", file, no)
-		// fmt.Println("[QUEUE] REMOVE OnUpdate[", onUpdate, "]: ", files)
 		queue2update := make(map[interface{}]int)
 
 		for _, filename := range files {
+			// fmt.Println("--- Removing ->", filename)
+
 			if man.qType != NoQueue {
-				// fmt.Println("--- Removing ->", filename)
 				curFile := man.files[filename]
 				// fmt.Printf("--- file -> %#v\n", curFile)
 				key := curFile.QueueKey
@@ -217,6 +223,7 @@ func (man *Manager) Remove(files []int64) {
 				} else {
 					panic("ERROR: filename to delete was not in ordered keys...")
 				}
+				delete(man.queue, filename)
 			}
 
 			delete(man.files, filename)
