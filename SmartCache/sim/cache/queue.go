@@ -36,18 +36,18 @@ const (
 
 // Manager manages the files in cache
 type Manager struct {
-	files       map[int64]*FileSupportData
-	queue       map[interface{}][]int64
-	orderedKeys []interface{}
-	qType       queueType
-	buffer      []*FileSupportData
+	files         map[int64]*FileSupportData
+	queue         map[interface{}][]int64
+	orderedValues []interface{}
+	qType         queueType
+	buffer        []*FileSupportData
 }
 
 // Init initialize the struct
 func (man *Manager) Init(qType queueType) {
 	man.files = make(map[int64]*FileSupportData)
 	man.queue = make(map[interface{}][]int64)
-	man.orderedKeys = make([]interface{}, 0)
+	man.orderedValues = make([]interface{}, 0)
 	man.buffer = make([]*FileSupportData, 0)
 	man.qType = qType
 }
@@ -74,28 +74,17 @@ func (man Manager) GetQueue() []*FileSupportData {
 	// https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
 	man.buffer = man.buffer[:0]
 
-	emptyQueueIdxs := make([]int, 0)
-	emptyQueueKeys := make([]interface{}, 0)
-
-	for queueIdx := len(man.orderedKeys) - 1; queueIdx > -1; queueIdx-- {
-		key := man.orderedKeys[queueIdx]
-		if man.qType != NoQueue {
+	for queueIdx := len(man.orderedValues) - 1; queueIdx > -1; queueIdx-- {
+		key := man.orderedValues[queueIdx]
+		switch man.qType {
+		case LRUQueue, LFUQueue, SizeBigQueue, SizeSmallQueue:
 			curQueue := man.queue[key]
-			if len(curQueue) > 0 {
-				for _, filename := range curQueue {
-					man.buffer = append(man.buffer, man.files[filename])
-				}
-			} else {
-				emptyQueueIdxs = append(emptyQueueIdxs, queueIdx)
-				emptyQueueKeys = append(emptyQueueKeys, key)
+			for _, filename := range curQueue {
+				man.buffer = append(man.buffer, man.files[filename])
 			}
-		} else {
+		case NoQueue:
 			man.buffer = append(man.buffer, man.files[key.(int64)])
 		}
-	}
-
-	if len(emptyQueueIdxs) > 0 {
-		man.removeEmptyQueues(emptyQueueIdxs, emptyQueueKeys)
 	}
 
 	return man.buffer
@@ -107,32 +96,23 @@ func (man Manager) GetFromWorst() []*FileSupportData {
 	// https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
 	man.buffer = man.buffer[:0]
 
-	emptyQueueIdxs := make([]int, 0)
-	emptyQueueKeys := make([]interface{}, 0)
-
-	for queueIdx, key := range man.orderedKeys {
-		if man.qType != NoQueue {
+	// fmt.Println(man.orderedValues)
+	for _, key := range man.orderedValues {
+		// fmt.Println("KEY->", key.(int64))
+		switch man.qType {
+		case LRUQueue, LFUQueue, SizeBigQueue, SizeSmallQueue:
 			curQueue := man.queue[key]
-			if len(curQueue) > 0 {
-				for idx := len(curQueue) - 1; idx > -1; idx-- {
-					filename := curQueue[idx]
-					man.buffer = append(man.buffer, man.files[filename])
-				}
-			} else {
-				emptyQueueIdxs = append(emptyQueueIdxs, queueIdx)
-				emptyQueueKeys = append(emptyQueueKeys, key)
+			for idx := len(curQueue) - 1; idx > -1; idx-- {
+				filename := curQueue[idx]
+				man.buffer = append(man.buffer, man.files[filename])
 			}
-		} else {
+		case NoQueue:
+			// fmt.Println(man.files[key.(int64)])
 			man.buffer = append(man.buffer, man.files[key.(int64)])
 		}
 	}
 
-	if len(emptyQueueIdxs) > 0 {
-		man.removeEmptyQueues(emptyQueueIdxs, emptyQueueKeys)
-	}
-
-	// for _, file := range man.buffer {
-	// 	fmt.Printf("%d | ", file.Filename)
+	// for _, file := range man.buffer {	// 	fmt.Printf("%d | ", file.Filename)
 	// }
 	// fmt.Println()
 	return man.buffer
@@ -146,57 +126,32 @@ func (man Manager) GetWorstFilesUp2Size(totSize float64) []*FileSupportData {
 	// https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
 	man.buffer = man.buffer[:0]
 
-	emptyQueueIdxs := make([]int, 0)
-	emptyQueueKeys := make([]interface{}, 0)
-
-	for queueIdx, key := range man.orderedKeys {
-		if man.qType != NoQueue {
+	for _, key := range man.orderedValues {
+		switch man.qType {
+		case LRUQueue, LFUQueue, SizeBigQueue, SizeSmallQueue:
 			curQueue := man.queue[key]
-			if len(curQueue) > 0 {
-				for idx := len(curQueue) - 1; idx > -1; idx-- {
-					filename := curQueue[idx]
-					curFile := man.files[filename]
-					man.buffer = append(man.buffer, curFile)
-					if totSize != 0. {
-						sended += curFile.Size
-						if sended >= totSize {
-							break
-						}
-					}
-				}
-				if totSize != 0. && sended >= totSize {
-					break
-				}
-			} else {
-				emptyQueueIdxs = append(emptyQueueIdxs, queueIdx)
-				emptyQueueKeys = append(emptyQueueKeys, key)
-			}
-		} else {
-			curFile := man.files[key.(int64)]
-			man.buffer = append(man.buffer, curFile)
-			if totSize != 0. {
+			for idx := len(curQueue) - 1; idx > -1; idx-- {
+				filename := curQueue[idx]
+				curFile := man.files[filename]
+				man.buffer = append(man.buffer, man.files[filename])
 				sended += curFile.Size
 				if sended >= totSize {
 					break
 				}
 			}
+			if sended >= totSize {
+				break
+			}
+		case NoQueue:
+			curFile := man.files[key.(int64)]
+			man.buffer = append(man.buffer, curFile)
+			if sended >= totSize {
+				break
+			}
 		}
 	}
 
-	if len(emptyQueueIdxs) > 0 {
-		man.removeEmptyQueues(emptyQueueIdxs, emptyQueueKeys)
-	}
-
 	return man.buffer
-}
-
-func (man *Manager) removeEmptyQueues(emptyQueueIdxs []int, emptyQueueKeys []interface{}) {
-	for idx := len(emptyQueueIdxs) - 1; idx > -1; idx-- {
-		curIdx := emptyQueueIdxs[idx]
-		copy(man.orderedKeys[curIdx:], man.orderedKeys[curIdx+1:])
-		man.orderedKeys = man.orderedKeys[:len(man.orderedKeys)-1]
-		delete(man.queue, emptyQueueKeys[idx])
-	}
 }
 
 func (man *Manager) updateIndexes(queue []int64, startFrom int) {
@@ -210,13 +165,13 @@ func (man *Manager) updateIndexes(queue []int64, startFrom int) {
 func (man *Manager) Remove(files []int64) {
 	// fmt.Println("--- 2 REMOVE ---", files)
 	// fmt.Println("--- BEFORE ---")
-	// fmt.Println(man.orderedKeys)
+	// fmt.Println(man.orderedValues)
 	// fmt.Println("#-> QUEUE")
 	// for key, queue := range man.queue {
 	// 	fmt.Println("-[", key, "]", queue)
 	// }
 	// fmt.Println("#-> ORDERED KEYS")
-	// for key, val := range man.orderedKeys {
+	// for key, val := range man.orderedValues {
 	// 	fmt.Println("-[", key, "]", val)
 	// }
 	// fmt.Println("#-> FILES")
@@ -232,39 +187,84 @@ func (man *Manager) Remove(files []int64) {
 		for _, filename := range files {
 			// fmt.Println("--- Removing ->", filename)
 
-			if man.qType != NoQueue {
+			switch man.qType {
+			case LRUQueue, LFUQueue, SizeBigQueue, SizeSmallQueue:
 				curFile := man.files[filename]
 				// fmt.Printf("--- file -> %#v\n", curFile)
-				key := curFile.QueueKey
-				idx := curFile.QueueIdx
-				// fmt.Println("--- Coords ->", key, idx)
-
-				curQueue := man.queue[key]
-
+				queueKey := curFile.QueueKey
+				queueFileIdx := curFile.QueueIdx
+				// fmt.Println("--- Coords ->", key, queueFileIdx)
+				curQueue := man.queue[queueKey]
 				// fmt.Println(curQueue)
 
 				// Remove
-				if len(curQueue) == 1 {
-					curQueue = curQueue[:0]
-				} else {
-					copy(curQueue[idx:], curQueue[idx+1:])
-					curQueue = curQueue[:len(curQueue)-1]
-				}
-				man.queue[key] = curQueue
+				copy(curQueue[queueFileIdx:], curQueue[queueFileIdx+1:])
+				curQueue = curQueue[:len(curQueue)-1]
 
-				curVal, inList := queue2update[key]
-				if !inList {
-					queue2update[key] = idx
-				} else if curVal > idx {
-					queue2update[key] = idx
+				if len(curQueue) > 0 {
+					man.queue[queueKey] = curQueue
+					curVal, inList := queue2update[queueKey]
+					if !inList {
+						queue2update[queueKey] = queueFileIdx
+					} else if curVal > queueFileIdx {
+						queue2update[queueKey] = queueFileIdx
+					}
+				} else {
+					delete(man.queue, queueKey)
+					switch man.qType {
+					case LRUQueue:
+						recency := curFile.Recency
+						idx := sort.Search(len(man.orderedValues), func(i int) bool {
+							return man.orderedValues[i].(int64) >= recency
+						})
+						if idx < len(man.orderedValues) && man.orderedValues[idx] == recency {
+							copy(man.orderedValues[idx:], man.orderedValues[idx+1:])
+							man.orderedValues = man.orderedValues[:len(man.orderedValues)-1]
+						} else {
+							panic("ERROR: size to delete was not in ordered keys...")
+						}
+					case LFUQueue:
+						frequency := curFile.Frequency
+						idx := sort.Search(len(man.orderedValues), func(i int) bool {
+							return man.orderedValues[i].(int64) >= frequency
+						})
+						if idx < len(man.orderedValues) && man.orderedValues[idx] == frequency {
+							copy(man.orderedValues[idx:], man.orderedValues[idx+1:])
+							man.orderedValues = man.orderedValues[:len(man.orderedValues)-1]
+						} else {
+							panic("ERROR: size to delete was not in ordered keys...")
+						}
+					case SizeSmallQueue:
+						size := curFile.Size
+						idx := sort.Search(len(man.orderedValues), func(i int) bool {
+							return man.orderedValues[i].(float64) >= size
+						})
+						if idx < len(man.orderedValues) && man.orderedValues[idx] == size {
+							copy(man.orderedValues[idx:], man.orderedValues[idx+1:])
+							man.orderedValues = man.orderedValues[:len(man.orderedValues)-1]
+						} else {
+							panic("ERROR: size to delete was not in ordered keys...")
+						}
+					case SizeBigQueue:
+						size := curFile.Size
+						idx := sort.Search(len(man.orderedValues), func(i int) bool {
+							return man.orderedValues[i].(float64) <= size
+						})
+						if idx < len(man.orderedValues) && man.orderedValues[idx] == size {
+							copy(man.orderedValues[idx:], man.orderedValues[idx+1:])
+							man.orderedValues = man.orderedValues[:len(man.orderedValues)-1]
+						} else {
+							panic("ERROR: size to delete was not in ordered keys...")
+						}
+					}
 				}
-			} else {
-				idx := sort.Search(len(man.orderedKeys), func(i int) bool {
-					return man.orderedKeys[i].(int64) >= filename
+			case NoQueue:
+				idx := sort.Search(len(man.orderedValues), func(i int) bool {
+					return man.orderedValues[i].(int64) >= filename
 				})
-				if idx < len(man.orderedKeys) && man.orderedKeys[idx] == filename {
-					copy(man.orderedKeys[idx:], man.orderedKeys[idx+1:])
-					man.orderedKeys = man.orderedKeys[:len(man.orderedKeys)-1]
+				if idx < len(man.orderedValues) && man.orderedValues[idx] == filename {
+					copy(man.orderedValues[idx:], man.orderedValues[idx+1:])
+					man.orderedValues = man.orderedValues[:len(man.orderedValues)-1]
 				} else {
 					panic("ERROR: filename to delete was not in ordered keys...")
 				}
@@ -302,29 +302,26 @@ func (man *Manager) insertKey(key interface{}) {
 	var insertIdx = -1
 	switch man.qType {
 	case NoQueue, LRUQueue, LFUQueue:
-		insertIdx = sort.Search(len(man.orderedKeys), func(idx int) bool {
-			return man.orderedKeys[idx].(int64) > key.(int64)
+		insertIdx = sort.Search(len(man.orderedValues), func(idx int) bool {
+			return man.orderedValues[idx].(int64) > key.(int64)
 		})
 	case SizeBigQueue:
-		insertIdx = sort.Search(len(man.orderedKeys), func(idx int) bool {
-			return man.orderedKeys[idx].(float64) < key.(float64)
+		insertIdx = sort.Search(len(man.orderedValues), func(idx int) bool {
+			return man.orderedValues[idx].(float64) < key.(float64)
 		})
 	case SizeSmallQueue, WeightQueue:
-		insertIdx = sort.Search(len(man.orderedKeys), func(idx int) bool {
-			return man.orderedKeys[idx].(float64) > key.(float64)
+		insertIdx = sort.Search(len(man.orderedValues), func(idx int) bool {
+			return man.orderedValues[idx].(float64) > key.(float64)
 		})
 	}
-	if insertIdx == len(man.orderedKeys) {
-		man.orderedKeys = append(man.orderedKeys, key)
+	if insertIdx == len(man.orderedValues) {
+		man.orderedValues = append(man.orderedValues, key)
 	} else {
 		// Trick
 		// https://github.com/golang/go/wiki/SliceTricks#insert
-		man.orderedKeys = append(man.orderedKeys, nil)
-		copy(man.orderedKeys[insertIdx+1:], man.orderedKeys[insertIdx:])
-		man.orderedKeys[insertIdx] = key
-	}
-	if man.qType != NoQueue {
-		man.queue[key] = make([]int64, 0)
+		man.orderedValues = append(man.orderedValues, nil)
+		copy(man.orderedValues[insertIdx+1:], man.orderedValues[insertIdx:])
+		man.orderedValues[insertIdx] = key
 	}
 }
 
@@ -345,46 +342,44 @@ func (man *Manager) Insert(file *FileSupportData) {
 
 	key := man.getKey(file)
 
-	if man.qType != NoQueue {
+	switch man.qType {
+	case LRUQueue, LFUQueue, SizeBigQueue, SizeSmallQueue:
 		_, inQueue := man.queue[key]
 		if !inQueue {
 			man.insertKey(key)
+			man.queue[key] = make([]int64, 0)
 		}
 
 		idx := man.insertInQueue(key, file.Filename)
 		file.QueueIdx = idx
 		file.QueueKey = key
-	} else {
+
+	case NoQueue:
 		man.insertKey(key)
 	}
 
 	man.files[file.Filename] = file
-	// fmt.Println("[QUEUE] INSERT: ", file)
+	// fmt.Println("[QUEUE] INSERT: ", file, file.Filename, key)
 }
 
 // Update a file into the queue manager
 func (man *Manager) Update(file *FileSupportData) {
 	// fmt.Println("UPDATE:", file.Filename)
 	// fmt.Println("--- BEFORE ---")
-	// fmt.Println(man.orderedKeys)
+	// fmt.Println(man.orderedValues)
 	// for key, queue := range man.queue {
 	// 	fmt.Println("-[", key, "]", queue)
 	// }
-
-	if man.qType != NoQueue {
+	switch man.qType {
+	case LRUQueue, LFUQueue, SizeBigQueue, SizeSmallQueue:
 		man.Remove([]int64{file.Filename})
 		man.Insert(file)
-	} else {
+	case NoQueue:
 		man.files[file.Filename] = file
 	}
 
-	switch man.qType {
-	case NoQueue:
-		return
-	}
-
 	// fmt.Println("--- AFTER ---")
-	// fmt.Println(man.orderedKeys)
+	// fmt.Println(man.orderedValues)
 	// for key, queue := range man.queue {
 	// 	fmt.Println("-[", key, "]", queue)
 	// }

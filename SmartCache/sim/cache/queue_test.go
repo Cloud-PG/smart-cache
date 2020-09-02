@@ -55,15 +55,17 @@ func TestLRUQueueBehavior(t *testing.T) {
 		files[idx] = 100000 + int64(idx)
 	}
 
+	var lastRecency int64 = 0
 	for _, filename := range files {
 		man.Insert(
 			&FileSupportData{
 				Filename:  filename,
 				Frequency: -1,
-				Recency:   r.Int63n(numFiles),
-				Size:      -1.,
+				Recency:   lastRecency,
+				Size:      1.,
 			},
 		)
+		lastRecency++
 	}
 
 	toRemove := make([]int64, len(files)/2)
@@ -115,16 +117,18 @@ func TestLRUQueueBehavior(t *testing.T) {
 	for numUpdate := 1; numUpdate < 11; numUpdate++ {
 		oldValues := make(map[int64]int64)
 		// fmt.Println("UPDATE ->", toUpdate)
+		var lastRecency int64 = 0
 		for _, filename := range toUpdate {
 			oldValues[filename] = man.GetFileSupportData(filename).Recency
 			man.Update(
 				&FileSupportData{
 					Filename:  filename,
 					Frequency: -1,
-					Recency:   r.Int63n(numFiles) + numFiles*int64(numUpdate),
-					Size:      -1.,
+					Recency:   lastRecency + numFiles*int64(numUpdate),
+					Size:      1.,
 				},
 			)
+			lastRecency++
 		}
 
 		var prevRecency int64 = -1
@@ -141,6 +145,31 @@ func TestLRUQueueBehavior(t *testing.T) {
 			}
 			prevRecency = curFile.Recency
 		}
+	}
+
+	remainFiles := make([]*FileSupportData, 0)
+	remainFiles = append(remainFiles, man.GetFromWorst()...)
+
+	if len(remainFiles) == 0 {
+		panic("ERROR: empty queue...")
+	}
+
+	// fmt.Println("--- Remain Files ---")
+	// for idx, curFile := range remainFiles {
+	// 	fmt.Printf("[%d]->%d\n", idx, curFile.Filename)
+	// }
+	curRemainIdx := 0
+	for man.Len() > 0 {
+		toRemove := man.GetWorstFilesUp2Size(1.0)
+		// fmt.Println("--- To REMOVE ---")
+		// for idx, curFile := range toRemove {
+		// 	fmt.Printf("[%d]->%d\n", idx, curFile.Filename)
+		// }
+		if toRemove[0].Filename != remainFiles[curRemainIdx].Filename {
+			panic("ERROR: GetWorstFilesUp2Size not work properly")
+		}
+		man.Remove([]int64{toRemove[0].Filename})
+		curRemainIdx++
 	}
 }
 
