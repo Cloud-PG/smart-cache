@@ -1,7 +1,6 @@
 package cache
 
 import (
-	"fmt"
 	"sort"
 )
 
@@ -164,21 +163,21 @@ func (man *Manager) updateIndexes(queue []int64, startFrom int) {
 
 // Remove a file already in queue
 func (man *Manager) Remove(files []int64) {
-	fmt.Println("--- 2 REMOVE ---", files)
-	fmt.Println("--- BEFORE ---")
-	fmt.Println(man.orderedKeys)
-	fmt.Println("#-> QUEUE")
-	for key, queue := range man.queue {
-		fmt.Println("-[", key, "]", queue)
-	}
-	fmt.Println("#-> ORDERED KEYS")
-	for key, val := range man.orderedKeys {
-		fmt.Println("-[", key, "]", val)
-	}
-	fmt.Println("#-> FILES")
-	for key, file := range man.files {
-		fmt.Printf("-[ %d ] -> %#v\n", key, file)
-	}
+	// fmt.Println("--- 2 REMOVE ---", files)
+	// fmt.Println("--- BEFORE ---")
+	// fmt.Println(man.orderedKeys)
+	// fmt.Println("#-> QUEUE")
+	// for key, queue := range man.queue {
+	// 	fmt.Println("-[", key, "]", queue)
+	// }
+	// fmt.Println("#-> ORDERED KEYS")
+	// for key, val := range man.orderedKeys {
+	// 	fmt.Println("-[", key, "]", val)
+	// }
+	// fmt.Println("#-> FILES")
+	// for key, file := range man.files {
+	// 	fmt.Printf("-[ %d ] -> %#v\n", key, file)
+	// }
 
 	if len(files) > 0 {
 		// _, file, no, _ := runtime.Caller(1)
