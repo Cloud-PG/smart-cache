@@ -122,22 +122,30 @@ func (man Manager) GetWorstFilesUp2Size(totSize float64) []*FileSupportData {
 	// https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
 	man.buffer = man.buffer[:0]
 
-	for _, key := range man.orderedKeys {
+	emptyQueueIdxs := make([]int, 0)
+	emptyQueueKeys := make([]interface{}, 0)
+
+	for queueIdx, key := range man.orderedKeys {
 		if man.qType != NoQueue {
 			curQueue := man.queue[key]
-			for idx := len(curQueue) - 1; idx > -1; idx-- {
-				filename := curQueue[idx]
-				curFile := man.files[filename]
-				man.buffer = append(man.buffer, curFile)
-				if totSize != 0. {
-					sended += curFile.Size
-					if sended >= totSize {
-						break
+			if len(curQueue) > 0 {
+				for idx := len(curQueue) - 1; idx > -1; idx-- {
+					filename := curQueue[idx]
+					curFile := man.files[filename]
+					man.buffer = append(man.buffer, curFile)
+					if totSize != 0. {
+						sended += curFile.Size
+						if sended >= totSize {
+							break
+						}
 					}
 				}
-			}
-			if totSize != 0. && sended >= totSize {
-				break
+				if totSize != 0. && sended >= totSize {
+					break
+				}
+			} else {
+				emptyQueueIdxs = append(emptyQueueIdxs, queueIdx)
+				emptyQueueKeys = append(emptyQueueKeys, key)
 			}
 		} else {
 			curFile := man.files[key.(int64)]
@@ -148,6 +156,15 @@ func (man Manager) GetWorstFilesUp2Size(totSize float64) []*FileSupportData {
 					break
 				}
 			}
+		}
+	}
+
+	if len(emptyQueueIdxs) > 0 {
+		for idx := len(emptyQueueIdxs) - 1; idx > -1; idx-- {
+			curIdx := emptyQueueIdxs[idx]
+			copy(man.orderedKeys[curIdx:], man.orderedKeys[curIdx+1:])
+			man.orderedKeys = man.orderedKeys[:len(man.orderedKeys)-1]
+			delete(man.queue, emptyQueueKeys[idx])
 		}
 	}
 
