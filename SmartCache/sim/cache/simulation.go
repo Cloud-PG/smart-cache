@@ -408,6 +408,10 @@ func GetCacheSize(cacheSize float64, cacheSizeUnit string) float64 {
 		res = cacheSize * 1024.
 	case "T", "t":
 		res = cacheSize * 1024. * 1024.
+	case "P", "p":
+		res = cacheSize * 1024. * 1024. * 1024.
+	default:
+		panic("ERROR: unit size not recognized...")
 	}
 	return res
 }
