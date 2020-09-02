@@ -223,7 +223,6 @@ func (man *Manager) Remove(files []int64) {
 				} else {
 					panic("ERROR: filename to delete was not in ordered keys...")
 				}
-				delete(man.queue, filename)
 			}
 
 			delete(man.files, filename)
@@ -299,15 +298,17 @@ func (man *Manager) Insert(file *FileSupportData) {
 
 	key := man.getKey(file)
 
-	_, inQueue := man.queue[key]
-	if !inQueue {
-		man.insertKey(key)
-	}
-
 	if man.qType != NoQueue {
+		_, inQueue := man.queue[key]
+		if !inQueue {
+			man.insertKey(key)
+		}
+
 		idx := man.insertInQueue(key, file.Filename)
 		file.QueueIdx = idx
 		file.QueueKey = key
+	} else {
+		man.insertKey(key)
 	}
 
 	man.files[file.Filename] = file
