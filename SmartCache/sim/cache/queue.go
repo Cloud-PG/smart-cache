@@ -209,7 +209,7 @@ func (man *Manager) Remove(files []int64) {
 				}
 			} else {
 				idx := sort.Search(len(man.orderedKeys), func(i int) bool {
-					return man.orderedKeys[i] >= filename
+					return man.orderedKeys[i].(int64) >= filename
 				})
 				if idx < len(man.orderedKeys) && man.orderedKeys[idx] == filename {
 					copy(man.orderedKeys[idx:], man.orderedKeys[idx+1:])
