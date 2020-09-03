@@ -159,17 +159,32 @@ func TestLRUQueueBehavior(t *testing.T) {
 	// 	fmt.Printf("[%d]->%d\n", idx, curFile.Filename)
 	// }
 	curRemainIdx := 0
-	for man.Len() > 0 {
-		toRemove := man.GetWorstFilesUp2Size(1.0)
+	sizeToRemove := 1.0
+	for man.Len() != curRemainIdx {
+		toRemove := man.GetWorstFilesUp2Size(sizeToRemove)
 		// fmt.Println("--- To REMOVE ---")
 		// for idx, curFile := range toRemove {
 		// 	fmt.Printf("[%d]->%d\n", idx, curFile.Filename)
 		// }
-		if toRemove[0].Filename != remainFiles[curRemainIdx].Filename {
+		if toRemove[curRemainIdx].Filename != remainFiles[curRemainIdx].Filename {
 			panic("ERROR: GetWorstFilesUp2Size not work properly")
 		}
-		man.Remove([]int64{toRemove[0].Filename})
 		curRemainIdx++
+		sizeToRemove += 1.0
+	}
+
+	for man.Len() > 0 {
+		toRemove := man.GetWorstFilesUp2Size(2.0)
+		// fmt.Println("--- To REMOVE ---")
+		// for idx, curFile := range toRemove {
+		// 	fmt.Printf("[%d]->%d\n", idx, curFile.Filename)
+		// }
+		for _, file := range toRemove {
+			man.Remove([]int64{file.Filename})
+		}
+		if man.Len() > 0 && len(toRemove) != 2 {
+			panic("ERROR: GetWorstFilesUp2Size not work properly")
+		}
 	}
 }
 
