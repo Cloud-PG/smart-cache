@@ -59,7 +59,7 @@ type Cache interface {
 	WeightedHitRate() float64
 	Size() float64
 	GetMaxSize() float64
-	Occupancy() float64
+	Capacity() float64
 	AvgFreeSpace() float64
 	StdDevFreeSpace() float64
 	DataWritten() float64
@@ -178,9 +178,9 @@ func GetMaxSize(cache Cache) float64 {
 	return cache.GetMaxSize()
 }
 
-// Occupancy of the current cache instance
-func Occupancy(cache Cache) float64 {
-	return cache.Occupancy()
+// Capacity of the current cache instance
+func Capacity(cache Cache) float64 {
+	return cache.Capacity()
 }
 
 // DataWritten of the current cache instance

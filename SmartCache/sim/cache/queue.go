@@ -120,6 +120,9 @@ func (man Manager) GetFromWorst() []*FileSupportData {
 
 // GetWorstFilesUp2Size values from a queue until size is reached
 func (man Manager) GetWorstFilesUp2Size(totSize float64) []*FileSupportData {
+	if totSize <= 0. {
+		panic("ERROR: tot size is negative or equal to 0")
+	}
 	var sended float64
 
 	// Filtering trick
@@ -139,17 +142,16 @@ func (man Manager) GetWorstFilesUp2Size(totSize float64) []*FileSupportData {
 					break
 				}
 			}
-			if sended >= totSize {
-				break
-			}
 		case NoQueue:
 			curFile := man.files[key.(int64)]
 			man.buffer = append(man.buffer, curFile)
-			if sended >= totSize {
-				break
-			}
+		}
+		if sended >= totSize {
+			break
 		}
 	}
+
+	// fmt.Println(totSize, sended, len(man.buffer))
 
 	return man.buffer
 }

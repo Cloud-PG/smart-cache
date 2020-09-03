@@ -352,7 +352,7 @@ func (cache *AIRL) getState4AdditionAgent(hit bool, curFileStats *FileStats) int
 		case "deltaLastRequest":
 			cache.bufferIdxVector = append(cache.bufferIdxVector, feature.Index(curFileStats.DeltaLastRequest))
 		case "percOcc":
-			cache.bufferIdxVector = append(cache.bufferIdxVector, feature.Index(cache.SimpleCache.Occupancy()))
+			cache.bufferIdxVector = append(cache.bufferIdxVector, feature.Index(cache.SimpleCache.Capacity()))
 		case "hitRate":
 			cache.bufferIdxVector = append(cache.bufferIdxVector, feature.Index(cache.SimpleCache.HitRate()))
 		}
@@ -504,7 +504,7 @@ func (catMan CategoryManager) GetFileCategory(file *FileSupportData) int {
 }
 
 // GetStateFromCategories generates all the states from the current categories
-func (catMan *CategoryManager) GetStateFromCategories(newStates bool, agent qlearn.Agent, occupancy float64, hitRate float64, maxSize float64) chan CatState {
+func (catMan *CategoryManager) GetStateFromCategories(newStates bool, agent qlearn.Agent, capacity float64, hitRate float64, maxSize float64) chan CatState {
 	catMan.generatorChan = make(chan CatState, len(catMan.categoryFileListMap))
 	go func() {
 		defer close(catMan.generatorChan)
@@ -525,7 +525,7 @@ func (catMan *CategoryManager) GetStateFromCategories(newStates bool, agent qlea
 						percSize := (catMan.categorySizesMap[catID] / maxSize) * 100.
 						catMan.buffer = append(catMan.buffer, feature.Index(percSize))
 					case "percOcc":
-						catMan.buffer = append(catMan.buffer, feature.Index(occupancy))
+						catMan.buffer = append(catMan.buffer, feature.Index(capacity))
 					case "hitRate":
 						catMan.buffer = append(catMan.buffer, feature.Index(hitRate))
 					}
@@ -585,7 +585,7 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 				for catState := range cache.evictionCategoryManager.GetStateFromCategories(
 					false,
 					cache.evictionAgent,
-					cache.Occupancy(),
+					cache.Capacity(),
 					cache.HitRate(),
 					cache.MaxSize,
 				) {
@@ -604,7 +604,7 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 	for catState := range cache.evictionCategoryManager.GetStateFromCategories(
 		true,
 		cache.evictionAgent,
-		cache.Occupancy(),
+		cache.Capacity(),
 		cache.HitRate(),
 		cache.MaxSize,
 	) {
@@ -635,7 +635,7 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 					Action:    catState.Action,
 					Tick:      cache.tick,
 					DeltaT:    curFileStats.DeltaLastRequest,
-					Occupancy: cache.Occupancy(),
+					Capacity:  cache.Capacity(),
 					Size:      curFile.Size,
 					Frequency: curFileStats.Frequency,
 				})
@@ -697,7 +697,7 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 					Action:    catState.Action,
 					Tick:      cache.tick,
 					DeltaT:    curFileStats.DeltaLastRequest,
-					Occupancy: cache.Occupancy(),
+					Capacity:  cache.Capacity(),
 					Size:      curFile.Size,
 					Frequency: curFileStats.Frequency,
 				})
@@ -746,7 +746,7 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 				Action:    catState.Action,
 				Tick:      cache.tick,
 				DeltaT:    curFileStats.DeltaLastRequest,
-				Occupancy: cache.Occupancy(),
+				Capacity:  cache.Capacity(),
 				Size:      curFile.Size,
 				Frequency: curFileStats.Frequency,
 			})
@@ -774,7 +774,7 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 					Action:    catState.Action,
 					Tick:      cache.tick,
 					DeltaT:    curFileStats.DeltaLastRequest,
-					Occupancy: cache.Occupancy(),
+					Capacity:  cache.Capacity(),
 					Size:      curFile.Size,
 					Frequency: curFileStats.Frequency,
 				})
@@ -783,7 +783,7 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 					Action:    catState.Action,
 					Tick:      cache.tick,
 					DeltaT:    curFileStats.DeltaLastRequest,
-					Occupancy: cache.Occupancy(),
+					Capacity:  cache.Capacity(),
 					Size:      curFile.Size,
 					Frequency: curFileStats.Frequency,
 				})
@@ -846,7 +846,7 @@ func (cache *AIRL) delayedRewardEvictionAgent(filename int64, hit bool) {
 				for catState := range cache.evictionCategoryManager.GetStateFromCategories(
 					false,
 					cache.evictionAgent,
-					cache.Occupancy(),
+					cache.Capacity(),
 					cache.HitRate(),
 					cache.MaxSize,
 				) {
@@ -864,7 +864,7 @@ func (cache *AIRL) delayedRewardEvictionAgent(filename int64, hit bool) {
 				reward += 1.
 				if prevMemory.Action == qlearn.ActionNotDelete {
 					reward += 1.
-					if prevMemory.Occupancy >= nextMemory.Occupancy {
+					if prevMemory.Capacity >= nextMemory.Capacity {
 						reward += 1.
 					}
 				}
@@ -872,7 +872,7 @@ func (cache *AIRL) delayedRewardEvictionAgent(filename int64, hit bool) {
 				reward += -1.
 				if prevMemory.Action != qlearn.ActionNotDelete {
 					reward += -1.
-					if prevMemory.Occupancy < nextMemory.Occupancy {
+					if prevMemory.Capacity < nextMemory.Capacity {
 						reward += -1.
 					}
 				}
@@ -969,7 +969,7 @@ func (cache *AIRL) rewardEvictionAfterForcedCall(added bool) {
 	for catState := range cache.evictionCategoryManager.GetStateFromCategories(
 		false,
 		cache.evictionAgent,
-		cache.Occupancy(),
+		cache.Capacity(),
 		cache.HitRate(),
 		cache.MaxSize,
 	) {
@@ -1151,7 +1151,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					Tick:      cache.tick,
 					DeltaT:    fileStats.DeltaLastRequest,
 					Hit:       hit,
-					Occupancy: cache.Occupancy(),
+					Capacity:  cache.Capacity(),
 					Size:      request.Size,
 					Frequency: fileStats.Frequency,
 				}
@@ -1214,7 +1214,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 						Tick:      cache.tick,
 						DeltaT:    fileStats.DeltaLastRequest,
 						Hit:       hit,
-						Occupancy: cache.Occupancy(),
+						Capacity:  cache.Capacity(),
 						Size:      request.Size,
 						Frequency: fileStats.Frequency,
 					}
@@ -1260,7 +1260,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				Tick:      cache.tick,
 				DeltaT:    fileStats.DeltaLastRequest,
 				Hit:       hit,
-				Occupancy: cache.Occupancy(),
+				Capacity:  cache.Capacity(),
 				Size:      request.Size,
 				Frequency: fileStats.Frequency,
 			}

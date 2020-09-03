@@ -27,7 +27,7 @@ _COLUMNS = [
     'size redirected',
     'cache size',
     'size',
-    'occupancy',
+    'capacity',
     'bandwidth',
     'bandwidth usage',
     'hit rate',

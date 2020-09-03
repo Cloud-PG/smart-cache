@@ -175,7 +175,7 @@ type Choice struct {
 	Action    ActionType `json:"action"`
 	Tick      int64      `json:"tick"`
 	DeltaT    int64      `json:"deltaT"`
-	Occupancy float64    `json:"occupancy"`
+	Capacity  float64    `json:"capacity"`
 	Hit       bool       `json:"hit"`
 	Size      float64    `json:"Size"`
 	Frequency int64      `json:"frequency"`

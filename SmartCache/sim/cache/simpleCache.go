@@ -405,6 +405,9 @@ func (cache *SimpleCache) Free(amount float64, percentage bool) float64 {
 	}
 	if sizeToDelete > 0. {
 		deletedFiles := make([]int64, 0)
+		if sizeToDelete/cache.MaxSize > 0.5 {
+			panic("ERROR!!!")
+		}
 		for _, curFile := range cache.files.GetWorstFilesUp2Size(sizeToDelete) {
 			logger.Debug("delete",
 				zap.Int64("filename", curFile.Filename),
@@ -456,10 +459,10 @@ func (cache *SimpleCache) CheckWatermark() bool {
 	ok := true
 	if cache.useWatermarks {
 		// fmt.Println("CHECK WATERMARKS")
-		if cache.Occupancy() >= cache.HighWatermark {
+		if cache.Capacity() >= cache.HighWatermark {
 			ok = false
 			cache.Free(
-				cache.Occupancy()-cache.LowWatermark,
+				cache.Capacity()-cache.LowWatermark,
 				true,
 			)
 		}
@@ -491,8 +494,8 @@ func (cache *SimpleCache) GetMaxSize() float64 {
 	return cache.MaxSize
 }
 
-// Occupancy of the cache
-func (cache *SimpleCache) Occupancy() float64 {
+// Capacity of the cache
+func (cache *SimpleCache) Capacity() float64 {
 	return (cache.Size() / cache.MaxSize) * 100.
 }
 
