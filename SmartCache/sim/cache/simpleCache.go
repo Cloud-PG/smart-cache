@@ -405,9 +405,6 @@ func (cache *SimpleCache) Free(amount float64, percentage bool) float64 {
 	}
 	if sizeToDelete > 0. {
 		deletedFiles := make([]int64, 0)
-		if sizeToDelete/cache.MaxSize > 0.5 {
-			panic("ERROR!!!")
-		}
 		for _, curFile := range cache.files.GetWorstFilesUp2Size(sizeToDelete) {
 			logger.Debug("delete",
 				zap.Int64("filename", curFile.Filename),
