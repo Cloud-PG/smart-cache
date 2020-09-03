@@ -275,6 +275,8 @@ func (man *Manager) Remove(files []int64) {
 			delete(man.files, filename)
 		}
 
+		// fmt.Println(man.Len(), len(man.files), len(man.queue), len(man.orderedValues))
+
 		for key, startFrom := range queue2update {
 			man.updateIndexes(man.queue[key], startFrom)
 		}
