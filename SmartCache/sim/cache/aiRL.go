@@ -1142,15 +1142,6 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 // AfterRequest of the cache
 func (cache *AIRL) AfterRequest(request *Request, fileStats *FileStats, hit bool, added bool) {
 	if cache.rlType == SCDL2 {
-		if cache.evictionAgentOK && cache.evictionUseK {
-			// fmt.Println(cache.evictionAgentStep)
-			if cache.evictionAgentStep <= 0 {
-				cache.callEvictionAgent(false)
-				cache.evictionAgentStep = cache.evictionAgentK
-			} else {
-				cache.evictionAgentStep--
-			}
-		}
 		if cache.additionAgentOK {
 			cache.delayedRewardAdditionAgent(request.Filename, hit)
 		}
@@ -1159,6 +1150,15 @@ func (cache *AIRL) AfterRequest(request *Request, fileStats *FileStats, hit bool
 			curNumCat := cache.evictionCategoryManager.GetNumCategories()
 			cache.numDailyCategories = append(cache.numDailyCategories, curNumCat)
 			cache.sumNumDailyCategories += curNumCat
+		}
+		if cache.evictionAgentOK && cache.evictionUseK {
+			// fmt.Println(cache.evictionAgentStep)
+			if cache.evictionAgentStep <= 0 {
+				cache.callEvictionAgent(false)
+				cache.evictionAgentStep = cache.evictionAgentK
+			} else {
+				cache.evictionAgentStep--
+			}
 		}
 	}
 	cache.SimpleCache.AfterRequest(request, fileStats, hit, added)
