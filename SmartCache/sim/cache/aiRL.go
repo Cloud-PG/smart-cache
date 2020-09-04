@@ -990,23 +990,6 @@ func (cache *AIRL) rewardEvictionAfterForcedCall(added bool) {
 // BeforeRequest of LRU cache
 func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) {
 	//fmt.Println("+++ REQUESTED FILE +++-> ", request.Filename)
-	if cache.evictionAgentOK && cache.evictionUseK {
-		// fmt.Println(cache.evictionAgentStep)
-		if cache.evictionAgentStep <= 0 {
-			_, deletedFiles := cache.callEvictionAgent(false)
-			if hit {
-				for _, filename := range deletedFiles {
-					if filename == request.Filename {
-						hit = false
-						break
-					}
-				}
-			}
-			cache.evictionAgentStep = cache.evictionAgentK
-		} else {
-			cache.evictionAgentStep--
-		}
-	}
 
 	fileStats, _ := cache.stats.GetOrCreate(request.Filename, request.Size, request.DayTime, cache.tick)
 
@@ -1363,6 +1346,15 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 // AfterRequest of the cache
 func (cache *AIRL) AfterRequest(request *Request, fileStats *FileStats, hit bool, added bool) {
 	if cache.rlType == SCDL2 {
+		if cache.evictionAgentOK && cache.evictionUseK {
+			// fmt.Println(cache.evictionAgentStep)
+			if cache.evictionAgentStep <= 0 {
+				cache.callEvictionAgent(false)
+				cache.evictionAgentStep = cache.evictionAgentK
+			} else {
+				cache.evictionAgentStep--
+			}
+		}
 		if cache.additionAgentOK {
 			cache.delayedRewardAdditionAgent(request.Filename, hit)
 		}
