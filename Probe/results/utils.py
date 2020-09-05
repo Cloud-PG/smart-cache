@@ -801,5 +801,5 @@ def make_table(files2plot: list, prefix: str) -> 'pd.DataFrame':
         by=["Throughput", "Cost", "Hit rate"],
         ascending=[False, True, False],
     )
-    df = df.round(2)
+    df = df.round(3)
     return df
