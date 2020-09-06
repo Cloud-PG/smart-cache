@@ -131,6 +131,7 @@ tasks:
     desc: Run only us dataset simulations
     deps:
       - release
+    ignore_error: true
     cmds:
       - echo "US dataset simulations"
       # 1000T
@@ -166,6 +167,7 @@ tasks:
     desc: Run only us dataset no k simulations
     deps:
       - release
+    ignore_error: true
     cmds:
       - echo "US dataset no k simulations"
       # 1000T
@@ -201,6 +203,7 @@ tasks:
     desc: Run only us dataset with watermarks simulations
     deps:
       - release
+    ignore_error: true
     cmds:
       - echo "US dataset with watermarks simulations"
       # 1000T
@@ -236,6 +239,7 @@ tasks:
     desc: Run only us dataset with watermarks no k simulations
     deps:
       - release
+    ignore_error: true
     cmds:
       - echo "US dataset with watermarks no k simulations"
       # 1000T
