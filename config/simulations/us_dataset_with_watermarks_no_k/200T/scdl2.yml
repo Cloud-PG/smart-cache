@@ -10,6 +10,9 @@ sim:
   overwrite: true
   cache:
     type: aiRL
+    stats:
+      maxNumDayDiff: 14.0
+      deltaDaysStep: 7.0
     watermarks: false
     size:
       value: 200
