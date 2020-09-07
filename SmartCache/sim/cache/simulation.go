@@ -537,6 +537,7 @@ type InitParameters struct {
 	AIRLEpsilonDecay       float64
 	MaxNumDayDiff          float64
 	DeltaDaysStep          float64
+	CalcWeight             bool
 }
 
 func InitInstance(cacheType string, cacheInstance Cache, params InitParameters) {
@@ -594,6 +595,7 @@ func InitInstance(cacheType string, cacheInstance Cache, params InitParameters) 
 	case "weightFunLRU":
 		logger.Info("Init Weight Function Cache")
 		params.QueueType = LRUQueue
+		params.CalcWeight = true
 		InitCache(cacheInstance, params)
 	default:
 		fmt.Printf("ERR: '%s' is not a valid cache type...\n", cacheType)

@@ -66,6 +66,7 @@ type SimpleCache struct {
 	logSimulation                      bool
 	maxNumDayDiff                      float64
 	deltaDaysStep                      float64
+	calcWeight                         bool
 }
 
 // Init the LRU struct
@@ -78,8 +79,9 @@ func (cache *SimpleCache) Init(param InitParameters) interface{} {
 	cache.LowWatermark = param.LowWatermark
 	cache.maxNumDayDiff = param.MaxNumDayDiff
 	cache.deltaDaysStep = param.DeltaDaysStep
+	cache.calcWeight = param.CalcWeight
 
-	cache.stats.Init(cache.maxNumDayDiff, cache.deltaDaysStep)
+	cache.stats.Init(cache.maxNumDayDiff, cache.deltaDaysStep, cache.calcWeight)
 	cache.files.Init(cache.ordType)
 
 	cache.dailyfreeSpace = make([]float64, 0)
@@ -117,7 +119,7 @@ func (cache *SimpleCache) ClearFiles() {
 
 // Clear the LRU struct
 func (cache *SimpleCache) Clear() {
-	cache.stats.Init(cache.maxNumDayDiff, cache.deltaDaysStep)
+	cache.stats.Init(cache.maxNumDayDiff, cache.deltaDaysStep, cache.calcWeight)
 	cache.ClearFiles()
 	cache.ClearStats()
 	cache.tick = 0
