@@ -63,21 +63,34 @@ func (cache *WeightFun) Dumps(fileAndStats bool) [][]byte {
 // Loads the WeightFun cache
 func (cache *WeightFun) Loads(inputString [][]byte, _ ...interface{}) {
 	logger.Info("Load cache dump string")
-	var curRecord DumpRecord
-	var curRecordInfo DumpInfo
-
+	var (
+		curRecord     DumpRecord
+		curRecordInfo DumpInfo
+		unmarshalErr  error
+	)
 	for _, record := range inputString {
 		buffer := record[:len(record)-1]
 		json.Unmarshal(buffer, &curRecord)
 		json.Unmarshal([]byte(curRecord.Info), &curRecordInfo)
 		switch curRecordInfo.Type {
 		case "FILES":
-			var curFile FileSupportData
-			json.Unmarshal([]byte(curRecord.Data), &curFile)
-			cache.files.Insert(&curFile)
-			cache.size += curFile.Size
+			var curFileStats FileStats
+			unmarshalErr = json.Unmarshal([]byte(curRecord.Data), &curFileStats)
+			if unmarshalErr != nil {
+				panic(unmarshalErr)
+			}
+			cache.files.Insert(&curFileStats)
+			cache.size += curFileStats.Size
+			cache.stats.fileStats[curRecord.Filename] = &curFileStats
 		case "STATS":
-			json.Unmarshal([]byte(curRecord.Data), &cache.stats.fileStats)
+			var curFileStats FileStats
+			unmarshalErr = json.Unmarshal([]byte(curRecord.Data), &curFileStats)
+			if unmarshalErr != nil {
+				panic(unmarshalErr)
+			}
+			if _, inStats := cache.stats.fileStats[curRecord.Filename]; !inStats {
+				cache.stats.fileStats[curRecord.Filename] = &curFileStats
+			}
 		}
 	}
 }
@@ -117,22 +130,12 @@ func (cache *WeightFun) UpdatePolicy(request *Request, fileStats *FileStats, hit
 			cache.size += requestedFileSize
 			fileStats.addInCache(cache.tick, nil)
 
-			cache.files.Insert(&FileSupportData{
-				Filename:  request.Filename,
-				Size:      request.Size,
-				Frequency: fileStats.FrequencyInCache,
-				Recency:   fileStats.Recency,
-			})
+			cache.files.Insert(fileStats)
 
 			added = true
 		}
 	} else {
-		cache.files.Update(&FileSupportData{
-			Filename:  request.Filename,
-			Size:      request.Size,
-			Frequency: fileStats.FrequencyInCache,
-			Recency:   fileStats.Recency,
-		})
+		cache.files.Update(fileStats)
 	}
 	return added
 }

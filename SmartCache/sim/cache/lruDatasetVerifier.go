@@ -68,12 +68,7 @@ func (cache *LRUDatasetVerifier) UpdatePolicy(request *Request, fileStats *FileS
 				cache.Free(requestedFileSize, false)
 			}
 			if cache.Size()+requestedFileSize <= cache.MaxSize {
-				cache.files.Insert(&FileSupportData{
-					Filename:  request.Filename,
-					Size:      request.Size,
-					Frequency: fileStats.Frequency,
-					Recency:   fileStats.DeltaLastRequest,
-				})
+				cache.files.Insert(fileStats)
 
 				cache.size += requestedFileSize
 				fileStats.addInCache(cache.tick, nil)
@@ -81,12 +76,7 @@ func (cache *LRUDatasetVerifier) UpdatePolicy(request *Request, fileStats *FileS
 			}
 		}
 	} else {
-		cache.files.Update(&FileSupportData{
-			Filename:  request.Filename,
-			Size:      request.Size,
-			Frequency: fileStats.Frequency,
-			Recency:   fileStats.DeltaLastRequest,
-		})
+		cache.files.Update(fileStats)
 	}
 
 	return added

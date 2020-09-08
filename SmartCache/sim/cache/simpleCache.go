@@ -39,6 +39,10 @@ type SimpleCache struct {
 	stats                              Stats
 	files                              Manager
 	ordType                            queueType
+	canRedirect                        bool
+	useWatermarks                      bool
+	logSimulation                      bool
+	calcWeight                         bool
 	hit, miss, size, MaxSize           float64
 	hitCPUEff, missCPUEff              float64
 	upperCPUEff, lowerCPUEff           float64
@@ -59,14 +63,10 @@ type SimpleCache struct {
 	bandwidth                          float64
 	redirectSize                       float64
 	tick                               int64
-	canRedirect                        bool
-	useWatermarks                      bool
 	choicesLogFile                     *OutputCSV
 	choicesBuffer                      [][]string
-	logSimulation                      bool
 	maxNumDayDiff                      float64
 	deltaDaysStep                      float64
-	calcWeight                         bool
 }
 
 // Init the LRU struct
@@ -170,6 +170,19 @@ func (cache *SimpleCache) Dumps(fileAndStats bool) [][]byte {
 			record = append(record, newLine...)
 			outData = append(outData, record)
 		}
+		// ----- Stats -----
+		logger.Info("Dump cache stats")
+		for filename, stats := range cache.stats.fileStats {
+			dumpInfo, _ := json.Marshal(DumpInfo{Type: "STATS"})
+			dumpStats, _ := json.Marshal(stats)
+			record, _ := json.Marshal(DumpRecord{
+				Info:     string(dumpInfo),
+				Data:     string(dumpStats),
+				Filename: filename,
+			})
+			record = append(record, newLine...)
+			outData = append(outData, record)
+		}
 	}
 	return outData
 }
@@ -215,13 +228,23 @@ func (cache *SimpleCache) Loads(inputString [][]byte, _ ...interface{}) {
 		}
 		switch curRecordInfo.Type {
 		case "FILES":
-			var curFile FileSupportData
-			unmarshalErr = json.Unmarshal([]byte(curRecord.Data), &curFile)
+			var curFileStats FileStats
+			unmarshalErr = json.Unmarshal([]byte(curRecord.Data), &curFileStats)
+			cache.files.Insert(&curFileStats)
 			if unmarshalErr != nil {
 				panic(unmarshalErr)
 			}
-			cache.files.Insert(&curFile)
-			cache.size += curFile.Size
+			cache.size += curFileStats.Size
+			cache.stats.fileStats[curRecord.Filename] = &curFileStats
+		case "STATS":
+			var curFileStats FileStats
+			unmarshalErr = json.Unmarshal([]byte(curRecord.Data), &curFileStats)
+			if unmarshalErr != nil {
+				panic(unmarshalErr)
+			}
+			if _, inStats := cache.stats.fileStats[curRecord.Filename]; !inStats {
+				cache.stats.fileStats[curRecord.Filename] = &curFileStats
+			}
 		}
 	}
 }
@@ -305,12 +328,7 @@ func (cache *SimpleCache) UpdatePolicy(request *Request, fileStats *FileStats, h
 			cache.size += requestedFileSize
 			fileStats.addInCache(cache.tick, nil)
 
-			cache.files.Insert(&FileSupportData{
-				Filename:  request.Filename,
-				Size:      request.Size,
-				Frequency: fileStats.FrequencyInCache,
-				Recency:   fileStats.Recency,
-			})
+			cache.files.Insert(fileStats)
 			cache.toChoiceBuffer([]string{
 				fmt.Sprintf("%d", cache.tick),
 				fmt.Sprintf("%d", fileStats.Filename),
@@ -323,12 +341,7 @@ func (cache *SimpleCache) UpdatePolicy(request *Request, fileStats *FileStats, h
 			added = true
 		}
 	} else {
-		cache.files.Update(&FileSupportData{
-			Filename:  request.Filename,
-			Size:      request.Size,
-			Frequency: fileStats.FrequencyInCache,
-			Recency:   fileStats.Recency,
-		})
+		cache.files.Update(fileStats)
 	}
 	return added
 }

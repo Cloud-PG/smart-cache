@@ -23,7 +23,7 @@ const (
 
 // 			for idx := 0; idx < numTests; idx++ {
 // 				man.Insert(
-// 					&FileSupportData{
+// 					&FileStats{
 // 						Filename:  int64(idx),
 // 						Frequency: r.Int63n(maxInt),
 // 						Recency:   int64(numTests - idx),
@@ -33,7 +33,7 @@ const (
 // 			}
 // 			for idx := 0; idx < numTests; idx++ {
 // 				man.Update(
-// 					&FileSupportData{
+// 					&FileStats{
 // 						Filename:  int64(numTests),
 // 						Frequency: r.Int63n(maxInt),
 // 						Recency:   r.Int63n(maxInt),
@@ -58,7 +58,7 @@ func TestLRUQueueBehavior(t *testing.T) {
 	var lastRecency int64 = 0
 	for _, filename := range files {
 		man.Insert(
-			&FileSupportData{
+			&FileStats{
 				Filename:  filename,
 				Frequency: -1,
 				Recency:   lastRecency,
@@ -78,6 +78,7 @@ func TestLRUQueueBehavior(t *testing.T) {
 		for _, filename := range files {
 			if filename == curFile.Filename {
 				inserted = true
+
 				break
 			}
 		}
@@ -119,9 +120,9 @@ func TestLRUQueueBehavior(t *testing.T) {
 		// fmt.Println("UPDATE ->", toUpdate)
 		var lastRecency int64 = 0
 		for _, filename := range toUpdate {
-			oldValues[filename] = man.GetFileSupportData(filename).Recency
+			oldValues[filename] = man.GetFileStats(filename).Recency
 			man.Update(
-				&FileSupportData{
+				&FileStats{
 					Filename:  filename,
 					Frequency: -1,
 					Recency:   lastRecency + numFiles*int64(numUpdate),
@@ -147,7 +148,7 @@ func TestLRUQueueBehavior(t *testing.T) {
 		}
 	}
 
-	remainFiles := make([]*FileSupportData, 0)
+	remainFiles := make([]*FileStats, 0)
 	remainFiles = append(remainFiles, man.GetFromWorst()...)
 
 	if len(remainFiles) == 0 {
@@ -200,7 +201,7 @@ func TestLFUQueueBehavior(t *testing.T) {
 
 	for _, filename := range files {
 		man.Insert(
-			&FileSupportData{
+			&FileStats{
 				Filename:  filename,
 				Frequency: r.Int63n(numFiles),
 				Recency:   -1,
@@ -259,9 +260,9 @@ func TestLFUQueueBehavior(t *testing.T) {
 		oldValues := make(map[int64]int64)
 		// fmt.Println("UPDATE ->", toUpdate)
 		for _, filename := range toUpdate {
-			oldValues[filename] = man.GetFileSupportData(filename).Frequency
+			oldValues[filename] = man.GetFileStats(filename).Frequency
 			man.Update(
-				&FileSupportData{
+				&FileStats{
 					Filename:  filename,
 					Frequency: r.Int63n(numFiles) + numFiles*int64(numUpdate),
 					Recency:   -1,
@@ -299,7 +300,7 @@ func TestSizeSmallQueueBehavior(t *testing.T) {
 
 	for _, filename := range files {
 		man.Insert(
-			&FileSupportData{
+			&FileStats{
 				Filename:  filename,
 				Frequency: -1,
 				Recency:   r.Int63n(numFiles),
@@ -358,9 +359,9 @@ func TestSizeSmallQueueBehavior(t *testing.T) {
 		oldValues := make(map[int64]float64)
 		// fmt.Println("UPDATE ->", toUpdate)
 		for _, filename := range toUpdate {
-			oldValues[filename] = man.GetFileSupportData(filename).Size
+			oldValues[filename] = man.GetFileStats(filename).Size
 			man.Update(
-				&FileSupportData{
+				&FileStats{
 					Filename:  filename,
 					Frequency: -1,
 					Recency:   r.Int63n(numFiles) + numFiles*int64(numUpdate),
@@ -398,7 +399,7 @@ func TestSizeBigQueueBehavior(t *testing.T) {
 
 	for _, filename := range files {
 		man.Insert(
-			&FileSupportData{
+			&FileStats{
 				Filename:  filename,
 				Frequency: -1,
 				Recency:   r.Int63n(numFiles),
@@ -457,9 +458,9 @@ func TestSizeBigQueueBehavior(t *testing.T) {
 		oldValues := make(map[int64]float64)
 		// fmt.Println("UPDATE ->", toUpdate)
 		for _, filename := range toUpdate {
-			oldValues[filename] = man.GetFileSupportData(filename).Size
+			oldValues[filename] = man.GetFileStats(filename).Size
 			man.Update(
-				&FileSupportData{
+				&FileStats{
 					Filename:  filename,
 					Frequency: -1,
 					Recency:   r.Int63n(numFiles) + numFiles*int64(numUpdate),

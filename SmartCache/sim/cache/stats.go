@@ -157,6 +157,8 @@ type FileStats struct {
 	Frequency          int64       `json:"frequency"`
 	FrequencyInCache   int64       `json:"frequencyInCache"`
 	Recency            int64       `json:"recency"`
+	QueueIdx           int         `json:"queueIdx"`
+	QueueKey           interface{} `json:"queueKey"`
 	NHits              int64       `json:"nHits"`
 	NMiss              int64       `json:"nMiss"`
 	InCacheSinceTime   time.Time   `json:"inCacheSinceTime"`

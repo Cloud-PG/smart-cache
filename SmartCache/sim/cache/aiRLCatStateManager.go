@@ -9,14 +9,14 @@ import (
 type CatState struct {
 	Idx      int
 	Category int
-	Files    []*FileSupportData
+	Files    []*FileStats
 	Action   qlearn.ActionType
 }
 
 // DelCatFile stores the files to be deleted in eviction call
 type DelCatFile struct {
 	Category int
-	File     *FileSupportData
+	File     *FileStats
 }
 
 // CategoryManager helps the category management in the eviction agent
@@ -27,9 +27,9 @@ type CategoryManager struct {
 	fileFeatures           []featuremap.Obj
 	features               []featuremap.Obj
 	fileFeatureIdxMap      map[string]int
-	categoryFileListMap    map[int][]*FileSupportData
+	categoryFileListMap    map[int][]*FileStats
 	categoryFileFeatureIdx map[int][]int
-	fileSupportDataSizeMap map[*FileSupportData]float64
+	fileSupportDataSizeMap map[*FileStats]float64
 	filesCategoryMap       map[int64]int
 	categorySizesMap       map[int]float64
 	categoryStatesMap      map[int]int
@@ -45,9 +45,9 @@ func (catMan *CategoryManager) Init(features []featuremap.Obj, featureWeights []
 	catMan.fileFeatures = fileFeatures
 	catMan.features = features
 
-	catMan.categoryFileListMap = make(map[int][]*FileSupportData)
+	catMan.categoryFileListMap = make(map[int][]*FileStats)
 	catMan.categoryFileFeatureIdx = make(map[int][]int)
-	catMan.fileSupportDataSizeMap = make(map[*FileSupportData]float64)
+	catMan.fileSupportDataSizeMap = make(map[*FileStats]float64)
 	catMan.filesCategoryMap = make(map[int64]int)
 	catMan.categorySizesMap = make(map[int]float64)
 	catMan.fileFeatureIdxMap = make(map[string]int)
@@ -62,7 +62,7 @@ func (catMan CategoryManager) GetNumCategories() int {
 	return len(catMan.categorySizesMap)
 }
 
-func (catMan *CategoryManager) deleteFileFromCategory(category int, file2Remove *FileSupportData) {
+func (catMan *CategoryManager) deleteFileFromCategory(category int, file2Remove *FileStats) {
 	// fmt.Println("[CATMANAGER] DELETE FILE FROM CATEGORY [", category, "]-> ", file2Remove.Filename)
 	delete(catMan.filesCategoryMap, file2Remove.Filename)
 	catMan.categorySizesMap[category] -= catMan.fileSupportDataSizeMap[file2Remove]
@@ -88,11 +88,11 @@ func (catMan *CategoryManager) deleteFileFromCategory(category int, file2Remove 
 	}
 }
 
-func (catMan *CategoryManager) insertFileInCategory(category int, file *FileSupportData) {
+func (catMan *CategoryManager) insertFileInCategory(category int, file *FileStats) {
 	// fmt.Println("[CATMANAGER] INSERT FILE IN CATEGORY [", category, "]-> ", file.Filename)
 	_, inMemory := catMan.categoryFileListMap[category]
 	if !inMemory {
-		catMan.categoryFileListMap[category] = make([]*FileSupportData, 0)
+		catMan.categoryFileListMap[category] = make([]*FileStats, 0)
 	}
 	catMan.categoryFileListMap[category] = append(catMan.categoryFileListMap[category], file)
 	catMan.fileSupportDataSizeMap[file] = file.Size
@@ -101,7 +101,7 @@ func (catMan *CategoryManager) insertFileInCategory(category int, file *FileSupp
 }
 
 // AddOrUpdateCategoryFile inserts or update a file associated to its category
-func (catMan *CategoryManager) AddOrUpdateCategoryFile(category int, file *FileSupportData) {
+func (catMan *CategoryManager) AddOrUpdateCategoryFile(category int, file *FileStats) {
 	// fmt.Println("[CATMANAGER] ADD OR UPDATE FILE CATEGORY [", category, "]-> ", file.Filename)
 	oldFileCategory, inMemory := catMan.filesCategoryMap[file.Filename]
 	if inMemory {
@@ -118,7 +118,7 @@ func (catMan *CategoryManager) AddOrUpdateCategoryFile(category int, file *FileS
 }
 
 // GetFileCategory returns the category of a specific file
-func (catMan CategoryManager) GetFileCategory(file *FileSupportData) int {
+func (catMan CategoryManager) GetFileCategory(file *FileStats) int {
 	catMan.buffer = catMan.buffer[:0]
 	for _, feature := range catMan.features {
 		// fmt.Println(feature.Name)
@@ -138,7 +138,7 @@ func (catMan CategoryManager) GetFileCategory(file *FileSupportData) int {
 
 	_, present := catMan.categoryFileListMap[curCatIdx]
 	if !present {
-		catMan.categoryFileListMap[curCatIdx] = make([]*FileSupportData, 0)
+		catMan.categoryFileListMap[curCatIdx] = make([]*FileStats, 0)
 		catMan.categoryFileFeatureIdx[curCatIdx] = make([]int, len(catMan.buffer))
 		catMan.categorySizesMap[curCatIdx] = 0.0
 		copy(catMan.categoryFileFeatureIdx[curCatIdx], catMan.buffer)

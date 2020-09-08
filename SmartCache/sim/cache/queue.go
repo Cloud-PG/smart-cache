@@ -6,17 +6,6 @@ import (
 
 // Other policy utils
 
-// FileSupportData is a struct used to manae files in cache (useful for the queues)
-type FileSupportData struct {
-	Filename  int64       `json:"filename"`
-	Frequency int64       `json:"frequency"`
-	Size      float64     `json:"size"`
-	Recency   int64       `json:"recency"`
-	Weight    float64     `json:"weight"`
-	QueueIdx  int         `json:"queueIdx"`
-	QueueKey  interface{} `json:"queueKey"`
-}
-
 type queueType int
 
 const (
@@ -36,25 +25,26 @@ const (
 
 // Manager manages the files in cache
 type Manager struct {
-	files         map[int64]*FileSupportData
+	files         map[int64]*FileStats
 	queue         map[interface{}][]int64
 	orderedValues []interface{}
 	qType         queueType
-	buffer        []*FileSupportData
+	buffer        []*FileStats
 }
 
 // Init initialize the struct
 func (man *Manager) Init(qType queueType) {
-	man.files = make(map[int64]*FileSupportData)
+	man.files = make(map[int64]*FileStats)
 	man.queue = make(map[interface{}][]int64)
 	man.orderedValues = make([]interface{}, 0)
-	man.buffer = make([]*FileSupportData, 0)
+	man.buffer = make([]*FileStats, 0)
 	man.qType = qType
 }
 
 // Check if a file is in cache
 func (man Manager) Check(file int64) bool {
 	_, inCache := man.files[file]
+
 	return inCache
 }
 
@@ -64,12 +54,12 @@ func (man Manager) Len() int {
 }
 
 // GetFile returns a specific file support data
-func (man Manager) GetFileSupportData(id int64) *FileSupportData {
+func (man Manager) GetFileStats(id int64) *FileStats {
 	return man.files[id]
 }
 
 // GetQueue values from a queue
-func (man Manager) GetQueue() []*FileSupportData {
+func (man Manager) GetQueue() []*FileStats {
 	// Filtering trick
 	// https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
 	man.buffer = man.buffer[:0]
@@ -91,7 +81,7 @@ func (man Manager) GetQueue() []*FileSupportData {
 }
 
 // GetFromWorst values from worst queue values
-func (man Manager) GetFromWorst() []*FileSupportData {
+func (man Manager) GetFromWorst() []*FileStats {
 	// Filtering trick
 	// https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
 	man.buffer = man.buffer[:0]
@@ -100,7 +90,7 @@ func (man Manager) GetFromWorst() []*FileSupportData {
 	for _, key := range man.orderedValues {
 		// fmt.Println("KEY->", key.(int64))
 		switch man.qType {
-		case LRUQueue, LFUQueue, SizeBigQueue, SizeSmallQueue:
+		case LRUQueue, LFUQueue, SizeBigQueue, SizeSmallQueue, WeightQueue:
 			curQueue := man.queue[key]
 			for idx := len(curQueue) - 1; idx > -1; idx-- {
 				filename := curQueue[idx]
@@ -119,7 +109,7 @@ func (man Manager) GetFromWorst() []*FileSupportData {
 }
 
 // GetWorstFilesUp2Size values from a queue until size is reached
-func (man Manager) GetWorstFilesUp2Size(totSize float64) []*FileSupportData {
+func (man Manager) GetWorstFilesUp2Size(totSize float64) []*FileStats {
 	if totSize <= 0. {
 		panic("ERROR: tot size is negative or equal to 0")
 	}
@@ -131,7 +121,7 @@ func (man Manager) GetWorstFilesUp2Size(totSize float64) []*FileSupportData {
 
 	for _, key := range man.orderedValues {
 		switch man.qType {
-		case LRUQueue, LFUQueue, SizeBigQueue, SizeSmallQueue:
+		case LRUQueue, LFUQueue, SizeBigQueue, SizeSmallQueue, WeightQueue:
 			curQueue := man.queue[key]
 			for idx := len(curQueue) - 1; idx > -1; idx-- {
 				filename := curQueue[idx]
@@ -185,12 +175,12 @@ func (man *Manager) Remove(files []int64) {
 		// _, file, no, _ := runtime.Caller(1)
 		// fmt.Printf("called from %s#%d\n", file, no)
 		queue2update := make(map[interface{}]int)
-
 		for _, filename := range files {
+			filename := filename // pin
 			// fmt.Println("--- Removing ->", filename)
 
 			switch man.qType {
-			case LRUQueue, LFUQueue, SizeBigQueue, SizeSmallQueue:
+			case LRUQueue, LFUQueue, SizeBigQueue, SizeSmallQueue, WeightQueue:
 				curFile := man.files[filename]
 				// fmt.Printf("--- file -> %#v\n", curFile)
 				queueKey := curFile.QueueKey
@@ -258,6 +248,17 @@ func (man *Manager) Remove(files []int64) {
 						} else {
 							panic("ERROR: size to delete was not in ordered keys...")
 						}
+					case WeightQueue:
+						weight := curFile.Weight
+						idx := sort.Search(len(man.orderedValues), func(i int) bool {
+							return man.orderedValues[i].(float64) >= weight
+						})
+						if idx < len(man.orderedValues) && man.orderedValues[idx] == weight {
+							copy(man.orderedValues[idx:], man.orderedValues[idx+1:])
+							man.orderedValues = man.orderedValues[:len(man.orderedValues)-1]
+						} else {
+							panic("ERROR: size to delete was not in ordered keys...")
+						}
 					}
 				}
 			case NoQueue:
@@ -283,7 +284,7 @@ func (man *Manager) Remove(files []int64) {
 	}
 }
 
-func (man *Manager) getKey(file *FileSupportData) interface{} {
+func (man *Manager) getKey(file *FileStats) interface{} {
 	var key interface{}
 	switch man.qType {
 	case NoQueue:
@@ -337,7 +338,7 @@ func (man *Manager) insertInQueue(key interface{}, filename int64) int {
 }
 
 // Insert a file into the queue manager
-func (man *Manager) Insert(file *FileSupportData) {
+func (man *Manager) Insert(file *FileStats) {
 	// Force inserto check
 	_, inCache := man.files[file.Filename]
 	if inCache {
@@ -347,7 +348,7 @@ func (man *Manager) Insert(file *FileSupportData) {
 	key := man.getKey(file)
 
 	switch man.qType {
-	case LRUQueue, LFUQueue, SizeBigQueue, SizeSmallQueue:
+	case LRUQueue, LFUQueue, SizeBigQueue, SizeSmallQueue, WeightQueue:
 		_, inQueue := man.queue[key]
 		if !inQueue {
 			man.insertKey(key)
@@ -367,7 +368,7 @@ func (man *Manager) Insert(file *FileSupportData) {
 }
 
 // Update a file into the queue manager
-func (man *Manager) Update(file *FileSupportData) {
+func (man *Manager) Update(file *FileStats) {
 	// fmt.Println("UPDATE:", file.Filename)
 	// fmt.Println("--- BEFORE ---")
 	// fmt.Println(man.orderedValues)
@@ -375,7 +376,7 @@ func (man *Manager) Update(file *FileSupportData) {
 	// 	fmt.Println("-[", key, "]", queue)
 	// }
 	switch man.qType {
-	case LRUQueue, LFUQueue, SizeBigQueue, SizeSmallQueue:
+	case LRUQueue, LFUQueue, SizeBigQueue, SizeSmallQueue, WeightQueue:
 		man.Remove([]int64{file.Filename})
 		man.Insert(file)
 	case NoQueue:
