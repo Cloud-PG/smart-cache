@@ -71,6 +71,7 @@ func (catMan *CategoryManager) deleteFileFromCategory(category int, file2Remove 
 	for idx, file := range categoryFiles {
 		if file.Filename == file2Remove.Filename {
 			deleteIdx = idx
+
 			break
 		}
 	}
@@ -94,6 +95,7 @@ func (catMan *CategoryManager) insertFileInCategory(category int, file *FileStat
 	if !inMemory {
 		catMan.categoryFileListMap[category] = make([]*FileStats, 0)
 	}
+
 	catMan.categoryFileListMap[category] = append(catMan.categoryFileListMap[category], file)
 	catMan.fileSupportDataSizeMap[file] = file.Size
 	catMan.filesCategoryMap[file.Filename] = category
@@ -150,6 +152,7 @@ func (catMan CategoryManager) GetFileCategory(file *FileStats) int {
 // GetStateFromCategories generates all the states from the current categories
 func (catMan *CategoryManager) GetStateFromCategories(newStates bool, agent qlearn.Agent, capacity float64, hitRate float64, maxSize float64) chan CatState {
 	catMan.generatorChan = make(chan CatState, len(catMan.categoryFileListMap))
+
 	go func() {
 		defer close(catMan.generatorChan)
 		if newStates {
