@@ -204,32 +204,24 @@ func (man *Manager) Remove(files []int64) {
 				} else {
 					delete(man.queue, queueKey)
 					switch man.qType {
-					case LRUQueue:
-						recency := curFile.Recency
+					case LRUQueue, LFUQueue:
+						oldKey := curFile.QueueKey // Old Recency or Frequency
+						// fmt.Println(oldKey)
+						// fmt.Println(man.orderedValues)
+						// fmt.Println(curFile.QueueIdx, curFile.QueueKey)
 						idx := sort.Search(len(man.orderedValues), func(i int) bool {
-							return man.orderedValues[i].(int64) >= recency
+							return man.orderedValues[i].(int64) >= oldKey.(int64)
 						})
-						if idx < len(man.orderedValues) && man.orderedValues[idx] == recency {
+						if idx < len(man.orderedValues) && man.orderedValues[idx] == oldKey {
 							copy(man.orderedValues[idx:], man.orderedValues[idx+1:])
 							man.orderedValues = man.orderedValues[:len(man.orderedValues)-1]
 						} else {
-							panic("ERROR: size to delete was not in ordered keys...")
-						}
-					case LFUQueue:
-						frequency := curFile.Frequency
-						idx := sort.Search(len(man.orderedValues), func(i int) bool {
-							return man.orderedValues[i].(int64) >= frequency
-						})
-						if idx < len(man.orderedValues) && man.orderedValues[idx] == frequency {
-							copy(man.orderedValues[idx:], man.orderedValues[idx+1:])
-							man.orderedValues = man.orderedValues[:len(man.orderedValues)-1]
-						} else {
-							panic("ERROR: size to delete was not in ordered keys...")
+							panic("ERROR: old value to delete was not in ordered keys...")
 						}
 					case SizeSmallQueue:
-						size := curFile.Size
+						size := curFile.QueueKey // Old Size
 						idx := sort.Search(len(man.orderedValues), func(i int) bool {
-							return man.orderedValues[i].(float64) >= size
+							return man.orderedValues[i].(float64) >= size.(float64)
 						})
 						if idx < len(man.orderedValues) && man.orderedValues[idx] == size {
 							copy(man.orderedValues[idx:], man.orderedValues[idx+1:])
@@ -237,27 +229,16 @@ func (man *Manager) Remove(files []int64) {
 						} else {
 							panic("ERROR: size to delete was not in ordered keys...")
 						}
-					case SizeBigQueue:
-						size := curFile.Size
+					case SizeBigQueue, WeightQueue:
+						oldKey := curFile.QueueKey // Old Size or Weight
 						idx := sort.Search(len(man.orderedValues), func(i int) bool {
-							return man.orderedValues[i].(float64) <= size
+							return man.orderedValues[i].(float64) <= oldKey.(float64)
 						})
-						if idx < len(man.orderedValues) && man.orderedValues[idx] == size {
+						if idx < len(man.orderedValues) && man.orderedValues[idx] == oldKey {
 							copy(man.orderedValues[idx:], man.orderedValues[idx+1:])
 							man.orderedValues = man.orderedValues[:len(man.orderedValues)-1]
 						} else {
-							panic("ERROR: size to delete was not in ordered keys...")
-						}
-					case WeightQueue:
-						weight := curFile.Weight
-						idx := sort.Search(len(man.orderedValues), func(i int) bool {
-							return man.orderedValues[i].(float64) >= weight
-						})
-						if idx < len(man.orderedValues) && man.orderedValues[idx] == weight {
-							copy(man.orderedValues[idx:], man.orderedValues[idx+1:])
-							man.orderedValues = man.orderedValues[:len(man.orderedValues)-1]
-						} else {
-							panic("ERROR: size to delete was not in ordered keys...")
+							panic("ERROR: old value to delete was not in ordered keys...")
 						}
 					}
 				}
@@ -339,6 +320,7 @@ func (man *Manager) insertInQueue(key interface{}, filename int64) int {
 
 // Insert a file into the queue manager
 func (man *Manager) Insert(file *FileStats) {
+	// fmt.Println(file.Filename, "->", file.Recency)
 	// Force inserto check
 	_, inCache := man.files[file.Filename]
 	if inCache {
@@ -369,11 +351,15 @@ func (man *Manager) Insert(file *FileStats) {
 
 // Update a file into the queue manager
 func (man *Manager) Update(file *FileStats) {
-	// fmt.Println("UPDATE:", file.Filename)
+	// fmt.Println("UPDATE:", file.Filename, "->", file.Recency)
 	// fmt.Println("--- BEFORE ---")
 	// fmt.Println(man.orderedValues)
 	// for key, queue := range man.queue {
 	// 	fmt.Println("-[", key, "]", queue)
+	// }
+	// curFileStats := man.files[file.Filename]
+	// if curFileStats != file {
+	// 	panic("Different file stats...")
 	// }
 	switch man.qType {
 	case LRUQueue, LFUQueue, SizeBigQueue, SizeSmallQueue, WeightQueue:
