@@ -396,9 +396,13 @@ func simCommand() *cobra.Command {
 					parameters,
 				}, "_")
 			case "aiRL":
+				subAIType := aiRLType
+				if aiRLType == "SCDL2" {
+					subAIType += "-" + simEvictionType
+				}
 				baseName = strings.Join([]string{
 					cacheType,
-					aiRLType + "-" + simEvictionType,
+					subAIType,
 					cacheSizeString,
 					cacheBandwidthString,
 					simRegion,
