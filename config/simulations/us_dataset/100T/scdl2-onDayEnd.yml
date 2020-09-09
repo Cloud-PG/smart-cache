@@ -1,0 +1,28 @@
+--- # Simulation parameters
+sim:
+  data: ../../../../datasets/source2018_numeric_us_with_avro_order/
+  outputFolder: ../../../../results/sim_us_dataset/100T
+  type: normal
+  window:
+    start: 0
+    stop: 52
+  region: us
+  overwrite: true
+  cache:
+    type: aiRL
+    watermarks: false
+    size:
+      value: 100
+      unit: T
+    bandwidth: 
+      value: 10
+      redirect: true
+  ai:
+    rl:
+      epsilon:
+        decay: 0.000001
+      addition:
+        featuremap: ../../../../featureMaps/rlAdditionFeatureMap.json
+      eviction:
+        type: onDayEnd
+        featuremap: ../../../../featureMaps/rlEvictionFeatureMap.json
