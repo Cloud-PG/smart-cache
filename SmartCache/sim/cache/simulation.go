@@ -529,7 +529,7 @@ type InitParameters struct {
 	WeightAlpha            float64
 	WeightBeta             float64
 	WeightGamma            float64
-	SimUseK                bool
+	EvictionAgentType      string
 	AIRLEvictionK          int64
 	AIRLType               string
 	AIRLAdditionFeatureMap string

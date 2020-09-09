@@ -16,6 +16,7 @@ import (
 )
 
 type aiRLType int
+type evictionType int
 
 const (
 	maxBadQValueInRow = 8
@@ -23,6 +24,13 @@ const (
 	SCDL aiRLType = iota - 2
 	// SCDL2 type
 	SCDL2
+
+	// EvictionOnK agent uses uses k to call eviction decisions
+	EvictionOnK = iota - 3
+	// EvictionOnDayEnd agent waits the end of the day to call eviction decisions
+	EvictionOnDayEnd
+	// EvictionOnFree agent call eviction decisions on free
+	EvictionOnFree
 )
 
 // AIRL cache
@@ -31,7 +39,7 @@ type AIRL struct {
 	rlType                            aiRLType
 	additionAgentOK                   bool
 	evictionAgentOK                   bool
-	evictionUseK                      bool
+	evictionType                      evictionType
 	additionAgentBadQValue            int
 	evictionAgentBadQValue            int
 	additionAgentPrevQValue           float64
@@ -61,7 +69,7 @@ type AIRL struct {
 func (cache *AIRL) Init(params InitParameters) interface{} {
 	logger = zap.L()
 
-	useK := params.SimUseK
+	evictionAgetType := params.EvictionAgentType
 	evictionk := params.AIRLEvictionK
 	rlType := params.AIRLType
 	additionFeatureMap := params.AIRLAdditionFeatureMap
@@ -89,7 +97,16 @@ func (cache *AIRL) Init(params InitParameters) interface{} {
 		params.QueueType = NoQueue
 		cache.SimpleCache.Init(params)
 
-		cache.evictionUseK = useK
+		switch evictionAgetType {
+		case "onK", "on_k", "ONK":
+			cache.evictionType = EvictionOnK
+		case "onDayEnd", "on_day_end", "ONDAYEND":
+			cache.evictionType = EvictionOnDayEnd
+		case "onFree", "on_free", "ONFREE":
+			cache.evictionType = EvictionOnFree
+		default:
+			panic("ERROR: no valid eviction type...")
+		}
 		cache.evictionAgentK = evictionk
 		cache.evictionAgentStep = cache.evictionAgentK
 		cache.evictionRO = 1.0
@@ -179,8 +196,8 @@ func (cache *AIRL) ClearStats() {
 	if cache.evictionAgentOK {
 		cache.numDailyCategories = cache.numDailyCategories[:0]
 		cache.sumNumDailyCategories = 0
-		if !cache.evictionUseK {
-			cache.callEvictionAgent(false)
+		if cache.evictionType == EvictionOnDayEnd {
+			cache.callEvictionAgent()
 		}
 	}
 }
@@ -365,7 +382,31 @@ func (cache *AIRL) getState4AdditionAgent(hit bool, curFileStats *FileStats) int
 	return cache.additionAgent.QTable.FeatureIdxs2StateIdx(cache.bufferIdxVector...)
 }
 
-func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
+func (cache *AIRL) punishEvictionAgentOnForcedCall() {
+	cache.evictionAgentNumForcedCalls++
+	choicesList, inMemory := cache.evictionAgent.Memory["NotDelete"]
+	if inMemory {
+		for _, choice := range choicesList {
+			for catState := range cache.evictionCategoryManager.GetStateFromCategories(
+				false,
+				cache.evictionAgent,
+				cache.Capacity(),
+				cache.HitRate(),
+				cache.MaxSize,
+			) {
+				if cache.checkEvictionNextState(choice.State, catState.Idx) {
+					// Update table
+					cache.evictionAgent.UpdateTable(choice.State, catState.Idx, choice.Action, -cache.evictionRO)
+					// Update epsilon
+					cache.evictionAgent.UpdateEpsilon()
+				}
+			}
+		}
+		delete(cache.evictionAgent.Memory, "NotDelete")
+	}
+}
+
+func (cache *AIRL) callEvictionAgent() (float64, []int64) {
 	var (
 		totalDeleted float64
 		deletedFiles = make([]int64, 0)
@@ -375,31 +416,6 @@ func (cache *AIRL) callEvictionAgent(forced bool) (float64, []int64) {
 	cache.evictionAgentNumCalls++
 
 	// fmt.Println("----- EVICTION ----- Forced[", forced, "]")
-
-	// Forced event rewards
-	if forced {
-		cache.evictionAgentNumForcedCalls++
-		choicesList, inMemory := cache.evictionAgent.Memory["NotDelete"]
-		if inMemory {
-			for _, choice := range choicesList {
-				for catState := range cache.evictionCategoryManager.GetStateFromCategories(
-					false,
-					cache.evictionAgent,
-					cache.Capacity(),
-					cache.HitRate(),
-					cache.MaxSize,
-				) {
-					if cache.checkEvictionNextState(choice.State, catState.Idx) {
-						// Update table
-						cache.evictionAgent.UpdateTable(choice.State, catState.Idx, choice.Action, -cache.evictionRO)
-						// Update epsilon
-						cache.evictionAgent.UpdateEpsilon()
-					}
-				}
-			}
-			delete(cache.evictionAgent.Memory, "NotDelete")
-		}
-	}
 
 	for catState := range cache.evictionCategoryManager.GetStateFromCategories(
 		true,
@@ -836,7 +852,7 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) 
 				cache.additionAgentBadQValue = 0
 				if cache.additionAgent.QValue < 0. {
 					cache.additionAgent.UnleashEpsilon(nil)
-					cache.additionAgent.ResetTableAction()
+					// cache.additionAgent.ResetTableAction()  // Clean completely the actions
 					cache.additionAgent.ResetMemories()
 				} else {
 					cache.additionAgent.UnleashEpsilon(0.5)
@@ -848,7 +864,7 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) 
 				cache.evictionAgentBadQValue = 0
 				if cache.evictionAgent.QValue < 0. {
 					cache.evictionAgent.UnleashEpsilon(nil)
-					cache.evictionAgent.ResetTableAction()
+					// cache.evictionAgent.ResetTableAction()  // Clean completely the actions
 					cache.evictionAgent.ResetMemories()
 				} else {
 					cache.evictionAgent.UnleashEpsilon(0.5)
@@ -966,7 +982,14 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				if cache.Size()+requestedFileSize > cache.MaxSize {
 					if cache.evictionAgentOK {
 						forced = true
-						cache.callEvictionAgent(forced)
+						switch cache.evictionType {
+						case EvictionOnDayEnd, EvictionOnK:
+							cache.punishEvictionAgentOnForcedCall()
+							cache.callEvictionAgent()
+						case EvictionOnFree:
+							cache.callEvictionAgent()
+						}
+						cache.callEvictionAgent()
 					} else {
 						cache.Free(requestedFileSize, false)
 					}
@@ -1072,7 +1095,13 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			if cache.Size()+requestedFileSize > cache.MaxSize {
 				if cache.evictionAgentOK {
 					forced = true
-					cache.callEvictionAgent(forced)
+					switch cache.evictionType {
+					case EvictionOnDayEnd, EvictionOnK:
+						cache.punishEvictionAgentOnForcedCall()
+						cache.callEvictionAgent()
+					case EvictionOnFree:
+						cache.callEvictionAgent()
+					}
 				} else {
 					cache.Free(requestedFileSize, false)
 				}
@@ -1137,10 +1166,10 @@ func (cache *AIRL) AfterRequest(request *Request, fileStats *FileStats, hit bool
 			cache.numDailyCategories = append(cache.numDailyCategories, curNumCat)
 			cache.sumNumDailyCategories += curNumCat
 		}
-		if cache.evictionAgentOK && cache.evictionUseK {
+		if cache.evictionAgentOK && cache.evictionType == EvictionOnK {
 			// fmt.Println(cache.evictionAgentStep)
 			if cache.evictionAgentStep <= 0 {
-				cache.callEvictionAgent(false)
+				cache.callEvictionAgent()
 				cache.evictionAgentStep = cache.evictionAgentK
 			} else {
 				cache.evictionAgentStep--

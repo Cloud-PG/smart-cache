@@ -77,7 +77,7 @@ func configureViper(configFilenameWithNoExt string) {
 	viper.SetDefault("sim.ai.rl.addition.featuremap", "")
 	viper.SetDefault("sim.ai.rl.eviction.featuremap", "")
 	viper.SetDefault("sim.ai.rl.eviction.k", 32)
-	viper.SetDefault("sim.ai.rl.eviction.use_k", true)
+	viper.SetDefault("sim.ai.rl.eviction.type", "onK")
 	viper.SetDefault("sim.ai.model", "")
 
 	viper.SetDefault("sim.dataset2testpath", "")
@@ -107,7 +107,7 @@ func simCommand() *cobra.Command {
 		simOutputFolder       string
 		simRegion             string
 		simType               string
-		simUseK               bool
+		simEvictionType       string
 		simWindowStart        int
 		simWindowStop         int
 		simWindowSize         int
@@ -371,8 +371,8 @@ func simCommand() *cobra.Command {
 			aiRLEpsilonDecay = viper.GetFloat64("sim.ai.rl.epsilon.decay")
 			logger.Info("CONF_VAR", zap.Float64("aiRLEpsilonDecay", aiRLEpsilonDecay))
 
-			simUseK = viper.GetBool("sim.ai.rl.eviction.use_k")
-			logger.Info("CONF_VAR", zap.Bool("simUseK", simUseK))
+			simEvictionType = viper.GetString("sim.ai.rl.eviction.type")
+			logger.Info("CONF_VAR", zap.String("simEvictionType", simEvictionType))
 
 			cacheType = viper.GetString("sim.cache.type")
 			logger.Info("CONF_VAR", zap.String("cacheType", cacheType))
@@ -398,7 +398,7 @@ func simCommand() *cobra.Command {
 			case "aiRL":
 				baseName = strings.Join([]string{
 					cacheType,
-					aiRLType,
+					aiRLType + "-" + simEvictionType,
 					cacheSizeString,
 					cacheBandwidthString,
 					simRegion,
@@ -491,7 +491,7 @@ func simCommand() *cobra.Command {
 					WeightAlpha:            weightAlpha,
 					WeightBeta:             weightBeta,
 					WeightGamma:            weightGamma,
-					SimUseK:                simUseK,
+					EvictionAgentType:      simEvictionType,
 					AIRLEvictionK:          aiRLEvictionK,
 					AIRLType:               aiRLType,
 					AIRLAdditionFeatureMap: aiRLAdditionFeatureMap,
