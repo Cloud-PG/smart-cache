@@ -75,6 +75,10 @@ func (cache *AIRL) Init(params InitParameters) interface{} {
 
 	cache.actionCounters = make(map[qlearn.ActionType]int)
 
+	if cache.logger == nil {
+		cache.logger = zap.L()
+	}
+
 	cache.logger.Info("Feature maps",
 		zap.String("addition map", additionFeatureMap),
 		zap.String("eviction map", evictionFeatureMap),
