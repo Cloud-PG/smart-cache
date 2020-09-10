@@ -21,12 +21,12 @@ const (
 	MeanCPUDiffUS = 10.
 	// DailyBandwidth1Gbit is 1Gibt day bandwidth available
 	DailyBandwidth1Gbit = (1000. / 8.) * 60. * 60. * 24.
-	// CHOICESLOGBUFFERDIM is the max dimension of the buffer to store choices
-	CHOICESLOGBUFFERDIM = 9999
-	// CHOICE_ADD string to store in choice add
-	CHOICE_ADD = "ADD"
-	// CHOICE_DELETE string to store in choice delete
-	CHOICE_DELETE = "DELETE"
+	// ChoiceLogBufferDim is the max dimension of the buffer to store choices
+	ChoiceLogBufferDim = 9999
+	// ChoiceAdd string to store in choice add
+	ChoiceAdd = "ADD"
+	// ChoiceDelete string to store in choice delete
+	ChoiceDelete = "DELETE"
 )
 
 var (
@@ -346,7 +346,7 @@ func (cache *SimpleCache) UpdatePolicy(request *Request, fileStats *FileStats, h
 				fmt.Sprintf("%0.2f", fileStats.Size),
 				fmt.Sprintf("%d", fileStats.Frequency),
 				fmt.Sprintf("%d", fileStats.DeltaLastRequest),
-				CHOICE_ADD,
+				ChoiceAdd,
 			})
 
 			added = true
@@ -452,7 +452,7 @@ func (cache *SimpleCache) Free(amount float64, percentage bool) float64 {
 				fmt.Sprintf("%0.2f", curFileStats.Size),
 				fmt.Sprintf("%d", curFileStats.Frequency),
 				fmt.Sprintf("%d", curFileStats.DeltaLastRequest),
-				CHOICE_DELETE,
+				ChoiceDelete,
 			})
 			cache.numDeleted++
 		}
@@ -668,7 +668,7 @@ func (cache *SimpleCache) NumHits() int64 {
 func (cache *SimpleCache) toChoiceBuffer(curChoice []string) {
 	if cache.choicesLogFile != nil {
 		cache.choicesBuffer = append(cache.choicesBuffer, curChoice)
-		if len(cache.choicesBuffer) > CHOICESLOGBUFFERDIM {
+		if len(cache.choicesBuffer) > ChoiceLogBufferDim {
 			cache.flushChoices()
 		}
 	}

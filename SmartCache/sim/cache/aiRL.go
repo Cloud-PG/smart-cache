@@ -483,7 +483,7 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) { //nolint:funlen
 					fmt.Sprintf("%0.2f", curFileStats.Size),
 					fmt.Sprintf("%d", curFileStats.Frequency),
 					fmt.Sprintf("%d", curFileStats.DeltaLastRequest),
-					CHOICE_DELETE,
+					ChoiceDelete,
 				})
 			}
 		case qlearn.ActionDeleteHalf, qlearn.ActionDeleteQuarter:
@@ -549,7 +549,7 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) { //nolint:funlen
 					fmt.Sprintf("%0.2f", curFileStats.Size),
 					fmt.Sprintf("%d", curFileStats.Frequency),
 					fmt.Sprintf("%d", curFileStats.DeltaLastRequest),
-					CHOICE_DELETE,
+					ChoiceDelete,
 				})
 				numDeletes--
 				if numDeletes <= 0 {
@@ -599,7 +599,7 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) { //nolint:funlen
 				fmt.Sprintf("%0.2f", curFileStats.Size),
 				fmt.Sprintf("%d", curFileStats.Frequency),
 				fmt.Sprintf("%d", curFileStats.DeltaLastRequest),
-				CHOICE_DELETE,
+				ChoiceDelete,
 			})
 		case qlearn.ActionNotDelete:
 			for _, curFile := range catState.Files {
@@ -1066,7 +1066,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					fmt.Sprintf("%0.2f", fileStats.Size),
 					fmt.Sprintf("%d", fileStats.Frequency),
 					fmt.Sprintf("%d", fileStats.DeltaLastRequest),
-					CHOICE_ADD,
+					ChoiceAdd,
 				})
 			}
 		} else {
@@ -1153,7 +1153,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				fmt.Sprintf("%0.2f", fileStats.Size),
 				fmt.Sprintf("%d", fileStats.Frequency),
 				fmt.Sprintf("%d", fileStats.DeltaLastRequest),
-				CHOICE_ADD,
+				ChoiceAdd,
 			})
 		} else {
 			// #######################
