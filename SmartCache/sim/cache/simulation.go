@@ -418,7 +418,7 @@ func GetCacheSize(cacheSize float64, cacheSizeUnit string) float64 {
 }
 
 // Create simulation cache
-func Create(cacheType string, cacheSize float64, cacheSizeUnit string, log bool, weightFunc string, weightFuncParams WeightFunctionParameters) Cache { //nolint:ignore,funlen
+func Create(cacheType string, cacheSize float64, cacheSizeUnit string, weightFunc string, weightFuncParams WeightFunctionParameters) Cache { //nolint:ignore,funlen
 	var cacheInstance Cache
 
 	logger := zap.L()

@@ -29,7 +29,7 @@ var (
 	buildstamp string
 )
 
-func configureViper(configFilenameWithNoExt string) {
+func configureViper(configFilenameWithNoExt string) { //nolint:ignore,funlen
 	viper.SetConfigName(configFilenameWithNoExt) // name of config file (without extension)
 	viper.SetConfigType("yaml")                  // REQUIRED if the config file does not have the extension in the name
 	viper.AddConfigPath(".")                     // optionally look for config in the working directory
@@ -83,7 +83,7 @@ func configureViper(configFilenameWithNoExt string) {
 	viper.SetDefault("sim.dataset2testpath", "")
 }
 
-func simCommand() *cobra.Command {
+func simCommand() *cobra.Command { //nolint:ignore,funlen
 	// Simulation config variables
 	var (
 		logLevel string
@@ -149,6 +149,7 @@ func simCommand() *cobra.Command {
 			if len(args) < 1 {
 				return errors.New("requires a configuration file")
 			}
+
 			return nil
 		},
 		Run: func(cmd *cobra.Command, args []string) {
@@ -163,6 +164,7 @@ func simCommand() *cobra.Command {
 				logger.Info("ENABLE INFO LOG")
 				loggerMgr := initZapLog(zap.InfoLevel)
 				zap.ReplaceGlobals(loggerMgr)
+
 				defer func() {
 					// TODO: fix error
 					// -> https://github.com/uber-go/zap/issues/772
@@ -173,6 +175,7 @@ func simCommand() *cobra.Command {
 				logger.Info("ENABLE DEBUG LOG")
 				loggerMgr := initZapLog(zap.DebugLevel)
 				zap.ReplaceGlobals(loggerMgr)
+
 				defer func() {
 					// TODO: fix error
 					// -> https://github.com/uber-go/zap/issues/772
@@ -427,7 +430,7 @@ func simCommand() *cobra.Command {
 			}
 
 			// Create output folder and move working dir
-			switch simType {
+			switch simType { //nolint:ignore,nestif
 			case "normal":
 				finalOutputFolder := filepath.Join(simOutputFolder, "run_full_normal", baseName)
 				errMkdir := os.MkdirAll(finalOutputFolder, 0755)
@@ -443,7 +446,7 @@ func simCommand() *cobra.Command {
 			}
 
 			// Check previous simulation results
-			if !simOverwrite {
+			if !simOverwrite { //nolint:ignore,nestif
 				fileStat, errStat := os.Stat(simOutFile)
 				if errStat != nil {
 					if !os.IsNotExist(errStat) {
@@ -469,7 +472,6 @@ func simCommand() *cobra.Command {
 				cacheType,
 				cacheSize,
 				cacheSizeUnit,
-				simLog,
 				weightFunc,
 				cache.WeightFunctionParameters{
 					Alpha: weightAlpha,
@@ -576,6 +578,7 @@ func simCommand() *cobra.Command {
 func main() {
 	rootCmd := &cobra.Command{}
 	rootCmd.AddCommand(simCommand())
+
 	//rootCmd.AddCommand(commandSimulate())
 	//rootCmd.AddCommand(commandSimulateAI())
 	//rootCmd.AddCommand(testDataset())
