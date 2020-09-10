@@ -391,6 +391,22 @@ tasks:
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/10T/scdl2-onFree.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/10T/scdl2-onK.yml"
 
+  italian-dataset-behavior-comparison:
+    desc: Run only italian dataset simulations with logs to compare behaviors
+    deps:
+      - release
+    cmds:
+      - echo "Italian dataset behavior comparison simulations"
+      # 10T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/10T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/10T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/10T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/10T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/10T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/10T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/10T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/10T/scdl2-onK.yml"
+
   make-weight-function-configs:
     desc: Make all weight function configuration files
     dir: ../../config/simulations/weight_function_italian_dataset/100T
