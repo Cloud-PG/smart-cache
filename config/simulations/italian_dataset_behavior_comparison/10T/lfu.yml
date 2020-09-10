@@ -6,7 +6,7 @@ sim:
   log: true
   window:
     start: 0
-    stop: 52
+    stop: 16
   region: it
   cache:
     type: lfu
