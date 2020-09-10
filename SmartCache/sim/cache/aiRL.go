@@ -10,7 +10,6 @@ import (
 	"os"
 	"simulator/v2/cache/ai/featuremap"
 	"simulator/v2/cache/ai/qlearn"
-	"strings"
 
 	"go.uber.org/zap"
 )
@@ -69,20 +68,21 @@ type AIRL struct {
 func (cache *AIRL) Init(params InitParameters) interface{} {
 	logger = zap.L()
 
-	evictionAgetType := params.EvictionAgentType
-	evictionk := params.AIRLEvictionK
-	rlType := params.AIRLType
 	additionFeatureMap := params.AIRLAdditionFeatureMap
 	evictionFeatureMap := params.AIRLEvictionFeatureMap
+
 	initEpsilon := params.AIRLEpsilonStart
 	decayRateEpsilon := params.AIRLEpsilonDecay
 
 	cache.actionCounters = make(map[qlearn.ActionType]int)
 
-	logger.Info("Feature maps", zap.String("addition map", additionFeatureMap), zap.String("eviction map", evictionFeatureMap))
+	logger.Info("Feature maps",
+		zap.String("addition map", additionFeatureMap),
+		zap.String("eviction map", evictionFeatureMap),
+	)
 
-	switch strings.ToLower(rlType) {
-	case "scdl":
+	switch params.AIRLType {
+	case "scdl", "SCDL":
 		cache.rlType = SCDL
 
 		params.QueueType = LRUQueue
@@ -91,11 +91,11 @@ func (cache *AIRL) Init(params InitParameters) interface{} {
 		if additionFeatureMap == "" {
 			panic("ERROR: SCDL needs the addition feature map...")
 		}
-	case "scdl2":
+	case "scdl2", "SCDL2":
 		cache.rlType = SCDL2
 
-		params.QueueType = NoQueue
-		cache.SimpleCache.Init(params)
+		evictionAgetType := params.EvictionAgentType
+		evictionk := params.AIRLEvictionK
 
 		switch evictionAgetType {
 		case "onK", "on_k", "ONK":
@@ -112,8 +112,12 @@ func (cache *AIRL) Init(params InitParameters) interface{} {
 		cache.evictionRO = 1.0
 
 		if evictionFeatureMap != "" {
+			params.QueueType = NoQueue
+			cache.SimpleCache.Init(params)
+
 			logger.Info("Create eviction feature manager")
 			cache.evictionFeatureManager = featuremap.Parse(evictionFeatureMap)
+
 			logger.Info("Create eviction agent")
 			cache.evictionAgent.Init(
 				&cache.evictionFeatureManager,
@@ -146,6 +150,9 @@ func (cache *AIRL) Init(params InitParameters) interface{} {
 			cache.numDailyCategories = make([]int, 0)
 		} else {
 			cache.evictionAgentOK = false
+
+			params.QueueType = LRUQueue
+			cache.SimpleCache.Init(params)
 		}
 	default:
 		panic("ERROR: RL type is not valid...")
@@ -154,6 +161,7 @@ func (cache *AIRL) Init(params InitParameters) interface{} {
 	if additionFeatureMap != "" {
 		logger.Info("Create addition feature manager")
 		cache.additionFeatureManager = featuremap.Parse(additionFeatureMap)
+
 		logger.Info("Create addition agent")
 		cache.additionAgent.Init(
 			&cache.additionFeatureManager,
@@ -203,7 +211,7 @@ func (cache *AIRL) ClearStats() {
 }
 
 // Dumps the AIRL cache
-func (cache *AIRL) Dumps(fileAndStats bool) [][]byte {
+func (cache *AIRL) Dumps(fileAndStats bool) [][]byte { //nolint:funlen
 	logger.Info("Dump cache into byte string")
 	outData := make([][]byte, 0)
 	var newLine = []byte("\n")
@@ -254,7 +262,7 @@ func (cache *AIRL) Dumps(fileAndStats bool) [][]byte {
 			Info: string(dumpInfoFMM),
 			Data: string(dumpStatsFMM),
 		})
-		record = append(recordFMM, newLine...)
+		record = append(recordFMM, newLine...) //nolint:gocritic
 		outData = append(outData, record)
 	}
 	if cache.evictionAgentOK {
@@ -276,7 +284,7 @@ func (cache *AIRL) Dumps(fileAndStats bool) [][]byte {
 			Info: string(dumpInfoFMM),
 			Data: string(dumpStatsFMM),
 		})
-		record = append(recordFMM, newLine...)
+		record = append(recordFMM, newLine...) //nolint:gocritic
 		outData = append(outData, record)
 	}
 	return outData
@@ -309,6 +317,7 @@ func (cache *AIRL) Loads(inputString [][]byte, vars ...interface{}) {
 	logger.Info("Loads cache dump string")
 	initEpsilon := vars[0].(float64)
 	decayRateEpsilon := vars[1].(float64)
+
 	var (
 		curRecord     DumpRecord
 		curRecordInfo DumpInfo
@@ -359,7 +368,6 @@ func (cache *AIRL) Loads(inputString [][]byte, vars ...interface{}) {
 }
 
 func (cache *AIRL) getState4AdditionAgent(hit bool, curFileStats *FileStats) int {
-
 	cache.bufferIdxVector = cache.bufferIdxVector[:0]
 
 	for _, feature := range cache.additionFeatureManager.Features {
@@ -402,11 +410,12 @@ func (cache *AIRL) punishEvictionAgentOnForcedCall() {
 				}
 			}
 		}
+
 		delete(cache.evictionAgent.Memory, "NotDelete")
 	}
 }
 
-func (cache *AIRL) callEvictionAgent() (float64, []int64) {
+func (cache *AIRL) callEvictionAgent() (float64, []int64) { //nolint:funlen
 	var (
 		totalDeleted float64
 		deletedFiles = make([]int64, 0)
@@ -446,6 +455,7 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) {
 					Category: catState.Category,
 					File:     curFile,
 				})
+
 				cache.evictionAgent.SaveMemoryWithNoLimits(curFile.Filename, qlearn.Choice{
 					State:     catState.Idx,
 					Action:    catState.Action,
@@ -511,6 +521,7 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) {
 					Category: catState.Category,
 					File:     curFile,
 				})
+
 				cache.evictionAgent.SaveMemoryWithNoLimits(curFile.Filename, qlearn.Choice{
 					State:     catState.Idx,
 					Action:    catState.Action,
@@ -560,6 +571,7 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) {
 				Category: catState.Category,
 				File:     curFile,
 			})
+
 			cache.evictionAgent.SaveMemoryWithNoLimits(curFile.Filename, qlearn.Choice{
 				State:     catState.Idx,
 				Action:    catState.Action,
@@ -588,6 +600,7 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) {
 		case qlearn.ActionNotDelete:
 			for _, curFile := range catState.Files {
 				curFileStats := cache.stats.Get(curFile.Filename)
+
 				cache.evictionAgent.SaveMemoryWithNoLimits(curFile.Filename, qlearn.Choice{
 					State:     catState.Idx,
 					Action:    catState.Action,
@@ -644,17 +657,19 @@ func (cache *AIRL) checkEvictionNextState(oldStateIdx int, newStateIdx int) bool
 		catNumReqIdx := cache.evictionFeatureManager.FeatureIdxMap["catNumReq"]
 		catDeltaLastRequestIdx := cache.evictionFeatureManager.FeatureIdxMap["catDeltaLastRequest"]
 		// catPercOccIdx := cache.evictionFeatureManager.FeatureIdxMap["catPercOcc"]
-		isNext = newState[catSizeIdx] == oldState[catSizeIdx] && newState[catDeltaLastRequestIdx] == oldState[catDeltaLastRequestIdx] && newState[catNumReqIdx] >= oldState[catNumReqIdx]
+		isNext = newState[catSizeIdx] == oldState[catSizeIdx]
+		isNext = isNext && newState[catDeltaLastRequestIdx] == oldState[catDeltaLastRequestIdx]
+		isNext = isNext && newState[catNumReqIdx] >= oldState[catNumReqIdx]
 	}
 
 	cache.evictionCheckNextStateMap[curArgs] = isNext
 	return isNext
 }
 
-func (cache *AIRL) delayedRewardEvictionAgent(filename int64, hit bool) {
+func (cache *AIRL) delayedRewardEvictionAgent(filename int64, hit bool) { //nolint:ignore,gocognit
 	memories, inMemory := cache.evictionAgent.Memory[filename]
 
-	if inMemory {
+	if inMemory { //nolint:ignore,nestif
 		for idx := 0; idx < len(memories)-1; idx++ {
 			var (
 				prevMemory, nextMemory qlearn.Choice
@@ -675,7 +690,6 @@ func (cache *AIRL) delayedRewardEvictionAgent(filename int64, hit bool) {
 				}
 
 				continue // No next state found
-
 			} else {
 				nextMemory = memories[idx+1]
 			}
@@ -707,11 +721,11 @@ func (cache *AIRL) delayedRewardEvictionAgent(filename int64, hit bool) {
 	}
 }
 
-func (cache *AIRL) delayedRewardAdditionAgent(filename int64, hit bool) {
+func (cache *AIRL) delayedRewardAdditionAgent(filename int64, hit bool) { //nolint:ignore,funlen
 	switch cache.rlType {
 	case SCDL:
 		lastMemories, present := cache.additionAgent.Remember(SCDL)
-		if present {
+		if present { //nolint:ignore,nestif
 			for _, memory := range lastMemories {
 				reward := 0.0
 
@@ -756,7 +770,7 @@ func (cache *AIRL) delayedRewardAdditionAgent(filename int64, hit bool) {
 		}
 	case SCDL2:
 		memories, inMemory := cache.additionAgent.Memory[filename]
-		if inMemory {
+		if inMemory { //nolint:ignore,nestif
 			for idx := 0; idx < len(memories)-2; idx++ {
 				prevMemory, nextMemory := memories[idx], memories[idx+1]
 				reward := 0.0
@@ -810,7 +824,7 @@ func (cache *AIRL) rewardEvictionAfterForcedCall(added bool) {
 }
 
 // BeforeRequest of LRU cache
-func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) {
+func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) { //nolint:ignore,funlen
 	// fmt.Println("+++ REQUESTED FILE +++-> ", request.Filename)
 
 	fileStats, _ := cache.stats.GetOrCreate(request.Filename, request.Size, request.DayTime, cache.tick)
@@ -881,7 +895,7 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) 
 }
 
 // UpdatePolicy of AIRL cache
-func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool) bool {
+func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool) bool { //nolint:ignore,funlen
 	var (
 		added             = false
 		curAction         qlearn.ActionType
@@ -918,7 +932,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 	// 	(cache.dataReadOnMiss/cache.bandwidth)*100.,
 	// )
 
-	if cache.additionAgentOK {
+	if cache.additionAgentOK { //nolint:ignore,nestif
 
 		logger.Debug("ADDITION AGENT OK")
 
@@ -1026,12 +1040,14 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					Size:      request.Size,
 					Frequency: fileStats.Frequency,
 				}
+
 				switch cache.rlType {
 				case SCDL:
 					cache.additionAgent.SaveMemory(SCDL, curChoice)
 				case SCDL2:
 					cache.additionAgent.SaveMemoryWithNoLimits(request.Filename, curChoice)
 				}
+
 				cache.toAdditionChoiceBuffer([]string{
 					fmt.Sprintf("%d", cache.tick),
 					fmt.Sprintf("%d", fileStats.Filename),
@@ -1076,7 +1092,6 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				cache.evictionCategoryManager.AddOrUpdateCategoryFile(fileCategory, fileStats)
 			}
 		}
-
 	} else {
 		// #####################################################################
 		// #                      NO ADDITION AGENT                            #
@@ -1156,8 +1171,8 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 // AfterRequest of the cache
 func (cache *AIRL) AfterRequest(request *Request, fileStats *FileStats, hit bool, added bool) {
-	if cache.rlType == SCDL2 {
-		if cache.additionAgentOK {
+	if cache.rlType == SCDL2 { //nolint:ignore,nestif
+		if cache.additionAgentOK { //nolint:ignore,nestif
 			cache.delayedRewardAdditionAgent(request.Filename, hit)
 		}
 		if cache.evictionAgentOK {
@@ -1237,7 +1252,7 @@ func (cache *AIRL) stdDevNumCategories() float64 {
 }
 
 // ExtraOutput for output specific information
-func (cache *AIRL) ExtraOutput(info string) string {
+func (cache *AIRL) ExtraOutput(info string) string { //nolint:ignore,funlen
 	result := ""
 	switch info {
 	case "evictionCategoryStats":
