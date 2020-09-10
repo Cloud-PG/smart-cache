@@ -78,7 +78,7 @@ func (cache *AINN) Dumps(fileAndStats bool) [][]byte {
 
 	if fileAndStats {
 		// ----- Files -----
-		logger.Info("Dump cache files")
+		cache.logger.Info("Dump cache files")
 		for file := range cache.files.GetQueue() {
 			dumpInfo, _ := json.Marshal(DumpInfo{Type: "FILES"})
 			dumpFile, _ := json.Marshal(file)
@@ -90,7 +90,7 @@ func (cache *AINN) Dumps(fileAndStats bool) [][]byte {
 			outData = append(outData, record)
 		}
 		// ----- Stats -----
-		logger.Info("Dump cache stats")
+		cache.logger.Info("Dump cache stats")
 		for _, stats := range cache.stats.fileStats {
 			dumpInfo, _ := json.Marshal(DumpInfo{Type: "STATS"})
 			dumpStats, _ := json.Marshal(stats)

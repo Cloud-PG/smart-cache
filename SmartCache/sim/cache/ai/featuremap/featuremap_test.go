@@ -45,19 +45,21 @@ func TestFeatureMapParse(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	defer func() {
 		removeErr := os.Remove(tmpFile.Name())
 		if removeErr != nil {
 			panic(removeErr)
 		}
 	}()
+
 	_, writeErr := tmpFile.WriteString(featureMapString)
+
 	if writeErr != nil {
 		panic(writeErr)
 	}
 
 	Parse(tmpFile.Name())
-
 	// for entryName, entryLen := range allKeys {
 	// 	if _, inMap := entries[entryName]; !inMap {
 	// 		t.Fatalf("Expected key '%s' in map but is not there...", entryName)

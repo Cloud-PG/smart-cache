@@ -12,7 +12,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// Obj represents a map object
+// Obj represents a map object.
 type Obj struct {
 	Name            string       `json:"name"`
 	Type            string       `json:"type"`
@@ -26,13 +26,13 @@ type Obj struct {
 	FileFeature     bool         `json:"fileFeature"`
 }
 
-// ObjVal used in range cycles
+// ObjVal used in range cycles.
 type ObjVal struct {
 	Idx int
 	Val interface{}
 }
 
-// FeatureManager collects and manages the features
+// FeatureManager collects and manages the features.
 type FeatureManager struct {
 	Features              []Obj          `json:"feature"`
 	FileFeatures          []Obj          `json:"fileFeature"`
@@ -40,6 +40,7 @@ type FeatureManager struct {
 	FileFeatureIdxMap     map[string]int `json:"fileFeatureIdxMap"`
 	FeatureIdxWeights     []int          `json:"featureIdxWeights"`
 	FileFeatureIdxWeights []int          `json:"fileFeatureIdxWeights"`
+	logger                *zap.Logger
 }
 
 func (manager *FeatureManager) makeFileFeatureIdxWeights() {
@@ -62,47 +63,52 @@ func (manager *FeatureManager) makeFeatureIdxWeights() {
 	}
 }
 
-// Parse a feature map file and returns the map of keys and objects
+// Parse a feature map file and returns the map of keys and objects.
 func Parse(featureMapFilePath string) FeatureManager {
 	manager := FeatureManager{}
 	manager.Features = make([]Obj, 0)
 	manager.Populate(featureMapFilePath)
+
 	return manager
 }
 
-// Populate reads the feature map files and populates the manager
-func (manager *FeatureManager) Populate(featureMapFilePath string) {
-	logger := zap.L()
-
+// Populate reads the feature map files and populates the manager.
+func (manager *FeatureManager) Populate(featureMapFilePath string) { //nolint:ignore,funlen
 	var tmpMap interface{}
+
 	fileExtension := filepath.Ext(featureMapFilePath)
 
 	featureMapFile, errOpenFile := os.Open(featureMapFilePath)
 	if errOpenFile != nil {
-		logger.Error("Cannot open file", zap.Error(errOpenFile))
+		manager.logger.Error("Cannot open file", zap.Error(errOpenFile))
 		os.Exit(-1)
 	}
 
-	if fileExtension == ".gzip" || fileExtension == ".gz" {
+	switch {
+	case fileExtension == ".gzip" || fileExtension == ".gz":
 		featureMapFileGz, errOpenZipFile := gzip.NewReader(featureMapFile)
 		if errOpenZipFile != nil {
-			logger.Error("Cannot open zip stream from file", zap.String("filename", featureMapFilePath), zap.Error(errOpenZipFile))
+			manager.logger.Error("Cannot open zip stream from file",
+				zap.String("filename", featureMapFilePath), zap.Error(errOpenZipFile))
 			os.Exit(-1)
 		}
 
 		errJSONUnmarshal := json.NewDecoder(featureMapFileGz).Decode(&tmpMap)
 		if errJSONUnmarshal != nil {
-			logger.Error("Cannot unmarshal gzipped json from file", zap.String("filename", featureMapFilePath), zap.Error(errJSONUnmarshal))
+			manager.logger.Error("Cannot unmarshal gzipped json from file",
+				zap.String("filename", featureMapFilePath), zap.Error(errJSONUnmarshal))
 			os.Exit(-1)
 		}
-	} else if fileExtension == ".json" {
+	case fileExtension == ".json":
 		errJSONUnmarshal := json.NewDecoder(featureMapFile).Decode(&tmpMap)
 		if errJSONUnmarshal != nil {
-			logger.Error("Cannot unmarshal plain json from file", zap.String("filename", featureMapFilePath), zap.Error(errJSONUnmarshal))
+			manager.logger.Error("Cannot unmarshal plain json from file",
+				zap.String("filename", featureMapFilePath), zap.Error(errJSONUnmarshal))
 			os.Exit(-1)
 		}
-	} else {
-		logger.Error("Cannot unmarshal", zap.String("filename", featureMapFilePath), zap.String("extension", fileExtension))
+	default:
+		manager.logger.Error("Cannot unmarshal",
+			zap.String("filename", featureMapFilePath), zap.String("extension", fileExtension))
 		os.Exit(-1)
 	}
 
@@ -118,7 +124,7 @@ func (manager *FeatureManager) Populate(featureMapFilePath string) {
 	manager.FeatureIdxMap = make(map[string]int)
 	manager.FileFeatureIdxMap = make(map[string]int)
 
-	if mainType := reflect.TypeOf(tmpMap).Kind(); mainType == reflect.Map {
+	if mainType := reflect.TypeOf(tmpMap).Kind(); mainType == reflect.Map { //nolint:ignore,nestif
 		mapIter := reflect.ValueOf(tmpMap).MapRange()
 		for mapIter.Next() {
 			feature := mapIter.Key().String()
@@ -142,14 +148,15 @@ func (manager *FeatureManager) Populate(featureMapFilePath string) {
 							itemValues = curFeatureValue.Elem().Interface().([]interface{})
 							curStruct.Buckets = true
 						} else {
-							logger.Error(
+							manager.logger.Error(
 								"Feature entries",
 								zap.String(
 									"error",
 									fmt.Sprintf("bucket of %s is not a slice", feature),
 								),
 							)
-							os.Exit(-1)
+
+							panic("Error: deconding features")
 						}
 					case "openRight":
 						if curFeatureValue.Elem().Bool() {
@@ -162,14 +169,15 @@ func (manager *FeatureManager) Populate(featureMapFilePath string) {
 					case "type":
 						curStruct.Type = curFeatureValue.Elem().String()
 					default:
-						logger.Error(
+						manager.logger.Error(
 							"Feature entries",
 							zap.String(
 								"error",
 								fmt.Sprintf("entry %s of  %s is not allowed", curFeatureKey, feature),
 							),
 						)
-						os.Exit(-1)
+
+						panic("Error: deconding features")
 					}
 				}
 
@@ -178,6 +186,7 @@ func (manager *FeatureManager) Populate(featureMapFilePath string) {
 					// fmt.Println("int", reflect.TypeOf(itemValues[0]).Kind())
 					curStruct.ReflectType = reflect.Bool
 					curStruct.BoolValues = make([]bool, len(itemValues))
+
 					for idx, val := range itemValues {
 						curStruct.BoolValues[idx] = val.(bool)
 					}
@@ -185,6 +194,7 @@ func (manager *FeatureManager) Populate(featureMapFilePath string) {
 					// fmt.Println("int", reflect.TypeOf(itemValues[0]).Kind())
 					curStruct.ReflectType = reflect.String
 					curStruct.StringValues = make([]string, len(itemValues))
+
 					for idx, val := range itemValues {
 						curStruct.StringValues[idx] = val.(string)
 					}
@@ -192,9 +202,11 @@ func (manager *FeatureManager) Populate(featureMapFilePath string) {
 					// fmt.Println("int", reflect.TypeOf(itemValues[0]).Kind())
 					curStruct.ReflectType = reflect.Int64
 					curStruct.Int64Values = make([]int64, len(itemValues))
+
 					for idx, val := range itemValues {
 						curStruct.Int64Values[idx] = int64(val.(float64)) // numbers from JSON are always floats
 					}
+
 					if curStruct.BucketOpenRight {
 						curStruct.Int64Values = append(curStruct.Int64Values, math.MaxInt64)
 					}
@@ -202,9 +214,11 @@ func (manager *FeatureManager) Populate(featureMapFilePath string) {
 					// fmt.Println("float", reflect.TypeOf(itemValues[0]).Kind())
 					curStruct.ReflectType = reflect.Float64
 					curStruct.Float64Values = make([]float64, len(itemValues))
+
 					for idx, val := range itemValues {
 						curStruct.Float64Values[idx] = val.(float64)
 					}
+
 					if curStruct.BucketOpenRight {
 						curStruct.Float64Values = append(curStruct.Float64Values, math.MaxFloat64)
 					}
@@ -221,31 +235,30 @@ func (manager *FeatureManager) Populate(featureMapFilePath string) {
 					manager.FileFeatureIdxMap[curStruct.Name] = curFileFeatureIdx
 					manager.FileFeatures = append(manager.FileFeatures, curStruct)
 				}
-
 			} else {
-				logger.Error(
+				manager.logger.Error(
 					"Feature entries",
 					zap.String(
 						"error",
 						fmt.Sprintf("feature %s is not a valid map", feature),
 					),
 				)
-				os.Exit(-1)
+				panic("ERROR: decoding features")
 			}
 		}
 	} else {
-		logger.Error("Feature entries", zap.String("error", "Not a valid feature JSON"))
-		os.Exit(-1)
+		manager.logger.Error("Feature entries", zap.String("error", "Not a valid feature JSON"))
+		panic("ERROR: decoding features")
 	}
 
 	manager.makeFeatureIdxWeights()
 	manager.makeFileFeatureIdxWeights()
 }
 
-// Size returns the number of possible elements
+// Size returns the number of possible elements.
 func (obj Obj) Size() int {
 	if obj.Buckets {
-		switch obj.ReflectType {
+		switch obj.ReflectType { //nolint:ignore,exaustive
 		case reflect.String:
 			return len(obj.StringValues)
 		case reflect.Bool:
@@ -256,13 +269,14 @@ func (obj Obj) Size() int {
 			return len(obj.Float64Values)
 		}
 	}
+
 	return -1
 }
 
-// Value returns the value (as interface) of a specific index of a feature
+// Value returns the value (as interface) of a specific index of a feature.
 func (obj Obj) Value(idx int) interface{} {
 	if obj.Buckets {
-		switch obj.ReflectType {
+		switch obj.ReflectType { //nolint:ignore,exaustive
 		case reflect.String:
 			return obj.StringValues[idx]
 		case reflect.Bool:
@@ -271,20 +285,22 @@ func (obj Obj) Value(idx int) interface{} {
 			return obj.Int64Values[idx]
 		case reflect.Float64:
 			return obj.Float64Values[idx]
-
 		}
 	}
+
 	return nil
 }
 
-// Values returns all the values (as interface generator) of the feature
+// Values returns all the values (as interface generator) of the feature.
 func (obj Obj) Values() chan ObjVal {
 	outChan := make(chan ObjVal, obj.Size())
+
 	if obj.Buckets {
-		switch obj.ReflectType {
+		switch obj.ReflectType { //nolint:ignore,exaustive
 		case reflect.String:
 			go func() {
 				defer close(outChan)
+
 				for idx, elm := range obj.StringValues {
 					outChan <- ObjVal{
 						Idx: idx,
@@ -295,6 +311,7 @@ func (obj Obj) Values() chan ObjVal {
 		case reflect.Bool:
 			go func() {
 				defer close(outChan)
+
 				for idx, elm := range obj.BoolValues {
 					outChan <- ObjVal{
 						Idx: idx,
@@ -305,6 +322,7 @@ func (obj Obj) Values() chan ObjVal {
 		case reflect.Int64:
 			go func() {
 				defer close(outChan)
+
 				for idx, elm := range obj.Int64Values {
 					outChan <- ObjVal{
 						Idx: idx,
@@ -315,6 +333,7 @@ func (obj Obj) Values() chan ObjVal {
 		case reflect.Float64:
 			go func() {
 				defer close(outChan)
+
 				for idx, elm := range obj.Float64Values {
 					outChan <- ObjVal{
 						Idx: idx,
@@ -324,13 +343,14 @@ func (obj Obj) Values() chan ObjVal {
 			}()
 		}
 	}
+
 	return outChan
 }
 
-// Index returns the index of the value for the selected feature
-func (obj Obj) Index(value interface{}) int {
+// Index returns the index of the value for the selected feature.
+func (obj Obj) Index(value interface{}) int { //nolint:ignore,gocognit
 	if obj.Buckets {
-		switch obj.ReflectType {
+		switch obj.ReflectType { //nolint:ignore,exaustive
 		case reflect.String:
 			curVal := value.(string)
 			for idx, val := range obj.StringValues {
@@ -361,13 +381,15 @@ func (obj Obj) Index(value interface{}) int {
 			}
 		}
 	}
+
 	return -1
 }
 
-// ToString transform the given index feature object value to a string
+// ToString transform the given index feature object value to a string.
 func (obj Obj) ToString(valIdx int) string {
 	outString := ""
-	switch obj.ReflectType {
+
+	switch obj.ReflectType { //nolint:ignore,exaustive
 	case reflect.String:
 		outString = obj.StringValues[valIdx]
 	case reflect.Bool:
@@ -388,5 +410,6 @@ func (obj Obj) ToString(valIdx int) string {
 			outString = fmt.Sprintf("%09.2f", curFeatureVal)
 		}
 	}
+
 	return outString
 }

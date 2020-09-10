@@ -15,6 +15,7 @@ type Stats struct {
 	lastUpdateTime  time.Time
 	maxNumDayDiff   float64 // MaxNumDayDiff limit to stay in the stats
 	deltaDaysStep   float64 // DeltaDaysStep limit the clean action of the stats
+	logger          *zap.Logger
 }
 
 // Init initialize Stats
@@ -23,6 +24,7 @@ func (statStruct *Stats) Init(maxNumDayDiff float64, deltaDaysStep float64, calc
 	statStruct.calcWeight = calcWeight
 	statStruct.maxNumDayDiff = maxNumDayDiff
 	statStruct.deltaDaysStep = deltaDaysStep
+	statStruct.logger = zap.L()
 }
 
 // Clear Stats after load
@@ -40,7 +42,7 @@ func (statStruct *Stats) Clear() {
 func (statStruct Stats) Dirty() bool {
 	numDays := statStruct.lastUpdateTime.Sub(statStruct.firstUpdateTime).Hours() / 24.
 	if numDays >= statStruct.deltaDaysStep {
-		logger.Debug("Dirty Stats", zap.Float64("numDays", numDays),
+		statStruct.logger.Debug("Dirty Stats", zap.Float64("numDays", numDays),
 			zap.String("lastTime", statStruct.lastUpdateTime.Format(time.UnixDate)),
 			zap.String("firstTime", statStruct.firstUpdateTime.Format(time.UnixDate)),
 		)
@@ -54,7 +56,7 @@ func (statStruct *Stats) Purge() {
 	numDeletedFiles := 0
 	for filename, stats := range statStruct.fileStats {
 		if !stats.InCache && stats.DiffLastUpdate(statStruct.lastUpdateTime) >= statStruct.maxNumDayDiff {
-			logger.Debug("Purge", zap.Bool("in cache", stats.InCache))
+			statStruct.logger.Debug("Purge", zap.Bool("in cache", stats.InCache))
 			if statStruct.calcWeight {
 				statStruct.weightSum -= stats.Weight
 			}
@@ -62,7 +64,7 @@ func (statStruct *Stats) Purge() {
 			numDeletedFiles++
 		}
 	}
-	logger.Debug("Stats purged", zap.Int("NumDeletedFiles", numDeletedFiles))
+	statStruct.logger.Debug("Stats purged", zap.Int("NumDeletedFiles", numDeletedFiles))
 	statStruct.firstUpdateTime = statStruct.lastUpdateTime
 }
 
@@ -70,7 +72,7 @@ func (statStruct *Stats) Purge() {
 func (statStruct Stats) Get(filename int64) *FileStats {
 	curStats, inStats := statStruct.fileStats[filename]
 	if !inStats {
-		logger.Error("Get: no file found", zap.Int64("filename", filename))
+		statStruct.logger.Error("Get: no file found", zap.Int64("filename", filename))
 	}
 	return curStats
 }
@@ -96,7 +98,7 @@ func (statStruct *Stats) GetOrCreate(filename int64, vars ...interface{}) (*File
 
 	// Stats age update
 	if statStruct.firstUpdateTime.IsZero() {
-		logger.Info("Updated first time")
+		statStruct.logger.Info("Updated first time")
 		statStruct.firstUpdateTime = reqTime
 	}
 	statStruct.lastUpdateTime = reqTime

@@ -22,18 +22,19 @@ type WeightFun struct {
 // Init the WeightFun struct
 func (cache *WeightFun) Init(params InitParameters) interface{} {
 	cache.SimpleCache.Init(params)
+
 	return cache
 }
 
 // Dumps the WeightFun cache
 func (cache *WeightFun) Dumps(fileAndStats bool) [][]byte {
-	logger.Info("Dump cache into byte string")
+	cache.logger.Info("Dump cache into byte string")
 	outData := make([][]byte, 0)
 	var newLine = []byte("\n")
 
 	if fileAndStats {
 		// ----- Files -----
-		logger.Info("Dump cache files")
+		cache.logger.Info("Dump cache files")
 		for _, file := range cache.files.GetQueue() {
 			dumpInfo, _ := json.Marshal(DumpInfo{Type: "FILES"})
 			dumpFile, _ := json.Marshal(file)
@@ -45,7 +46,7 @@ func (cache *WeightFun) Dumps(fileAndStats bool) [][]byte {
 			outData = append(outData, record)
 		}
 		// ----- Stats -----
-		logger.Info("Dump cache stats")
+		cache.logger.Info("Dump cache stats")
 		for _, stats := range cache.stats.fileStats {
 			dumpInfo, _ := json.Marshal(DumpInfo{Type: "STATS"})
 			dumpStats, _ := json.Marshal(stats)
@@ -62,7 +63,7 @@ func (cache *WeightFun) Dumps(fileAndStats bool) [][]byte {
 
 // Loads the WeightFun cache
 func (cache *WeightFun) Loads(inputString [][]byte, _ ...interface{}) {
-	logger.Info("Load cache dump string")
+	cache.logger.Info("Load cache dump string")
 	var (
 		curRecord     DumpRecord
 		curRecordInfo DumpInfo
@@ -105,7 +106,10 @@ func (cache *WeightFun) BeforeRequest(request *Request, hit bool) (*FileStats, b
 
 	curStats, newFile := cache.stats.GetOrCreate(request.Filename, request.Size, request.DayTime)
 	curStats.updateStats(hit, request.Size, request.UserID, request.SiteName, request.DayTime)
-	cache.stats.updateWeight(curStats, newFile, cache.SelFunctionType, cache.Parameters.Alpha, cache.Parameters.Beta, cache.Parameters.Gamma)
+	cache.stats.updateWeight(curStats, newFile,
+		cache.SelFunctionType,
+		cache.Parameters.Alpha, cache.Parameters.Beta, cache.Parameters.Gamma,
+	)
 	return curStats, hit
 }
 

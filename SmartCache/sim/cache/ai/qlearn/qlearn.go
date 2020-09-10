@@ -197,11 +197,12 @@ type Agent struct {
 	RGenerator       *rand.Rand               `json:"rGenerator"`
 	UpdateAlgorithm  RLUpdateAlg              `json:"updateAlgorithm"`
 	QValue           float64                  `json:"qValue"`
+	logger           *zap.Logger
 }
 
 // Init initilizes the Agent struct
 func (agent *Agent) Init(featureManager *featuremap.FeatureManager, role AgentRole, initEpsilon float64, decayRateEpsilon float64) {
-	logger = zap.L()
+	agent.logger = zap.L()
 
 	agent.LearningRate = 0.9 // also named Alpha
 	agent.DiscountFactor = 0.5
@@ -241,7 +242,7 @@ func (agent *Agent) Init(featureManager *featuremap.FeatureManager, role AgentRo
 	agent.NumStates = len(agent.QTable.States)
 	agent.NumVars = agent.NumStates * len(agent.QTable.Actions[0])
 
-	logger.Info("Agent",
+	agent.logger.Info("Agent",
 		zap.Int("numStates", agent.NumStates),
 		zap.Int("numVars", agent.NumVars),
 	)
@@ -260,7 +261,7 @@ func (agent *Agent) ResetParams(initEpsilon float64, decayRateEpsilon float64) {
 	agent.StepNum = 0
 	agent.QValue = 0.
 
-	logger.Info("Parameters restored as default...")
+	agent.logger.Info("Parameters restored as default...")
 }
 
 // ResetQValue clean the value function
@@ -368,7 +369,7 @@ func (agent Agent) GetActionValue(stateIdx int, action ActionType) float64 {
 func (agent Agent) GetBestActionValue(stateIdx int) float64 {
 	values := agent.QTable.Actions[stateIdx]
 	maxValueIdx, maxValue := getArgMax(values)
-	logger.Debug("Get best action",
+	agent.logger.Debug("Get best action",
 		zap.Float64s("values", values),
 		zap.Int("idx max value", maxValueIdx),
 	)
@@ -380,7 +381,7 @@ func (agent Agent) GetBestAction(stateIdx int) ActionType {
 	values := agent.QTable.Actions[stateIdx]
 	maxValueIdx, _ := getArgMax(values)
 	bestAction := agent.QTable.ActionTypes[maxValueIdx]
-	logger.Debug("Get best action",
+	agent.logger.Debug("Get best action",
 		zap.Float64s("values", values),
 		zap.Int("idx max value", maxValueIdx),
 		zap.Int("type best action", int(bestAction)),

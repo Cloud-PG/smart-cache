@@ -7,16 +7,11 @@ import (
 	"strconv"
 	"strings"
 
-	"go.uber.org/zap"
 	"golang.org/x/crypto/blake2b"
 )
 
 const (
 	hashSize int = 8
-)
-
-var (
-	logger = zap.L()
 )
 
 // HashHexDigest convert to a string into an hash string

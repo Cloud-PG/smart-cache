@@ -67,6 +67,7 @@ type SimpleCache struct {
 	choicesBuffer                      [][]string
 	maxNumDayDiff                      float64
 	deltaDaysStep                      float64
+	logger                             *zap.Logger
 }
 
 // Init the LRU struct
@@ -96,6 +97,8 @@ func (cache *SimpleCache) Init(param InitParameters) interface{} {
 		cache.choicesLogFile.Write(choicesLogHeader)
 		cache.choicesBuffer = make([][]string, 0)
 	}
+
+	cache.logger = zap.L()
 
 	return cache
 }
@@ -153,13 +156,13 @@ func (cache *SimpleCache) ClearStats() {
 
 // Dumps the SimpleCache cache
 func (cache *SimpleCache) Dumps(fileAndStats bool) [][]byte {
-	logger.Info("Dump cache into byte string")
+	cache.logger.Info("Dump cache into byte string")
 	outData := make([][]byte, 0)
 	var newLine = []byte("\n")
 
 	if fileAndStats {
 		// ----- Files -----
-		logger.Info("Dump cache files")
+		cache.logger.Info("Dump cache files")
 		for _, file := range cache.files.GetQueue() {
 			dumpInfo, _ := json.Marshal(DumpInfo{Type: "FILES"})
 			dumpFile, _ := json.Marshal(file)
@@ -171,7 +174,7 @@ func (cache *SimpleCache) Dumps(fileAndStats bool) [][]byte {
 			outData = append(outData, record)
 		}
 		// ----- Stats -----
-		logger.Info("Dump cache stats")
+		cache.logger.Info("Dump cache stats")
 		for filename, stats := range cache.stats.fileStats {
 			dumpInfo, _ := json.Marshal(DumpInfo{Type: "STATS"})
 			dumpStats, _ := json.Marshal(stats)
@@ -189,7 +192,7 @@ func (cache *SimpleCache) Dumps(fileAndStats bool) [][]byte {
 
 // Dump the SimpleCache cache
 func (cache *SimpleCache) Dump(filename string, fileAndStats bool) {
-	logger.Info("Dump cache", zap.String("filename", filename))
+	cache.logger.Info("Dump cache", zap.String("filename", filename))
 	outFile, osErr := os.Create(filename)
 	if osErr != nil {
 		panic(fmt.Sprintf("Error dump file creation: %s", osErr))
@@ -211,7 +214,7 @@ func (cache *SimpleCache) Dump(filename string, fileAndStats bool) {
 
 // Loads the SimpleCache cache
 func (cache *SimpleCache) Loads(inputString [][]byte, _ ...interface{}) {
-	logger.Info("Load cache dump string")
+	cache.logger.Info("Load cache dump string")
 	var (
 		curRecord     DumpRecord
 		curRecordInfo DumpInfo
@@ -251,7 +254,7 @@ func (cache *SimpleCache) Loads(inputString [][]byte, _ ...interface{}) {
 
 // Load the SimpleCache cache
 func (cache *SimpleCache) Load(filename string) [][]byte {
-	logger.Info("Load cache Dump", zap.String("filename", filename))
+	cache.logger.Info("Load cache Dump", zap.String("filename", filename))
 
 	inFile, err := os.Open(filename)
 	if err != nil {
@@ -402,7 +405,7 @@ func (cache *SimpleCache) AfterRequest(request *Request, fileStats *FileStats, h
 // Free removes files from the cache
 func (cache *SimpleCache) Free(amount float64, percentage bool) float64 {
 	// TODO: remove all means and StdDev
-	// logger.Debug(
+	// cache.logger.Debug(
 	// 	"Cache free",
 	// 	zap.Float64("mean size", cache.MeanSize()),
 	// 	zap.Float64("mean frequency", cache.MeanFrequency()),
@@ -421,7 +424,7 @@ func (cache *SimpleCache) Free(amount float64, percentage bool) float64 {
 	if sizeToDelete > 0. {
 		deletedFiles := make([]int64, 0)
 		for _, curFile := range cache.files.GetWorstFilesUp2Size(sizeToDelete) {
-			logger.Debug("delete",
+			cache.logger.Debug("delete",
 				zap.Int64("filename", curFile.Filename),
 				zap.Float64("fileSize", curFile.Size),
 				zap.Int64("frequency", curFile.Frequency),

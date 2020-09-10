@@ -172,7 +172,7 @@ func recordGenerator(csvReader *csv.Reader, curFile *os.File, headerMap []int) c
 
 // OpenSimFile opens a simulation file
 func OpenSimFile(filePath string) chan CSVRecord {
-	logger = zap.L()
+	logger := zap.L()
 
 	fileExt := path.Ext(filePath)
 	var iterator chan CSVRecord
@@ -645,6 +645,8 @@ func Simulate(cacheType string, cacheInstance Cache, param SimulationParams) {
 		redirectedData     float64
 		numRedirected      int64
 	)
+
+	logger := zap.L()
 
 	if param.LoadDump {
 		logger.Info("Loading cache dump", zap.String("filename", param.LoadDumpFileName))
