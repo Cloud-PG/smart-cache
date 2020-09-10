@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	csvHeader        = "Filename,SiteName,UserID,TaskID,TaskMonitorID,JobID,Protocol,JobExecExitCode,JobStart,JobEnd,NumCPU,WrapWC,WrapCPU,Size,DataType,FileType,JobLengthH,JobLengthM,JobSuccess,CPUTime,IOTime,reqDay,Region,Campain,Process"
+	csvHeader        = "Filename,SiteName,UserID,TaskID,TaskMonitorID,JobID,Protocol,JobExecExitCode,JobStart,JobEnd,NumCPU,WrapWC,WrapCPU,Size,DataType,FileType,JobLengthH,JobLengthM,JobSuccess,CPUTime,IOTime,reqDay,Region,Campaign,Process"
 	readerBufferSize = 1024
 )
 
@@ -52,7 +52,7 @@ var (
 			- [20] IOTime (float64)
 			- [21] reqDay (int64)
 			- [22] Region (int64)
-			- [23] Campain (int64)
+			- [23] Campaign (int64)
 			- [24] Process (int64)
 	*/
 	csvHeaderIndexes = []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24}
@@ -78,7 +78,7 @@ type CSVRecord struct {
 	Filename        int64   `json:"filename"`
 	FileType        int64   `json:"fileType"`
 	DataType        int64   `json:"dataType"`
-	Campain         int64   `json:"campain"`
+	Campaign        int64   `json:"campaign"`
 	Process         int64   `json:"process"`
 	Protocol        int64   `json:"protocol"`
 	TaskMonitorID   int64   `json:"taskMonitorID"`
@@ -101,11 +101,13 @@ type CSVRecord struct {
 	SizeM           float64 `json:"sizeM"`
 }
 
-func recordGenerator(csvReader *csv.Reader, curFile *os.File, headerMap []int) chan CSVRecord {
+func recordGenerator(csvReader *csv.Reader, curFile *os.File, headerMap []int) chan CSVRecord { //nolint:ignore,funlen
 	channel := make(chan CSVRecord, readerBufferSize)
+
 	go func() {
 		defer close(channel)
 		defer curFile.Close()
+
 		for {
 			record, err := csvReader.Read()
 			if err == io.EOF {
@@ -134,7 +136,7 @@ func recordGenerator(csvReader *csv.Reader, curFile *os.File, headerMap []int) c
 			iotime, _ := strconv.ParseFloat(record[headerMap[20]], 64)
 			day, _ := strconv.ParseFloat(record[headerMap[21]], 64)
 			region, _ := strconv.ParseInt(record[headerMap[22]], 10, 64)
-			campain, _ := strconv.ParseInt(record[headerMap[23]], 10, 64)
+			campaign, _ := strconv.ParseInt(record[headerMap[23]], 10, 64)
 			process, _ := strconv.ParseInt(record[headerMap[24]], 10, 64)
 
 			sizeInMegabytes := size / (1024. * 1024.)
@@ -158,7 +160,7 @@ func recordGenerator(csvReader *csv.Reader, curFile *os.File, headerMap []int) c
 				IOTime:        iotime,
 				Size:          size,
 				SizeM:         sizeInMegabytes,
-				Campain:       campain,
+				Campaign:      campaign,
 				Process:       process,
 			}
 
@@ -236,11 +238,10 @@ func getHeaderIndexes(header []string) []int {
 
 // OpenSimFolder opens a simulation folder
 func OpenSimFolder(dirPath *os.File) chan CSVRecord {
+	var fileList = make([]string, 0)
 
 	channel := make(chan CSVRecord)
-
 	fileStats, _ := dirPath.Readdir(0)
-	var fileList []string
 
 	for _, file := range fileStats {
 		fileList = append(fileList, path.Join(dirPath.Name(), file.Name()))
@@ -417,10 +418,12 @@ func GetCacheSize(cacheSize float64, cacheSizeUnit string) float64 {
 }
 
 // Create simulation cache
-func Create(cacheType string, cacheSize float64, cacheSizeUnit string, log bool, weightFunc string, weightFuncParams WeightFunctionParameters) Cache {
-	logger := zap.L()
+func Create(cacheType string, cacheSize float64, cacheSizeUnit string, log bool, weightFunc string, weightFuncParams WeightFunctionParameters) Cache { //nolint:ignore,funlen
 	var cacheInstance Cache
+
+	logger := zap.L()
 	cacheSizeMegabytes := GetCacheSize(cacheSize, cacheSizeUnit)
+
 	switch cacheType {
 	case "lru":
 		logger.Info("Create LRU Cache",
@@ -516,9 +519,10 @@ func Create(cacheType string, cacheSize float64, cacheSizeUnit string, log bool,
 
 type InitParameters struct {
 	Log                    bool
-	QueueType              queueType
 	RedirectReq            bool
 	Watermarks             bool
+	CalcWeight             bool
+	QueueType              queueType
 	HighWatermark          float64
 	LowWatermark           float64
 	Dataset2TestPath       string
@@ -538,11 +542,11 @@ type InitParameters struct {
 	AIRLEpsilonDecay       float64
 	MaxNumDayDiff          float64
 	DeltaDaysStep          float64
-	CalcWeight             bool
 }
 
-func InitInstance(cacheType string, cacheInstance Cache, params InitParameters) {
+func InitInstance(cacheType string, cacheInstance Cache, params InitParameters) { //nolint:ignore,funlen
 	logger := zap.L()
+
 	switch cacheType {
 	case "lru":
 		logger.Info("Init LRU Cache")
@@ -605,18 +609,18 @@ func InitInstance(cacheType string, cacheInstance Cache, params InitParameters) 
 }
 
 type SimulationParams struct {
+	LoadDump           bool
+	Dump               bool
+	DumpFilesAndStats  bool
+	ColdStart          bool
+	ColdStartNoStats   bool
 	DataPath           string
 	OutFile            string
 	BaseName           string
 	ResultRunStatsName string
 	DumpFilename       string
-	LoadDump           bool
 	LoadDumpFileName   string
-	Dump               bool
 	DumpFileName       string
-	DumpFilesAndStats  bool
-	ColdStart          bool
-	ColdStartNoStats   bool
 	AIRLEpsilonStart   float64
 	AIRLEpsilonDecay   float64
 	CPUprofile         string
@@ -629,7 +633,7 @@ type SimulationParams struct {
 	DataTypeFilter     Filter
 }
 
-func Simulate(cacheType string, cacheInstance Cache, param SimulationParams) {
+func Simulate(cacheType string, cacheInstance Cache, param SimulationParams) { //nolint:ignore,funlen
 	// Simulation variables
 	var (
 		numDailyRecords    int64
@@ -648,7 +652,7 @@ func Simulate(cacheType string, cacheInstance Cache, param SimulationParams) {
 
 	logger := zap.L()
 
-	if param.LoadDump {
+	if param.LoadDump { //nolint:ignore,nestif
 		logger.Info("Loading cache dump", zap.String("filename", param.LoadDumpFileName))
 
 		latestCacheRun := GetSimulationRunNum(filepath.Dir(param.LoadDumpFileName))
@@ -700,16 +704,19 @@ func Simulate(cacheType string, cacheInstance Cache, param SimulationParams) {
 		iterator = OpenSimFile(param.DataPath)
 	case mode.IsDir():
 		curFolder, _ := os.Open(param.DataPath)
+
 		defer func() {
 			closeErr := curFolder.Close()
 			if closeErr != nil {
 				panic(closeErr)
 			}
 		}()
+
 		iterator = OpenSimFolder(curFolder)
 	}
 
 	csvSimOutput := OutputCSV{}
+
 	csvSimOutput.Create(param.OutFile, false)
 	defer csvSimOutput.Close()
 
@@ -767,20 +774,22 @@ func Simulate(cacheType string, cacheInstance Cache, param SimulationParams) {
 		profileOut, err := os.Create(param.CPUprofile)
 		if err != nil {
 			fmt.Printf("ERR: Can not create CPU profile file %s.\n", err)
-			os.Exit(-1)
+			panic("ERROR: on create cpu profile")
 		}
+
 		logger.Info("Enable CPU profiliing", zap.String("filename", param.CPUprofile))
 		startProfileErr := pprof.StartCPUProfile(profileOut)
+
 		if startProfileErr != nil {
 			panic(startProfileErr)
 		}
+
 		defer pprof.StopCPUProfile()
 	}
 
 	logger.Info("Simulation START")
 
 	for record := range iterator {
-
 		numIterations++
 
 		// --------------------- Make daily output ---------------------
@@ -826,8 +835,8 @@ func Simulate(cacheType string, cacheInstance Cache, param SimulationParams) {
 					csvRow = append(csvRow, strings.Split(ExtraOutput(cacheInstance, "evictionStats"), ",")...)
 					csvRow = append(csvRow, strings.Split(ExtraOutput(cacheInstance, "evictionCategoryStats"), ",")...)
 					csvRow = append(csvRow, strings.Split(ExtraOutput(cacheInstance, "actionStats"), ",")...)
-
 				}
+
 				csvSimOutput.Write(csvRow)
 			}
 			ClearStats(cacheInstance)
@@ -847,20 +856,23 @@ func Simulate(cacheType string, cacheInstance Cache, param SimulationParams) {
 
 		totNumRecords++
 
-		if windowCounter >= param.WindowStart {
+		if windowCounter >= param.WindowStart { //nolint:ignore,nestif
 			if !succesJobFilter.Check(record) {
 				numFilteredRecords++
+
 				continue
 			}
 			if param.DataTypeFilter != nil {
 				if !param.DataTypeFilter.Check(record) {
 					numFilteredRecords++
+
 					continue
 				}
 			}
 			if param.RecordFilter != nil {
 				if !param.RecordFilter.Check(record) {
 					numFilteredRecords++
+
 					continue
 				}
 			}
@@ -869,17 +881,22 @@ func Simulate(cacheType string, cacheInstance Cache, param SimulationParams) {
 
 			cpuEff := (record.CPUTime / (record.CPUTime + record.IOTime)) * 100.
 			// Filter records with invalid CPU efficiency
-			if cpuEff < 0. {
+			switch {
+			case cpuEff < 0.:
 				numInvalidRecords++
+
 				continue
-			} else if math.IsInf(cpuEff, 0) {
+			case math.IsInf(cpuEff, 0):
 				numInvalidRecords++
+
 				continue
-			} else if math.IsNaN(cpuEff) {
+			case math.IsNaN(cpuEff):
 				numInvalidRecords++
+
 				continue
-			} else if cpuEff > 100. {
+			case cpuEff > 100.:
 				numInvalidRecords++
+
 				continue
 			}
 
@@ -898,6 +915,7 @@ func Simulate(cacheType string, cacheInstance Cache, param SimulationParams) {
 			if redirected {
 				redirectedData += sizeInMbytes
 				numRedirected++
+
 				continue
 			}
 
@@ -927,7 +945,6 @@ func Simulate(cacheType string, cacheInstance Cache, param SimulationParams) {
 				numIterations = 0
 				start = time.Now()
 			}
-
 		} else {
 			numJumpedRecords++
 			if time.Since(start).Seconds() >= param.OutputUpdateDelay {
@@ -950,7 +967,7 @@ func Simulate(cacheType string, cacheInstance Cache, param SimulationParams) {
 				zap.Error(err),
 				zap.String("filename", param.MEMprofile),
 			)
-			os.Exit(-1)
+			panic("ERROR: on create memory profile")
 		}
 		logger.Info("Write memprofile", zap.String("filename", param.MEMprofile))
 		profileWriteErr := pprof.WriteHeapProfile(profileOut)
@@ -979,15 +996,18 @@ func Simulate(cacheType string, cacheInstance Cache, param SimulationParams) {
 	)
 	// Save run statistics
 	statFile, errCreateStat := os.Create(param.ResultRunStatsName)
+
 	defer func() {
 		closeErr := statFile.Close()
 		if closeErr != nil {
 			panic(closeErr)
 		}
 	}()
+
 	if errCreateStat != nil {
 		panic(errCreateStat)
 	}
+
 	jsonBytes, errMarshal := json.Marshal(SimulationStats{
 		TimeElapsed:           fmt.Sprintf("%02d:%02d:%02d", elTH, elTM, elTS),
 		Extra:                 ExtraStats(cacheInstance),
