@@ -23,6 +23,10 @@ const (
 	DailyBandwidth1Gbit = (1000. / 8.) * 60. * 60. * 24.
 	// CHOICESLOGBUFFERDIM is the max dimension of the buffer to store choices
 	CHOICESLOGBUFFERDIM = 9999
+	// CHOICE_ADD string to store in choice add
+	CHOICE_ADD = "ADD"
+	// CHOICE_DELETE string to store in choice delete
+	CHOICE_DELETE = "DELETE"
 )
 
 var (
@@ -342,7 +346,7 @@ func (cache *SimpleCache) UpdatePolicy(request *Request, fileStats *FileStats, h
 				fmt.Sprintf("%0.2f", fileStats.Size),
 				fmt.Sprintf("%d", fileStats.Frequency),
 				fmt.Sprintf("%d", fileStats.DeltaLastRequest),
-				"Add",
+				CHOICE_ADD,
 			})
 
 			added = true
@@ -448,7 +452,7 @@ func (cache *SimpleCache) Free(amount float64, percentage bool) float64 {
 				fmt.Sprintf("%0.2f", curFileStats.Size),
 				fmt.Sprintf("%d", curFileStats.Frequency),
 				fmt.Sprintf("%d", curFileStats.DeltaLastRequest),
-				"Delete",
+				CHOICE_DELETE,
 			})
 			cache.numDeleted++
 		}

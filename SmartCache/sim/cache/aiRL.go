@@ -65,7 +65,7 @@ type AIRL struct {
 }
 
 // Init the AIRL struct
-func (cache *AIRL) Init(params InitParameters) interface{} {
+func (cache *AIRL) Init(params InitParameters) interface{} { //nolint:ignore,funlen
 
 	additionFeatureMap := params.AIRLAdditionFeatureMap
 	evictionFeatureMap := params.AIRLEvictionFeatureMap
@@ -438,6 +438,7 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) { //nolint:funlen
 	) {
 		// fmt.Printf("[CATMANAGER]: Category -> %#v\n", catState)
 		cache.actionCounters[catState.Action]++
+
 		switch catState.Action {
 		case qlearn.ActionDeleteAll:
 			curFileList := catState.Files
@@ -482,7 +483,7 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) { //nolint:funlen
 					fmt.Sprintf("%0.2f", curFileStats.Size),
 					fmt.Sprintf("%d", curFileStats.Frequency),
 					fmt.Sprintf("%d", curFileStats.DeltaLastRequest),
-					"Delete",
+					CHOICE_DELETE,
 				})
 			}
 		case qlearn.ActionDeleteHalf, qlearn.ActionDeleteQuarter:
@@ -548,7 +549,7 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) { //nolint:funlen
 					fmt.Sprintf("%0.2f", curFileStats.Size),
 					fmt.Sprintf("%d", curFileStats.Frequency),
 					fmt.Sprintf("%d", curFileStats.DeltaLastRequest),
-					"Delete",
+					CHOICE_DELETE,
 				})
 				numDeletes--
 				if numDeletes <= 0 {
@@ -598,7 +599,7 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) { //nolint:funlen
 				fmt.Sprintf("%0.2f", curFileStats.Size),
 				fmt.Sprintf("%d", curFileStats.Frequency),
 				fmt.Sprintf("%d", curFileStats.DeltaLastRequest),
-				"Delete",
+				CHOICE_DELETE,
 			})
 		case qlearn.ActionNotDelete:
 			for _, curFile := range catState.Files {
@@ -835,8 +836,7 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) 
 	cache.prevTime = cache.curTime
 	cache.curTime = request.DayTime
 
-	if !cache.curTime.Equal(cache.prevTime) {
-
+	if !cache.curTime.Equal(cache.prevTime) { //nolint:ignore,nestif
 		if cache.additionAgent.Epsilon <= cache.additionAgent.MinEpsilon+0.01 {
 			if cache.additionAgentPrevQValue == 0. {
 				cache.additionAgentPrevQValue = cache.additionAgent.QValue
@@ -1006,6 +1006,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 						case EvictionOnFree:
 							cache.callEvictionAgent()
 						}
+
 						cache.callEvictionAgent()
 					} else {
 						cache.Free(requestedFileSize, false)
@@ -1065,7 +1066,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					fmt.Sprintf("%0.2f", fileStats.Size),
 					fmt.Sprintf("%d", fileStats.Frequency),
 					fmt.Sprintf("%d", fileStats.DeltaLastRequest),
-					"Add",
+					CHOICE_ADD,
 				})
 			}
 		} else {
@@ -1152,9 +1153,8 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				fmt.Sprintf("%0.2f", fileStats.Size),
 				fmt.Sprintf("%d", fileStats.Frequency),
 				fmt.Sprintf("%d", fileStats.DeltaLastRequest),
-				"Add",
+				CHOICE_ADD,
 			})
-
 		} else {
 			// #######################
 			// ##### HIT branch  #####
@@ -1194,6 +1194,7 @@ func (cache *AIRL) AfterRequest(request *Request, fileStats *FileStats, hit bool
 			}
 		}
 	}
+
 	cache.SimpleCache.AfterRequest(request, fileStats, hit, added)
 }
 
@@ -1225,15 +1226,18 @@ func (cache *AIRL) ExtraStats() string {
 
 func writeQTable(outFilename string, data string) {
 	qtableAdditionFile, errCreateQTablecsv := os.Create(outFilename)
+
 	defer func() {
 		closeErr := qtableAdditionFile.Close()
 		if closeErr != nil {
 			panic(closeErr)
 		}
 	}()
+
 	if errCreateQTablecsv != nil {
 		panic(errCreateQTablecsv)
 	}
+
 	_, writeErr := qtableAdditionFile.WriteString(data)
 	if writeErr != nil {
 		panic(writeErr)
@@ -1245,12 +1249,15 @@ func (cache *AIRL) meanNumCategories() int {
 }
 
 func (cache *AIRL) stdDevNumCategories() float64 {
-	mean := cache.meanNumCategories()
 	var sum int
+
+	mean := cache.meanNumCategories()
+
 	for _, value := range cache.numDailyCategories {
 		curDiff := value - mean
 		sum += curDiff * curDiff
 	}
+
 	return math.Sqrt(float64(sum) / float64(len(cache.numDailyCategories)-1))
 }
 
