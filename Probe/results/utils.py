@@ -168,14 +168,24 @@ def aggregate_results(folder: str):
     return results
 
 
-def _measure_throughput(df: 'pd.DataFrame') -> 'pd.Series':
+def _measure_throughput_ratio(df: 'pd.DataFrame') -> 'pd.Series':
     cache_size = df['cache size'][0]
     return (df['read on hit data'] - df['written data'])/cache_size
 
 
-def _measure_cost(df: 'pd.DataFrame') -> 'pd.Series':
+def _measure_cost_ratio(df: 'pd.DataFrame') -> 'pd.Series':
     cache_size = df['cache size'][0]
     return (df['written data'] + df['deleted data'])/cache_size
+
+
+def _measure_throughput(df: 'pd.DataFrame') -> 'pd.Series':
+    # to Terabytes
+    return (df['read on hit data'] - df['written data'])/(1024.**2.)
+
+
+def _measure_cost(df: 'pd.DataFrame') -> 'pd.Series':
+    # to Terabytes
+    return (df['written data'] + df['deleted data'])/(1024.**2.)
 
 
 def _measure_read_on_hit_ratio(df: 'pd.DataFrame') -> 'pd.Series':
@@ -218,8 +228,10 @@ def _agent_epsilon(df: 'pd.DataFrame') -> 'pd.Series':
 
 
 _MEASURES = {
-    'Throughput': _measure_throughput,
-    'Cost': _measure_cost,
+    'Throughput ratio': _measure_throughput_ratio,
+    'Cost ratio': _measure_cost_ratio,
+    'Throughput (TB)': _measure_throughput,
+    'Cost (TB)': _measure_cost,
     'Read on hit ratio': _measure_read_on_hit_ratio,
     'CPU Eff.': _measure_cpu_eff,
     'Avg. Free Space': _measure_avg_free_space,
@@ -234,12 +246,22 @@ _MEASURES = {
 def _get_measures(cache_filename: str, df: 'pd.DataFrame') -> list:
     measures = [cache_filename]
 
-    # Throughput
+    # Throughput ratio
+    measures.append(
+        _measure_throughput_ratio(df).mean()
+    )
+
+    # Cost ratio
+    measures.append(
+        _measure_cost_ratio(df).mean()
+    )
+    
+    # Throughput (TB)
     measures.append(
         _measure_throughput(df).mean()
     )
 
-    # Cost
+    # Cost (TB)
     measures.append(
         _measure_cost(df).mean()
     )
@@ -790,7 +812,8 @@ def make_table(files2plot: list, prefix: str) -> 'pd.DataFrame':
     df = pd.DataFrame(
         table,
         columns=[
-            "file", "Throughput", "Cost",
+            "file", "Throughput ratio", "Cost ratio",
+            "Throughput (TB)", "Cost (TB)",
             "Read on hit ratio", "Bandwidth",
             "Redirect Vol.", "Avg. Free Space",
             "Std. Dev. Free Space", "Hit over Miss",
@@ -798,7 +821,7 @@ def make_table(files2plot: list, prefix: str) -> 'pd.DataFrame':
         ]
     )
     df = df.sort_values(
-        by=["Throughput", "Cost", "Hit rate"],
+        by=["Throughput ratio", "Cost ratio", "Hit rate"],
         ascending=[False, True, False],
     )
     df = df.round(3)
