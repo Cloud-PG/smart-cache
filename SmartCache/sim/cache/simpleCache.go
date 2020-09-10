@@ -21,6 +21,8 @@ const (
 	MeanCPUDiffUS = 10.
 	// DailyBandwidth1Gbit is 1Gibt day bandwidth available
 	DailyBandwidth1Gbit = (1000. / 8.) * 60. * 60. * 24.
+	// CHOICESLOGBUFFERDIM is the max dimension of the buffer to store choices
+	CHOICESLOGBUFFERDIM = 9999
 )
 
 var (
@@ -229,6 +231,7 @@ func (cache *SimpleCache) Loads(inputString [][]byte, _ ...interface{}) {
 		if unmarshalErr != nil {
 			panic(unmarshalErr)
 		}
+
 		switch curRecordInfo.Type {
 		case "FILES":
 			var curFileStats FileStats
@@ -281,6 +284,7 @@ func (cache *SimpleCache) Load(filename string) [][]byte {
 					copy(newRecord, buffer)
 					records = append(records, newRecord)
 				}
+
 				break
 			}
 			panic(err)
@@ -351,11 +355,9 @@ func (cache *SimpleCache) UpdatePolicy(request *Request, fileStats *FileStats, h
 
 // AfterRequest of LRU cache
 func (cache *SimpleCache) AfterRequest(request *Request, fileStats *FileStats, hit bool, added bool) {
-
 	var currentCPUEff float64
 
 	if request.CPUEff != 0. {
-
 		if request.Protocol == 1 {
 			// Local
 			cache.upperCPUEff += request.CPUEff
@@ -404,7 +406,6 @@ func (cache *SimpleCache) AfterRequest(request *Request, fileStats *FileStats, h
 
 // Free removes files from the cache
 func (cache *SimpleCache) Free(amount float64, percentage bool) float64 {
-	// TODO: remove all means and StdDev
 	// cache.logger.Debug(
 	// 	"Cache free",
 	// 	zap.Float64("mean size", cache.MeanSize()),
@@ -592,6 +593,7 @@ func (cache *SimpleCache) CPUEffLowerBound() float64 {
 // CPUEffBoundDiff returns the ideal CPU efficiency bound difference
 func (cache *SimpleCache) CPUEffBoundDiff() float64 {
 	diffValue := 0.
+
 	if len(cache.region) == 0 {
 		diff := cache.CPUEffUpperBound() - cache.CPUEffLowerBound()
 		if !math.IsNaN(diff) && diff > 0. {
@@ -662,7 +664,7 @@ func (cache *SimpleCache) NumHits() int64 {
 func (cache *SimpleCache) toChoiceBuffer(curChoice []string) {
 	if cache.choicesLogFile != nil {
 		cache.choicesBuffer = append(cache.choicesBuffer, curChoice)
-		if len(cache.choicesBuffer) > 9999 {
+		if len(cache.choicesBuffer) > CHOICESLOGBUFFERDIM {
 			cache.flushChoices()
 		}
 	}
