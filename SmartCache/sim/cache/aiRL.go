@@ -139,7 +139,7 @@ func (cache *AIRL) Init(params InitParameters) interface{} {
 			if cache.logSimulation {
 				cache.evictionAgentChoicesLogFile = &OutputCSV{}
 				cache.evictionAgentChoicesLogFile.Create("evictionAgentChoiceLog.csv", true)
-				cache.evictionAgentChoicesLogFile.Write(choicesLogHeader)
+				cache.evictionAgentChoicesLogFile.Write(CHOICESLOGHEADER)
 				cache.evictionAgentChoicesLogFileBuffer = make([][]string, 0)
 			}
 			cache.evictionCheckNextStateMap = make(map[[8]byte]bool)
@@ -175,7 +175,7 @@ func (cache *AIRL) Init(params InitParameters) interface{} {
 		if cache.logSimulation {
 			cache.additionAgentChoicesLogFile = &OutputCSV{}
 			cache.additionAgentChoicesLogFile.Create("additionAgentChoiceLog.csv", true)
-			cache.additionAgentChoicesLogFile.Write(choicesLogHeader)
+			cache.additionAgentChoicesLogFile.Write(CHOICESLOGHEADER)
 			cache.additionAgentChoicesLogFileBuffer = make([][]string, 0)
 		}
 		cache.additionAgentOK = true
