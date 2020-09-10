@@ -68,6 +68,7 @@ func (catMan *CategoryManager) deleteFileFromCategory(category int, file2Remove 
 	catMan.categorySizesMap[category] -= catMan.fileSupportDataSizeMap[file2Remove]
 	categoryFiles := catMan.categoryFileListMap[category]
 	deleteIdx := -1
+
 	for idx, file := range categoryFiles {
 		if file.Filename == file2Remove.Filename {
 			deleteIdx = idx
@@ -122,6 +123,7 @@ func (catMan *CategoryManager) AddOrUpdateCategoryFile(category int, file *FileS
 // GetFileCategory returns the category of a specific file
 func (catMan CategoryManager) GetFileCategory(file *FileStats) int {
 	catMan.buffer = catMan.buffer[:0]
+
 	for _, feature := range catMan.features {
 		// fmt.Println(feature.Name)
 		switch feature.Name {
@@ -133,7 +135,9 @@ func (catMan CategoryManager) GetFileCategory(file *FileStats) int {
 			catMan.buffer = append(catMan.buffer, feature.Index(file.Recency))
 		}
 	}
+
 	curCatIdx := 0
+
 	for idx, value := range catMan.buffer {
 		curCatIdx += value * catMan.fileFeatureIdxWeights[idx]
 	}
@@ -160,6 +164,7 @@ func (catMan *CategoryManager) GetStateFromCategories(newStates bool, agent qlea
 			for catID := range catMan.categoryFileListMap {
 				curCat := catMan.categoryFileFeatureIdx[catID]
 				catMan.buffer = catMan.buffer[:0]
+
 				for _, feature := range catMan.features {
 					switch feature.Name {
 					case "catSize":
