@@ -500,7 +500,7 @@ func (agent *Agent) SaveMemory(key interface{}, choice Choice) {
 }
 
 // Remember returns some memories and then delete them
-func (agent *Agent) Remember(key interface{}) []Choice {
+func (agent *Agent) Remember(key interface{}) ([]Choice, bool) {
 	pastChoices, inMemory := agent.Memory[key]
 
 	memories := make([]Choice, 0)
@@ -511,7 +511,7 @@ func (agent *Agent) Remember(key interface{}) []Choice {
 		delete(agent.Memory, key)
 	}
 
-	return memories
+	return memories, inMemory
 }
 
 //##############################################################################
