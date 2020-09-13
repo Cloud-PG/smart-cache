@@ -249,6 +249,7 @@ func (man *Manager) Remove(files []int64) { //nolint: ignore,funlen
 				copy(man.queueF[curIdx:], man.queueF[curIdx+1:])
 				man.queueF = man.queueF[:len(man.queueF)-1]
 			}
+
 			copy(man.queueFilenames[curIdx:], man.queueFilenames[curIdx+1:])
 			man.queueFilenames = man.queueFilenames[:len(man.queueFilenames)-1]
 		}
