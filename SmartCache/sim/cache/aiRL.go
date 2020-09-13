@@ -667,6 +667,7 @@ func (cache *AIRL) checkEvictionNextState(oldStateIdx int, newStateIdx int) bool
 	}
 
 	cache.evictionCheckNextStateMap[curArgs] = isNext
+
 	return isNext
 }
 
@@ -990,6 +991,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					fmt.Sprintf("%d", fileStats.DeltaLastRequest),
 					"NotStore",
 				})
+
 				return false
 			case qlearn.ActionStore:
 				forced := false
@@ -997,6 +999,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				if cache.Size()+requestedFileSize > cache.MaxSize {
 					if cache.evictionAgentOK {
 						forced = true
+
 						switch cache.evictionType {
 						case EvictionOnDayEnd, EvictionOnK:
 							cache.punishEvictionAgentOnForcedCall()
@@ -1014,6 +1017,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					if cache.evictionAgentOK && forced {
 						cache.rewardEvictionAfterForcedCall(false)
 					}
+
 					return false
 				}
 
@@ -1027,6 +1031,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				cache.size += requestedFileSize
 				fileStats.addInCache(cache.tick, &request.DayTime)
 				added = true
+
 				if cache.evictionAgentOK && forced {
 					cache.rewardEvictionAfterForcedCall(added)
 				}
@@ -1082,6 +1087,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				Size:      request.Size,
 				Frequency: fileStats.Frequency,
 			}
+
 			switch cache.rlType {
 			case SCDL2:
 				cache.additionAgent.SaveMemoryWithNoLimits(request.Filename, curChoice)
@@ -1204,6 +1210,7 @@ func (cache *AIRL) CheckWatermark() bool {
 	if cache.rlType == SCDL {
 		return cache.SimpleCache.CheckWatermark()
 	}
+
 	return true
 }
 
@@ -1260,6 +1267,7 @@ func (cache *AIRL) stdDevNumCategories() float64 {
 // ExtraOutput for output specific information
 func (cache *AIRL) ExtraOutput(info string) string { //nolint:ignore,funlen
 	result := ""
+
 	switch info {
 	case "evictionCategoryStats":
 		if cache.evictionAgentOK {
@@ -1325,6 +1333,7 @@ func (cache *AIRL) ExtraOutput(info string) string { //nolint:ignore,funlen
 	default:
 		result = "NONE"
 	}
+
 	return result
 }
 
@@ -1340,7 +1349,9 @@ func (cache *AIRL) Terminate() error {
 			cache.evictionAgentChoicesLogFile.Close()
 		}
 	}
+
 	_ = cache.SimpleCache.Terminate()
+
 	return nil
 }
 
