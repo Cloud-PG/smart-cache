@@ -261,6 +261,7 @@ func (man *Manager) Remove(files []int64) { //nolint: ignore,funlen
 
 func (man *Manager) getFeature(file *FileStats) interface{} {
 	var feature interface{}
+
 	switch man.qType {
 	case NoQueue:
 		feature = file.Filename
@@ -275,11 +276,12 @@ func (man *Manager) getFeature(file *FileStats) interface{} {
 	case WeightQueue:
 		feature = file.Weight
 	}
+
 	return feature
 }
 
 // Insert a file into the queue manager
-func (man *Manager) Insert(file *FileStats) {
+func (man *Manager) Insert(file *FileStats) { //nolint:ignore,funlen
 	// fmt.Println(file.Filename, "->", file.Recency)
 	// Force inserto check
 
@@ -293,6 +295,7 @@ func (man *Manager) Insert(file *FileStats) {
 	man.prevVal[filename] = feature
 
 	var insertIdx = -1
+
 	switch man.qType {
 	case NoQueue:
 		intFeature := feature.(int64)
@@ -319,6 +322,7 @@ func (man *Manager) Insert(file *FileStats) {
 	switch man.qType {
 	case LRUQueue, LFUQueue:
 		intFeature := feature.(int64)
+
 		if insertIdx == len(man.queueI) {
 			man.queueI = append(man.queueI, intFeature)
 		} else {
@@ -330,6 +334,7 @@ func (man *Manager) Insert(file *FileStats) {
 		}
 	case SizeBigQueue, SizeSmallQueue, WeightQueue:
 		floatFeature := feature.(float64)
+
 		if insertIdx == len(man.queueF) {
 			man.queueF = append(man.queueF, floatFeature)
 		} else {
