@@ -12,52 +12,51 @@ import (
 	"go.uber.org/zap"
 )
 
-// ActionType are cache possible actions
+// ActionType are cache possible actions.
 type ActionType int
 
-// RLUpdateAlg are the possible update functions
+// RLUpdateAlg are the possible update functions.
 type RLUpdateAlg int
 
-// AgentRole are the possible table roles
+// AgentRole are the possible table roles.
 type AgentRole int
 
 const (
-	// ActionNotStore indicates to store an element in cache
+	// ActionNONE indicates no actions.
 	ActionNONE ActionType = iota - 8
-	// ActionNotStore indicates to store an element in cache
+	// ActionNotStore indicates to store an element in cache.
 	ActionNotStore
-	// ActionStore indicates to not store an element in cache
+	// ActionStore indicates to not store an element in cache.
 	ActionStore
-	// ActionNotDelete indicates to not remove a category of files
+	// ActionNotDelete indicates to not remove a category of files.
 	ActionNotDelete
-	// ActionDeleteAll indicates to remove a all files from a category
+	// ActionDeleteAll indicates to remove a all files from a category.
 	ActionDeleteAll
-	// ActionDeleteHalf indicates to remove an half of the category files
+	// ActionDeleteHalf indicates to remove an half of the category files.
 	ActionDeleteHalf
-	// ActionDeleteQuarter indicates to remove a quarter of the category files
+	// ActionDeleteQuarter indicates to remove a quarter of the category files.
 	ActionDeleteQuarter
-	// ActionDeleteOne indicates to remove a file of the category
+	// ActionDeleteOne indicates to remove a file of the category.
 	ActionDeleteOne
 
-	// RLSARSA indicates the standard RL update algorithm SARSA
+	// RLSARSA indicates the standard RL update algorithm SARSA.
 	RLSARSA RLUpdateAlg = iota - 2
-	// RLQLearning indicates the Bellman equation
+	// RLQLearning indicates the Bellman equation.
 	RLQLearning
 
-	// EvictionAgent indicates the table to choose which files to delete
+	// EvictionAgent indicates the table to choose which files to delete.
 	EvictionAgent AgentRole = iota - 2
-	// AdditionAgent indicates the table to accept file requests
+	// AdditionAgent indicates the table to accept file requests.
 	AdditionAgent
 
 	maxStoredPastChoices = 32
 )
 
 var (
-	logger          = zap.L()
 	randomGenerator = rand.New(rand.NewSource(42))
 )
 
-// QTable struct used by agents
+// QTable struct used by agents.
 type QTable struct {
 	States         [][]int                    `json:"states"`
 	Actions        [][]float64                `json:"actions"`
@@ -65,11 +64,12 @@ type QTable struct {
 	ActionTypeIdxs map[ActionType]int         `json:"actionTypeIdxs"`
 	ActionTypes    []ActionType               `json:"actionTypes"`
 	IndexWeights   []int                      `json:"indexWeights"`
+	logger         *zap.Logger
 }
 
 // Init prepare the QTable States and Actions
-func (table *QTable) Init(featureManager *featuremap.FeatureManager, actions []ActionType) {
-	// logger := zap.L()
+func (table *QTable) Init(featureManager *featuremap.FeatureManager, actions []ActionType) { //nolint:ignore,funlen
+	table.logger = zap.L()
 
 	table.States = make([][]int, 0)
 	table.Actions = make([][]float64, 0)
@@ -80,13 +80,14 @@ func (table *QTable) Init(featureManager *featuremap.FeatureManager, actions []A
 	for idx, action := range actions {
 		table.ActionTypeIdxs[action] = idx
 	}
+
 	copy(table.ActionTypes, actions)
 
 	counters := make([]int, len(table.FeatureManager.Features))
-	lenghts := make([]int, len(table.FeatureManager.Features))
+	lengths := make([]int, len(table.FeatureManager.Features))
 
 	for idx, feature := range table.FeatureManager.Features {
-		lenghts[idx] = feature.Size()
+		lengths[idx] = feature.Size()
 	}
 
 	for {
@@ -99,19 +100,22 @@ func (table *QTable) Init(featureManager *featuremap.FeatureManager, actions []A
 		table.Actions = append(table.Actions, curActions)
 
 		allEqual := true
+
 		for idx := 0; idx < len(counters); idx++ {
-			if counters[idx]+1 != lenghts[idx] {
+			if counters[idx]+1 != lengths[idx] {
 				allEqual = false
+
 				break
 			}
 		}
+
 		if allEqual {
 			break
 		}
 
 		counters[len(counters)-1]++
 		for idx := len(counters) - 1; idx > -1; idx-- {
-			if counters[idx] == lenghts[idx] {
+			if counters[idx] == lengths[idx] {
 				counters[idx] = 0
 				if idx-1 > -1 {
 					counters[idx-1]++
@@ -131,12 +135,12 @@ func (table *QTable) Init(featureManager *featuremap.FeatureManager, actions []A
 
 	// testIdxs := table.Features2Idxs([]interface{}{float64(5000.0), int64(1), int64(500000)}...)
 	// fmt.Println(testIdxs, "->", table.FeatureIdxs2StateIdx(testIdxs...))
-
 }
 
 // FeatureIdxs2StateIdx returns the State index of the corresponding feature indexes
 func (table QTable) FeatureIdxs2StateIdx(featureIdxs ...int) int {
 	index := 0
+
 	for idx, curIdx := range featureIdxs {
 		if idx != len(featureIdxs)-1 {
 			index += curIdx * table.IndexWeights[idx]
@@ -144,14 +148,16 @@ func (table QTable) FeatureIdxs2StateIdx(featureIdxs ...int) int {
 			index += curIdx
 		}
 	}
+
 	return index
 }
 
 // Features2Idxs transform a list of features in their indexes
 func (table QTable) Features2Idxs(features ...interface{}) []int {
 	featureIdxs := make([]int, len(features))
+
 	for idx, val := range features {
-		fmt.Println(idx, val, table.FeatureManager.Features[idx].Type)
+		// fmt.Println(idx, val, table.FeatureManager.Features[idx].Type)
 		switch table.FeatureManager.Features[idx].ReflectType {
 		case reflect.Int64:
 			featureIdxs[idx] = table.FeatureManager.Features[idx].Index(val.(int64))
@@ -159,6 +165,7 @@ func (table QTable) Features2Idxs(features ...interface{}) []int {
 			featureIdxs[idx] = table.FeatureManager.Features[idx].Index(val.(float64))
 		}
 	}
+
 	return featureIdxs
 }
 
@@ -250,7 +257,7 @@ func (agent *Agent) Init(featureManager *featuremap.FeatureManager, role AgentRo
 
 // ResetParams resets the learning parameters
 func (agent *Agent) ResetParams(initEpsilon float64, decayRateEpsilon float64) {
-	logger = zap.L()
+	agent.logger = zap.L()
 
 	agent.LearningRate = 0.9 // also named Alpha
 	agent.DiscountFactor = 0.5
@@ -278,6 +285,7 @@ func (agent *Agent) ResetTableAction() {
 func (agent *Agent) UnleashEpsilon(newEpsilon interface{}) {
 	agent.Epsilon = 1.0
 	agent.StepNum = 0
+
 	if newEpsilon != nil {
 		targetEpsilon := newEpsilon.(float64)
 		for agent.Epsilon > targetEpsilon {
@@ -293,9 +301,10 @@ func (agent Agent) GetRandomFloat() float64 {
 
 // QTableToString outputs the state values in a csv format string
 func (agent Agent) QTableToString() string {
-	var csvOutput []string
-
-	var tmp []string
+	var (
+		csvOutput = make([]string, 0)
+		tmp       = make([]string, 0)
+	)
 
 	for _, action := range agent.QTable.ActionTypes {
 		switch action {
@@ -313,8 +322,11 @@ func (agent Agent) QTableToString() string {
 			tmp = append(tmp, "ActionStore")
 		case ActionNotStore:
 			tmp = append(tmp, "ActionNotStore")
+		case ActionNONE:
+			panic("ERROR: ActionNONE must not be in the table...")
 		}
 	}
+
 	for _, feature := range agent.QTable.FeatureManager.Features {
 		tmp = append(tmp, feature.Name)
 	}
@@ -336,6 +348,7 @@ func (agent Agent) QTableToString() string {
 
 		csvOutput = append(csvOutput, strings.Join(tmp, ","))
 	}
+
 	return strings.Join(csvOutput, "\n")
 }
 
@@ -343,20 +356,26 @@ func (agent Agent) QTableToString() string {
 func (agent Agent) GetCoverage() (float64, float64) {
 	actionsCov := 0
 	stateCov := 0
+
 	for _, actions := range agent.QTable.Actions {
 		curStateCov := false
+
 		for _, action := range actions {
 			if action != 0.0 {
 				actionsCov++
+
 				curStateCov = true
 			}
 		}
+
 		if curStateCov {
 			stateCov++
 		}
 	}
+
 	actionCovPerc := (float64(actionsCov) / float64(agent.NumVars)) * 100.
 	stateCovPerc := (float64(stateCov) / float64(agent.NumStates)) * 100.
+
 	return actionCovPerc, stateCovPerc
 }
 
@@ -373,6 +392,7 @@ func (agent Agent) GetBestActionValue(stateIdx int) float64 {
 		zap.Float64s("values", values),
 		zap.Int("idx max value", maxValueIdx),
 	)
+
 	return maxValue
 }
 
@@ -386,6 +406,7 @@ func (agent Agent) GetBestAction(stateIdx int) ActionType {
 		zap.Int("idx max value", maxValueIdx),
 		zap.Int("type best action", int(bestAction)),
 	)
+
 	return bestAction
 }
 
@@ -396,7 +417,10 @@ func (agent *Agent) UpdateTable(stateIdx int, newStateIdx int, action ActionType
 	curStateValue := agent.GetActionValue(stateIdx, action)
 	nextStateBestValue := agent.GetBestActionValue(newStateIdx)
 
-	actionIdx := agent.QTable.ActionTypeIdxs[action]
+	actionIdx, inActionTable := agent.QTable.ActionTypeIdxs[action]
+	if !inActionTable {
+		panic("ERROR: wrong action passed...")
+	}
 
 	switch agent.UpdateAlgorithm {
 	// case RLSARSA:
@@ -405,6 +429,8 @@ func (agent *Agent) UpdateTable(stateIdx int, newStateIdx int, action ActionType
 	case RLQLearning:
 		newQ := curStateValue + agent.LearningRate*(reward+agent.DiscountFactor*nextStateBestValue-curStateValue)
 		agent.QTable.Actions[stateIdx][actionIdx] = newQ
+	case RLSARSA:
+		panic("ERROR: not implemented...")
 	default:
 		panic(fmt.Sprintf("Update %d is not implemented", agent.UpdateAlgorithm))
 	}
@@ -424,6 +450,7 @@ func (agent *Agent) GetMemories(key interface{}) []Choice {
 	if !inMemory {
 		panic("Error: Memory not present...")
 	}
+
 	return pastChoices
 }
 
@@ -437,12 +464,14 @@ func (agent *Agent) ResetMemories() {
 	for key := range agent.Memory {
 		delete(agent.Memory, key)
 	}
+
 	agent.Memory = make(map[interface{}][]Choice)
 }
 
 // SaveMemoryWithNoLimits insert made actions in memory with no limits on memory size
 func (agent *Agent) SaveMemoryWithNoLimits(key interface{}, choice Choice) {
 	pastChoices, inMemory := agent.Memory[key]
+
 	if inMemory {
 		pastChoices = append(pastChoices, choice)
 		agent.Memory[key] = pastChoices
@@ -456,6 +485,7 @@ func (agent *Agent) SaveMemoryWithNoLimits(key interface{}, choice Choice) {
 // SaveMemory insert made actions in memory
 func (agent *Agent) SaveMemory(key interface{}, choice Choice) {
 	pastChoices, inMemory := agent.Memory[key]
+
 	if inMemory {
 		if len(pastChoices) < maxStoredPastChoices {
 			pastChoices = append(pastChoices, choice)
@@ -463,6 +493,7 @@ func (agent *Agent) SaveMemory(key interface{}, choice Choice) {
 			pastChoices = pastChoices[1:]
 			pastChoices = append(pastChoices, choice)
 		}
+
 		agent.Memory[key] = pastChoices
 	} else {
 		newChoices := make([]Choice, 0)
@@ -474,16 +505,20 @@ func (agent *Agent) SaveMemory(key interface{}, choice Choice) {
 // Remember returns some memories and then delete them
 func (agent *Agent) Remember(key interface{}) ([]Choice, bool) {
 	pastChoices, inMemory := agent.Memory[key]
+
 	var (
 		memories []Choice
 		present  bool
 	)
+
 	if inMemory && len(pastChoices) > (maxStoredPastChoices>>1) {
 		memories = make([]Choice, len(pastChoices))
 		copy(memories, pastChoices)
 		delete(agent.Memory, key)
+
 		present = true
 	}
+
 	return memories, present
 }
 
@@ -495,30 +530,36 @@ func getArgMax(array []float64) (int, float64) {
 	maxIdx := 0
 	maxElm := array[maxIdx]
 	allEqual := true
+
 	for idx := 1; idx < len(array); idx++ {
 		if array[idx] > maxElm {
 			maxElm = array[idx]
 			maxIdx = idx
 			allEqual = false
 		}
+
 		allEqual = allEqual && (array[idx] == maxElm)
 	}
+
 	if allEqual {
 		maxIdx = randomGenerator.Intn(len(array))
 		maxElm = array[maxIdx]
 	}
+
 	return maxIdx, maxElm
 }
 
-func createOneHot(lenght int, targetIdx int) []bool {
-	res := make([]bool, lenght)
+func createOneHot(length int, targetIdx int) []bool {
+	res := make([]bool, length)
 	res[targetIdx] = true
+
 	return res
 }
 
 // State2String returns the string of a given state
 func State2String(state []bool) string {
 	var resIdx string
+
 	for idx := 0; idx < len(state); idx++ {
 		if state[idx] {
 			resIdx += "1"
@@ -526,5 +567,6 @@ func State2String(state []bool) string {
 			resIdx += "0"
 		}
 	}
+
 	return resIdx
 }
