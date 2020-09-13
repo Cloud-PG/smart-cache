@@ -6,7 +6,7 @@ sim:
   cpuprofile: scdlProfiling.prof
   window:
     start: 0
-    stop: 4
+    stop: 2
   region: it
   overwrite: true
   cache:
@@ -21,7 +21,12 @@ sim:
   ai:
     rl:
       type: SCDL
+      # type: SCDL2
       epsilon:
         decay: 0.00001
       addition:
         featuremap: ../featureMaps/rlAdditionFeatureMap.json
+      # eviction:
+      #   type: onK
+      #   k: 8192
+      #   featuremap: ../featureMaps/rlEvictionFeatureMap.json

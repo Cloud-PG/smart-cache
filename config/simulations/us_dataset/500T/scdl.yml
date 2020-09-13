@@ -7,7 +7,7 @@ sim:
     start: 0
     stop: 52
   region: us
-  overwrite: false
+  overwrite: true
   cache:
     type: aiRL
     watermarks: false
