@@ -302,8 +302,10 @@ func (man *Manager) Update(file *FileStats) {
 	// if curFileStats != file {
 	// 	panic("Different file stats...")
 	// }
-	man.Remove([]int64{file.Filename})
-	man.Insert(file)
+	if man.qType != NoQueue {
+		man.Remove([]int64{file.Filename})
+		man.Insert(file)
+	}
 	// fmt.Println("--- AFTER ---")
 	// fmt.Println(man.orderedValues)
 	// for key, queue := range man.queue {
