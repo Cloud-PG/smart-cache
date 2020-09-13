@@ -23,7 +23,9 @@ const (
 	SCDL aiRLType = iota - 2
 	// SCDL2 type
 	SCDL2
+)
 
+const (
 	// EvictionOnK agent uses uses k to call eviction decisions
 	EvictionOnK = iota - 3
 	// EvictionOnDayEnd agent waits the end of the day to call eviction decisions

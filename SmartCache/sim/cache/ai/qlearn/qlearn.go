@@ -37,17 +37,23 @@ const (
 	ActionDeleteQuarter
 	// ActionDeleteOne indicates to remove a file of the category.
 	ActionDeleteOne
+)
 
+const (
 	// RLSARSA indicates the standard RL update algorithm SARSA.
 	RLSARSA RLUpdateAlg = iota - 2
 	// RLQLearning indicates the Bellman equation.
 	RLQLearning
+)
 
+const (
 	// EvictionAgent indicates the table to choose which files to delete.
 	EvictionAgent AgentRole = iota - 2
 	// AdditionAgent indicates the table to accept file requests.
 	AdditionAgent
+)
 
+const (
 	maxStoredPastChoices = 32
 )
 
