@@ -5,9 +5,8 @@ import (
 	"math"
 	"math/rand"
 	"reflect"
-	"strings"
-
 	"simulator/v2/cache/ai/featuremap"
+	"strings"
 
 	"go.uber.org/zap"
 )
@@ -52,9 +51,7 @@ const (
 	maxStoredPastChoices = 32
 )
 
-var (
-	randomGenerator = rand.New(rand.NewSource(42))
-)
+var randomGenerator = rand.New(rand.NewSource(42))
 
 // QTable struct used by agents.
 type QTable struct {
@@ -503,23 +500,18 @@ func (agent *Agent) SaveMemory(key interface{}, choice Choice) {
 }
 
 // Remember returns some memories and then delete them
-func (agent *Agent) Remember(key interface{}) ([]Choice, bool) {
+func (agent *Agent) Remember(key interface{}) []Choice {
 	pastChoices, inMemory := agent.Memory[key]
 
-	var (
-		memories []Choice
-		present  bool
-	)
+	memories := make([]Choice, 0)
 
-	if inMemory && len(pastChoices) > (maxStoredPastChoices>>1) {
+	if inMemory {
 		memories = make([]Choice, len(pastChoices))
 		copy(memories, pastChoices)
 		delete(agent.Memory, key)
-
-		present = true
 	}
 
-	return memories, present
+	return memories
 }
 
 //##############################################################################
