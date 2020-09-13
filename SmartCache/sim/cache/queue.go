@@ -200,17 +200,23 @@ func (man *Manager) Remove(files []int64) { //nolint: ignore,funlen
 				// fmt.Println(man.queueI)
 				// fmt.Println(man.queueF)
 
+				numChanges := 0
 				for idx := guessIdx; idx != stop; idx += direction {
 					curFilename := man.queueFilenames[idx]
 					// fmt.Println("Finding:", filename, "on index", idx, "found ->", curFilename)
 					man.fileIndexes[filename] = idx
+					numChanges++
 
 					if curFilename == filename {
 						// fmt.Println("FOUND at index", idx)
 						idx2Remove = append(idx2Remove, idx)
 						found = true
 
-						break
+						if numChanges > len(man.queueFilenames)>>1 {
+							continue
+						} else {
+							break
+						}
 					}
 				}
 
