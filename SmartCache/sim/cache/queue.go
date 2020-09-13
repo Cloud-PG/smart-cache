@@ -27,6 +27,8 @@ const (
 type Manager struct {
 	files map[int64]*FileStats
 	// Local scope to force the stack memory (hopefully)
+	fileIndexes    map[int64]int
+	prevVal        map[int64]interface{}
 	queueFilenames []int64
 	queueI         []int64
 	queueF         []float64
@@ -37,6 +39,8 @@ type Manager struct {
 // Init initialize the struct
 func (man *Manager) Init(qType queueType) {
 	man.files = make(map[int64]*FileStats)
+	man.fileIndexes = make(map[int64]int)
+	man.prevVal = make(map[int64]interface{})
 	man.queueFilenames = make([]int64, 0)
 	man.queueI = make([]int64, 0)
 	man.queueF = make([]float64, 0)
@@ -45,24 +49,24 @@ func (man *Manager) Init(qType queueType) {
 }
 
 // Check if a file is in cache
-func (man Manager) Check(file int64) bool {
+func (man *Manager) Check(file int64) bool {
 	_, inCache := man.files[file]
 
 	return inCache
 }
 
 // Len returns the number of files in cache
-func (man Manager) Len() int {
+func (man *Manager) Len() int {
 	return len(man.files)
 }
 
 // GetFile returns a specific file support data
-func (man Manager) GetFileStats(id int64) *FileStats {
+func (man *Manager) GetFileStats(id int64) *FileStats {
 	return man.files[id]
 }
 
 // GetQueue values from a queue
-func (man Manager) GetQueue() []*FileStats {
+func (man *Manager) GetQueue() []*FileStats {
 	// Filtering trick
 	// https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
 	man.buffer = man.buffer[:0]
@@ -76,7 +80,7 @@ func (man Manager) GetQueue() []*FileStats {
 }
 
 // GetFromWorst values from worst queue values
-func (man Manager) GetFromWorst() []*FileStats {
+func (man *Manager) GetFromWorst() []*FileStats {
 	// Filtering trick
 	// https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
 	man.buffer = man.buffer[:0]
@@ -92,7 +96,7 @@ func (man Manager) GetFromWorst() []*FileStats {
 }
 
 // GetWorstFilesUp2Size values from a queue until size is reached
-func (man Manager) GetWorstFilesUp2Size(totSize float64) []*FileStats {
+func (man *Manager) GetWorstFilesUp2Size(totSize float64) []*FileStats {
 	if totSize <= 0. {
 		panic("ERROR: tot size is negative or equal to 0")
 	}
@@ -117,24 +121,8 @@ func (man Manager) GetWorstFilesUp2Size(totSize float64) []*FileStats {
 	return man.buffer
 }
 
-func (man *Manager) updateIndexes(startFrom int) {
-	// fmt.Println("UPDATE INDEXES", "len:", len(man.queueFilenames), "start:", startFrom)
-
-	for idx := startFrom; idx < len(man.queueFilenames); idx++ {
-		filename := man.queueFilenames[idx]
-
-		// fmt.Println("FILENAME:", filename)
-
-		curFile, inFiles := man.files[filename]
-		if !inFiles {
-			panic("ERROR: cannot update deleted file...")
-		}
-		curFile.QueueIdx = idx
-	}
-}
-
 // Remove a file already in queue
-func (man *Manager) Remove(files []int64) {
+func (man *Manager) Remove(files []int64) { //nolint: ignore,funlen
 	// fmt.Println("--- 2 REMOVE ---", files)
 	// fmt.Println("--- BEFORE ---")
 	// fmt.Println(man.orderedValues)
@@ -151,16 +139,92 @@ func (man *Manager) Remove(files []int64) {
 	// 	fmt.Printf("-[ %d ] -> %#v\n", key, file)
 	// }
 
-	if len(files) > 0 {
+	if len(files) > 0 { //nolint:ignore,nestif
 		// _, file, no, _ := runtime.Caller(1)
 		// fmt.Printf("called from %s#%d\n", file, no)
 
 		idx2Remove := make([]int, 0)
 		for _, filename := range files {
 			// fmt.Println("--- Removing ->", filename)
+			guessIdx := man.fileIndexes[filename]
+			if guessIdx >= len(man.queueFilenames) {
+				guessIdx = len(man.queueFilenames) - 1
+			}
+			guessedFilename := man.queueFilenames[guessIdx]
 
-			idx2Remove = append(idx2Remove, man.files[filename].QueueIdx)
+			// fmt.Println("Guessed filename ->", guessedFilename, "Wanted name ->", filename)
+
+			switch {
+			case guessedFilename != filename:
+				direction := 1
+
+				switch man.qType {
+				case NoQueue:
+					idxVal := man.queueFilenames[guessIdx]
+					prevVal := man.prevVal[filename].(int64)
+					// fmt.Println("target:", prevVal, "guess val:", idxVal)
+					if idxVal >= prevVal {
+						direction = -1
+					}
+				case LRUQueue, LFUQueue:
+					idxVal := man.queueI[guessIdx]
+					prevVal := man.prevVal[filename].(int64)
+					// fmt.Println("target:", prevVal, "guess val:", idxVal)
+					if idxVal >= prevVal {
+						direction = -1
+					}
+				case SizeSmallQueue, WeightQueue:
+					idxVal := man.queueF[guessIdx]
+					prevVal := man.prevVal[filename].(float64)
+					// fmt.Println("target:", prevVal, "guess val:", idxVal)
+					if idxVal >= prevVal {
+						direction = -1
+					}
+				case SizeBigQueue:
+					idxVal := man.queueF[guessIdx]
+					prevVal := man.prevVal[filename].(float64)
+					// fmt.Println("target:", prevVal, "guess val:", idxVal)
+					if idxVal <= prevVal {
+						direction = -1
+					}
+				}
+
+				stop := -1
+				if direction > 0 {
+					stop = len(man.queueFilenames)
+				}
+
+				found := false
+				// fmt.Println("Start:", guessIdx, "Stop:", stop, "Direction:", direction)
+				// fmt.Println(man.queueFilenames)
+				// fmt.Println(man.queueI)
+				// fmt.Println(man.queueF)
+
+				for idx := guessIdx; idx != stop; idx += direction {
+					curFilename := man.queueFilenames[idx]
+					// fmt.Println("Finding:", filename, "on index", idx, "found ->", curFilename)
+					man.fileIndexes[filename] = idx
+
+					if curFilename == filename {
+						// fmt.Println("FOUND at index", idx)
+						idx2Remove = append(idx2Remove, idx)
+						found = true
+
+						break
+					}
+				}
+
+				if !found {
+					panic("ERROR: file to remove not found with guess...")
+				}
+			case guessedFilename == filename:
+				idx2Remove = append(idx2Remove, guessIdx)
+			default:
+				panic("ERROR: file to remove not found...")
+			}
+
 			delete(man.files, filename)
+			delete(man.fileIndexes, filename)
 		}
 
 		sort.Sort(sort.Reverse(sort.IntSlice(idx2Remove)))
@@ -182,10 +246,7 @@ func (man *Manager) Remove(files []int64) {
 			copy(man.queueFilenames[curIdx:], man.queueFilenames[curIdx+1:])
 			man.queueFilenames = man.queueFilenames[:len(man.queueFilenames)-1]
 		}
-
 		// fmt.Println("AFTER", man.queueFilenames)
-
-		man.updateIndexes(idx2Remove[len(idx2Remove)-1])
 
 		// fmt.Println(man.Len(), len(man.files), len(man.queue), len(man.orderedValues))
 	}
@@ -214,6 +275,7 @@ func (man *Manager) getFeature(file *FileStats) interface{} {
 func (man *Manager) Insert(file *FileStats) {
 	// fmt.Println(file.Filename, "->", file.Recency)
 	// Force inserto check
+
 	filename := file.Filename
 	_, inCache := man.files[filename]
 	if inCache {
@@ -221,6 +283,7 @@ func (man *Manager) Insert(file *FileStats) {
 	}
 
 	feature := man.getFeature(file)
+	man.prevVal[filename] = feature
 
 	var insertIdx = -1
 	switch man.qType {
@@ -281,12 +344,9 @@ func (man *Manager) Insert(file *FileStats) {
 		man.queueFilenames[insertIdx] = filename
 	}
 
-	file.QueueIdx = insertIdx
+	man.fileIndexes[file.Filename] = insertIdx
 	man.files[file.Filename] = file
 
-	if insertIdx != len(man.queueFilenames) {
-		man.updateIndexes(insertIdx)
-	}
 	// fmt.Println("[QUEUE] INSERT: ", file, file.Filename, key)
 }
 
