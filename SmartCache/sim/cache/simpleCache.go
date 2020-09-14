@@ -33,6 +33,10 @@ const (
 	ChoiceKeep = "KEEP"
 	// ChoiceRedirect string redirect action
 	ChoiceRedirect = "REDIRECT"
+	// LogEventHit string hit event
+	LogEventHit = "HIT"
+	// LogEventMiss string miss event
+	LogEventMiss = "MISS"
 )
 
 var (
@@ -596,7 +600,28 @@ func (cache *SimpleCache) DataDeleted() float64 {
 
 // Check returns if a file is in cache or not
 func (cache *SimpleCache) Check(key int64) bool {
-	return cache.files.Check(key)
+	hit := cache.files.Check(key)
+
+	if cache.choicesLogFile != nil {
+		event := LogEventMiss
+
+		if hit {
+			event = LogEventHit
+		}
+
+		cache.toChoiceBuffer([]string{
+			fmt.Sprintf("%d", cache.tick),
+			event,
+			fmt.Sprintf("%0.2f", cache.size),
+			fmt.Sprintf("%0.2f", cache.Capacity()),
+			fmt.Sprintf("%d", key),
+			fmt.Sprintf("%0.2f", -1.),
+			fmt.Sprintf("%d", -1),
+			fmt.Sprintf("%d", -1),
+		})
+	}
+
+	return hit
 }
 
 // ExtraStats for output

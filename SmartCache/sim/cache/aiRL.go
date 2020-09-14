@@ -1358,6 +1358,7 @@ func (cache *AIRL) CheckWatermark() bool {
 func (cache *AIRL) ExtraStats() string {
 	addActionCov, addStateCov := cache.additionAgent.GetCoverage()
 	evcActionCov, evcStateCov := cache.evictionAgent.GetCoverage()
+
 	return fmt.Sprintf(
 		"SCov:%0.2f%%|ACov:%0.2f%%|Eps:%0.5f||SCov:%0.2f%%|ACov:%0.2f%%|Eps:%0.5f",
 		addStateCov, addActionCov, cache.additionAgent.Epsilon,
