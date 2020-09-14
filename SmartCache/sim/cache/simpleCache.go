@@ -42,7 +42,7 @@ const (
 var (
 	ChoiceLogHeader = []string{
 		"tick",
-		"action",
+		"action or event",
 		"cache size",
 		"cache capacity",
 		"filename",
@@ -111,7 +111,7 @@ func (cache *SimpleCache) Init(param InitParameters) interface{} {
 
 	if cache.logSimulation {
 		cache.choicesLogFile = &OutputCSV{}
-		cache.choicesLogFile.Create("choicesLogFile.csv", true)
+		cache.choicesLogFile.Create("simulationLogFile.csv", true)
 		cache.choicesLogFile.Write(ChoiceLogHeader)
 		cache.choicesBuffer = make([][]string, 0)
 	}
