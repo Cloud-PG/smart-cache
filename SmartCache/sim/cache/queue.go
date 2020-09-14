@@ -221,6 +221,35 @@ func (man *Manager) Remove(files []int64) { //nolint: ignore,funlen
 				}
 
 				if !found {
+					direction = -direction
+
+					stop = -1
+					if direction > 0 {
+						stop = len(man.queueFilenames)
+					}
+
+					numChanges = 0
+					for idx := guessIdx; idx != stop; idx += direction {
+						curFilename := man.queueFilenames[idx]
+						// fmt.Println("Finding:", filename, "on index", idx, "found ->", curFilename)
+						man.fileIndexes[filename] = idx
+						numChanges++
+
+						if curFilename == filename {
+							// fmt.Println("FOUND at index", idx)
+							idx2Remove = append(idx2Remove, idx)
+							found = true
+
+							if numChanges > len(man.queueFilenames)>>1 {
+								continue
+							} else {
+								break
+							}
+						}
+					}
+				}
+
+				if !found {
 					panic("ERROR: file to remove not found with guess...")
 				}
 			case guessedFilename == filename:
