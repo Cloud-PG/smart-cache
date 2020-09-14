@@ -26,12 +26,19 @@ const (
 )
 
 const (
-	// EvictionOnK agent uses uses k to call eviction decisions
-	EvictionOnK = iota - 3
+	// EvictionOnFree agent call eviction decisions on free
+	EvictionOnFree = iota - 3
 	// EvictionOnDayEnd agent waits the end of the day to call eviction decisions
 	EvictionOnDayEnd
-	// EvictionOnFree agent call eviction decisions on free
-	EvictionOnFree
+	// EvictionOnK agent uses uses k to call eviction decisions
+	EvictionOnK
+)
+
+const (
+	eventEvictionOnK          = "ONK"
+	eventEvictionOnFree       = "ONFREE"
+	eventEvictionOnDayEnd     = "ONDAYEND"
+	eventEvictionOnForcedCall = "FORCEDCALL"
 )
 
 // AIRL cache
@@ -210,6 +217,19 @@ func (cache *AIRL) ClearStats() {
 		cache.numDailyCategories = cache.numDailyCategories[:0]
 		cache.sumNumDailyCategories = 0
 		if cache.evictionType == EvictionOnDayEnd {
+			if cache.choicesLogFile != nil {
+				cache.toChoiceBuffer([]string{
+					fmt.Sprintf("%d", cache.tick),
+					eventEvictionOnDayEnd,
+					fmt.Sprintf("%0.2f", cache.size),
+					fmt.Sprintf("%0.2f", cache.Capacity()),
+					fmt.Sprintf("%d", -1),
+					fmt.Sprintf("%0.2f", -1.),
+					fmt.Sprintf("%d", -1),
+					fmt.Sprintf("%d", -1),
+				})
+			}
+
 			cache.callEvictionAgent()
 		}
 	}
@@ -479,14 +499,19 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) { //nolint:funlen
 					fmt.Sprintf("%d", curFileStats.DeltaLastRequest),
 					"DeleteAll",
 				})
-				cache.toChoiceBuffer([]string{
-					fmt.Sprintf("%d", cache.tick),
-					fmt.Sprintf("%d", curFileStats.Filename),
-					fmt.Sprintf("%0.2f", curFileStats.Size),
-					fmt.Sprintf("%d", curFileStats.Frequency),
-					fmt.Sprintf("%d", curFileStats.DeltaLastRequest),
-					ChoiceDelete,
-				})
+
+				if cache.choicesLogFile != nil {
+					cache.toChoiceBuffer([]string{
+						fmt.Sprintf("%d", cache.tick),
+						ChoiceDelete,
+						fmt.Sprintf("%0.2f", cache.size),
+						fmt.Sprintf("%0.2f", cache.Capacity()),
+						fmt.Sprintf("%d", curFileStats.Filename),
+						fmt.Sprintf("%0.2f", curFileStats.Size),
+						fmt.Sprintf("%d", curFileStats.Frequency),
+						fmt.Sprintf("%d", curFileStats.DeltaLastRequest),
+					})
+				}
 			}
 		case qlearn.ActionDeleteHalf, qlearn.ActionDeleteQuarter:
 			curFileList := catState.Files
@@ -545,14 +570,20 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) { //nolint:funlen
 					fmt.Sprintf("%d", curFileStats.DeltaLastRequest),
 					actionString,
 				})
-				cache.toChoiceBuffer([]string{
-					fmt.Sprintf("%d", cache.tick),
-					fmt.Sprintf("%d", curFileStats.Filename),
-					fmt.Sprintf("%0.2f", curFileStats.Size),
-					fmt.Sprintf("%d", curFileStats.Frequency),
-					fmt.Sprintf("%d", curFileStats.DeltaLastRequest),
-					ChoiceDelete,
-				})
+
+				if cache.choicesLogFile != nil {
+					cache.toChoiceBuffer([]string{
+						fmt.Sprintf("%d", cache.tick),
+						ChoiceDelete,
+						fmt.Sprintf("%0.2f", cache.size),
+						fmt.Sprintf("%0.2f", cache.Capacity()),
+						fmt.Sprintf("%d", curFileStats.Filename),
+						fmt.Sprintf("%0.2f", curFileStats.Size),
+						fmt.Sprintf("%d", curFileStats.Frequency),
+						fmt.Sprintf("%d", curFileStats.DeltaLastRequest),
+					})
+				}
+
 				numDeletes--
 				if numDeletes <= 0 {
 					break
@@ -595,14 +626,19 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) { //nolint:funlen
 				fmt.Sprintf("%d", curFileStats.DeltaLastRequest),
 				"DeleteOne",
 			})
-			cache.toChoiceBuffer([]string{
-				fmt.Sprintf("%d", cache.tick),
-				fmt.Sprintf("%d", curFileStats.Filename),
-				fmt.Sprintf("%0.2f", curFileStats.Size),
-				fmt.Sprintf("%d", curFileStats.Frequency),
-				fmt.Sprintf("%d", curFileStats.DeltaLastRequest),
-				ChoiceDelete,
-			})
+
+			if cache.choicesLogFile != nil {
+				cache.toChoiceBuffer([]string{
+					fmt.Sprintf("%d", cache.tick),
+					ChoiceDelete,
+					fmt.Sprintf("%0.2f", cache.size),
+					fmt.Sprintf("%0.2f", cache.Capacity()),
+					fmt.Sprintf("%d", curFileStats.Filename),
+					fmt.Sprintf("%0.2f", curFileStats.Size),
+					fmt.Sprintf("%d", curFileStats.Frequency),
+					fmt.Sprintf("%d", curFileStats.DeltaLastRequest),
+				})
+			}
 		case qlearn.ActionNotDelete:
 			for _, curFile := range catState.Files {
 				curFileStats := cache.stats.Get(curFile.Filename)
@@ -625,6 +661,20 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) { //nolint:funlen
 					Size:      curFile.Size,
 					Frequency: curFileStats.Frequency,
 				})
+
+				if cache.choicesLogFile != nil {
+					cache.toChoiceBuffer([]string{
+						fmt.Sprintf("%d", cache.tick),
+						ChoiceKeep,
+						fmt.Sprintf("%0.2f", cache.size),
+						fmt.Sprintf("%0.2f", cache.Capacity()),
+						fmt.Sprintf("%d", curFileStats.Filename),
+						fmt.Sprintf("%0.2f", curFileStats.Size),
+						fmt.Sprintf("%d", curFileStats.Frequency),
+						fmt.Sprintf("%d", curFileStats.DeltaLastRequest),
+					})
+				}
+
 				cache.toEvictionChoiceBuffer([]string{
 					fmt.Sprintf("%d", cache.tick),
 					fmt.Sprintf("%d", curFileStats.Filename),
@@ -994,6 +1044,19 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					"NotStore",
 				})
 
+				if cache.choicesLogFile != nil {
+					cache.toChoiceBuffer([]string{
+						fmt.Sprintf("%d", cache.tick),
+						ChoiceSkip,
+						fmt.Sprintf("%0.2f", cache.size),
+						fmt.Sprintf("%0.2f", cache.Capacity()),
+						fmt.Sprintf("%d", fileStats.Filename),
+						fmt.Sprintf("%0.2f", fileStats.Size),
+						fmt.Sprintf("%d", fileStats.Frequency),
+						fmt.Sprintf("%d", fileStats.DeltaLastRequest),
+					})
+				}
+
 				return false
 			case qlearn.ActionStore:
 				forced := false
@@ -1004,9 +1067,35 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 						switch cache.evictionType {
 						case EvictionOnDayEnd, EvictionOnK:
+							if cache.choicesLogFile != nil {
+								cache.toChoiceBuffer([]string{
+									fmt.Sprintf("%d", cache.tick),
+									eventEvictionOnForcedCall,
+									fmt.Sprintf("%0.2f", cache.size),
+									fmt.Sprintf("%0.2f", cache.Capacity()),
+									fmt.Sprintf("%d", -1),
+									fmt.Sprintf("%0.2f", -1.),
+									fmt.Sprintf("%d", -1),
+									fmt.Sprintf("%d", -1),
+								})
+							}
+
 							cache.punishEvictionAgentOnForcedCall()
 							cache.callEvictionAgent()
 						case EvictionOnFree:
+							if cache.choicesLogFile != nil {
+								cache.toChoiceBuffer([]string{
+									fmt.Sprintf("%d", cache.tick),
+									eventEvictionOnFree,
+									fmt.Sprintf("%0.2f", cache.size),
+									fmt.Sprintf("%0.2f", cache.Capacity()),
+									fmt.Sprintf("%d", -1),
+									fmt.Sprintf("%0.2f", -1.),
+									fmt.Sprintf("%d", -1),
+									fmt.Sprintf("%d", -1),
+								})
+							}
+
 							cache.callEvictionAgent()
 						}
 
@@ -1065,14 +1154,19 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					fmt.Sprintf("%d", fileStats.DeltaLastRequest),
 					"Store",
 				})
-				cache.toChoiceBuffer([]string{
-					fmt.Sprintf("%d", cache.tick),
-					fmt.Sprintf("%d", fileStats.Filename),
-					fmt.Sprintf("%0.2f", fileStats.Size),
-					fmt.Sprintf("%d", fileStats.Frequency),
-					fmt.Sprintf("%d", fileStats.DeltaLastRequest),
-					ChoiceAdd,
-				})
+
+				if cache.choicesLogFile != nil {
+					cache.toChoiceBuffer([]string{
+						fmt.Sprintf("%d", cache.tick),
+						ChoiceAdd,
+						fmt.Sprintf("%0.2f", cache.size),
+						fmt.Sprintf("%0.2f", cache.Capacity()),
+						fmt.Sprintf("%d", fileStats.Filename),
+						fmt.Sprintf("%0.2f", fileStats.Size),
+						fmt.Sprintf("%d", fileStats.Frequency),
+						fmt.Sprintf("%d", fileStats.DeltaLastRequest),
+					})
+				}
 			}
 		} else {
 			// #######################
@@ -1120,9 +1214,35 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					forced = true
 					switch cache.evictionType {
 					case EvictionOnDayEnd, EvictionOnK:
+						if cache.choicesLogFile != nil {
+							cache.toChoiceBuffer([]string{
+								fmt.Sprintf("%d", cache.tick),
+								eventEvictionOnForcedCall,
+								fmt.Sprintf("%0.2f", cache.size),
+								fmt.Sprintf("%0.2f", cache.Capacity()),
+								fmt.Sprintf("%d", -1),
+								fmt.Sprintf("%0.2f", -1.),
+								fmt.Sprintf("%d", -1),
+								fmt.Sprintf("%d", -1),
+							})
+						}
+
 						cache.punishEvictionAgentOnForcedCall()
 						cache.callEvictionAgent()
 					case EvictionOnFree:
+						if cache.choicesLogFile != nil {
+							cache.toChoiceBuffer([]string{
+								fmt.Sprintf("%d", cache.tick),
+								eventEvictionOnFree,
+								fmt.Sprintf("%0.2f", cache.size),
+								fmt.Sprintf("%0.2f", cache.Capacity()),
+								fmt.Sprintf("%d", -1),
+								fmt.Sprintf("%0.2f", -1.),
+								fmt.Sprintf("%d", -1),
+								fmt.Sprintf("%d", -1),
+							})
+						}
+
 						cache.callEvictionAgent()
 					}
 				} else {
@@ -1147,18 +1267,23 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			cache.size += requestedFileSize
 			fileStats.addInCache(cache.tick, &request.DayTime)
 			added = true
+
 			if cache.evictionAgentOK && forced {
 				cache.rewardEvictionAfterForcedCall(added)
 			}
 
-			cache.toChoiceBuffer([]string{
-				fmt.Sprintf("%d", cache.tick),
-				fmt.Sprintf("%d", fileStats.Filename),
-				fmt.Sprintf("%0.2f", fileStats.Size),
-				fmt.Sprintf("%d", fileStats.Frequency),
-				fmt.Sprintf("%d", fileStats.DeltaLastRequest),
-				ChoiceAdd,
-			})
+			if cache.choicesLogFile != nil {
+				cache.toChoiceBuffer([]string{
+					fmt.Sprintf("%d", cache.tick),
+					ChoiceAdd,
+					fmt.Sprintf("%0.2f", cache.size),
+					fmt.Sprintf("%0.2f", cache.Capacity()),
+					fmt.Sprintf("%d", fileStats.Filename),
+					fmt.Sprintf("%0.2f", fileStats.Size),
+					fmt.Sprintf("%d", fileStats.Frequency),
+					fmt.Sprintf("%d", fileStats.DeltaLastRequest),
+				})
+			}
 		} else {
 			// #######################
 			// ##### HIT branch  #####
@@ -1191,6 +1316,19 @@ func (cache *AIRL) AfterRequest(request *Request, fileStats *FileStats, hit bool
 		if cache.evictionAgentOK && cache.evictionType == EvictionOnK {
 			// fmt.Println(cache.evictionAgentStep)
 			if cache.evictionAgentStep <= 0 {
+				if cache.choicesLogFile != nil {
+					cache.toChoiceBuffer([]string{
+						fmt.Sprintf("%d", cache.tick),
+						eventEvictionOnK,
+						fmt.Sprintf("%0.2f", cache.size),
+						fmt.Sprintf("%0.2f", cache.Capacity()),
+						fmt.Sprintf("%d", -1),
+						fmt.Sprintf("%0.2f", -1.),
+						fmt.Sprintf("%d", -1),
+						fmt.Sprintf("%d", -1),
+					})
+				}
+
 				cache.callEvictionAgent()
 				cache.evictionAgentStep = cache.evictionAgentK
 			} else {

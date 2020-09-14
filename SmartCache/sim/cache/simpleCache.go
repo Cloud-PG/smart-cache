@@ -23,20 +23,28 @@ const (
 	DailyBandwidth1Gbit = (1000. / 8.) * 60. * 60. * 24.
 	// ChoiceLogBufferDim is the max dimension of the buffer to store choices
 	ChoiceLogBufferDim = 9999
-	// ChoiceAdd string to store in choice add
+	// ChoiceAdd string add action
 	ChoiceAdd = "ADD"
-	// ChoiceDelete string to store in choice delete
+	// ChoiceDelete string remove action
 	ChoiceDelete = "DELETE"
+	// ChoiceSkip string skip action
+	ChoiceSkip = "SKIP"
+	// ChoiceKeep string keep action
+	ChoiceKeep = "KEEP"
+	// ChoiceRedirect string redirect action
+	ChoiceRedirect = "REDIRECT"
 )
 
 var (
 	ChoiceLogHeader = []string{
 		"tick",
+		"action",
+		"cache size",
+		"cache capacity",
 		"filename",
 		"size",
 		"num req",
 		"delta t",
-		"action",
 	}
 )
 
@@ -331,7 +339,7 @@ func (cache *SimpleCache) UpdatePolicy(request *Request, fileStats *FileStats, h
 		requestedFileSize = request.Size
 	)
 
-	if !hit {
+	if !hit { //nolint:ignore,nestif
 		if cache.Size()+requestedFileSize > cache.MaxSize {
 			cache.Free(requestedFileSize, false)
 		}
@@ -340,14 +348,19 @@ func (cache *SimpleCache) UpdatePolicy(request *Request, fileStats *FileStats, h
 			fileStats.addInCache(cache.tick, nil)
 
 			cache.files.Insert(fileStats)
-			cache.toChoiceBuffer([]string{
-				fmt.Sprintf("%d", cache.tick),
-				fmt.Sprintf("%d", fileStats.Filename),
-				fmt.Sprintf("%0.2f", fileStats.Size),
-				fmt.Sprintf("%d", fileStats.Frequency),
-				fmt.Sprintf("%d", fileStats.DeltaLastRequest),
-				ChoiceAdd,
-			})
+
+			if cache.choicesLogFile != nil {
+				cache.toChoiceBuffer([]string{
+					fmt.Sprintf("%d", cache.tick),
+					ChoiceAdd,
+					fmt.Sprintf("%0.2f", cache.size),
+					fmt.Sprintf("%0.2f", cache.Capacity()),
+					fmt.Sprintf("%d", fileStats.Filename),
+					fmt.Sprintf("%0.2f", fileStats.Size),
+					fmt.Sprintf("%d", fileStats.Frequency),
+					fmt.Sprintf("%d", fileStats.DeltaLastRequest),
+				})
+			}
 
 			added = true
 		}
@@ -446,16 +459,23 @@ func (cache *SimpleCache) Free(amount float64, percentage bool) float64 {
 			totalDeleted += curFile.Size
 
 			deletedFiles = append(deletedFiles, curFile.Filename)
-			cache.toChoiceBuffer([]string{
-				fmt.Sprintf("%d", cache.tick),
-				fmt.Sprintf("%d", curFileStats.Filename),
-				fmt.Sprintf("%0.2f", curFileStats.Size),
-				fmt.Sprintf("%d", curFileStats.Frequency),
-				fmt.Sprintf("%d", curFileStats.DeltaLastRequest),
-				ChoiceDelete,
-			})
+
+			if cache.choicesLogFile != nil {
+				cache.toChoiceBuffer([]string{
+					fmt.Sprintf("%d", cache.tick),
+					ChoiceDelete,
+					fmt.Sprintf("%0.2f", cache.size),
+					fmt.Sprintf("%0.2f", cache.Capacity()),
+					fmt.Sprintf("%d", curFile.Filename),
+					fmt.Sprintf("%0.2f", curFile.Size),
+					fmt.Sprintf("%d", curFile.Frequency),
+					fmt.Sprintf("%d", curFile.DeltaLastRequest),
+				})
+			}
+
 			cache.numDeleted++
 		}
+
 		cache.files.Remove(deletedFiles)
 	}
 	return totalDeleted
@@ -464,38 +484,58 @@ func (cache *SimpleCache) Free(amount float64, percentage bool) float64 {
 // CheckRedirect checks the cache can redirect requests on miss
 func (cache *SimpleCache) CheckRedirect(filename int64, size float64) bool {
 	redirect := false
+
 	if cache.canRedirect {
 		if cache.BandwidthUsage() >= 95. {
 			redirect = true
 			cache.numRedirected++
 			cache.redirectSize += size
+
+			if cache.choicesLogFile != nil {
+				cache.toChoiceBuffer([]string{
+					fmt.Sprintf("%d", cache.tick),
+					ChoiceRedirect,
+					fmt.Sprintf("%0.2f", cache.size),
+					fmt.Sprintf("%0.2f", cache.Capacity()),
+					fmt.Sprintf("%d", filename),
+					fmt.Sprintf("%0.2f", size),
+					fmt.Sprintf("%d", -1),
+					fmt.Sprintf("%d", -1),
+				})
+			}
 		}
 	}
+
 	return redirect
 }
 
 // CheckWatermark checks the watermark levels and resolve the situation
 func (cache *SimpleCache) CheckWatermark() bool {
 	ok := true
+
 	if cache.useWatermarks {
 		// fmt.Println("CHECK WATERMARKS")
 		if cache.Capacity() >= cache.HighWatermark {
 			ok = false
+
 			cache.Free(
 				cache.Capacity()-cache.LowWatermark,
 				true,
 			)
 		}
 	}
+
 	return ok
 }
 
 // HitRate of the cache
 func (cache *SimpleCache) HitRate() float64 {
 	perc := (cache.hit / (cache.hit + cache.miss)) * 100.
+
 	if math.IsNaN(perc) {
 		return 0.0
 	}
+
 	return perc
 }
 
@@ -600,6 +640,7 @@ func (cache *SimpleCache) CPUEffBoundDiff() float64 {
 
 	if len(cache.region) == 0 {
 		diff := cache.CPUEffUpperBound() - cache.CPUEffLowerBound()
+
 		if !math.IsNaN(diff) && diff > 0. {
 			diffValue = diff
 		}
@@ -611,6 +652,7 @@ func (cache *SimpleCache) CPUEffBoundDiff() float64 {
 			diffValue = MeanCPUDiffUS
 		}
 	}
+
 	return diffValue
 }
 
@@ -628,10 +670,12 @@ func (cache *SimpleCache) AvgFreeSpace() float64 {
 func (cache *SimpleCache) StdDevFreeSpace() float64 {
 	mean := cache.AvgFreeSpace()
 	var sum float64
+
 	for _, value := range cache.dailyfreeSpace {
 		curDiff := value - mean
 		sum += curDiff * curDiff
 	}
+
 	return math.Sqrt(sum / float64(len(cache.dailyfreeSpace)-1))
 }
 
@@ -668,6 +712,7 @@ func (cache *SimpleCache) NumHits() int64 {
 func (cache *SimpleCache) toChoiceBuffer(curChoice []string) {
 	if cache.choicesLogFile != nil {
 		cache.choicesBuffer = append(cache.choicesBuffer, curChoice)
+
 		if len(cache.choicesBuffer) > ChoiceLogBufferDim {
 			cache.flushChoices()
 		}
@@ -678,6 +723,7 @@ func (cache *SimpleCache) flushChoices() {
 	for _, choice := range cache.choicesBuffer {
 		cache.choicesLogFile.Write(choice)
 	}
+
 	cache.choicesBuffer = cache.choicesBuffer[:0]
 }
 
@@ -687,5 +733,6 @@ func (cache *SimpleCache) Terminate() error {
 		cache.flushChoices()
 		cache.choicesLogFile.Close()
 	}
+
 	return nil
 }
