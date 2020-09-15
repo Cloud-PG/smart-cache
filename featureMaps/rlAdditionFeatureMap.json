@@ -35,14 +35,6 @@
     "type": "int",
     "fileFeature": true
   },
-  "hit": {
-    "values": [
-      false,
-      true
-    ],
-    "type": "bool",
-    "fileFeature": true
-  },
   "percOcc": {
     "buckets": [
       50.0,
