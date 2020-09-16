@@ -1,7 +1,6 @@
 package cache
 
 import (
-	_ "fmt"
 	"math/rand"
 	"testing"
 )
@@ -10,7 +9,7 @@ const (
 	numTests = 1000
 	maxInt   = 1000
 	maxFloat = 10000.
-	numFiles = 10
+	numFiles = 9999
 )
 
 // func BenchmarkQueue(b *testing.B) {
@@ -55,16 +54,18 @@ func TestLRUQueueBehavior(t *testing.T) {
 		files[idx] = 100000 + int64(idx)
 	}
 
+	stats := make(map[int64]*FileStats)
+
 	var lastRecency int64 = 0
 	for _, filename := range files {
-		man.Insert(
-			&FileStats{
-				Filename:  filename,
-				Frequency: -1,
-				Recency:   lastRecency,
-				Size:      1.,
-			},
-		)
+		curStat := FileStats{
+			Filename:  filename,
+			Frequency: -1,
+			Recency:   lastRecency,
+			Size:      1.,
+		}
+		stats[curStat.Filename] = &curStat
+		man.Insert(stats[curStat.Filename])
 		lastRecency++
 	}
 
@@ -91,6 +92,10 @@ func TestLRUQueueBehavior(t *testing.T) {
 		}
 	}
 
+	// fmt.Println(man.queueFilenames)
+	// fmt.Println(man.queueI)
+	// fmt.Println(man.fileIndexes)
+
 	man.Remove(toRemove)
 
 	toUpdate := make([]int64, man.Len())
@@ -115,20 +120,22 @@ func TestLRUQueueBehavior(t *testing.T) {
 		}
 	}
 
+	// fmt.Println(man.queueFilenames)
+	// fmt.Println(man.queueI)
+	// fmt.Println(man.fileIndexes)
+
 	for numUpdate := 1; numUpdate < 11; numUpdate++ {
 		oldValues := make(map[int64]int64)
 		// fmt.Println("UPDATE ->", toUpdate)
-		var lastRecency int64 = 0
+		// fmt.Println(man.queueFilenames)
+		// fmt.Println(man.queueI)
+		// fmt.Println(man.fileIndexes)
+
+		var lastRecency int64
 		for _, filename := range toUpdate {
 			oldValues[filename] = man.GetFileStats(filename).Recency
-			man.Update(
-				&FileStats{
-					Filename:  filename,
-					Frequency: -1,
-					Recency:   lastRecency + numFiles*int64(numUpdate),
-					Size:      1.,
-				},
-			)
+			stats[filename].Recency = lastRecency + numFiles*int64(numUpdate)
+			man.Update(stats[filename])
 			lastRecency++
 		}
 
@@ -199,15 +206,17 @@ func TestLFUQueueBehavior(t *testing.T) {
 		files[idx] = 100000 + int64(idx)
 	}
 
+	stats := make(map[int64]*FileStats)
+
 	for _, filename := range files {
-		man.Insert(
-			&FileStats{
-				Filename:  filename,
-				Frequency: r.Int63n(numFiles),
-				Recency:   -1,
-				Size:      -1.,
-			},
-		)
+		curStat := FileStats{
+			Filename:  filename,
+			Frequency: r.Int63n(numFiles),
+			Recency:   -1,
+			Size:      -1.,
+		}
+		stats[curStat.Filename] = &curStat
+		man.Insert(stats[curStat.Filename])
 	}
 
 	toRemove := make([]int64, len(files)/2)
@@ -215,7 +224,7 @@ func TestLFUQueueBehavior(t *testing.T) {
 
 	// fmt.Println("INSERT")
 	for _, curFile := range man.GetFromWorst() {
-		// fmt.Println(curFile.Filename, "->", curFile.Recency)
+		// fmt.Println(curFile.Filename, "->", curFile.Frequency)
 		inserted := false
 		for _, filename := range files {
 			if filename == curFile.Filename {
@@ -231,6 +240,10 @@ func TestLFUQueueBehavior(t *testing.T) {
 			toRemove = append(toRemove, curFile.Filename)
 		}
 	}
+
+	// fmt.Println(man.queueFilenames)
+	// fmt.Println(man.queueI)
+	// fmt.Println(man.fileIndexes)
 
 	man.Remove(toRemove)
 
@@ -261,14 +274,8 @@ func TestLFUQueueBehavior(t *testing.T) {
 		// fmt.Println("UPDATE ->", toUpdate)
 		for _, filename := range toUpdate {
 			oldValues[filename] = man.GetFileStats(filename).Frequency
-			man.Update(
-				&FileStats{
-					Filename:  filename,
-					Frequency: r.Int63n(numFiles) + numFiles*int64(numUpdate),
-					Recency:   -1,
-					Size:      -1.,
-				},
-			)
+			stats[filename].Frequency = r.Int63n(numFiles) + numFiles*int64(numUpdate)
+			man.Update(stats[filename])
 		}
 
 		var prevFrequency int64 = -1
@@ -298,15 +305,17 @@ func TestSizeSmallQueueBehavior(t *testing.T) {
 		files[idx] = 100000 + int64(idx)
 	}
 
+	stats := make(map[int64]*FileStats)
+
 	for _, filename := range files {
-		man.Insert(
-			&FileStats{
-				Filename:  filename,
-				Frequency: -1,
-				Recency:   r.Int63n(numFiles),
-				Size:      r.Float64() * 1024.,
-			},
-		)
+		curStat := FileStats{
+			Filename:  filename,
+			Frequency: -1,
+			Recency:   r.Int63n(numFiles),
+			Size:      r.Float64() * 1024.,
+		}
+		stats[curStat.Filename] = &curStat
+		man.Insert(stats[curStat.Filename])
 	}
 
 	toRemove := make([]int64, len(files)/2)
@@ -360,14 +369,9 @@ func TestSizeSmallQueueBehavior(t *testing.T) {
 		// fmt.Println("UPDATE ->", toUpdate)
 		for _, filename := range toUpdate {
 			oldValues[filename] = man.GetFileStats(filename).Size
-			man.Update(
-				&FileStats{
-					Filename:  filename,
-					Frequency: -1,
-					Recency:   r.Int63n(numFiles) + numFiles*int64(numUpdate),
-					Size:      oldValues[filename] + r.Float64()*1024. + 1.0,
-				},
-			)
+			stats[filename].Recency = r.Int63n(numFiles) + numFiles*int64(numUpdate)
+			stats[filename].Size = oldValues[filename] + r.Float64()*1024. + 1.0
+			man.Update(stats[filename])
 		}
 
 		var prevSize float64 = -1.
@@ -397,15 +401,17 @@ func TestSizeBigQueueBehavior(t *testing.T) {
 		files[idx] = 100000 + int64(idx)
 	}
 
+	stats := make(map[int64]*FileStats)
+
 	for _, filename := range files {
-		man.Insert(
-			&FileStats{
-				Filename:  filename,
-				Frequency: -1,
-				Recency:   r.Int63n(numFiles),
-				Size:      r.Float64() * 1024.,
-			},
-		)
+		curStat := FileStats{
+			Filename:  filename,
+			Frequency: -1,
+			Recency:   r.Int63n(numFiles),
+			Size:      r.Float64() * 1024.,
+		}
+		stats[curStat.Filename] = &curStat
+		man.Insert(stats[curStat.Filename])
 	}
 
 	toRemove := make([]int64, len(files)/2)
@@ -459,14 +465,9 @@ func TestSizeBigQueueBehavior(t *testing.T) {
 		// fmt.Println("UPDATE ->", toUpdate)
 		for _, filename := range toUpdate {
 			oldValues[filename] = man.GetFileStats(filename).Size
-			man.Update(
-				&FileStats{
-					Filename:  filename,
-					Frequency: -1,
-					Recency:   r.Int63n(numFiles) + numFiles*int64(numUpdate),
-					Size:      oldValues[filename] + r.Float64()*1024. + 1.0,
-				},
-			)
+			stats[filename].Recency = r.Int63n(numFiles) + numFiles*int64(numUpdate)
+			stats[filename].Size = oldValues[filename] + r.Float64()*1024. + 1.0
+			man.Update(stats[filename])
 		}
 
 		var prevSize float64 = -1.

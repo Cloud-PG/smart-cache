@@ -6,6 +6,10 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	numHoursInADay = 24.
+)
+
 // Stats collector of statistics for weight function cache
 type Stats struct {
 	fileStats       map[int64]*FileStats
@@ -40,14 +44,17 @@ func (statStruct *Stats) Clear() {
 
 // Dirty indicates if the stats needs a purge
 func (statStruct Stats) Dirty() bool {
-	numDays := statStruct.lastUpdateTime.Sub(statStruct.firstUpdateTime).Hours() / 24.
+	numDays := statStruct.lastUpdateTime.Sub(statStruct.firstUpdateTime).Hours() / numHoursInADay
+
 	if numDays >= statStruct.deltaDaysStep {
 		statStruct.logger.Debug("Dirty Stats", zap.Float64("numDays", numDays),
 			zap.String("lastTime", statStruct.lastUpdateTime.Format(time.UnixDate)),
 			zap.String("firstTime", statStruct.firstUpdateTime.Format(time.UnixDate)),
 		)
+
 		return true
 	}
+
 	return false
 }
 
@@ -159,7 +166,7 @@ type FileStats struct {
 
 // DiffLastUpdate returns the number of days from the last update stats
 func (stats FileStats) DiffLastUpdate(curTime time.Time) float64 {
-	return curTime.Sub(stats.StatLastUpdateTime).Hours() / 24.
+	return curTime.Sub(stats.StatLastUpdateTime).Hours() / numHoursInADay
 }
 
 func (stats *FileStats) addInCache(tick int64, curTime *time.Time) {
@@ -201,6 +208,7 @@ func (stats *FileStats) updateStats(hit bool, size float64, userID int64, siteNa
 
 func (stats *FileStats) updateWeight(functionType FunctionType, alpha float64, beta float64, gamma float64) float64 {
 	stats.RequestedTimesMean = stats.getMeanReqTimes()
+
 	switch functionType {
 	case FuncAdditive:
 		stats.Weight = fileAdditiveWeightFunction(
@@ -236,18 +244,22 @@ func (stats *FileStats) updateWeight(functionType FunctionType, alpha float64, b
 			stats.RequestedTimesMean,
 		)
 	}
+
 	return stats.Weight
 }
 
 func (stats FileStats) getMeanReqTimes() float64 {
 	var timeDiffSum time.Duration
+
 	for idx := 0; idx < len(stats.RequestedTimes); idx++ {
 		if !stats.RequestedTimes[idx].IsZero() {
 			timeDiffSum += stats.StatLastUpdateTime.Sub(stats.RequestedTimes[idx])
 		}
 	}
+
 	if timeDiffSum != 0. {
 		return timeDiffSum.Minutes() / float64(NumRequestedTimes)
 	}
+
 	return 0.
 }

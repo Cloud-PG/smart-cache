@@ -100,6 +100,7 @@ func (man *Manager) GetWorstFilesUp2Size(totSize float64) []*FileStats {
 	if totSize <= 0. {
 		panic("ERROR: tot size is negative or equal to 0")
 	}
+
 	var sended float64
 
 	// Filtering trick
@@ -121,8 +122,180 @@ func (man *Manager) GetWorstFilesUp2Size(totSize float64) []*FileStats {
 	return man.buffer
 }
 
+func (man *Manager) getFileIndex(filename int64) int { //nolint:ignore,funlen
+	var resultIdx int
+
+	guessIdx := man.fileIndexes[filename]
+	if guessIdx >= len(man.queueFilenames) {
+		guessIdx = len(man.queueFilenames) - 1
+	}
+	guessedFilename := man.queueFilenames[guessIdx]
+
+	// fmt.Println("Guessed filename ->", guessedFilename, "Wanted name ->", filename)
+
+	switch {
+	case guessedFilename != filename:
+		direction := 1
+
+		switch man.qType {
+		case NoQueue:
+			idxVal := man.queueFilenames[guessIdx]
+			prevVal := man.prevVal[filename].(int64)
+			// fmt.Println("target:", prevVal, "guess val:", idxVal)
+			if idxVal >= prevVal {
+				direction = -1
+			}
+		case LRUQueue, LFUQueue:
+			idxVal := man.queueI[guessIdx]
+			prevVal := man.prevVal[filename].(int64)
+			// fmt.Println("target:", prevVal, "guess val:", idxVal)
+			if idxVal >= prevVal {
+				direction = -1
+			}
+		case SizeSmallQueue, WeightQueue:
+			idxVal := man.queueF[guessIdx]
+			prevVal := man.prevVal[filename].(float64)
+			// fmt.Println("target:", prevVal, "guess val:", idxVal)
+			if idxVal >= prevVal {
+				direction = -1
+			}
+		case SizeBigQueue:
+			idxVal := man.queueF[guessIdx]
+			prevVal := man.prevVal[filename].(float64)
+			// fmt.Println("target:", prevVal, "guess val:", idxVal)
+			if idxVal <= prevVal {
+				direction = -1
+			}
+		}
+
+		stop := -1
+		if direction > 0 {
+			stop = len(man.queueFilenames)
+		}
+
+		found := false
+		// fmt.Println("Start:", guessIdx, "Stop:", stop, "Direction:", direction)
+		// fmt.Println(man.queueFilenames)
+		// fmt.Println(man.queueI)
+		// fmt.Println(man.queueF)
+
+		numChanges := 0
+		for idx := guessIdx; idx != stop; idx += direction {
+			curFilename := man.queueFilenames[idx]
+			// fmt.Println("Finding:", filename, "on index", idx, "found ->", curFilename)
+			man.fileIndexes[filename] = idx
+			numChanges++
+
+			if curFilename == filename {
+				// fmt.Println("FOUND at index", idx)
+				resultIdx = idx
+				found = true
+
+				if numChanges > len(man.queueFilenames)>>1 {
+					continue
+				} else {
+					break
+				}
+			}
+		}
+
+		if !found { //nolint:ignore,nestif
+			direction = -direction
+
+			stop = -1
+			if direction > 0 {
+				stop = len(man.queueFilenames)
+			}
+
+			numChanges = 0
+			for idx := guessIdx; idx != stop; idx += direction {
+				curFilename := man.queueFilenames[idx]
+				// fmt.Println("Finding:", filename, "on index", idx, "found ->", curFilename)
+				man.fileIndexes[filename] = idx
+				numChanges++
+
+				if curFilename == filename {
+					// fmt.Println("FOUND at index", idx)
+					resultIdx = idx
+					found = true
+
+					if numChanges > len(man.queueFilenames)>>1 {
+						continue
+					} else {
+						break
+					}
+				}
+			}
+		}
+
+		if !found {
+			panic("ERROR: file to remove not found with guess...")
+		}
+	case guessedFilename == filename:
+		resultIdx = guessIdx
+	default:
+		panic("ERROR: file to remove not found...")
+	}
+
+	return resultIdx
+}
+
+// collapseIndexes return the lowest index if they are all coninuos in the slice
+func collapseIndexes(indexes []int) int {
+	collapsedIdx := -1
+
+	for i := 0; i < len(indexes)-1; i++ {
+		if indexes[i]-indexes[i+1] == 1 {
+			collapsedIdx = indexes[i+1]
+		} else {
+			collapsedIdx = -1
+
+			break
+		}
+	}
+
+	return collapsedIdx
+}
+
+func (man *Manager) removeIndexes(idx2Remove []int) {
+	sort.Sort(sort.Reverse(sort.IntSlice(idx2Remove)))
+
+	// fmt.Println(idx2Remove)
+	// fmt.Println("BEFORE", man.queueFilenames)
+
+	collapse := collapseIndexes(idx2Remove)
+	if collapse != -1 && idx2Remove[0] == len(man.queueFilenames)-1 {
+		switch man.qType {
+		case LRUQueue, LFUQueue:
+			// Remove
+			man.queueI = man.queueI[:collapse]
+		case SizeBigQueue, SizeSmallQueue, WeightQueue:
+			// Remove
+			man.queueF = man.queueF[:collapse]
+		}
+
+		man.queueFilenames = man.queueFilenames[:collapse]
+	} else {
+		for _, curIdx := range idx2Remove {
+			switch man.qType {
+			case LRUQueue, LFUQueue:
+				// Remove
+				copy(man.queueI[curIdx:], man.queueI[curIdx+1:])
+				man.queueI = man.queueI[:len(man.queueI)-1]
+			case SizeBigQueue, SizeSmallQueue, WeightQueue:
+				// Remove
+				copy(man.queueF[curIdx:], man.queueF[curIdx+1:])
+				man.queueF = man.queueF[:len(man.queueF)-1]
+			}
+
+			copy(man.queueFilenames[curIdx:], man.queueFilenames[curIdx+1:])
+			man.queueFilenames = man.queueFilenames[:len(man.queueFilenames)-1]
+		}
+	}
+}
+
 // Remove a file already in queue
-func (man *Manager) Remove(files []int64) { //nolint: ignore,funlen
+func (man *Manager) Remove(files []int64) { //nolint:ignore,funlen
 	// fmt.Println("--- 2 REMOVE ---", files)
 	// fmt.Println("--- BEFORE ---")
 	// fmt.Println(man.orderedValues)
@@ -146,141 +319,16 @@ func (man *Manager) Remove(files []int64) { //nolint: ignore,funlen
 		idx2Remove := make([]int, 0)
 		for _, filename := range files {
 			// fmt.Println("--- Removing ->", filename)
-			guessIdx := man.fileIndexes[filename]
-			if guessIdx >= len(man.queueFilenames) {
-				guessIdx = len(man.queueFilenames) - 1
-			}
-			guessedFilename := man.queueFilenames[guessIdx]
-
-			// fmt.Println("Guessed filename ->", guessedFilename, "Wanted name ->", filename)
-
-			switch {
-			case guessedFilename != filename:
-				direction := 1
-
-				switch man.qType {
-				case NoQueue:
-					idxVal := man.queueFilenames[guessIdx]
-					prevVal := man.prevVal[filename].(int64)
-					// fmt.Println("target:", prevVal, "guess val:", idxVal)
-					if idxVal >= prevVal {
-						direction = -1
-					}
-				case LRUQueue, LFUQueue:
-					idxVal := man.queueI[guessIdx]
-					prevVal := man.prevVal[filename].(int64)
-					// fmt.Println("target:", prevVal, "guess val:", idxVal)
-					if idxVal >= prevVal {
-						direction = -1
-					}
-				case SizeSmallQueue, WeightQueue:
-					idxVal := man.queueF[guessIdx]
-					prevVal := man.prevVal[filename].(float64)
-					// fmt.Println("target:", prevVal, "guess val:", idxVal)
-					if idxVal >= prevVal {
-						direction = -1
-					}
-				case SizeBigQueue:
-					idxVal := man.queueF[guessIdx]
-					prevVal := man.prevVal[filename].(float64)
-					// fmt.Println("target:", prevVal, "guess val:", idxVal)
-					if idxVal <= prevVal {
-						direction = -1
-					}
-				}
-
-				stop := -1
-				if direction > 0 {
-					stop = len(man.queueFilenames)
-				}
-
-				found := false
-				// fmt.Println("Start:", guessIdx, "Stop:", stop, "Direction:", direction)
-				// fmt.Println(man.queueFilenames)
-				// fmt.Println(man.queueI)
-				// fmt.Println(man.queueF)
-
-				numChanges := 0
-				for idx := guessIdx; idx != stop; idx += direction {
-					curFilename := man.queueFilenames[idx]
-					// fmt.Println("Finding:", filename, "on index", idx, "found ->", curFilename)
-					man.fileIndexes[filename] = idx
-					numChanges++
-
-					if curFilename == filename {
-						// fmt.Println("FOUND at index", idx)
-						idx2Remove = append(idx2Remove, idx)
-						found = true
-
-						if numChanges > len(man.queueFilenames)>>1 {
-							continue
-						} else {
-							break
-						}
-					}
-				}
-
-				if !found {
-					direction = -direction
-
-					stop = -1
-					if direction > 0 {
-						stop = len(man.queueFilenames)
-					}
-
-					numChanges = 0
-					for idx := guessIdx; idx != stop; idx += direction {
-						curFilename := man.queueFilenames[idx]
-						// fmt.Println("Finding:", filename, "on index", idx, "found ->", curFilename)
-						man.fileIndexes[filename] = idx
-						numChanges++
-
-						if curFilename == filename {
-							// fmt.Println("FOUND at index", idx)
-							idx2Remove = append(idx2Remove, idx)
-							found = true
-
-							if numChanges > len(man.queueFilenames)>>1 {
-								continue
-							} else {
-								break
-							}
-						}
-					}
-				}
-
-				if !found {
-					panic("ERROR: file to remove not found with guess...")
-				}
-			case guessedFilename == filename:
-				idx2Remove = append(idx2Remove, guessIdx)
-			default:
-				panic("ERROR: file to remove not found...")
-			}
+			idx2Remove = append(idx2Remove, man.getFileIndex(filename))
 
 			delete(man.files, filename)
 			delete(man.fileIndexes, filename)
 		}
 
-		sort.Sort(sort.Reverse(sort.IntSlice(idx2Remove)))
+		// fmt.Println("IDX 2 REMOVE:", idx2Remove)
 
-		// fmt.Println(idx2Remove)
-		// fmt.Println("BEFORE", man.queueFilenames)
-
-		for _, curIdx := range idx2Remove {
-			switch man.qType {
-			case LRUQueue, LFUQueue:
-				// Remove
-				copy(man.queueI[curIdx:], man.queueI[curIdx+1:])
-				man.queueI = man.queueI[:len(man.queueI)-1]
-			case SizeBigQueue, SizeSmallQueue, WeightQueue:
-				// Remove
-				copy(man.queueF[curIdx:], man.queueF[curIdx+1:])
-				man.queueF = man.queueF[:len(man.queueF)-1]
-			}
-
-			copy(man.queueFilenames[curIdx:], man.queueFilenames[curIdx+1:])
-			man.queueFilenames = man.queueFilenames[:len(man.queueFilenames)-1]
+		if len(idx2Remove) > 0 {
+			man.removeIndexes(idx2Remove)
 		}
 		// fmt.Println("AFTER", man.queueFilenames)
 
@@ -309,20 +357,7 @@ func (man *Manager) getFeature(file *FileStats) interface{} {
 	return feature
 }
 
-// Insert a file into the queue manager
-func (man *Manager) Insert(file *FileStats) { //nolint:ignore,funlen
-	// fmt.Println(file.Filename, "->", file.Recency)
-	// Force inserto check
-
-	filename := file.Filename
-	_, inCache := man.files[filename]
-	if inCache {
-		panic("ERROR: File already in manager...")
-	}
-
-	feature := man.getFeature(file)
-	man.prevVal[filename] = feature
-
+func (man *Manager) getInsertIndex(feature interface{}, file *FileStats) int { //nolint: ignore,funlen
 	var insertIdx = -1
 
 	switch man.qType {
@@ -348,6 +383,10 @@ func (man *Manager) Insert(file *FileStats) { //nolint:ignore,funlen
 		})
 	}
 
+	return insertIdx
+}
+
+func (man *Manager) insertFeature(insertIdx int, feature interface{}) { //nolint: ignore,funlen
 	switch man.qType {
 	case LRUQueue, LFUQueue:
 		intFeature := feature.(int64)
@@ -374,7 +413,9 @@ func (man *Manager) Insert(file *FileStats) { //nolint:ignore,funlen
 			man.queueF[insertIdx] = floatFeature
 		}
 	}
+}
 
+func (man *Manager) insertFilename(insertIdx int, filename int64) {
 	if insertIdx == len(man.queueFilenames) {
 		man.queueFilenames = append(man.queueFilenames, filename)
 	} else {
@@ -384,6 +425,26 @@ func (man *Manager) Insert(file *FileStats) { //nolint:ignore,funlen
 		copy(man.queueFilenames[insertIdx+1:], man.queueFilenames[insertIdx:])
 		man.queueFilenames[insertIdx] = filename
 	}
+}
+
+// Insert a file into the queue manager
+func (man *Manager) Insert(file *FileStats) { //nolint:ignore,funlen
+	// fmt.Println(file.Filename, "->", file.Recency)
+	// Force inserto check
+
+	filename := file.Filename
+	_, inCache := man.files[filename]
+	if inCache {
+		panic("ERROR: File already in manager...")
+	}
+
+	feature := man.getFeature(file)
+	man.prevVal[filename] = feature
+
+	insertIdx := man.getInsertIndex(feature, file)
+
+	man.insertFeature(insertIdx, feature)
+	man.insertFilename(insertIdx, filename)
 
 	man.fileIndexes[file.Filename] = insertIdx
 	man.files[file.Filename] = file
@@ -403,9 +464,20 @@ func (man *Manager) Update(file *FileStats) {
 	// if curFileStats != file {
 	// 	panic("Different file stats...")
 	// }
+	if file != man.files[file.Filename] {
+		panic("ERROR: update on different stat")
+	}
 	if man.qType != NoQueue {
-		man.Remove([]int64{file.Filename})
-		man.Insert(file)
+		filename := file.Filename
+		man.removeIndexes([]int{man.getFileIndex(filename)})
+
+		feature := man.getFeature(file)
+		man.prevVal[filename] = feature
+		insertIdx := man.getInsertIndex(feature, file)
+		man.insertFeature(insertIdx, feature)
+		man.insertFilename(insertIdx, filename)
+
+		man.fileIndexes[file.Filename] = insertIdx
 	}
 	// fmt.Println("--- AFTER ---")
 	// fmt.Println(man.orderedValues)
