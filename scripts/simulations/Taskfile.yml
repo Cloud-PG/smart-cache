@@ -48,21 +48,21 @@ tasks:
   only-synthetic-simulations:
     desc: Run only synthetic simulations
     cmds:
-      - task: synthetic-dataset
       - task: synthetic-dataset-with-watermarks
+      - task: synthetic-dataset
 
   only-it-simulations:
     desc: Run only IT simulations
     cmds:
-      - task: italian-dataset
       - task: italian-dataset-with-watermarks
       - task: italian-dataset-with-watermarks-only-addition
+      - task: italian-dataset
 
   only-us-simulations:
     desc: Run only US simulations
     cmds:
-      - task: us-dataset
       - task: us-dataset-with-watermarks
+      - task: us-dataset
 
   synthetic-dataset:
     desc: Run only synthetic dataset simulations
