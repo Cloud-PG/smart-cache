@@ -242,12 +242,13 @@ func (man *Manager) getFileIndex(filename int64) int { //nolint:ignore,funlen
 
 // collapseIndexes return the lowest index if they are all coninuos in the slice
 func collapseIndexes(indexes []int) int {
-	collapsedIdx := -1
+	collapsedIdx := indexes[0]
 
 	if len(indexes) > 1 {
+		// fmt.Println("INDEXES", indexes)
 		for i := 0; i < len(indexes)-1; i++ {
 			if indexes[i]-indexes[i+1] == 1 {
-				collapsedIdx = indexes[i+1]
+				continue
 			} else {
 				collapsedIdx = -1
 
@@ -256,27 +257,33 @@ func collapseIndexes(indexes []int) int {
 		}
 	}
 
+	// fmt.Println("COLLAPSEDINDEX", collapsedIdx)
 	return collapsedIdx
 }
 
 func (man *Manager) removeIndexes(idx2Remove []int) {
 	sort.Sort(sort.Reverse(sort.IntSlice(idx2Remove)))
 
-	// fmt.Println(idx2Remove)
-	// fmt.Println("BEFORE", man.queueFilenames)
+	// if len(idx2Remove) > 1 {
+	// 	fmt.Println(idx2Remove)
+	// 	fmt.Println("BEFORE", man.queueFilenames, len(man.queueFilenames))
+	// }
 
-	collapse := collapseIndexes(idx2Remove)
-	if collapse != -1 && idx2Remove[0] == len(man.queueFilenames)-1 {
+	collapsedIdx := collapseIndexes(idx2Remove)
+	if collapsedIdx != -1 && idx2Remove[len(idx2Remove)-1] == 0 {
+		// fmt.Println("FILENAMES", man.queueFilenames)
+		// fmt.Println("QUEUEI", man.queueI)
+		// fmt.Println("QUEUEF", man.queueF)
 		switch man.qType {
 		case LRUQueue, LFUQueue:
 			// Remove
-			man.queueI = man.queueI[:collapse]
+			man.queueI = man.queueI[collapsedIdx+1:]
 		case SizeBigQueue, SizeSmallQueue, WeightQueue:
 			// Remove
-			man.queueF = man.queueF[:collapse]
+			man.queueF = man.queueF[collapsedIdx+1:]
 		}
 
-		man.queueFilenames = man.queueFilenames[:collapse]
+		man.queueFilenames = man.queueFilenames[collapsedIdx+1:]
 	} else {
 		for _, curIdx := range idx2Remove {
 			switch man.qType {
