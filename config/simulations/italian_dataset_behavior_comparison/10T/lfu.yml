@@ -10,7 +10,7 @@ sim:
   region: it
   cache:
     type: lfu
-    watermarks: false
+    watermarks: true
     size:
       value: 10
       unit: T

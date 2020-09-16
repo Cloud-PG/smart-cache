@@ -10,7 +10,7 @@ sim:
   region: it
   cache:
     type: sizeBig
-    watermarks: false
+    watermarks: true
     size:
       value: 10
       unit: T
