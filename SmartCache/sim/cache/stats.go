@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"math"
 	"time"
 
 	"go.uber.org/zap"
@@ -101,7 +102,7 @@ func (statStruct *Stats) GetOrCreate(filename int64, size float64, reqTime time.
 			Filename:         filename,
 			Size:             size,
 			StatInsertTime:   reqTime,
-			DeltaLastRequest: 0,
+			DeltaLastRequest: math.MaxInt64,
 			Recency:          curTick,
 			InCacheSinceTick: -1,
 		}
