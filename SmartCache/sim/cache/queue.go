@@ -217,7 +217,6 @@ func (man *Manager) getFileIndex(filename int64) int { //nolint:ignore,funlen
 					found = true
 
 					break
-
 				}
 			}
 		}
@@ -437,6 +436,10 @@ func (man *Manager) insertFilename(insertIdx int, filename int64) {
 		man.queueFilenames = append(man.queueFilenames, -1)
 		copy(man.queueFilenames[insertIdx+1:], man.queueFilenames[insertIdx:])
 		man.queueFilenames[insertIdx] = filename
+
+		man.dirtyFlag = append(man.dirtyFlag, false)
+		copy(man.dirtyFlag[insertIdx+1:], man.dirtyFlag[insertIdx:])
+		man.dirtyFlag[insertIdx] = false
 		man.setDirtyFrom(insertIdx + 1)
 	}
 }
