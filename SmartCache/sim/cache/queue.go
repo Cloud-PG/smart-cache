@@ -244,13 +244,15 @@ func (man *Manager) getFileIndex(filename int64) int { //nolint:ignore,funlen
 func collapseIndexes(indexes []int) int {
 	collapsedIdx := -1
 
-	for i := 0; i < len(indexes)-1; i++ {
-		if indexes[i]-indexes[i+1] == 1 {
-			collapsedIdx = indexes[i+1]
-		} else {
-			collapsedIdx = -1
+	if len(indexes) > 1 {
+		for i := 0; i < len(indexes)-1; i++ {
+			if indexes[i]-indexes[i+1] == 1 {
+				collapsedIdx = indexes[i+1]
+			} else {
+				collapsedIdx = -1
 
-			break
+				break
+			}
 		}
 	}
 
