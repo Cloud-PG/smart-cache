@@ -27,6 +27,8 @@ const (
 	ChoiceAdd = "ADD"
 	// ChoiceDelete string remove action
 	ChoiceDelete = "DELETE"
+	// ChoiceFree string free event
+	ChoiceFree = "FREE"
 	// ChoiceSkip string skip action
 	ChoiceSkip = "SKIP"
 	// ChoiceKeep string keep action
@@ -444,6 +446,19 @@ func (cache *SimpleCache) Free(amount float64, percentage bool) float64 {
 		sizeToDelete = amount
 	}
 	if sizeToDelete > 0. {
+		if cache.choicesLogFile != nil {
+			cache.toChoiceBuffer([]string{
+				fmt.Sprintf("%d", cache.tick),
+				ChoiceFree,
+				fmt.Sprintf("%0.2f", cache.size),
+				fmt.Sprintf("%0.2f", cache.Capacity()),
+				fmt.Sprintf("%d", -1),
+				fmt.Sprintf("%0.2f", -1.),
+				fmt.Sprintf("%d", -1),
+				fmt.Sprintf("%d", -1),
+			})
+		}
+
 		deletedFiles := make([]int64, 0)
 		for _, curFile := range cache.files.GetWorstFilesUp2Size(sizeToDelete) {
 			cache.logger.Debug("delete",
@@ -455,6 +470,10 @@ func (cache *SimpleCache) Free(amount float64, percentage bool) float64 {
 			)
 
 			curFileStats := cache.stats.Get(curFile.Filename)
+			if curFileStats != curFile {
+				panic("ERROR: file stats is not the same...")
+			}
+
 			curFileStats.removeFromCache()
 
 			// Update sizes
@@ -535,8 +554,8 @@ func (cache *SimpleCache) CheckWatermark() bool {
 // HitRate of the cache
 func (cache *SimpleCache) HitRate() float64 {
 	perc := (cache.hit / (cache.hit + cache.miss)) * 100.
-
 	if math.IsNaN(perc) {
+
 		return 0.0
 	}
 

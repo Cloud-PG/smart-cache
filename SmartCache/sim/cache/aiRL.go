@@ -44,33 +44,29 @@ const (
 // AIRL cache
 type AIRL struct {
 	SimpleCache
-	rlType                            aiRLType
-	additionAgentOK                   bool
-	evictionAgentOK                   bool
-	evictionType                      evictionType
-	additionAgentBadQValue            int
-	evictionAgentBadQValue            int
-	additionAgentPrevQValue           float64
-	evictionAgentPrevQValue           float64
-	evictionAgentStep                 int64
-	evictionAgentK                    int64
-	evictionAgentNumCalls             int64
-	evictionAgentNumForcedCalls       int64
-	evictionRO                        float64
-	sumNumDailyCategories             int
-	additionFeatureManager            featuremap.FeatureManager
-	evictionFeatureManager            featuremap.FeatureManager
-	additionAgent                     qlearn.Agent
-	evictionAgent                     qlearn.Agent
-	additionAgentChoicesLogFile       *OutputCSV
-	evictionAgentChoicesLogFile       *OutputCSV
-	additionAgentChoicesLogFileBuffer [][]string
-	evictionAgentChoicesLogFileBuffer [][]string
-	evictionCheckNextStateMap         map[[8]byte]bool
-	evictionCategoryManager           CategoryManager
-	actionCounters                    map[qlearn.ActionType]int
-	bufferIdxVector                   []int
-	numDailyCategories                []int
+	rlType                      aiRLType
+	additionAgentOK             bool
+	evictionAgentOK             bool
+	evictionType                evictionType
+	additionAgentBadQValue      int
+	evictionAgentBadQValue      int
+	additionAgentPrevQValue     float64
+	evictionAgentPrevQValue     float64
+	evictionAgentStep           int64
+	evictionAgentK              int64
+	evictionAgentNumCalls       int64
+	evictionAgentNumForcedCalls int64
+	evictionRO                  float64
+	sumNumDailyCategories       int
+	additionFeatureManager      featuremap.FeatureManager
+	evictionFeatureManager      featuremap.FeatureManager
+	additionAgent               qlearn.Agent
+	evictionAgent               qlearn.Agent
+	evictionCheckNextStateMap   map[[8]byte]bool
+	evictionCategoryManager     CategoryManager
+	actionCounters              map[qlearn.ActionType]int
+	bufferIdxVector             []int
+	numDailyCategories          []int
 }
 
 // Init the AIRL struct
@@ -145,12 +141,7 @@ func (cache *AIRL) Init(params InitParameters) interface{} { //nolint:ignore,fun
 				cache.evictionFeatureManager.FileFeatureIdxWeights,
 				cache.evictionFeatureManager.FileFeatureIdxMap,
 			)
-			if cache.logSimulation {
-				cache.evictionAgentChoicesLogFile = &OutputCSV{}
-				cache.evictionAgentChoicesLogFile.Create("evictionAgentChoiceLog.csv", true)
-				cache.evictionAgentChoicesLogFile.Write(ChoiceLogHeader)
-				cache.evictionAgentChoicesLogFileBuffer = make([][]string, 0)
-			}
+
 			cache.evictionCheckNextStateMap = make(map[[8]byte]bool)
 			cache.evictionAgentOK = true
 			// Eviction agent action counters
@@ -181,12 +172,7 @@ func (cache *AIRL) Init(params InitParameters) interface{} { //nolint:ignore,fun
 			initEpsilon,
 			decayRateEpsilon,
 		)
-		if cache.logSimulation {
-			cache.additionAgentChoicesLogFile = &OutputCSV{}
-			cache.additionAgentChoicesLogFile.Create("additionAgentChoiceLog.csv", true)
-			cache.additionAgentChoicesLogFile.Write(ChoiceLogHeader)
-			cache.additionAgentChoicesLogFileBuffer = make([][]string, 0)
-		}
+
 		cache.additionAgentOK = true
 		// Addition agent action counters
 		cache.actionCounters[qlearn.ActionStore] = 0
@@ -467,6 +453,10 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) { //nolint:funlen
 			for idx := len(curFileList) - 1; idx > -1; idx-- {
 				curFile := curFileList[idx]
 				curFileStats := cache.stats.Get(curFile.Filename)
+				if curFileStats != curFile {
+					panic("ERROR: file stats is not the same...")
+				}
+
 				// fmt.Println("REMOVE FREQ:", curFile.Frequency)
 				curFileStats.removeFromCache()
 
@@ -490,14 +480,6 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) { //nolint:funlen
 					Capacity:  cache.Capacity(),
 					Size:      curFile.Size,
 					Frequency: curFileStats.Frequency,
-				})
-				cache.toEvictionChoiceBuffer([]string{
-					fmt.Sprintf("%d", cache.tick),
-					fmt.Sprintf("%d", curFileStats.Filename),
-					fmt.Sprintf("%0.2f", curFileStats.Size),
-					fmt.Sprintf("%d", curFileStats.Frequency),
-					fmt.Sprintf("%d", curFileStats.DeltaLastRequest),
-					"DeleteAll",
 				})
 
 				if cache.choicesLogFile != nil {
@@ -519,12 +501,6 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) { //nolint:funlen
 				curFileList[i], curFileList[j] = curFileList[j], curFileList[i]
 			})
 			numDeletes := 0
-			actionString := ""
-			if catState.Action == qlearn.ActionDeleteHalf {
-				actionString = "DeleteHalf"
-			} else {
-				actionString = "DeleteQuarter"
-			}
 
 			switch {
 			case len(curFileList) == 1:
@@ -538,6 +514,10 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) { //nolint:funlen
 			for idx := len(curFileList) - 1; idx > -1; idx-- {
 				curFile := curFileList[idx]
 				curFileStats := cache.stats.Get(curFile.Filename)
+				if curFileStats != curFile {
+					panic("ERROR: file stats is not the same...")
+				}
+
 				// fmt.Println("REMOVE FREQ:", curFile.Frequency)
 				curFileStats.removeFromCache()
 
@@ -561,14 +541,6 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) { //nolint:funlen
 					Capacity:  cache.Capacity(),
 					Size:      curFile.Size,
 					Frequency: curFileStats.Frequency,
-				})
-				cache.toEvictionChoiceBuffer([]string{
-					fmt.Sprintf("%d", cache.tick),
-					fmt.Sprintf("%d", curFileStats.Filename),
-					fmt.Sprintf("%0.2f", curFileStats.Size),
-					fmt.Sprintf("%d", curFileStats.Frequency),
-					fmt.Sprintf("%d", curFileStats.DeltaLastRequest),
-					actionString,
 				})
 
 				if cache.choicesLogFile != nil {
@@ -594,6 +566,10 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) { //nolint:funlen
 			delIdx := rand.Intn(len(curFileList))
 			curFile := curFileList[delIdx]
 			curFileStats := cache.stats.Get(curFile.Filename)
+			if curFileStats != curFile {
+				panic("ERROR: file stats is not the same...")
+			}
+
 			// fmt.Println("REMOVE FREQ:", curFile.Frequency)
 			curFileStats.removeFromCache()
 
@@ -617,14 +593,6 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) { //nolint:funlen
 				Capacity:  cache.Capacity(),
 				Size:      curFile.Size,
 				Frequency: curFileStats.Frequency,
-			})
-			cache.toEvictionChoiceBuffer([]string{
-				fmt.Sprintf("%d", cache.tick),
-				fmt.Sprintf("%d", curFileStats.Filename),
-				fmt.Sprintf("%0.2f", curFileStats.Size),
-				fmt.Sprintf("%d", curFileStats.Frequency),
-				fmt.Sprintf("%d", curFileStats.DeltaLastRequest),
-				"DeleteOne",
 			})
 
 			if cache.choicesLogFile != nil {
@@ -674,15 +642,6 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) { //nolint:funlen
 						fmt.Sprintf("%d", curFileStats.DeltaLastRequest),
 					})
 				}
-
-				cache.toEvictionChoiceBuffer([]string{
-					fmt.Sprintf("%d", cache.tick),
-					fmt.Sprintf("%d", curFileStats.Filename),
-					fmt.Sprintf("%0.2f", curFileStats.Size),
-					fmt.Sprintf("%d", curFileStats.Frequency),
-					fmt.Sprintf("%d", curFileStats.DeltaLastRequest),
-					"NotDelete",
-				})
 			}
 		}
 	}
@@ -1035,15 +994,6 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					cache.additionAgent.SaveMemoryWithNoLimits(request.Filename, curChoice)
 				}
 
-				cache.toAdditionChoiceBuffer([]string{
-					fmt.Sprintf("%d", cache.tick),
-					fmt.Sprintf("%d", fileStats.Filename),
-					fmt.Sprintf("%0.2f", fileStats.Size),
-					fmt.Sprintf("%d", fileStats.Frequency),
-					fmt.Sprintf("%d", fileStats.DeltaLastRequest),
-					"NotStore",
-				})
-
 				if cache.choicesLogFile != nil {
 					cache.toChoiceBuffer([]string{
 						fmt.Sprintf("%d", cache.tick),
@@ -1145,15 +1095,6 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				case SCDL2:
 					cache.additionAgent.SaveMemoryWithNoLimits(request.Filename, curChoice)
 				}
-
-				cache.toAdditionChoiceBuffer([]string{
-					fmt.Sprintf("%d", cache.tick),
-					fmt.Sprintf("%d", fileStats.Filename),
-					fmt.Sprintf("%0.2f", fileStats.Size),
-					fmt.Sprintf("%d", fileStats.Frequency),
-					fmt.Sprintf("%d", fileStats.DeltaLastRequest),
-					"Store",
-				})
 
 				if cache.choicesLogFile != nil {
 					cache.toChoiceBuffer([]string{
@@ -1476,54 +1417,4 @@ func (cache *AIRL) ExtraOutput(info string) string { //nolint:ignore,funlen
 	}
 
 	return result
-}
-
-// Terminate pending things of the cache
-func (cache *AIRL) Terminate() error {
-	if cache.logSimulation {
-		if cache.additionAgentChoicesLogFile != nil {
-			cache.flushAdditionChoices()
-			cache.additionAgentChoicesLogFile.Close()
-		}
-		if cache.evictionAgentChoicesLogFile != nil {
-			cache.flushEvictionChoices()
-			cache.evictionAgentChoicesLogFile.Close()
-		}
-	}
-
-	_ = cache.SimpleCache.Terminate()
-
-	return nil
-}
-
-func (cache *AIRL) toAdditionChoiceBuffer(curChoice []string) {
-	if cache.logSimulation {
-		cache.additionAgentChoicesLogFileBuffer = append(cache.additionAgentChoicesLogFileBuffer, curChoice)
-		if len(cache.choicesBuffer) > 9999 {
-			cache.flushChoices()
-		}
-	}
-}
-
-func (cache *AIRL) flushAdditionChoices() {
-	for _, choice := range cache.additionAgentChoicesLogFileBuffer {
-		cache.additionAgentChoicesLogFile.Write(choice)
-	}
-	cache.additionAgentChoicesLogFileBuffer = cache.additionAgentChoicesLogFileBuffer[:0]
-}
-
-func (cache *AIRL) toEvictionChoiceBuffer(curChoice []string) {
-	if cache.logSimulation {
-		cache.evictionAgentChoicesLogFileBuffer = append(cache.evictionAgentChoicesLogFileBuffer, curChoice)
-		if len(cache.choicesBuffer) > 9999 {
-			cache.flushChoices()
-		}
-	}
-}
-
-func (cache *AIRL) flushEvictionChoices() {
-	for _, choice := range cache.evictionAgentChoicesLogFileBuffer {
-		cache.evictionAgentChoicesLogFile.Write(choice)
-	}
-	cache.evictionAgentChoicesLogFileBuffer = cache.evictionAgentChoicesLogFileBuffer[:0]
 }

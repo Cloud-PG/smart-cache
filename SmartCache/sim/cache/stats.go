@@ -78,24 +78,7 @@ func (statStruct Stats) Get(filename int64) *FileStats {
 }
 
 // GetOrCreate add the file into stats and returns (stats, is new file)
-func (statStruct *Stats) GetOrCreate(filename int64, vars ...interface{}) (*FileStats, bool) {
-	var (
-		size    float64
-		reqTime time.Time
-		curTick int64
-	)
-
-	switch {
-	case len(vars) > 2:
-		curTick = vars[2].(int64)
-		fallthrough
-	case len(vars) > 1:
-		reqTime = vars[1].(time.Time)
-		fallthrough
-	default:
-		size = vars[0].(float64)
-	}
-
+func (statStruct *Stats) GetOrCreate(filename int64, size float64, reqTime time.Time, curTick int64) (*FileStats, bool) {
 	// Stats age update
 	if statStruct.firstUpdateTime.IsZero() {
 		statStruct.logger.Info("Updated first time")
@@ -121,6 +104,8 @@ func (statStruct *Stats) GetOrCreate(filename int64, vars ...interface{}) (*File
 		curStats.DeltaLastRequest = curTick - curStats.Recency
 		curStats.Recency = curTick
 	}
+
+	// fmt.Println(curTick, curStats.Recency, curStats.DeltaLastRequest)
 
 	return curStats, !inStats
 }

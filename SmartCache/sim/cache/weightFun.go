@@ -104,7 +104,7 @@ func (cache *WeightFun) BeforeRequest(request *Request, hit bool) (*FileStats, b
 
 	cache.numReq++
 
-	curStats, newFile := cache.stats.GetOrCreate(request.Filename, request.Size, request.DayTime)
+	curStats, newFile := cache.stats.GetOrCreate(request.Filename, request.Size, request.DayTime, cache.tick)
 	curStats.updateStats(hit, request.Size, request.UserID, request.SiteName, request.DayTime)
 	cache.stats.updateWeight(curStats, newFile,
 		cache.SelFunctionType,
