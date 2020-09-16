@@ -1,6 +1,9 @@
 import pathlib
+from dataclasses import dataclass
 
 import pandas as pd
+import plotly.express as px
+from plotly.graph_objs import Figure as pxFigure
 from tqdm import tqdm
 
 from ..utils import STATUS_ARROW
@@ -231,12 +234,24 @@ def measure_hit_over_miss(df: 'pd.DataFrame') -> 'pd.Series':
     return df['read on hit data'] / df['read on miss data']
 
 
+@dataclass
+class FigContainers:
+    """Class for keeping track of an item in inventory."""
+    scatterActions: pxFigure
+    scatterAfter: pxFigure
+    histActionNumReq: pxFigure
+    histActionSize: pxFigure
+    histActionDeltaT: pxFigure
+
+
 class LogDeleteEvaluator(object):
 
     def __init__(self, event: tuple):
         self._event = event
         self.actions = []
         self.after = []
+
+        self.figs = FigContainers(None, None, None, None, None)
 
         self.tick = self._event[1]
         self.num_deleted_files = -1
@@ -264,6 +279,34 @@ class LogDeleteEvaluator(object):
         self.total_size_deleted_files = self._get_total_size_deleted_files()
         self.total_num_req_after_delete = self._get_num_deleted_miss()
 
+        self._make_figs()
+
+        del self.actions
+        del self.figs
+
+    def _make_figs(self):
+        self.figs.scatterActions = px.scatter_3d(
+            self.actions,
+            x='num req',
+            y='size',
+            z='filename',
+            color='delta t',
+            size='size',
+            opacity=0.9,
+        )
+        self.figs.scatterAfter = px.scatter_3d(
+            self.after[self.after.size != -1.],
+            x='num req',
+            y='size',
+            z='filename',
+            color='delta t',
+            size='size',
+            opacity=0.9,
+        )
+        self.figs.histActionNumReq = px.histogram(self.aztions, x='num req')
+        self.figs.histActionSize = px.histogram(self.aztions, x='Size')
+        self.figs.histActionDeltaT = px.histogram(self.aztions, x='delta t')
+
     def _get_num_deleted_files(self):
         return len(set(self.actions.filename))
 
@@ -280,16 +323,19 @@ class LogDeleteEvaluator(object):
 
     def _fix_delta_t_max(self):
         cur_max = self.actions['delta t'].max()
-        self.actions['delta t'][self.actions['delta t'] == cur_max] = -1.
+        selectRows = self.actions['delta t'] == cur_max
+        self.actions.loc[selectRows, 'delta t'] = -1.
         new_max = self.actions['delta t'].max()
-        self.actions['delta t'][self.actions['delta t'] == -1.] = new_max * 2.
+        selectRows = self.actions['delta t'] == -1.
+        self.actions.loc[selectRows, 'delta t'] = new_max * 2.
 
         cur_max = self.after['delta t'].max()
-        self.after['delta t'][(self.after['delta t'] == cur_max) & (
-            self.after.size != -1.)] = -1.
+        selectRows = (self.after['delta t'] == cur_max) & (
+            self.after.size != -1.)
+        self.after.loc[selectRows, 'delta t'] = -1.
         new_max = self.after['delta t'].max()
-        self.after['delta t'][(self.after['delta t'] == -1.)
-                              & (self.after.size != -1.)] = new_max * 2.
+        selectRows = (self.after['delta t'] == -1.) & (self.after.size != -1.)
+        self.after.loc[selectRows, 'delta t'] = new_max * 2.
 
 
 def make_comparison(files2plot: list, prefix: str) -> (list, int):
@@ -297,15 +343,20 @@ def make_comparison(files2plot: list, prefix: str) -> (list, int):
     del_evaluator = {}
 
     for file_, df, choices in tqdm(files2plot, desc="Parse log", position=0):
+        name = file_.replace(
+            prefix, "").replace(
+            f"/{SIM_RESULT_FILENAME}", ""
+        )
         curEvents = []
         curLog = None
         state = "AFTERDELETE"
-        for row in tqdm(df.itertuples(), total=len(df.index)):
+        for row in tqdm(choices.itertuples(), desc=f"Parse {name}",
+                        total=len(choices.index), position=1):
             event = row[2]
             if state == "AFTERDELETE":
                 if event in ["ONFREE", "ONDAYEND", "ONK", "FORCEDCALL", "FREE"]:
                     if curLog is not None:
-                        curLog.prepare(['Index'] + list(df.columns))
+                        curLog.prepare(['Index'] + list(choices.columns))
                         curEvents.append(curLog)
                     curLog = LogDeleteEvaluator(row)
                     state = "DELETING"
@@ -318,7 +369,7 @@ def make_comparison(files2plot: list, prefix: str) -> (list, int):
                     state = "AFTERDELETE"
                     curLog.trace(row)
         else:
-            curLog.prepare(['Index'] + list(df.columns))
+            curLog.prepare(['Index'] + list(choices.columns))
             curEvents.append(curLog)
 
         del_evaluator[name] = curEvents
@@ -338,7 +389,7 @@ def make_table(files2plot: list, prefix: str) -> 'pd.DataFrame':
     """
     table = []
     for file_, df in files2plot:
-        values = get_measures(file_, df)
+        values = get_measures(df)
         values[0] = values[0].replace(
             prefix, "").replace(
             f"/{SIM_RESULT_FILENAME}", "")
