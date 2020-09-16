@@ -3,7 +3,8 @@ import argparse
 from colorama import init
 
 from ..utils import STATUS_ARROW, str2bool
-from .utils import aggregate_results, dashboard
+from .data import aggregate_results
+from .utils import dashboard
 
 
 def main():

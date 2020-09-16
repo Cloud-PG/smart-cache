@@ -1,4 +1,3 @@
-import pathlib
 from os import path
 
 import dash
@@ -11,55 +10,16 @@ import pandas as pd
 import plotly.graph_objects as go
 from dash.dependencies import Input, Output, State
 from plotly.graph_objs import Layout
-from tqdm import tqdm
 
-_SIM_RESULT_FILENAME = "/simulation_results.csv"
+from .data import (COLUMNS, SIM_RESULT_FILENAME, Results, make_comparison,
+                   make_table, measure_avg_free_space, measure_bandwidth,
+                   measure_cost, measure_cost_ratio, measure_cpu_eff,
+                   measure_hit_over_miss, measure_hit_rate,
+                   measure_read_on_hit_ratio, measure_redirect_volume,
+                   measure_std_dev_free_space, measure_throughput,
+                   measure_throughput_ratio)
 
 _EXTERNAL_STYLESHEETS = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
-
-_COLUMNS = [
-    'date',
-    'num req',
-    'num hit',
-    'num added',
-    'num deleted',
-    'num redirected',
-    'size redirected',
-    'cache size',
-    'size',
-    'capacity',
-    'bandwidth',
-    'bandwidth usage',
-    'hit rate',
-    'weighted hit rate',
-    'written data',
-    'read data',
-    'read on hit data',
-    'read on miss data',
-    'deleted data',
-    'avg free space',
-    'std dev free space',
-    'CPU efficiency',
-    'CPU hit efficiency',
-    'CPU miss efficiency',
-    'CPU efficiency upper bound',
-    'CPU efficiency lower bound',
-    'Addition epsilon',
-    'Eviction epsilon',
-    'Addition qvalue function',
-    'Eviction qvalue function',
-    'Eviction calls',
-    'Eviction forced calls',
-    'Eviction mean num categories',
-    'Eviction std dev num categories',
-    'Action store',
-    'Action not store',
-    'Action delete all',
-    'Action delete half',
-    'Action delete quarter',
-    'Action delete one',
-    'Action not delete',
-]
 
 _LAYOUT = Layout(
     paper_bgcolor='rgb(255,255,255)',
@@ -68,250 +28,26 @@ _LAYOUT = Layout(
     xaxis={'gridcolor': 'black'},
 )
 
-_ALGORITHMS = ['lru', 'lfu', 'sizeSmall', 'sizeBig']
-
-
-class Element(object):
-
-    def __init__(self, components: list, filename: str, df: 'pd.DataFrame'):
-        self._df = df
-        self._filename = filename
-        self._components = set([
-            elm for elm in self.__parse_components(components)
-        ])
-
-    @staticmethod
-    def __parse_components(components: list) -> list:
-        for component in components:
-            if component.find("weightFunLRU") != -1:
-                yield component.rsplit("_", 3)[0]
-            elif component.find("_") != -1 and \
-                    component.split("_")[0] in _ALGORITHMS:
-                yield component.split("_")[0]
-            elif component.find("aiRL") != -1:
-                cur_type = component.split("aiRL_")[1].split("_", 1)[0]
-                if cur_type == "SCDL":
-                    yield "SCDL"
-                elif cur_type == "SCDL2":
-                    yield "SCDL2"
-                yield "aiRL"
-            else:
-                yield component
-
-    @property
-    def filename(self):
-        return self._filename
-
-    @property
-    def df(self):
-        return self._df
-
-    @property
-    def components(self):
-        return self._components
-
-    def __hash__(self):
-        return hash(str(self._components))
-
-
-class Results(object):
-
-    def __init__(self):
-        self._elemts = {}
-
-    def insert(self, path: 'pathlib.Path', components: list, filename: str, df: 'pd.DataFrame') -> 'Results':
-        elm = Element(components, filename,  df)
-        self._elemts[path.as_posix()] = elm
-        return self
-
-    @property
-    def components(self) -> set:
-        components = set()
-        for elm in self._elemts.values():
-            components |= elm.components
-        return sorted(components)
-
-    @property
-    def files(self) -> 'list[str]':
-        return list(sorted(self._elemts.keys()))
-
-    def get_df(self, file_: str, filters_all: list, filters_any: list):
-        cur_elm = self._elemts[file_]
-        all_ = len(cur_elm.components.intersection(set(filters_all))) == len(
-            filters_all) if len(filters_all) > 0 else True
-        any_ = len(cur_elm.components.intersection(set(filters_any))
-                   ) != 0 if len(filters_any) > 0 else True
-        if all_ and any_:
-            return cur_elm.df
-        return None
-
-
-def aggregate_results(folder: str):
-    abs_target_folder = pathlib.Path(folder).resolve()
-    results = Results()
-    all_columns = set(_COLUMNS)
-    for result_path in tqdm(list(
-        abs_target_folder.glob("**/simulation_results.csv")
-    ), desc="Opening results"):
-        df = pd.read_csv(result_path)
-        cur_columns = set(df.columns)
-        if cur_columns.issubset(all_columns):
-            df['date'] = pd.to_datetime(
-                df['date'].apply(lambda elm: elm.split()[0]),
-                format="%Y-%m-%d"
-            )
-            relative_path = result_path.relative_to(
-                abs_target_folder
-            )
-            *components, filename = relative_path.parts
-            results.insert(relative_path, components, filename, df)
-    return results
-
-
-def _measure_throughput_ratio(df: 'pd.DataFrame') -> 'pd.Series':
-    cache_size = df['cache size'][0]
-    return (df['read on hit data'] - df['written data'])/cache_size
-
-
-def _measure_cost_ratio(df: 'pd.DataFrame') -> 'pd.Series':
-    cache_size = df['cache size'][0]
-    return (df['written data'] + df['deleted data'])/cache_size
-
-
-def _measure_throughput(df: 'pd.DataFrame') -> 'pd.Series':
-    # to Terabytes
-    return (df['read on hit data'] - df['written data'])/(1024.**2.)
-
-
-def _measure_cost(df: 'pd.DataFrame') -> 'pd.Series':
-    # to Terabytes
-    return (df['written data'] + df['deleted data'])/(1024.**2.)
-
-
-def _measure_read_on_hit_ratio(df: 'pd.DataFrame') -> 'pd.Series':
-    return df['read on hit data']/df['read data']
-
-
-def _measure_cpu_eff(df: 'pd.DataFrame') -> 'pd.Series':
-    return df['CPU efficiency']
-
-
-def _measure_avg_free_space(df: 'pd.DataFrame') -> 'pd.Series':
-    cache_size = df['cache size'][0]
-    return (df['avg free space'] / cache_size) * 100.
-
-
-def _measure_std_dev_free_space(df: 'pd.DataFrame') -> 'pd.Series':
-    cache_size = df['cache size'][0]
-    return (df['std dev free space'] / cache_size) * 100.
-
-
-def _measure_bandwidth(df: 'pd.DataFrame') -> 'pd.Series':
-    return (df['read on miss data'] / df['bandwidth']) * 100.
-
-
-def _measure_redirect_volume(df: 'pd.DataFrame') -> 'pd.Series':
-    cache_size = df['cache size'][0]
-    return (df['size redirected'] / cache_size) * 100.
-
-
-def _measure_hit_rate(df: 'pd.DataFrame') -> 'pd.Series':
-    return df['hit rate']
-
-
-def _measure_hit_over_miss(df: 'pd.DataFrame') -> 'pd.Series':
-    return df['read on hit data'] / df['read on miss data']
-
-
-def _agent_epsilon(df: 'pd.DataFrame') -> 'pd.Series':
-    return df['']
-
 
 _MEASURES = {
-    'Throughput ratio': _measure_throughput_ratio,
-    'Cost ratio': _measure_cost_ratio,
-    'Throughput (TB)': _measure_throughput,
-    'Cost (TB)': _measure_cost,
-    'Read on hit ratio': _measure_read_on_hit_ratio,
-    'CPU Eff.': _measure_cpu_eff,
-    'Avg. Free Space': _measure_avg_free_space,
-    'Std. Dev. Free Space': _measure_std_dev_free_space,
-    'Bandwidth': _measure_bandwidth,
-    'Redirect Vol.': _measure_redirect_volume,
-    'Hit over Miss': _measure_hit_over_miss,
-    'Hit rate': _measure_hit_rate,
+    'Throughput ratio': measure_throughput_ratio,
+    'Cost ratio': measure_cost_ratio,
+    'Throughput (TB)': measure_throughput,
+    'Cost (TB)': measure_cost,
+    'Read on hit ratio': measure_read_on_hit_ratio,
+    'CPU Eff.': measure_cpu_eff,
+    'Avg. Free Space': measure_avg_free_space,
+    'Std. Dev. Free Space': measure_std_dev_free_space,
+    'Bandwidth': measure_bandwidth,
+    'Redirect Vol.': measure_redirect_volume,
+    'Hit over Miss': measure_hit_over_miss,
+    'Hit rate': measure_hit_rate,
 }
-
-
-def _get_measures(cache_filename: str, df: 'pd.DataFrame') -> list:
-    measures = [cache_filename]
-
-    # Throughput ratio
-    measures.append(
-        _measure_throughput_ratio(df).mean()
-    )
-
-    # Cost ratio
-    measures.append(
-        _measure_cost_ratio(df).mean()
-    )
-    
-    # Throughput (TB)
-    measures.append(
-        _measure_throughput(df).mean()
-    )
-
-    # Cost (TB)
-    measures.append(
-        _measure_cost(df).mean()
-    )
-
-    # Read on hit ratio
-    measures.append(
-        _measure_read_on_hit_ratio(df).mean()
-    )
-
-    # Bandwidth
-    measures.append(
-        _measure_bandwidth(df).mean()
-    )
-
-    # Redirect Vol.
-    measures.append(
-        _measure_redirect_volume(df).mean()
-    )
-
-    # Avg. Free Space
-    measures.append(
-        _measure_avg_free_space(df).mean()
-    )
-
-    # Std. Dev. Free Space
-    measures.append(
-        _measure_std_dev_free_space(df).mean()
-    )
-
-    # Hit over Miss
-    measures.append(
-        _measure_hit_over_miss(df).mean()
-    )
-
-    # Hit rate
-    measures.append(
-        _measure_hit_rate(df).mean()
-    )
-
-    # CPU Efficiency
-    measures.append(
-        _measure_cpu_eff(df).mean()
-    )
-
-    return measures
 
 
 def get_files2plot(results: 'Results', files: list, filters_all: list,
                    filters_any: list, column: str = "",
-                   agents: bool = False,) -> list:
+                   agents: bool = False, with_choices: bool = False) -> list:
     """Returns a filtered list of files to plot (name and dataframe)
 
     :param results: the result object with simulation data
@@ -335,12 +71,30 @@ def get_files2plot(results: 'Results', files: list, filters_all: list,
         if df is not None:
             if column != "":
                 if column in df.columns:
-                    files2plot.append((file_, df))
+                    if with_choices:
+                        files2plot.append((file_, df))
+                    else:
+                        choice_df = results.get_choices(
+                            file_, filters_all, filters_any)
+                        if choice_df is not None:
+                            files2plot.append((file_, df, choice_df))
             elif agents:
                 if "Addition epsilon" in df.columns:
-                    files2plot.append((file_, df))
+                    if with_choices:
+                        choice_df = results.get_choices(
+                            file_, filters_all, filters_any)
+                        if choice_df is not None:
+                            files2plot.append((file_, df, choice_df))
+                    else:
+                        files2plot.append((file_, df))
             else:
-                files2plot.append((file_, df))
+                if with_choices:
+                    choice_df = results.get_choices(
+                        file_, filters_all, filters_any)
+                    if choice_df is not None:
+                        files2plot.append((file_, df, choice_df))
+                else:
+                    files2plot.append((file_, df))
     return files2plot
 
 
@@ -352,7 +106,7 @@ def get_prefix(files2plot: list) -> str:
     :return: the commond prefix of the list of files
     :rtype: str
     """
-    return path.commonprefix([file_ for file_, _ in files2plot])
+    return path.commonprefix([file_ for file_, *_ in files2plot])
 
 
 def dashboard(results: 'Results'):
@@ -362,6 +116,7 @@ def dashboard(results: 'Results'):
         'measures': {},
         'agents': {},
         'tables': {},
+        'compare': {}
     }
 
     app = dash.Dash("Result Dashboard", external_stylesheets=[
@@ -458,6 +213,28 @@ def dashboard(results: 'Results'):
         ),
     )
 
+    _TAB_COMPARE = dbc.Card(
+        dbc.Spinner(
+            dbc.CardBody(
+                [
+                    dcc.Slider(
+                        min=0,
+                        max=10000,
+                        step=1000,
+                        value=0,
+                        id="choice-slider",
+                    ),
+                    html.Div(id="choice-slider-text"),
+                    html.Hr(),
+                    dbc.CardBody(
+                        id="comparison-plots"
+                    ),
+                ],
+                id="compare",
+            ),
+        ),
+    )
+
     _TABS = dbc.Tabs(
         [
             dbc.Tab(_TAB_FILES, label="Files", tab_id="tab-files"),
@@ -466,6 +243,7 @@ def dashboard(results: 'Results'):
             dbc.Tab(_TAB_MEASURES, label="Measures", tab_id="tab-measures"),
             dbc.Tab(_TAB_AGENTS, label="Agents", tab_id="tab-agents"),
             dbc.Tab(_TAB_TABLE, label="Table", tab_id="tab-table"),
+            dbc.Tab(_TAB_COMPARE, label="Compare", tab_id="tab-compare"),
         ],
         id="tabs",
     )
@@ -478,7 +256,35 @@ def dashboard(results: 'Results'):
     def selection2hash(files: list, filters_all: list, filters_any: list, num_of_results: int) -> str:
         return str(hash(" ".join(files + filters_all + filters_any + [str(num_of_results)])))
 
-    @app.callback(
+    @app.callback([
+        Output('choice-slider-text', 'children'),
+        Output('comparison-plots', 'children')
+    ],
+        [Input('choice-slider', 'value')],
+        [
+        State('choice-slider', 'step'),
+        State('choice-slider', 'max'),
+        State("selected-files", "value"),
+        State("selected-filters-all", "value"),
+        State("selected-filters-any", "value"),
+        State("num-of-results", "value"),
+    ]
+    )
+    def display_value(value, step, max_val, files, filters_all, filters_any, num_of_results):
+        cur_hash = selection2hash(
+            files, filters_all, filters_any, num_of_results)
+
+        window_limit = value+step
+        if cur_hash in _CACHE['compare']:
+            return f'Tick: {value} - {window_limit if window_limit <= max_val else window_limit} | window size: {step}', [dcc.Graph(
+                figure=make_comparison_figure(
+                    _CACHE['compare'][cur_hash], value, value+step
+                )
+            )]
+        else:
+            return "", []
+
+    @ app.callback(
         dash.dependencies.Output('selected-files', 'value'),
         [
             dash.dependencies.Input('unselect-files', 'n_clicks'),
@@ -503,6 +309,7 @@ def dashboard(results: 'Results'):
             Output("graphs-measures", "children"),
             Output("graphs-agents", "children"),
             Output("table", "children"),
+            Output("compare", "children"),
 
         ],
         [
@@ -519,17 +326,17 @@ def dashboard(results: 'Results'):
         cur_hash = selection2hash(
             files, filters_all, filters_any, num_of_results)
         if at == "tab-files":
-            return ("", "", "", "")
+            return ("", "", "", "", "")
 
         elif at == "tab-filters":
-            return ("", "", "", "")
+            return ("", "", "", "", "")
 
         elif at == "tab-columns":
             if cur_hash in _CACHE['columns']:
-                return (_CACHE['columns'][cur_hash], "", "", "")
+                return (_CACHE['columns'][cur_hash], "", "", "", "")
             else:
                 figures = []
-                for column in _COLUMNS[1:]:
+                for column in COLUMNS[1:]:
                     files2plot = get_files2plot(
                         results,
                         files,
@@ -559,11 +366,11 @@ def dashboard(results: 'Results'):
                     figures.append(html.Hr())
 
                 _CACHE['columns'][cur_hash] = figures
-                return (figures, "", "", "")
+                return (figures, "", "", "", "")
 
         elif at == "tab-measures":
             if cur_hash in _CACHE['measures']:
-                return ("", _CACHE['measures'][cur_hash], "", "")
+                return ("", _CACHE['measures'][cur_hash], "", "", "")
             else:
                 figures = []
                 files2plot = get_files2plot(
@@ -597,11 +404,11 @@ def dashboard(results: 'Results'):
                     figures.append(html.Hr())
 
                 _CACHE['measures'][cur_hash] = figures
-                return ("", figures, "", "")
+                return ("", figures, "", "", "")
 
         elif at == "tab-agents":
             if cur_hash in _CACHE['agents']:
-                return ("", "", _CACHE['agents'][cur_hash], "")
+                return ("", "", _CACHE['agents'][cur_hash], "", "")
             else:
                 figures = []
                 files2plot = get_files2plot(
@@ -628,11 +435,11 @@ def dashboard(results: 'Results'):
                     )
                 )
                 _CACHE['agents'][cur_hash] = figures
-                return ("", "", figures, "")
+                return ("", "", figures, "", "")
 
         elif at == "tab-table":
             if cur_hash in _CACHE['tables']:
-                return ("", "", "", _CACHE['tables'][cur_hash])
+                return ("", "", "", _CACHE['tables'][cur_hash], "")
             else:
                 files2plot = get_files2plot(
                     results,
@@ -656,9 +463,44 @@ def dashboard(results: 'Results'):
                     table, striped=True, bordered=True, hover=True
                 )
                 _CACHE['tables'][cur_hash] = table
-                return ("", "", "", table)
+                return ("", "", "", table, "")
+        elif at == "tab-compare":
+            if cur_hash in _CACHE['compare']:
+                return ("", "", "", "", _CACHE['compare'][cur_hash])
+            else:
+                files2plot = get_files2plot(
+                    results,
+                    files,
+                    filters_all,
+                    filters_any,
+                    with_choices=True,
+                )
+                prefix = get_prefix(files2plot)
+                diff_on_ticks, max_tick = make_comparison(files2plot, prefix)
+                _CACHE['compare'][cur_hash] = diff_on_ticks
+                step = int(max_tick / 1000)
+                childrens = [
+                    dcc.Slider(
+                        min=0,
+                        max=max_tick,
+                        step=step,
+                        value=0,
+                        id="choice-slider",
+                    ),
+                    html.Div(id="choice-slider-text"),
+                    html.Hr(),
+                    dbc.CardBody(
+                        dcc.Graph(
+                            figure=make_comparison_figure(
+                                _CACHE['compare'][cur_hash], 0, step
+                            )
+                        ),
+                        id="comparison-plots"
+                    ),
+                ]
+                return ("", "", "", "", childrens)
         else:
-            return ("", "", "", "")
+            return ("", "", "", "", "")
 
     app.run_server(
         debug=True,
@@ -712,7 +554,7 @@ def make_agent_figures(files2plot: list, prefix: str) -> list:
         for file_, df in files2plot:
             name = file_.replace(
                 prefix, "").replace(
-                    _SIM_RESULT_FILENAME, "")
+                    SIM_RESULT_FILENAME, "")
             for column in columns:
                 _add_columns(fig_epsilon, df, name, column)
         fig_epsilon.update_layout(
@@ -727,6 +569,24 @@ def make_agent_figures(files2plot: list, prefix: str) -> list:
         figures.append(html.Hr())
 
     return figures
+
+
+def make_comparison_figure(diff_on_ticks, start, stop):
+    print(start, stop)
+
+    fig = go.Figure(layout=_LAYOUT)
+
+    for type_, data in diff_on_ticks.items():
+        df = data.iloc[start:stop]
+        fig.add_trace(go.Scatter(
+            x=df.index,
+            y=df['action'],
+            name=type_,
+            # mode='markers',
+            text=df['tick'],
+        ))
+
+    return fig
 
 
 def make_line_figures(files2plot: list, prefix: str, title: str,
@@ -751,7 +611,7 @@ def make_line_figures(files2plot: list, prefix: str, title: str,
     for file_, df in files2plot:
         name = file_.replace(
             prefix, "").replace(
-                _SIM_RESULT_FILENAME, "")
+                SIM_RESULT_FILENAME, "")
         if function is not None:
             y_ax = function(df)
         elif column != "":
@@ -787,42 +647,6 @@ def get_top_n(df: 'pd.DataFrame', n: int, prefix: str) -> list:
     :rtype: list
     """
     return [
-        f"{prefix}{filename}{_SIM_RESULT_FILENAME}"
+        f"{prefix}{filename}{SIM_RESULT_FILENAME}"
         for filename in df[:n].file.to_list()
     ]
-
-
-def make_table(files2plot: list, prefix: str) -> 'pd.DataFrame':
-    """Make html table from files to plot
-
-    :param files2plot: list of files to plot with their dataframes
-    :type files2plot: list
-    :param prefix: the files' prefix
-    :type prefix: str
-    :return: html table component
-    :rtype: dbc.Table
-    """
-    table = []
-    for file_, df in files2plot:
-        values = _get_measures(file_, df)
-        values[0] = values[0].replace(
-            prefix, "").replace(
-            _SIM_RESULT_FILENAME, "")
-        table.append(values)
-    df = pd.DataFrame(
-        table,
-        columns=[
-            "file", "Throughput ratio", "Cost ratio",
-            "Throughput (TB)", "Cost (TB)",
-            "Read on hit ratio", "Bandwidth",
-            "Redirect Vol.", "Avg. Free Space",
-            "Std. Dev. Free Space", "Hit over Miss",
-            "Hit rate", "CPU Eff."
-        ]
-    )
-    df = df.sort_values(
-        by=["Throughput ratio", "Cost ratio", "Hit rate"],
-        ascending=[False, True, False],
-    )
-    df = df.round(3)
-    return df
