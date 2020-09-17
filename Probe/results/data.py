@@ -106,7 +106,7 @@ class Results(object):
     def __init__(self):
         self._elemets = {}
         self._choices = {}
-    
+
     def __len__(self) -> int:
         return len(self._elemets)
 
@@ -243,6 +243,7 @@ class LogDeleteEvaluator(object):
         self._event = event
         self.actions = []
         self.after = []
+        self.after4scatter = None
 
         self.figs = None
 
@@ -264,8 +265,12 @@ class LogDeleteEvaluator(object):
     def prepare(self, columns):
         self.actions = pd.DataFrame(self.actions, columns=columns)
         self.actions.set_index('Index', inplace=True)
+        self.actions.reset_index(inplace=True, drop=True)
         self.after = pd.DataFrame(self.after, columns=columns)
         self.after.set_index('Index', inplace=True)
+        self.after.reset_index(inplace=True, drop=True)
+        self.after4scatter = self.after.copy()
+        self.after4scatter = self.after4scatter.loc[self.after4scatter['action or event'] == "ADD"]
 
         self._fix_delta_t_max()
 
@@ -299,17 +304,15 @@ class LogDeleteEvaluator(object):
 
     @property
     def histActionNumReq(self):
-        return
-        px.histogram(self.aztions, x='num req')
+        return px.histogram(self.actions, x='num req')
 
     @property
     def histActionSize(self):
-        return
-        px.histogram(self.aztions, x='Size')
+        return px.histogram(self.actions, x='Size')
 
     @property
     def histActionDeltaT(self):
-        return px.histogram(self.aztions, x='delta t')
+        return px.histogram(self.actions, x='delta t')
 
     def _get_num_deleted_files(self):
         return len(set(self.actions.filename))
@@ -342,7 +345,7 @@ class LogDeleteEvaluator(object):
         self.after.loc[selectRows, 'delta t'] = new_max * 2.
 
 
-def make_comparison(files2plot: list, prefix: str) -> list:
+def make_comparison(files2plot: list, prefix: str) -> dict:
     del_evaluator = {}
 
     for file_, df, choices in tqdm(files2plot, desc="Parse log", position=0):

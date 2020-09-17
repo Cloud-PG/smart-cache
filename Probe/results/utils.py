@@ -6,6 +6,7 @@ import dash_core_components as dcc
 import dash_html_components as html
 # Create random data with numpy
 import pandas as pd
+import plotly.express as px
 # import plotly.express as px
 import plotly.graph_objects as go
 from dash.dependencies import Input, Output, State
@@ -217,7 +218,7 @@ def dashboard(results: 'Results'):
         ),
     )
 
-    _TAB_COMPARE = dbc.Card(
+    _TAB_COMPARE = dbc.Card([
         dbc.Spinner(
             dbc.CardBody(
                 id="compare",
@@ -225,7 +226,38 @@ def dashboard(results: 'Results'):
             color="primary",
             type="grow",
         ),
-    )
+        dbc.CardBody([
+            dbc.Input(id="sel-num-sim",
+                      placeholder="Number of simulation", type="number"),
+            dbc.Input(id="sel-tick",
+                      placeholder="tick of simulation", type="number"),
+            dbc.Spinner([
+                dbc.CardBody(
+                    id="sel-sim-compare-plot-actions",
+                ),
+                dbc.CardBody(
+                    id="sel-sim-compare-plot-actions-hist-numReq",
+                ),
+                dbc.CardBody(
+                    id="sel-sim-compare-plot-actions-hist-size",
+                ),
+                dbc.CardBody(
+                    id="sel-sim-compare-plot-actions-hist-deltaT",
+                ),
+                dbc.CardBody(
+                    id="sel-sim-compare-plot-after",
+                )
+            ],
+                color="warning",
+                type="grow",
+            ),
+        ],
+            id="compare-row",
+        ),
+        dbc.CardBody(
+            id="compare-tables",
+        ),
+    ])
 
     _TABS = dbc.Tabs(
         [
@@ -250,11 +282,84 @@ def dashboard(results: 'Results'):
         return str(hash(" ".join(files + filters_all + filters_any + [str(num_of_results)])))
 
     @app.callback(
+        [
+            Output("sel-sim-compare-plot-actions", "children"),
+            Output("sel-sim-compare-plot-actions-hist-numReq", "children"),
+            Output("sel-sim-compare-plot-actions-hist-size", "children"),
+            Output("sel-sim-compare-plot-actions-hist-deltaT", "children"),
+            Output("sel-sim-compare-plot-after", "children"),
+        ],
+        [
+            Input("sel-num-sim", "value"),
+            Input("sel-tick", "value")
+        ],
+        [
+            State("selected-files", "value"),
+            State("selected-filters-all", "value"),
+            State("selected-filters-any", "value"),
+            State("num-of-results", "value")
+        ]
+    )
+    def output_text(num_sim, tick, files, filters_all, filters_any, num_of_results):
+        cur_hash = selection2hash(
+            files, filters_all, filters_any, num_of_results
+        )
+        if cur_hash in _CACHE['compare']:
+            data, *_ = _CACHE['compare'][cur_hash]
+            keys = list(data.keys())
+            try:
+                cur_sim = keys[num_sim]
+                for evaluator in data[cur_sim]:
+                    if evaluator.tick == tick:
+                        scatterActionsFig = px.scatter_3d(
+                            evaluator.actions,
+                            x='num req',
+                            y='size',
+                            z='filename',
+                            color='delta t',
+                            size='size',
+                            opacity=0.9,
+                        )
+                        scatterActionsFig.update_layout(_LAYOUT)
+                        histActionNumReq = px.histogram(evaluator.actions, x='num req')
+                        histActionNumReq.update_layout(_LAYOUT)
+                        histActionSize = px.histogram(evaluator.actions, x='size')
+                        histActionSize.update_layout(_LAYOUT)
+                        histActionDeltaT = px.histogram(evaluator.actions, x='delta t')
+                        histActionDeltaT.update_layout(_LAYOUT)
+                        print(evaluator.after4scatter)
+                        after_data = evaluator.after4scatter
+                        print(after_data)
+                        scatterAfterFig = px.scatter_3d(
+                            after_data,
+                            x='num req',
+                            y='size',
+                            z='filename',
+                            color='delta t',
+                            size='size',
+                            opacity=0.9,
+                        )
+                        scatterAfterFig.update_layout(_LAYOUT)
+                        return (
+                            [dcc.Graph(figure=scatterActionsFig)],
+                            [dcc.Graph(figure=histActionNumReq)],
+                            [dcc.Graph(figure=histActionSize)],
+                            [dcc.Graph(figure=histActionDeltaT)],
+                            [dcc.Graph(figure=scatterAfterFig)],
+                        )
+                else:
+                    return [dbc.Alert(f"No tick found in simulation {num_sim}", color="danger")], [""], [""], [""], [""]
+            except (IndexError, TypeError):
+                return [dbc.Alert(f"No simulation found at index {num_sim}", color="danger")], [""], [""], [""], [""]
+        else:
+            return [dbc.Alert("No results", color="warning")], [""], [""], [""], [""]
+
+    @app.callback(
         [Output(f"collapse-{i}", "is_open") for i in range(len(results))],
         [Input(f"group-{i}-toggle", "n_clicks") for i in range(len(results))],
         [State(f"collapse-{i}", "is_open") for i in range(len(results))],
     )
-    def toggle_accordion(*args):
+    def toggle_collapse_table(*args):
         ctx = dash.callback_context
 
         if not ctx.triggered:
@@ -274,7 +379,7 @@ def dashboard(results: 'Results'):
 
         return res
 
-    @ app.callback(
+    @app.callback(
         dash.dependencies.Output('selected-files', 'value'),
         [
             dash.dependencies.Input('unselect-files', 'n_clicks'),
@@ -300,7 +405,7 @@ def dashboard(results: 'Results'):
             Output("graphs-agents", "children"),
             Output("table", "children"),
             Output("compare", "children"),
-
+            Output("compare-tables", "children"),
         ],
         [
             Input("tabs", "active_tab"),
@@ -316,14 +421,14 @@ def dashboard(results: 'Results'):
         cur_hash = selection2hash(
             files, filters_all, filters_any, num_of_results)
         if at == "tab-files":
-            return ("", "", "", "", "")
+            return ("", "", "", "", "", "")
 
         elif at == "tab-filters":
-            return ("", "", "", "", "")
+            return ("", "", "", "", "", "")
 
         elif at == "tab-columns":
             if cur_hash in _CACHE['columns']:
-                return (_CACHE['columns'][cur_hash], "", "", "", "")
+                return (_CACHE['columns'][cur_hash], "", "", "", "", "")
             else:
                 figures = []
                 for column in COLUMNS[1:]:
@@ -356,11 +461,11 @@ def dashboard(results: 'Results'):
                     figures.append(html.Hr())
 
                 _CACHE['columns'][cur_hash] = figures
-                return (figures, "", "", "", "")
+                return (figures, "", "", "", "", "")
 
         elif at == "tab-measures":
             if cur_hash in _CACHE['measures']:
-                return ("", _CACHE['measures'][cur_hash], "", "", "")
+                return ("", _CACHE['measures'][cur_hash], "", "", "", "")
             else:
                 figures = []
                 files2plot = get_files2plot(
@@ -394,11 +499,11 @@ def dashboard(results: 'Results'):
                     figures.append(html.Hr())
 
                 _CACHE['measures'][cur_hash] = figures
-                return ("", figures, "", "", "")
+                return ("", figures, "", "", "", "")
 
         elif at == "tab-agents":
             if cur_hash in _CACHE['agents']:
-                return ("", "", _CACHE['agents'][cur_hash], "", "")
+                return ("", "", _CACHE['agents'][cur_hash], "", "", "")
             else:
                 figures = []
                 files2plot = get_files2plot(
@@ -425,11 +530,11 @@ def dashboard(results: 'Results'):
                     )
                 )
                 _CACHE['agents'][cur_hash] = figures
-                return ("", "", figures, "", "")
+                return ("", "", figures, "", "", "")
 
         elif at == "tab-table":
             if cur_hash in _CACHE['tables']:
-                return ("", "", "", _CACHE['tables'][cur_hash], "")
+                return ("", "", "", _CACHE['tables'][cur_hash], "", "")
             else:
                 files2plot = get_files2plot(
                     results,
@@ -453,10 +558,11 @@ def dashboard(results: 'Results'):
                     table, striped=True, bordered=True, hover=True
                 )
                 _CACHE['tables'][cur_hash] = table
-                return ("", "", "", table, "")
+                return ("", "", "", table, "", "")
         elif at == "tab-compare":
             if cur_hash in _CACHE['compare']:
-                return ("", "", "", "", _CACHE['compare'][cur_hash])
+                _, figs, tables = _CACHE['compare'][cur_hash]
+                return ("", "", "", "", figs, tables)
             else:
                 files2plot = get_files2plot(
                     results,
@@ -467,14 +573,14 @@ def dashboard(results: 'Results'):
                 )
                 prefix = get_prefix(files2plot)
                 data = make_comparison(files2plot, prefix)
-                childrens = make_comparison_stuff(
+                figs, tables = make_comparison_stuff(
                     data, len(results)
                 )
-                _CACHE['compare'][cur_hash] = childrens
+                _CACHE['compare'][cur_hash] = (data, figs, tables)
 
-                return ("", "", "", "", childrens)
+                return ("", "", "", "", figs, tables)
         else:
-            return ("", "", "", "", "")
+            return ("", "", "", "", "", "")
 
     app.run_server(
         debug=True,
@@ -545,11 +651,13 @@ def make_agent_figures(files2plot: list, prefix: str) -> list:
     return figures
 
 
-def make_comparison_stuff(delEvaluators: list, tot_results: int) -> list:
-    stuff = []
+def make_comparison_stuff(delEvaluators: list, tot_results: int) -> (list, list):
+    figs = []
+    tables = []
 
     fig = go.Figure(layout=_LAYOUT)
     for name, evaluators in delEvaluators.items():
+
         x = [evaluator.tick for evaluator in evaluators]
         fig.add_trace(
             go.Scatter(
@@ -582,11 +690,11 @@ def make_comparison_stuff(delEvaluators: list, tot_results: int) -> list:
         yaxis_title='',
         autosize=True,
         # width=1920,
-        height=800,
+        height=480,
     )
 
-    stuff.append(dcc.Graph(figure=fig))
-    stuff.append(html.Hr())
+    figs.append(dcc.Graph(figure=fig))
+    figs.append(html.Hr())
 
     table_header = [
         html.Thead(
@@ -602,13 +710,16 @@ def make_comparison_stuff(delEvaluators: list, tot_results: int) -> list:
         )
     ]
 
+    tables.append(html.Hr())
+    tables.append(html.H1("Tables"))
+
     for idx, sim in enumerate(delEvaluators):
         evaluators = delEvaluators[sim]
-        stuff.append(
+        tables.append(
             dbc.CardHeader(
                 html.H2(
                     dbc.Button(
-                        f"@{sim}",
+                        f"[{idx}] -> {sim}",
                         color="link",
                         id=f"group-{idx}-toggle",
                     )
@@ -629,7 +740,7 @@ def make_comparison_stuff(delEvaluators: list, tot_results: int) -> list:
                 ])
             )
         table_body = [html.Tbody(cur_rows)]
-        stuff.append(
+        tables.append(
             dbc.Collapse(
                 dbc.CardBody([
                     dbc.Table(
@@ -644,11 +755,11 @@ def make_comparison_stuff(delEvaluators: list, tot_results: int) -> list:
                 id=f"collapse-{idx}",
             )
         )
-        stuff.append(html.Hr())
+        tables.append(html.Hr())
 
     # to satisfy filtered evaluator callbacks
     for idx in range(len(delEvaluators), tot_results):
-        stuff.append(
+        tables.append(
             dbc.CardHeader(
                 html.H2(
                     dbc.Button(
@@ -659,7 +770,7 @@ def make_comparison_stuff(delEvaluators: list, tot_results: int) -> list:
                 style={'display': "none"},
             )
         )
-        stuff.append(
+        tables.append(
             dbc.Collapse(
                 dbc.CardBody(f"This is the content of group {idx}..."),
                 id=f"collapse-{idx}",
@@ -667,7 +778,7 @@ def make_comparison_stuff(delEvaluators: list, tot_results: int) -> list:
             )
         )
 
-    return stuff
+    return figs, tables
 
 
 def make_line_figures(files2plot: list, prefix: str, title: str,
