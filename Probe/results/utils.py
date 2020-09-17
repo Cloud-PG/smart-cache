@@ -186,6 +186,7 @@ def dashboard(results: 'Results'):
             dbc.CardBody(
                 id="graphs-columns",
             ),
+            color="primary",
         ),
     )
 
@@ -194,6 +195,7 @@ def dashboard(results: 'Results'):
             dbc.CardBody(
                 id="graphs-measures",
             ),
+            color="primary",
         ),
     )
 
@@ -202,6 +204,7 @@ def dashboard(results: 'Results'):
             dbc.CardBody(
                 id="graphs-agents",
             ),
+            color="primary",
         ),
     )
 
@@ -210,12 +213,17 @@ def dashboard(results: 'Results'):
             dbc.CardBody(
                 id="table",
             ),
+            color="primary",
         ),
     )
 
     _TAB_COMPARE = dbc.Card(
         dbc.Spinner(
-            dbc.CardBody(id="compare"),
+            dbc.CardBody(
+                id="compare",
+            ),
+            color="primary",
+            type="grow",
         ),
     )
 
@@ -227,7 +235,8 @@ def dashboard(results: 'Results'):
             dbc.Tab(_TAB_MEASURES, label="Measures", tab_id="tab-measures"),
             dbc.Tab(_TAB_AGENTS, label="Agents", tab_id="tab-agents"),
             dbc.Tab(_TAB_TABLE, label="Table", tab_id="tab-table"),
-            dbc.Tab(_TAB_COMPARE, label="Compare eviction", tab_id="tab-compare"),
+            dbc.Tab(_TAB_COMPARE, label="Compare eviction",
+                    tab_id="tab-compare"),
         ],
         id="tabs",
     )
@@ -556,7 +565,7 @@ def make_comparison_stuff(delEvaluators: list, tot_results: int) -> list:
                 y=[int(evaluator.total_size_deleted_files / 1024.)
                    for evaluator in evaluators],
                 mode='lines+markers',
-                name=f"{name} - # tot. Size (GB)",
+                name=f"{name} - tot. Size (GB)",
             )
         )
         fig.add_trace(
@@ -564,7 +573,7 @@ def make_comparison_stuff(delEvaluators: list, tot_results: int) -> list:
                 x=x,
                 y=[evaluator.total_num_req_after_delete for evaluator in evaluators],
                 mode='lines+markers',
-                name=f"{name} - # # req. after del.",
+                name=f"{name} - # req. after del.",
             )
         )
     fig.update_layout(
@@ -599,7 +608,7 @@ def make_comparison_stuff(delEvaluators: list, tot_results: int) -> list:
             dbc.CardHeader(
                 html.H2(
                     dbc.Button(
-                        f"{sim}",
+                        f"@{sim}",
                         color="link",
                         id=f"group-{idx}-toggle",
                     )
