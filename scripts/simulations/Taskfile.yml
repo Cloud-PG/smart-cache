@@ -377,9 +377,7 @@ tasks:
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/10T/sizeBig.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/10T/sizeSmall.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/10T/scdl.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/10T/scdl2-onDayEnd.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/10T/scdl2-onFree.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/10T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/10T/scdl2.yml"
 
   italian-dataset-behavior-comparison:
     desc: Run only italian dataset simulations with logs to compare behaviors
