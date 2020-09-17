@@ -215,23 +215,7 @@ def dashboard(results: 'Results'):
 
     _TAB_COMPARE = dbc.Card(
         dbc.Spinner(
-            dbc.CardBody(
-                [
-                    dcc.Slider(
-                        min=0,
-                        max=10000,
-                        step=1000,
-                        value=0,
-                        id="choice-slider",
-                    ),
-                    html.Div(id="choice-slider-text"),
-                    html.Hr(),
-                    dbc.CardBody(
-                        id="comparison-plots"
-                    ),
-                ],
-                id="compare",
-            ),
+            dbc.CardBody(id="compare"),
         ),
     )
 
@@ -243,7 +227,7 @@ def dashboard(results: 'Results'):
             dbc.Tab(_TAB_MEASURES, label="Measures", tab_id="tab-measures"),
             dbc.Tab(_TAB_AGENTS, label="Agents", tab_id="tab-agents"),
             dbc.Tab(_TAB_TABLE, label="Table", tab_id="tab-table"),
-            dbc.Tab(_TAB_COMPARE, label="Compare", tab_id="tab-compare"),
+            dbc.Tab(_TAB_COMPARE, label="Compare eviction", tab_id="tab-compare"),
         ],
         id="tabs",
     )
@@ -256,33 +240,30 @@ def dashboard(results: 'Results'):
     def selection2hash(files: list, filters_all: list, filters_any: list, num_of_results: int) -> str:
         return str(hash(" ".join(files + filters_all + filters_any + [str(num_of_results)])))
 
-    @app.callback([
-        Output('choice-slider-text', 'children'),
-        Output('comparison-plots', 'children')
-    ],
-        [Input('choice-slider', 'value')],
-        [
-        State('choice-slider', 'step'),
-        State('choice-slider', 'max'),
-        State("selected-files", "value"),
-        State("selected-filters-all", "value"),
-        State("selected-filters-any", "value"),
-        State("num-of-results", "value"),
-    ]
+    @app.callback(
+        [Output(f"collapse-{i}", "is_open") for i in range(len(results))],
+        [Input(f"group-{i}-toggle", "n_clicks") for i in range(len(results))],
+        [State(f"collapse-{i}", "is_open") for i in range(len(results))],
     )
-    def display_value(value, step, max_val, files, filters_all, filters_any, num_of_results):
-        cur_hash = selection2hash(
-            files, filters_all, filters_any, num_of_results)
+    def toggle_accordion(*args):
+        ctx = dash.callback_context
 
-        window_limit = value+step
-        if cur_hash in _CACHE['compare']:
-            return f'Tick: {value} - {window_limit if window_limit <= max_val else window_limit} | window size: {step}', [dcc.Graph(
-                figure=make_comparison_figure(
-                    _CACHE['compare'][cur_hash], value, value+step
-                )
-            )]
+        if not ctx.triggered:
+            return [False] * len(results)
         else:
-            return "", []
+            button_id = ctx.triggered[0]["prop_id"].split(".")[0]
+
+        button_idx = int(button_id.split("-")[1])  # "group-idx-toggle"
+
+        res = [False] * len(results)
+        for idx in range(len(res)):
+            # update all is open to current status
+            res[idx] = args[idx + len(results)]
+
+        if args[button_idx]:  # Check input n
+            res[button_idx] = not args[button_idx + len(results)]  # is open
+
+        return res
 
     @ app.callback(
         dash.dependencies.Output('selected-files', 'value'),
@@ -476,28 +457,12 @@ def dashboard(results: 'Results'):
                     with_choices=True,
                 )
                 prefix = get_prefix(files2plot)
-                diff_on_ticks, max_tick = make_comparison(files2plot, prefix)
-                _CACHE['compare'][cur_hash] = diff_on_ticks
-                step = int(max_tick / 1000)
-                childrens = [
-                    dcc.Slider(
-                        min=0,
-                        max=max_tick,
-                        step=step,
-                        value=0,
-                        id="choice-slider",
-                    ),
-                    html.Div(id="choice-slider-text"),
-                    html.Hr(),
-                    dbc.CardBody(
-                        dcc.Graph(
-                            figure=make_comparison_figure(
-                                _CACHE['compare'][cur_hash], 0, step
-                            )
-                        ),
-                        id="comparison-plots"
-                    ),
-                ]
+                data = make_comparison(files2plot, prefix)
+                childrens = make_comparison_stuff(
+                    data, len(results)
+                )
+                _CACHE['compare'][cur_hash] = childrens
+
                 return ("", "", "", "", childrens)
         else:
             return ("", "", "", "", "")
@@ -571,22 +536,129 @@ def make_agent_figures(files2plot: list, prefix: str) -> list:
     return figures
 
 
-def make_comparison_figure(diff_on_ticks, start, stop):
-    print(start, stop)
+def make_comparison_stuff(delEvaluators: list, tot_results: int) -> list:
+    stuff = []
 
     fig = go.Figure(layout=_LAYOUT)
+    for name, evaluators in delEvaluators.items():
+        x = [evaluator.tick for evaluator in evaluators]
+        fig.add_trace(
+            go.Scatter(
+                x=x,
+                y=[evaluator.num_deleted_files for evaluator in evaluators],
+                mode='lines+markers',
+                name=f"{name} - # del. files",
+            )
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=x,
+                y=[int(evaluator.total_size_deleted_files / 1024.)
+                   for evaluator in evaluators],
+                mode='lines+markers',
+                name=f"{name} - # tot. Size (GB)",
+            )
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=x,
+                y=[evaluator.total_num_req_after_delete for evaluator in evaluators],
+                mode='lines+markers',
+                name=f"{name} - # # req. after del.",
+            )
+        )
+    fig.update_layout(
+        title="Report",
+        xaxis_title='tick',
+        yaxis_title='',
+        autosize=True,
+        # width=1920,
+        height=800,
+    )
 
-    for type_, data in diff_on_ticks.items():
-        df = data.iloc[start:stop]
-        fig.add_trace(go.Scatter(
-            x=df.index,
-            y=df['action'],
-            name=type_,
-            # mode='markers',
-            text=df['tick'],
-        ))
+    stuff.append(dcc.Graph(figure=fig))
+    stuff.append(html.Hr())
 
-    return fig
+    table_header = [
+        html.Thead(
+            html.Tr([
+                html.Th("Tick"),
+                html.Th("Event"),
+                html.Th("# Del. Files"),
+                html.Th("Tot. Size (GB)"),
+                html.Th("Tot. # req after del."),
+                html.Th("Cache Size"),
+                html.Th("Cache Occupancy"),
+            ])
+        )
+    ]
+
+    for idx, sim in enumerate(delEvaluators):
+        evaluators = delEvaluators[sim]
+        stuff.append(
+            dbc.CardHeader(
+                html.H2(
+                    dbc.Button(
+                        f"{sim}",
+                        color="link",
+                        id=f"group-{idx}-toggle",
+                    )
+                )
+            )
+        )
+        cur_rows = []
+        for evaluator in evaluators:
+            cur_rows.append(
+                html.Tr([
+                    html.Td(evaluator.tick),
+                    html.Td(evaluator.event),
+                    html.Td(evaluator.num_deleted_files),
+                    html.Td(int(evaluator.total_size_deleted_files / 1024.)),
+                    html.Td(evaluator.total_num_req_after_delete),
+                    html.Td(evaluator.on_delete_cache_size),
+                    html.Td(evaluator.on_delete_cache_occupancy),
+                ])
+            )
+        table_body = [html.Tbody(cur_rows)]
+        stuff.append(
+            dbc.Collapse(
+                dbc.CardBody([
+                    dbc.Table(
+                        # using the same table as in the above example
+                        table_header + table_body,
+                        bordered=True,
+                        hover=True,
+                        responsive=True,
+                        striped=True,
+                    )
+                ]),
+                id=f"collapse-{idx}",
+            )
+        )
+        stuff.append(html.Hr())
+
+    # to satisfy filtered evaluator callbacks
+    for idx in range(len(delEvaluators), tot_results):
+        stuff.append(
+            dbc.CardHeader(
+                html.H2(
+                    dbc.Button(
+                        color="link",
+                        id=f"group-{idx}-toggle",
+                    )
+                ),
+                style={'display': "none"},
+            )
+        )
+        stuff.append(
+            dbc.Collapse(
+                dbc.CardBody(f"This is the content of group {idx}..."),
+                id=f"collapse-{idx}",
+                style={'display': "none"},
+            )
+        )
+
+    return stuff
 
 
 def make_line_figures(files2plot: list, prefix: str, title: str,
@@ -608,7 +680,7 @@ def make_line_figures(files2plot: list, prefix: str, title: str,
     :rtype: go.Figure
     """
     fig = go.Figure(layout=_LAYOUT)
-    for file_, df in files2plot:
+    for file_, df, _ in files2plot:
         name = file_.replace(
             prefix, "").replace(
                 SIM_RESULT_FILENAME, "")

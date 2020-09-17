@@ -104,29 +104,32 @@ class Element(object):
 class Results(object):
 
     def __init__(self):
-        self._elemts = {}
+        self._elemets = {}
         self._choices = {}
+    
+    def __len__(self) -> int:
+        return len(self._elemets)
 
     def insert(self, path: 'pathlib.Path', components: list, filename: str,
                df: 'pd.DataFrame', choices: 'pd.DataFrame' = None) -> 'Results':
         elm = Element(components, filename,  df)
-        self._elemts[path.as_posix()] = elm
+        self._elemets[path.as_posix()] = elm
         self._choices[path.as_posix()] = choices
         return self
 
     @ property
     def components(self) -> set:
         components = set()
-        for elm in self._elemts.values():
+        for elm in self._elemets.values():
             components |= elm.components
         return sorted(components)
 
     @ property
     def files(self) -> 'list[str]':
-        return list(sorted(self._elemts.keys()))
+        return list(sorted(self._elemets.keys()))
 
     def get_df(self, file_: str, filters_all: list, filters_any: list) -> 'pd.DataFrame':
-        cur_elm = self._elemts[file_]
+        cur_elm = self._elemets[file_]
         all_ = len(cur_elm.components.intersection(set(filters_all))) == len(
             filters_all) if len(filters_all) > 0 else True
         any_ = len(cur_elm.components.intersection(set(filters_any))
@@ -136,7 +139,7 @@ class Results(object):
         return None
 
     def get_choices(self, file_: str, filters_all: list, filters_any: list) -> 'pd.DataFrame':
-        cur_elm = self._elemts[file_]
+        cur_elm = self._elemets[file_]
         all_ = len(cur_elm.components.intersection(set(filters_all))) == len(
             filters_all) if len(filters_all) > 0 else True
         any_ = len(cur_elm.components.intersection(set(filters_any))
@@ -151,7 +154,7 @@ class Results(object):
             return tmp
 
 
-def aggregate_results(folder: str):
+def aggregate_results(folder: str) -> 'Results':
     abs_target_folder = pathlib.Path(folder).resolve()
     results = Results()
     all_columns = set(COLUMNS)
@@ -234,16 +237,6 @@ def measure_hit_over_miss(df: 'pd.DataFrame') -> 'pd.Series':
     return df['read on hit data'] / df['read on miss data']
 
 
-@dataclass
-class FigContainers:
-    """Class for keeping track of an item in inventory."""
-    scatterActions: pxFigure
-    scatterAfter: pxFigure
-    histActionNumReq: pxFigure
-    histActionSize: pxFigure
-    histActionDeltaT: pxFigure
-
-
 class LogDeleteEvaluator(object):
 
     def __init__(self, event: tuple):
@@ -251,9 +244,10 @@ class LogDeleteEvaluator(object):
         self.actions = []
         self.after = []
 
-        self.figs = FigContainers(None, None, None, None, None)
+        self.figs = None
 
         self.tick = self._event[1]
+        self.event = self._event[2]
         self.num_deleted_files = -1
         self.total_size_deleted_files = -1.
         self.total_num_req_after_delete = -1
@@ -279,13 +273,9 @@ class LogDeleteEvaluator(object):
         self.total_size_deleted_files = self._get_total_size_deleted_files()
         self.total_num_req_after_delete = self._get_num_deleted_miss()
 
-        self._make_figs()
-
-        del self.actions
-        del self.figs
-
-    def _make_figs(self):
-        self.figs.scatterActions = px.scatter_3d(
+    @property
+    def scatterActions(self):
+        return px.scatter_3d(
             self.actions,
             x='num req',
             y='size',
@@ -294,7 +284,10 @@ class LogDeleteEvaluator(object):
             size='size',
             opacity=0.9,
         )
-        self.figs.scatterAfter = px.scatter_3d(
+
+    @property
+    def scatterAfter(self):
+        return px.scatter_3d(
             self.after[self.after.size != -1.],
             x='num req',
             y='size',
@@ -303,9 +296,20 @@ class LogDeleteEvaluator(object):
             size='size',
             opacity=0.9,
         )
-        self.figs.histActionNumReq = px.histogram(self.aztions, x='num req')
-        self.figs.histActionSize = px.histogram(self.aztions, x='Size')
-        self.figs.histActionDeltaT = px.histogram(self.aztions, x='delta t')
+
+    @property
+    def histActionNumReq(self):
+        return
+        px.histogram(self.aztions, x='num req')
+
+    @property
+    def histActionSize(self):
+        return
+        px.histogram(self.aztions, x='Size')
+
+    @property
+    def histActionDeltaT(self):
+        return px.histogram(self.aztions, x='delta t')
 
     def _get_num_deleted_files(self):
         return len(set(self.actions.filename))
@@ -338,8 +342,7 @@ class LogDeleteEvaluator(object):
         self.after.loc[selectRows, 'delta t'] = new_max * 2.
 
 
-def make_comparison(files2plot: list, prefix: str) -> (list, int):
-    max_len = -1
+def make_comparison(files2plot: list, prefix: str) -> list:
     del_evaluator = {}
 
     for file_, df, choices in tqdm(files2plot, desc="Parse log", position=0):
@@ -350,6 +353,8 @@ def make_comparison(files2plot: list, prefix: str) -> (list, int):
         curEvents = []
         curLog = None
         state = "AFTERDELETE"
+
+        # choices = choices[:100000]
         for row in tqdm(choices.itertuples(), desc=f"Parse {name}",
                         total=len(choices.index), position=1):
             event = row[2]
@@ -374,7 +379,9 @@ def make_comparison(files2plot: list, prefix: str) -> (list, int):
 
         del_evaluator[name] = curEvents
 
-    return del_evaluator, max_len
+    # print(del_evaluator)
+
+    return del_evaluator
 
 
 def make_table(files2plot: list, prefix: str) -> 'pd.DataFrame':
@@ -389,7 +396,7 @@ def make_table(files2plot: list, prefix: str) -> 'pd.DataFrame':
     """
     table = []
     for file_, df in files2plot:
-        values = get_measures(df)
+        values = get_measures(file_, df)
         values[0] = values[0].replace(
             prefix, "").replace(
             f"/{SIM_RESULT_FILENAME}", "")
