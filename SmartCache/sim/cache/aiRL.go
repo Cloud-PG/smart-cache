@@ -6,10 +6,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
-	"math/rand"
 	"os"
 	"simulator/v2/cache/ai/featuremap"
 	"simulator/v2/cache/ai/qlearn"
+	"sort"
 
 	"go.uber.org/zap"
 )
@@ -498,9 +498,9 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) { //nolint:funlen
 			}
 		case qlearn.ActionDeleteHalf, qlearn.ActionDeleteQuarter:
 			curFileList := catState.Files
-			rand.Shuffle(len(curFileList), func(i, j int) {
-				curFileList[i], curFileList[j] = curFileList[j], curFileList[i]
-			})
+			// Sort by LRU
+			sort.Sort(sortStatsByRecency(curFileList))
+
 			numDeletes := 0
 
 			switch {
@@ -566,8 +566,10 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) { //nolint:funlen
 			}
 		case qlearn.ActionDeleteOne:
 			curFileList := catState.Files
-			delIdx := rand.Intn(len(curFileList))
-			curFile := curFileList[delIdx]
+			// Sort by LRU
+			sort.Sort(sortStatsByRecency(curFileList))
+
+			curFile := curFileList[0]
 			curFileStats := cache.stats.Get(curFile.Filename)
 			if curFileStats != curFile {
 				panic("ERROR: file stats is not the same...")

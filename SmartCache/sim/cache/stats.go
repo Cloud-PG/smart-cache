@@ -298,3 +298,17 @@ func (stats FileStats) getMeanReqTimes() float64 {
 
 	return 0.
 }
+
+type sortStatsByRecency []*FileStats
+
+func (s sortStatsByRecency) Len() int {
+	return len(s)
+}
+
+func (s sortStatsByRecency) Less(i, j int) bool {
+	return s[i].Recency < s[j].Recency
+}
+
+func (s sortStatsByRecency) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
