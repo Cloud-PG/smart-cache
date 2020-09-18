@@ -23,3 +23,5 @@ sim:
         decay: 0.00001
       addition:
         featuremap: ../../../../featureMaps/rlAdditionFeatureMap.json
+      eviction:
+        type: NoEviction

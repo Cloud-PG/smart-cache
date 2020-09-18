@@ -24,5 +24,4 @@ sim:
       addition:
         featuremap: ../../../../featureMaps/rlAdditionFeatureMap.json
       eviction:
-        type: onDayEnd
-        featuremap: ../../../../featureMaps/rlEvictionFeatureMap.json
+        type: NoEviction
