@@ -13,23 +13,57 @@ const (
 
 // Stats collector of statistics for weight function cache
 type Stats struct {
-	fileStats       map[int64]*FileStats
-	weightSum       float64
-	calcWeight      bool
-	firstUpdateTime time.Time
-	lastUpdateTime  time.Time
-	maxNumDayDiff   float64 // MaxNumDayDiff limit to stay in the stats
-	deltaDaysStep   float64 // DeltaDaysStep limit the clean action of the stats
-	logger          *zap.Logger
+	fileStats                 map[int64]*FileStats
+	deletedFileMiss           map[int64]int
+	deletedFilesMissLastCount int
+	weightSum                 float64
+	calcWeight                bool
+	firstUpdateTime           time.Time
+	lastUpdateTime            time.Time
+	maxNumDayDiff             float64 // MaxNumDayDiff limit to stay in the stats
+	deltaDaysStep             float64 // DeltaDaysStep limit the clean action of the stats
+	logger                    *zap.Logger
 }
 
 // Init initialize Stats
 func (statStruct *Stats) Init(maxNumDayDiff float64, deltaDaysStep float64, calcWeight bool) {
 	statStruct.fileStats = make(map[int64]*FileStats)
+	statStruct.deletedFileMiss = make(map[int64]int)
 	statStruct.calcWeight = calcWeight
 	statStruct.maxNumDayDiff = maxNumDayDiff
 	statStruct.deltaDaysStep = deltaDaysStep
 	statStruct.logger = zap.L()
+}
+
+func (statStruct *Stats) AddDeletedFileMiss(filename int64) {
+	statStruct.deletedFileMiss[filename] = 0
+}
+
+func (statStruct *Stats) IncDeletedFileMiss(filename int64) {
+	_, inMap := statStruct.deletedFileMiss[filename]
+	if inMap {
+		statStruct.deletedFileMiss[filename]++
+	}
+}
+
+func (statStruct *Stats) ClearDeletedFileMiss() {
+	for _, value := range statStruct.deletedFileMiss {
+		statStruct.deletedFilesMissLastCount += value
+	}
+	statStruct.deletedFileMiss = make(map[int64]int)
+}
+
+func (statStruct *Stats) GetTotDeletedFileMiss() int {
+	sum := statStruct.deletedFilesMissLastCount
+
+	for key, value := range statStruct.deletedFileMiss {
+		sum += value
+		statStruct.deletedFileMiss[key] = 0
+	}
+
+	statStruct.deletedFilesMissLastCount = 0
+
+	return sum
 }
 
 // Clear Stats after load

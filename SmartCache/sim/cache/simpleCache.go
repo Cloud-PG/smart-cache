@@ -436,6 +436,9 @@ func (cache *SimpleCache) Free(amount float64, percentage bool) float64 {
 	// 	zap.Float64("mean recency", cache.MeanRecency()),
 	// 	zap.Int("num. files", cache.NumFiles()),
 	// )
+
+	cache.stats.ClearDeletedFileMiss()
+
 	var (
 		totalDeleted float64
 		sizeToDelete float64
@@ -482,6 +485,8 @@ func (cache *SimpleCache) Free(amount float64, percentage bool) float64 {
 			totalDeleted += curFile.Size
 
 			deletedFiles = append(deletedFiles, curFile.Filename)
+
+			cache.stats.AddDeletedFileMiss(curFile.Filename)
 
 			if cache.choicesLogFile != nil {
 				cache.toChoiceBuffer([]string{
@@ -618,8 +623,12 @@ func (cache *SimpleCache) DataDeleted() float64 {
 }
 
 // Check returns if a file is in cache or not
-func (cache *SimpleCache) Check(key int64) bool {
-	hit := cache.files.Check(key)
+func (cache *SimpleCache) Check(filename int64) bool {
+	hit := cache.files.Check(filename)
+
+	if !hit {
+		cache.stats.IncDeletedFileMiss(filename)
+	}
 
 	if cache.choicesLogFile != nil {
 		event := LogEventMiss
@@ -633,7 +642,7 @@ func (cache *SimpleCache) Check(key int64) bool {
 			event,
 			fmt.Sprintf("%0.2f", cache.size),
 			fmt.Sprintf("%0.2f", cache.Capacity()),
-			fmt.Sprintf("%d", key),
+			fmt.Sprintf("%d", filename),
 			fmt.Sprintf("%0.2f", -1.),
 			fmt.Sprintf("%d", -1),
 			fmt.Sprintf("%d", -1),
@@ -779,4 +788,8 @@ func (cache *SimpleCache) Terminate() error {
 	}
 
 	return nil
+}
+
+func (cache *SimpleCache) GetTotDeletedFileMiss() int {
+	return cache.stats.GetTotDeletedFileMiss()
 }

@@ -435,8 +435,7 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) { //nolint:funlen
 
 	cache.evictionAgentNumCalls++
 
-	// fmt.Println("----- EVICTION ----- Forced[", forced, "]")
-
+	cache.stats.ClearDeletedFileMiss()
 	for catState := range cache.evictionCategoryManager.GetStateFromCategories(
 		true,
 		cache.evictionAgent,
@@ -481,6 +480,8 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) { //nolint:funlen
 					Size:      curFile.Size,
 					Frequency: curFileStats.Frequency,
 				})
+
+				cache.stats.AddDeletedFileMiss(curFile.Filename)
 
 				if cache.choicesLogFile != nil {
 					cache.toChoiceBuffer([]string{
@@ -543,6 +544,8 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) { //nolint:funlen
 					Frequency: curFileStats.Frequency,
 				})
 
+				cache.stats.AddDeletedFileMiss(curFile.Filename)
+
 				if cache.choicesLogFile != nil {
 					cache.toChoiceBuffer([]string{
 						fmt.Sprintf("%d", cache.tick),
@@ -594,6 +597,8 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) { //nolint:funlen
 				Size:      curFile.Size,
 				Frequency: curFileStats.Frequency,
 			})
+
+			cache.stats.AddDeletedFileMiss(curFile.Filename)
 
 			if cache.choicesLogFile != nil {
 				cache.toChoiceBuffer([]string{

@@ -200,6 +200,7 @@ func OpenSimFile(filePath string) chan CSVRecord {
 		headerStr := strings.Join(header, ",")
 		logger.Debug("File header", zap.String("CSV header", headerStr), zap.String("file", filePath))
 		if headerStr != csvHeader {
+			logger.Info("File header is different from standard", zap.String("CSV header", headerStr), zap.String("file", filePath))
 			headerMap = getHeaderIndexes(header)
 		}
 		if errCSVRead != nil {
@@ -726,6 +727,7 @@ func Simulate(cacheType string, cacheInstance Cache, param SimulationParams) { /
 		"num added",
 		"num deleted",
 		"num redirected",
+		"num miss after delete",
 		"size redirected",
 		"cache size",
 		"size",
@@ -808,6 +810,7 @@ func Simulate(cacheType string, cacheInstance Cache, param SimulationParams) { /
 					fmt.Sprintf("%d", NumAdded(cacheInstance)),
 					fmt.Sprintf("%d", NumDeleted(cacheInstance)),
 					fmt.Sprintf("%d", NumRedirected(cacheInstance)),
+					fmt.Sprintf("%d", GetTotDeletedFileMiss(cacheInstance)),
 					fmt.Sprintf("%f", RedirectedSize(cacheInstance)),
 					fmt.Sprintf("%f", GetMaxSize(cacheInstance)),
 					fmt.Sprintf("%f", Size(cacheInstance)),

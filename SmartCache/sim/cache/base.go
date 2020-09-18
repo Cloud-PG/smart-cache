@@ -80,6 +80,7 @@ type Cache interface {
 	NumDeleted() int64
 	NumRedirected() int64
 	RedirectedSize() float64
+	GetTotDeletedFileMiss() int
 
 	Check(int64) bool
 	CheckWatermark() bool
@@ -366,4 +367,8 @@ func NumHits(cache Cache) int64 {
 // Terminate of the current cache instance
 func Terminate(cache Cache) error {
 	return cache.Terminate()
+}
+
+func GetTotDeletedFileMiss(cache Cache) int {
+	return cache.GetTotDeletedFileMiss()
 }
