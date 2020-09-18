@@ -112,9 +112,12 @@ func (cache *AIRL) Init(params InitParameters) interface{} { //nolint:ignore,fun
 			cache.evictionType = EvictionOnDayEnd
 		case "onFree", "on_free", "ONFREE":
 			cache.evictionType = EvictionOnFree
+		case "None", "NONE", "none", "NoEviction", "NOEVICTION", "noEviction", "noeviction":
+			break
 		default:
 			panic("ERROR: no valid eviction type...")
 		}
+
 		cache.evictionAgentK = evictionk
 		cache.evictionAgentStep = cache.evictionAgentK
 		cache.evictionRO = 1.0
