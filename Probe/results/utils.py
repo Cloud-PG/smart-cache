@@ -327,9 +327,7 @@ def dashboard(results: 'Results'):
                         histActionSize.update_layout(_LAYOUT)
                         histActionDeltaT = px.histogram(evaluator.actions, x='delta t')
                         histActionDeltaT.update_layout(_LAYOUT)
-                        print(evaluator.after4scatter)
                         after_data = evaluator.after4scatter
-                        print(after_data)
                         scatterAfterFig = px.scatter_3d(
                             after_data,
                             x='num req',

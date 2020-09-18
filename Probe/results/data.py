@@ -324,8 +324,8 @@ class LogDeleteEvaluator(object):
         files = set(self.after.filename) & set(self.actions.filename)
         tot = 0
         if len(files) > 0:
-            counts = self.after.filename.value_counts()
-            tot = sum(counts[file_] for file_ in files)
+            counts = self.after.filename[self.after['action or event'] == "MISS"].value_counts()
+            tot = sum(counts[file_] for file_ in files if file_ in counts)
         return tot
 
     def _fix_delta_t_max(self):
@@ -357,7 +357,7 @@ def make_comparison(files2plot: list, prefix: str) -> dict:
         curLog = None
         state = "AFTERDELETE"
 
-        # choices = choices[:100000]
+        choices = choices[:4000000]
         for row in tqdm(choices.itertuples(), desc=f"Parse {name}",
                         total=len(choices.index), position=1):
             event = row[2]
