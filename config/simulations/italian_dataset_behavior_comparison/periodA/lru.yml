@@ -1,7 +1,7 @@
 --- # Simulation parameters
 sim:
   data: ../../../../datasets/source2018_numeric_it_with_avro_order/
-  outputFolder: ../../../../results/sim_italian_dataset_behavior_comparison/10T
+  outputFolder: ../../../../results/sim_italian_dataset_behavior_comparison/periodA
   type: normal
   log: true
   window:
@@ -9,10 +9,10 @@ sim:
     stop: 16
   region: it
   cache:
-    type: lfu
+    type: lru
     watermarks: true
     size:
-      value: 10
+      value: 100
       unit: T
     bandwidth: 
       value: 10
