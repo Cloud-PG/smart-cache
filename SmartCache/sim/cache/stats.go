@@ -69,9 +69,6 @@ func (statStruct *Stats) GetTotDeletedFileMiss() int {
 // Clear Stats after load
 func (statStruct *Stats) Clear() {
 	for _, fileStats := range statStruct.fileStats {
-		fileStats.InCache = false
-		fileStats.InCacheSinceTime = time.Time{}
-		fileStats.InCacheSinceTick = -1
 		fileStats.Recency = 0
 	}
 	statStruct.weightSum = 0.0
@@ -94,11 +91,11 @@ func (statStruct Stats) Dirty() bool {
 }
 
 // Purge remove older stats
-func (statStruct *Stats) Purge() {
+func (statStruct *Stats) Purge(man Manager) {
 	numDeletedFiles := 0
 	for filename, stats := range statStruct.fileStats {
-		if !stats.InCache && stats.DiffLastUpdate(statStruct.lastUpdateTime) >= statStruct.maxNumDayDiff {
-			statStruct.logger.Debug("Purge", zap.Bool("in cache", stats.InCache))
+		if inCache := man.Check(filename); !inCache && stats.DiffLastUpdate(statStruct.lastUpdateTime) >= statStruct.maxNumDayDiff {
+			statStruct.logger.Debug("Purge", zap.Bool("in cache", inCache))
 			if statStruct.calcWeight {
 				statStruct.weightSum -= stats.Weight
 			}
@@ -120,7 +117,7 @@ func (statStruct Stats) Get(filename int64) *FileStats {
 }
 
 // GetOrCreate add the file into stats and returns (stats, is new file)
-func (statStruct *Stats) GetOrCreate(filename int64, size float64, reqTime time.Time, curTick int64) (*FileStats, bool) {
+func (statStruct *Stats) GetOrCreate(filename int64, size float64, reqTime time.Time, curTick int64) (stats *FileStats, newFile bool) {
 	// Stats age update
 	if statStruct.firstUpdateTime.IsZero() {
 		statStruct.logger.Info("Updated first time")
@@ -138,7 +135,6 @@ func (statStruct *Stats) GetOrCreate(filename int64, size float64, reqTime time.
 			StatInsertTime:   reqTime,
 			DeltaLastRequest: math.MaxInt64,
 			Recency:          curTick,
-			InCacheSinceTick: -1,
 		}
 		statStruct.fileStats[filename] = curStats
 	} else {
@@ -188,9 +184,6 @@ type FileStats struct {
 	Recency            int64       `json:"recency"`
 	NHits              int64       `json:"nHits"`
 	NMiss              int64       `json:"nMiss"`
-	InCacheSinceTime   time.Time   `json:"inCacheSinceTime"`
-	InCacheSinceTick   int64       `json:"inCacheSinceTick"`
-	InCache            bool        `json:"inCache"`
 	StatInsertTime     time.Time   `json:"statInsertTime"`
 	StatLastUpdateTime time.Time   `json:"statLastUpdateTime"`
 	RequestedTimesMean float64     `json:"requestedTimesMean"`
@@ -204,28 +197,10 @@ func (stats FileStats) DiffLastUpdate(curTime time.Time) float64 {
 	return curTime.Sub(stats.StatLastUpdateTime).Hours() / numHoursInADay
 }
 
-func (stats *FileStats) addInCache(tick int64, curTime *time.Time) {
-	if curTime != nil {
-		stats.InCacheSinceTime = *curTime
-	}
-	stats.InCacheSinceTick = tick
-	stats.InCache = true
-}
-
-func (stats *FileStats) removeFromCache() {
-	stats.InCacheSinceTime = time.Time{}
-	stats.InCache = false
-	stats.InCacheSinceTick = -1
-	stats.FrequencyInCache = 0
-}
-
 func (stats *FileStats) updateStats(hit bool, size float64, userID int64, siteName int64, curTime time.Time) {
 	stats.Size = size
 
 	stats.Frequency++
-	if stats.InCache {
-		stats.FrequencyInCache++
-	}
 
 	if hit {
 		stats.NHits++

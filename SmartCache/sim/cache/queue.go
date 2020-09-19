@@ -127,9 +127,14 @@ func (man *Manager) getFileIndex(filename int64) int { //nolint:ignore,funlen
 	var resultIdx int
 
 	guessIdx := man.fileIndexes[filename]
-	if guessIdx >= len(man.queueFilenames) {
-		guessIdx = len(man.queueFilenames) - 1
+
+	switch {
+	case guessIdx >= len(man.queueFilenames):
+		guessIdx = len(man.queueFilenames) >> 1
+	case guessIdx < 0:
+		panic("ERROR: negative guess index...")
 	}
+
 	guessedFilename := man.queueFilenames[guessIdx]
 
 	// fmt.Println("Guessed filename ->", guessedFilename, "Wanted name ->", filename)
@@ -481,9 +486,15 @@ func (man *Manager) Update(file *FileStats) {
 	// if curFileStats != file {
 	// 	panic("Different file stats...")
 	// }
-	if file != man.files[file.Filename] {
+	switch {
+	case man.files[file.Filename] == nil:
+		panic("ERROR: file not stored...")
+	case file != man.files[file.Filename]:
+		// fmt.Println(file, man.files[file.Filename])
+		// fmt.Println(file.Filename, man.files[file.Filename].Filename)
 		panic("ERROR: update on different stat")
 	}
+
 	if man.qType != NoQueue {
 		filename := file.Filename
 		man.removeIndexes([]int{man.getFileIndex(filename)})

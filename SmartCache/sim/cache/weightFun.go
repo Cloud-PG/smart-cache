@@ -132,7 +132,6 @@ func (cache *WeightFun) UpdatePolicy(request *Request, fileStats *FileStats, hit
 		}
 		if cache.Size()+requestedFileSize <= cache.MaxSize {
 			cache.size += requestedFileSize
-			fileStats.addInCache(cache.tick, nil)
 
 			cache.files.Insert(fileStats)
 

@@ -10,6 +10,7 @@ const (
 	maxInt   = 1000
 	maxFloat = 10000.
 	numFiles = 9999
+	numSteps = 10000
 )
 
 // func BenchmarkQueue(b *testing.B) {
@@ -43,6 +44,98 @@ const (
 // 		}
 // 	})
 // }
+
+func TestLRUQueueBehaviorRandomActions(t *testing.T) {
+	r := rand.New(rand.NewSource(42))
+	man := Manager{}
+	man.Init(LRUQueue)
+
+	stats := make([]*FileStats, 0)
+
+	for idx := 0; idx < numFiles; idx++ {
+		filename := 100000 + int64(idx)
+
+		stats = append(stats, &FileStats{
+			Filename:  filename,
+			Frequency: -1,
+			Recency:   -1,
+			Size:      1.,
+		},
+		)
+	}
+
+	inserted := make([]int, 0)
+
+	for i := 0; i < numSteps; i++ {
+		opDone := false
+
+		// fmt.Printf("%d\r", i)
+
+		for opDone == false {
+			switch r.Intn(3) {
+			case 0: // INSERT
+				curIdx := r.Intn(len(stats))
+				// fmt.Printf("[%d] INSERT -> %d\n", i, curIdx)
+
+				found := false
+				for _, idx := range inserted {
+					if idx == curIdx {
+						found = true
+					}
+				}
+
+				if found {
+					break
+				}
+
+				curStat := stats[curIdx]
+
+				curStat.Recency = int64(i)
+				man.Insert(curStat)
+
+				inserted = append(inserted, curIdx)
+				opDone = true
+
+			case 1: // UPDATE
+				if len(inserted) > 0 {
+					curIdx := r.Intn(len(inserted))
+					// fmt.Printf("[%d] UPDATE -> %d\n", i, inserted[curIdx])
+
+					curStat := stats[inserted[curIdx]]
+					curStat.Recency = int64(i)
+					man.Update(curStat)
+					opDone = true
+				}
+			case 2: // REMOVE
+				if len(inserted) > 0 {
+					curIdx := r.Intn(len(inserted))
+					// fmt.Printf("[%d] REMOVE -> %d\n", i, inserted[curIdx])
+
+					curStat := stats[inserted[curIdx]]
+					man.Remove([]int64{curStat.Filename})
+
+					copy(inserted[curIdx:], inserted[curIdx+1:])
+					inserted = inserted[:len(inserted)-1]
+
+					opDone = true
+				}
+			}
+		}
+	}
+
+	for _, idx := range inserted {
+		curStat := stats[idx]
+		if !man.Check(curStat.Filename) {
+			t.Log("ERROR: File '", curStat.Filename, "' not found...")
+			t.Fatal()
+		}
+	}
+
+	if man.Len() != len(inserted) {
+		t.Log("ERROR: Len manager != len inserted")
+		t.Fatal()
+	}
+}
 
 func TestLRUQueueBehavior(t *testing.T) {
 	r := rand.New(rand.NewSource(42))

@@ -460,7 +460,6 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) { //nolint:funlen
 				}
 
 				// fmt.Println("REMOVE FREQ:", curFile.Frequency)
-				curFileStats.removeFromCache()
 
 				// Update sizes
 				cache.size -= curFileStats.Size
@@ -523,7 +522,6 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) { //nolint:funlen
 				}
 
 				// fmt.Println("REMOVE FREQ:", curFile.Frequency)
-				curFileStats.removeFromCache()
 
 				// Update sizes
 				cache.size -= curFileStats.Size
@@ -579,7 +577,6 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) { //nolint:funlen
 			}
 
 			// fmt.Println("REMOVE FREQ:", curFile.Frequency)
-			curFileStats.removeFromCache()
 
 			// Update sizes
 			cache.size -= curFileStats.Size
@@ -1080,7 +1077,6 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				}
 
 				cache.size += requestedFileSize
-				fileStats.addInCache(cache.tick, &request.DayTime)
 				added = true
 
 				if cache.evictionAgentOK && forced {
@@ -1216,7 +1212,6 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			}
 
 			cache.size += requestedFileSize
-			fileStats.addInCache(cache.tick, &request.DayTime)
 			added = true
 
 			if cache.evictionAgentOK && forced {

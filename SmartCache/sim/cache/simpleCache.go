@@ -351,7 +351,6 @@ func (cache *SimpleCache) UpdatePolicy(request *Request, fileStats *FileStats, h
 		}
 		if cache.Size()+requestedFileSize <= cache.MaxSize {
 			cache.size += requestedFileSize
-			fileStats.addInCache(cache.tick, nil)
 
 			cache.files.Insert(fileStats)
 
@@ -421,7 +420,7 @@ func (cache *SimpleCache) AfterRequest(request *Request, fileStats *FileStats, h
 	cache.sumDailyFreeSpace += freeSpace
 
 	if cache.stats.Dirty() {
-		cache.stats.Purge()
+		cache.stats.Purge(cache.files)
 	}
 
 	cache.tick++
@@ -476,8 +475,6 @@ func (cache *SimpleCache) Free(amount float64, percentage bool) float64 {
 			if curFileStats != curFile {
 				panic("ERROR: file stats is not the same...")
 			}
-
-			curFileStats.removeFromCache()
 
 			// Update sizes
 			cache.size -= curFile.Size

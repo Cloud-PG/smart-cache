@@ -71,7 +71,6 @@ func (cache *LRUDatasetVerifier) UpdatePolicy(request *Request, fileStats *FileS
 				cache.files.Insert(fileStats)
 
 				cache.size += requestedFileSize
-				fileStats.addInCache(cache.tick, nil)
 				added = true
 			}
 		}
