@@ -20,6 +20,7 @@ COLUMNS = [
     'num redirected',
     'size redirected',
     'cache size',
+    'num miss after delete',
     'size',
     'capacity',
     'bandwidth',
@@ -227,6 +228,10 @@ def measure_redirect_volume(df: 'pd.DataFrame') -> 'pd.Series':
     return (df['size redirected'] / cache_size) * 100.
 
 
+def measure_num_miss_after_delete(df: 'pd.DataFrame') -> 'pd.Series':
+    return df['num miss after delete']
+
+
 def measure_hit_rate(df: 'pd.DataFrame') -> 'pd.Series':
     return df['hit rate']
 
@@ -322,7 +327,8 @@ class LogDeleteEvaluator(object):
         files = set(self.after.filename) & set(self.actions.filename)
         tot = 0
         if len(files) > 0:
-            counts = self.after.filename[self.after['action or event'] == "MISS"].value_counts()
+            counts = self.after.filename[self.after['action or event'] == "MISS"].value_counts(
+            )
             tot = sum(counts[file_] for file_ in files if file_ in counts)
         return tot
 
@@ -410,7 +416,7 @@ def make_table(files2plot: list, prefix: str) -> 'pd.DataFrame':
             "Read on hit ratio", "Bandwidth",
             "Redirect Vol.", "Avg. Free Space",
             "Std. Dev. Free Space", "Hit over Miss",
-            "Hit rate", "CPU Eff."
+            "Num. miss after del.", "Hit rate", "CPU Eff."
         ]
     )
     df = df.sort_values(
@@ -472,6 +478,11 @@ def get_measures(cache_filename: str, df: 'pd.DataFrame') -> list:
     # Hit over Miss
     measures.append(
         measure_hit_over_miss(df).mean()
+    )
+    
+    # Num. miss after delete
+    measures.append(
+        measure_num_miss_after_delete(df).mean()
     )
 
     # Hit rate

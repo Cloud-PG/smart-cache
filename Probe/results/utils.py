@@ -1,4 +1,5 @@
 from os import path
+from typing import Tuple
 
 import dash
 import dash_bootstrap_components as dbc
@@ -16,9 +17,9 @@ from .data import (COLUMNS, SIM_RESULT_FILENAME, Results, make_comparison,
                    make_table, measure_avg_free_space, measure_bandwidth,
                    measure_cost, measure_cost_ratio, measure_cpu_eff,
                    measure_hit_over_miss, measure_hit_rate,
-                   measure_read_on_hit_ratio, measure_redirect_volume,
-                   measure_std_dev_free_space, measure_throughput,
-                   measure_throughput_ratio)
+                   measure_num_miss_after_delete, measure_read_on_hit_ratio,
+                   measure_redirect_volume, measure_std_dev_free_space,
+                   measure_throughput, measure_throughput_ratio)
 
 _EXTERNAL_STYLESHEETS = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
@@ -42,6 +43,7 @@ _MEASURES = {
     'Bandwidth': measure_bandwidth,
     'Redirect Vol.': measure_redirect_volume,
     'Hit over Miss': measure_hit_over_miss,
+    "Num. miss after del.": measure_num_miss_after_delete,
     'Hit rate': measure_hit_rate,
 }
 
@@ -321,11 +323,14 @@ def dashboard(results: 'Results'):
                             opacity=0.9,
                         )
                         scatterActionsFig.update_layout(_LAYOUT)
-                        histActionNumReq = px.histogram(evaluator.actions, x='num req')
+                        histActionNumReq = px.histogram(
+                            evaluator.actions, x='num req')
                         histActionNumReq.update_layout(_LAYOUT)
-                        histActionSize = px.histogram(evaluator.actions, x='size')
+                        histActionSize = px.histogram(
+                            evaluator.actions, x='size')
                         histActionSize.update_layout(_LAYOUT)
-                        histActionDeltaT = px.histogram(evaluator.actions, x='delta t')
+                        histActionDeltaT = px.histogram(
+                            evaluator.actions, x='delta t')
                         histActionDeltaT.update_layout(_LAYOUT)
                         after_data = evaluator.after4scatter
                         scatterAfterFig = px.scatter_3d(
@@ -649,7 +654,7 @@ def make_agent_figures(files2plot: list, prefix: str) -> list:
     return figures
 
 
-def make_comparison_stuff(delEvaluators: list, tot_results: int) -> (list, list):
+def make_comparison_stuff(delEvaluators: list, tot_results: int) -> Tuple[list, list]:
     figs = []
     tables = []
 
