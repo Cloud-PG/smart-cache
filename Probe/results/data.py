@@ -1,9 +1,7 @@
 import pathlib
-from dataclasses import dataclass
 
 import pandas as pd
 import plotly.express as px
-from plotly.graph_objs import Figure as pxFigure
 from tqdm import tqdm
 
 from ..utils import STATUS_ARROW
