@@ -205,8 +205,8 @@ func (catMan *CategoryManager) GetStateFromCategories(newStates bool, agent qlea
 					Files:    catMan.categoryFileListMap[catID],
 					Action:   curAction,
 				}
-				catMan.generatorChan <- curCatState
 				catMan.lastStateAction[curState] = curCatState
+				catMan.generatorChan <- curCatState
 			}
 		} else {
 			for _, curCatState := range catMan.lastStateAction {

@@ -796,27 +796,25 @@ func (cache *AIRL) delayedRewardAdditionAgent(filename int64, hit bool) { //noli
 				prevMemory, nextMemory := memories[idx], memories[idx+1]
 				reward := 0.0
 
-				if prevMemory.Action != qlearn.ActionNONE {
-					if hit { // HIT
+				if hit { // HIT
+					reward += 1.
+					if !prevMemory.Hit && nextMemory.Hit {
 						reward += 1.
-						if !prevMemory.Hit && nextMemory.Hit {
-							reward += 1.
-						}
-					} else { // MISS
-						reward += -1.
-						if prevMemory.Action == qlearn.ActionNotStore {
-							if !prevMemory.Hit && !nextMemory.Hit {
-								reward += -1.
-							} else if prevMemory.Hit && !nextMemory.Hit {
-								reward += -1.
-							}
+					}
+				} else { // MISS
+					reward += -1.
+					if prevMemory.Action == qlearn.ActionNotStore {
+						if !prevMemory.Hit && !nextMemory.Hit {
+							reward += -1.
+						} else if prevMemory.Hit && !nextMemory.Hit {
+							reward += -1.
 						}
 					}
-					// Update table
-					cache.additionAgent.UpdateTable(prevMemory.State, nextMemory.State, prevMemory.Action, reward)
-					// Update epsilon
-					cache.additionAgent.UpdateEpsilon()
 				}
+				// Update table
+				cache.additionAgent.UpdateTable(prevMemory.State, nextMemory.State, prevMemory.Action, reward)
+				// Update epsilon
+				cache.additionAgent.UpdateEpsilon()
 			}
 		}
 	}
@@ -980,27 +978,27 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				curAction = cache.additionAgent.QTable.ActionTypes[randomActionIdx]
 			}
 
+			cache.actionCounters[curAction]++
+			curChoice := qlearn.Choice{
+				State:     curState,
+				Action:    curAction,
+				Tick:      cache.tick,
+				DeltaT:    fileStats.DeltaLastRequest,
+				Hit:       hit,
+				Capacity:  cache.Capacity(),
+				Size:      request.Size,
+				Frequency: fileStats.Frequency,
+			}
+
+			switch cache.rlType {
+			case SCDL:
+				cache.additionAgent.SaveMemory(request.Filename, curChoice)
+			case SCDL2:
+				cache.additionAgent.SaveMemoryWithNoLimits(request.Filename, curChoice)
+			}
+
 			switch curAction {
 			case qlearn.ActionNotStore:
-				cache.actionCounters[curAction]++
-				curChoice := qlearn.Choice{
-					State:     curState,
-					Action:    curAction,
-					Tick:      cache.tick,
-					DeltaT:    fileStats.DeltaLastRequest,
-					Hit:       hit,
-					Capacity:  cache.Capacity(),
-					Size:      request.Size,
-					Frequency: fileStats.Frequency,
-				}
-
-				switch cache.rlType {
-				case SCDL:
-					cache.additionAgent.SaveMemory(request.Filename, curChoice)
-				case SCDL2:
-					cache.additionAgent.SaveMemoryWithNoLimits(request.Filename, curChoice)
-				}
-
 				if cache.choicesLogFile != nil {
 					cache.toChoiceBuffer([]string{
 						fmt.Sprintf("%d", cache.tick),
@@ -1083,25 +1081,6 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					cache.rewardEvictionAfterForcedCall(added)
 				}
 
-				cache.actionCounters[curAction]++
-				curChoice := qlearn.Choice{
-					State:     curState,
-					Action:    curAction,
-					Tick:      cache.tick,
-					DeltaT:    fileStats.DeltaLastRequest,
-					Hit:       hit,
-					Capacity:  cache.Capacity(),
-					Size:      request.Size,
-					Frequency: fileStats.Frequency,
-				}
-
-				switch cache.rlType {
-				case SCDL:
-					cache.additionAgent.SaveMemory(request.Filename, curChoice)
-				case SCDL2:
-					cache.additionAgent.SaveMemoryWithNoLimits(request.Filename, curChoice)
-				}
-
 				if cache.choicesLogFile != nil {
 					cache.toChoiceBuffer([]string{
 						fmt.Sprintf("%d", cache.tick),
@@ -1120,21 +1099,6 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			// ##### HIT branch  #####
 			// #######################
 			cache.files.Update(fileStats)
-			curChoice := qlearn.Choice{
-				State:     curState,
-				Action:    qlearn.ActionNONE,
-				Tick:      cache.tick,
-				DeltaT:    fileStats.DeltaLastRequest,
-				Hit:       hit,
-				Capacity:  cache.Capacity(),
-				Size:      request.Size,
-				Frequency: fileStats.Frequency,
-			}
-
-			switch cache.rlType {
-			case SCDL2:
-				cache.additionAgent.SaveMemoryWithNoLimits(request.Filename, curChoice)
-			}
 
 			if cache.evictionAgentOK {
 				fileCategory := cache.evictionCategoryManager.GetFileCategory(fileStats)

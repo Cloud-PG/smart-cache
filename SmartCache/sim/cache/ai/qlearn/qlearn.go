@@ -21,10 +21,8 @@ type RLUpdateAlg int
 type AgentRole int
 
 const (
-	// ActionNONE indicates no actions.
-	ActionNONE ActionType = iota - 8
 	// ActionNotStore indicates to store an element in cache.
-	ActionNotStore
+	ActionNotStore ActionType = iota - 7
 	// ActionStore indicates to not store an element in cache.
 	ActionStore
 	// ActionNotDelete indicates to not remove a category of files.
@@ -325,8 +323,6 @@ func (agent Agent) QTableToString() string {
 			tmp = append(tmp, "ActionStore")
 		case ActionNotStore:
 			tmp = append(tmp, "ActionNotStore")
-		case ActionNONE:
-			panic("ERROR: ActionNONE must not be in the table...")
 		}
 	}
 
