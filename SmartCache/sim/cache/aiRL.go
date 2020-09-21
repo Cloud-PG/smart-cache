@@ -1257,7 +1257,7 @@ func (cache *AIRL) Free(amount float64, percentage bool) float64 {
 
 // CheckWatermark checks the watermark levels and resolve the situation
 func (cache *AIRL) CheckWatermark() bool {
-	if cache.rlType == SCDL {
+	if cache.rlType == SCDL || !cache.evictionAgentOK {
 		return cache.SimpleCache.CheckWatermark()
 	}
 
