@@ -486,10 +486,12 @@ func (man *Manager) Update(file *FileStats) {
 	// if curFileStats != file {
 	// 	panic("Different file stats...")
 	// }
+	oldStats, inMap := man.files[file.Filename]
+
 	switch {
-	case man.files[file.Filename] == nil:
+	case !inMap:
 		panic("ERROR: file not stored...")
-	case file != man.files[file.Filename]:
+	case file != oldStats:
 		// fmt.Println(file, man.files[file.Filename])
 		// fmt.Println(file.Filename, man.files[file.Filename].Filename)
 		panic("ERROR: update on different stat")
