@@ -1,10 +1,12 @@
 import argparse
+from os import path
 
 from colorama import init
 
 from ..utils import STATUS_ARROW, str2bool
-from .data import aggregate_results
-from .utils import dashboard
+from .data import aggregate_results, parse_simulation_report
+from .plotters import plot_num_miss_after_del
+from .utils import dashboard, get_prefix
 
 
 def main():
@@ -37,6 +39,14 @@ def main():
     if args.action == 'dashboard':
         print(f"{STATUS_ARROW}Start dashboard...")
         dashboard(results, args.dash_ip)
+    elif args.action == 'plot':
+        if args.p_type == "num_miss_after_del":
+            plot_num_miss_after_del(
+                parse_simulation_report(
+                    results.get_all(), path.commonprefix(results.files),
+                    generator=True,
+                )
+            )
 
 
 if __name__ == "__main__":

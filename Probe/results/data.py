@@ -127,6 +127,10 @@ class Results(object):
     def files(self) -> 'list[str]':
         return list(sorted(self._elemets.keys()))
 
+    def get_all(self):
+        for file_, df in self._elemets.items():
+            yield file_, df, self.get_choices(file_, [], [])
+
     def get_df(self, file_: str, filters_all: list, filters_any: list) -> 'pd.DataFrame':
         cur_elm = self._elemets[file_]
         all_ = len(cur_elm.components.intersection(set(filters_all))) == len(
@@ -349,19 +353,23 @@ class LogDeleteEvaluator(object):
         self.after.loc[selectRows, 'delta t'] = new_max * 2.
 
 
-def parse_simulation_report(files2plot: list, prefix: str) -> dict:
+def parse_simulation_report(files2plot: list, prefix: str, generator: bool = False) -> dict:
     del_evaluator = {}
 
     for file_, df, choices in tqdm(files2plot, desc="Parse log", position=0):
         name = file_.replace(
-            prefix, "").replace(
-            f"/{SIM_RESULT_FILENAME}", ""
+            prefix,
+            ""
+        ).replace(
+            f"/{SIM_RESULT_FILENAME}",
+            ""
         )
+
         curEvents = []
         curLog = None
         state = "AFTERDELETE"
 
-        choices = choices[:4000000]
+        # choices = choices[:1000000]
         for row in tqdm(choices.itertuples(), desc=f"Parse {name}",
                         total=len(choices.index), position=1):
             event = row[2]
@@ -383,6 +391,9 @@ def parse_simulation_report(files2plot: list, prefix: str) -> dict:
         else:
             curLog.prepare(['Index'] + list(choices.columns))
             curEvents.append(curLog)
+
+        if generator:
+            yield name, curEvents
 
         del_evaluator[name] = curEvents
 

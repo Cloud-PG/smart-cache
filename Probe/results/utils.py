@@ -23,7 +23,7 @@ from .data import (COLUMNS, SIM_RESULT_FILENAME, Results, parse_simulation_repor
 
 _EXTERNAL_STYLESHEETS = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
-_LAYOUT = Layout(
+LAYOUT = Layout(
     paper_bgcolor='rgb(255,255,255)',
     plot_bgcolor='rgb(255,255,255)',
     yaxis={'gridcolor': 'black'},
@@ -322,16 +322,16 @@ def dashboard(results: 'Results', server_ip: str = "localhost"):
                             size='size',
                             opacity=0.9,
                         )
-                        scatterActionsFig.update_layout(_LAYOUT)
+                        scatterActionsFig.update_layout(LAYOUT)
                         histActionNumReq = px.histogram(
                             evaluator.actions, x='num req')
-                        histActionNumReq.update_layout(_LAYOUT)
+                        histActionNumReq.update_layout(LAYOUT)
                         histActionSize = px.histogram(
                             evaluator.actions, x='size')
-                        histActionSize.update_layout(_LAYOUT)
+                        histActionSize.update_layout(LAYOUT)
                         histActionDeltaT = px.histogram(
                             evaluator.actions, x='delta t')
-                        histActionDeltaT.update_layout(_LAYOUT)
+                        histActionDeltaT.update_layout(LAYOUT)
                         after_data = evaluator.after4scatter
                         scatterAfterFig = px.scatter_3d(
                             after_data,
@@ -342,7 +342,7 @@ def dashboard(results: 'Results', server_ip: str = "localhost"):
                             size='size',
                             opacity=0.9,
                         )
-                        scatterAfterFig.update_layout(_LAYOUT)
+                        scatterAfterFig.update_layout(LAYOUT)
                         return (
                             [dcc.Graph(figure=scatterActionsFig)],
                             [dcc.Graph(figure=histActionNumReq)],
@@ -633,7 +633,7 @@ def make_agent_figures(files2plot: list, prefix: str) -> list:
         "Eviction actions": ['Action delete all', 'Action delete half', 'Action delete quarter', 'Action delete one', 'Action not delete'],
     }
     for plot, columns in _AGENT_COLUMNS.items():
-        fig_epsilon = go.Figure(layout=_LAYOUT)
+        fig_epsilon = go.Figure(layout=LAYOUT)
         for file_, df in files2plot:
             name = file_.replace(
                 prefix, "").replace(
@@ -658,7 +658,7 @@ def parse_simulation_report_stuff(delEvaluators: list, tot_results: int) -> Tupl
     figs = []
     tables = []
 
-    fig = go.Figure(layout=_LAYOUT)
+    fig = go.Figure(layout=LAYOUT)
     for name, evaluators in delEvaluators.items():
 
         x = [evaluator.tick for evaluator in evaluators]
@@ -802,7 +802,7 @@ def make_line_figures(files2plot: list, prefix: str, title: str,
     :return: a plot figure
     :rtype: go.Figure
     """
-    fig = go.Figure(layout=_LAYOUT)
+    fig = go.Figure(layout=LAYOUT)
     for file_, df, _ in files2plot:
         name = file_.replace(
             prefix, "").replace(
