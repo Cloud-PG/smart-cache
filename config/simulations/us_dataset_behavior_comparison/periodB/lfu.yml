@@ -7,7 +7,7 @@ sim:
   window:
     start: 16
     stop: 32
-  region: it
+  region: us
   cache:
     type: lfu
     watermarks: true

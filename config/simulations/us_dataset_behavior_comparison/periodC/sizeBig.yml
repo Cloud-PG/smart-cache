@@ -7,7 +7,7 @@ sim:
   window:
     start: 32
     stop: 48
-  region: it
+  region: us
   cache:
     type: sizeBig
     watermarks: true
