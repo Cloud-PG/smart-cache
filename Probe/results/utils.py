@@ -75,12 +75,12 @@ def get_files2plot(results: 'Results', files: list, filters_all: list,
             if column != "":
                 if column in df.columns:
                     if with_choices:
-                        files2plot.append((file_, df))
-                    else:
                         choice_df = results.get_choices(
                             file_, filters_all, filters_any)
                         if choice_df is not None:
                             files2plot.append((file_, df, choice_df))
+                    else:
+                        files2plot.append((file_, df))
             elif agents:
                 if "Addition epsilon" in df.columns:
                     if with_choices:
