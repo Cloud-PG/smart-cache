@@ -803,7 +803,7 @@ def make_line_figures(files2plot: list, prefix: str, title: str,
     :rtype: go.Figure
     """
     fig = go.Figure(layout=LAYOUT)
-    for file_, df, _ in files2plot:
+    for file_, df in files2plot:
         name = file_.replace(
             prefix, "").replace(
                 SIM_RESULT_FILENAME, "")
