@@ -11,7 +11,7 @@ sim:
   overwrite: true
   cache:
     type: aiRL
-    watermarks: false
+    watermarks: true
     size:
       value: 100
       unit: T
