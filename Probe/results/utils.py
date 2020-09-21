@@ -13,7 +13,7 @@ import plotly.graph_objects as go
 from dash.dependencies import Input, Output, State
 from plotly.graph_objs import Layout
 
-from .data import (COLUMNS, SIM_RESULT_FILENAME, Results, make_comparison,
+from .data import (COLUMNS, SIM_RESULT_FILENAME, Results, parse_simulation_report,
                    make_table, measure_avg_free_space, measure_bandwidth,
                    measure_cost, measure_cost_ratio, measure_cpu_eff,
                    measure_hit_over_miss, measure_hit_rate,
@@ -112,7 +112,7 @@ def get_prefix(files2plot: list) -> str:
     return path.commonprefix([file_ for file_, *_ in files2plot])
 
 
-def dashboard(results: 'Results'):
+def dashboard(results: 'Results', server_ip: str = "localhost"):
 
     _CACHE = {
         'columns': {},
@@ -575,8 +575,8 @@ def dashboard(results: 'Results'):
                     with_choices=True,
                 )
                 prefix = get_prefix(files2plot)
-                data = make_comparison(files2plot, prefix)
-                figs, tables = make_comparison_stuff(
+                data = parse_simulation_report(files2plot, prefix)
+                figs, tables = parse_simulation_report_stuff(
                     data, len(results)
                 )
                 _CACHE['compare'][cur_hash] = (data, figs, tables)
@@ -587,7 +587,7 @@ def dashboard(results: 'Results'):
 
     app.run_server(
         debug=True,
-        host="0.0.0.0",
+        host=server_ip,
     )
 
 
@@ -654,7 +654,7 @@ def make_agent_figures(files2plot: list, prefix: str) -> list:
     return figures
 
 
-def make_comparison_stuff(delEvaluators: list, tot_results: int) -> Tuple[list, list]:
+def parse_simulation_report_stuff(delEvaluators: list, tot_results: int) -> Tuple[list, list]:
     figs = []
     tables = []
 

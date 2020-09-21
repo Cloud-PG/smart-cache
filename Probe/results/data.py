@@ -349,7 +349,7 @@ class LogDeleteEvaluator(object):
         self.after.loc[selectRows, 'delta t'] = new_max * 2.
 
 
-def make_comparison(files2plot: list, prefix: str) -> dict:
+def parse_simulation_report(files2plot: list, prefix: str) -> dict:
     del_evaluator = {}
 
     for file_, df, choices in tqdm(files2plot, desc="Parse log", position=0):
