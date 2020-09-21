@@ -479,7 +479,7 @@ def get_measures(cache_filename: str, df: 'pd.DataFrame') -> list:
     measures.append(
         measure_hit_over_miss(df).mean()
     )
-    
+
     # Num. miss after delete
     measures.append(
         measure_num_miss_after_delete(df).mean()
