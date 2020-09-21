@@ -5,8 +5,8 @@ sim:
   type: normal
   log: true
   window:
-    start: 16
-    stop: 32
+    start: 12
+    stop: 24
   region: us
   cache:
     type: sizeSmall

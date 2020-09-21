@@ -5,7 +5,7 @@ sim:
   type: normal
   log: true
   window:
-    start: 32
+    start: 36
     stop: 48
   region: it
   overwrite: true

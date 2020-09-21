@@ -5,7 +5,7 @@ sim:
   type: normal
   window:
     start: 0
-    stop: 52
+    stop: 12
   region: it
   overwrite: true
   cache:

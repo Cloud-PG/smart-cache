@@ -4,7 +4,7 @@ sim:
   outputFolder: ../../../../results/sim_italian_dataset_behavior_comparison/100T
   type: normal
   window:
-    start: 0
+    start: 48
     stop: 52
   region: it
   overwrite: true

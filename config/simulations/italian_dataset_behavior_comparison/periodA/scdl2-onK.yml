@@ -6,7 +6,7 @@ sim:
   log: true
   window:
     start: 0
-    stop: 16
+    stop: 12
   region: it
   overwrite: true
   cache:
