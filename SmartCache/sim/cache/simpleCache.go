@@ -42,7 +42,7 @@ const (
 )
 
 const (
-	logBufferLen        = 1024
+	logBufferLen        = 24
 	logBufferExitString = "EXIT"
 )
 
