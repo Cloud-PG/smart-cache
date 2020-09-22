@@ -138,96 +138,91 @@ func (man *Manager) getFileIndex(filename int64) int { //nolint:ignore,funlen
 	guessedFilename := man.queueFilenames[guessIdx]
 
 	// fmt.Println("Guessed filename ->", guessedFilename, "Wanted name ->", filename)
-
-	prevVal := man.prevVal[filename]
+	// fmt.Println(man.queueFilenames)
+	// fmt.Println(man.queueF)
+	// fmt.Println(man.queueI)
 
 	switch {
 	case guessedFilename != filename:
-		direction := 1
+		left := guessIdx - 1
+		right := guessIdx + 1
+
+		prevVal := man.prevVal[filename]
 
 		switch man.qType {
 		case NoQueue:
-			idxVal := man.queueFilenames[guessIdx]
-			// fmt.Println("target:", prevVal, "guess val:", idxVal)
-			if idxVal >= prevVal.(int64) {
-				direction = -1
+			if left > -1 && man.queueFilenames[left] < prevVal.(int64) {
+				left = -1
+			} else if right < len(man.queueFilenames) && man.queueFilenames[right] > prevVal.(int64) {
+				right = len(man.queueFilenames)
 			}
 		case LRUQueue, LFUQueue:
-			idxVal := man.queueI[guessIdx]
-			// fmt.Println("target:", prevVal, "guess val:", idxVal)
-			if idxVal >= prevVal.(int64) {
-				direction = -1
+			if left > -1 && man.queueI[left] < prevVal.(int64) {
+				left = -1
+			} else if right < len(man.queueFilenames) && man.queueI[right] > prevVal.(int64) {
+				right = len(man.queueFilenames)
 			}
 		case SizeSmallQueue, WeightQueue:
-			idxVal := man.queueF[guessIdx]
-			// fmt.Println("target:", prevVal, "guess val:", idxVal)
-			if idxVal >= prevVal.(float64) {
-				direction = -1
+			if left > -1 && man.queueF[left] < prevVal.(float64) {
+				left = -1
+			} else if right < len(man.queueFilenames) && man.queueF[right] > prevVal.(float64) {
+				right = len(man.queueFilenames)
 			}
 		case SizeBigQueue:
-			idxVal := man.queueF[guessIdx]
-			// fmt.Println("target:", prevVal, "guess val:", idxVal)
-			if idxVal <= prevVal.(float64) {
-				direction = -1
+			if left > -1 && man.queueF[left] > prevVal.(float64) {
+				left = -1
+			} else if right < len(man.queueFilenames) && man.queueF[right] < prevVal.(float64) {
+				right = len(man.queueFilenames)
 			}
-		}
-
-		stop := -1
-		if direction > 0 {
-			stop = len(man.queueFilenames)
 		}
 
 		found := false
-		// fmt.Println("Start:", guessIdx, "Stop:", stop, "Direction:", direction)
-		// fmt.Println(man.queueFilenames)
-		// fmt.Println(man.queueI)
-		// fmt.Println(man.queueF)
+		cycles := 0
 
-		for idx := guessIdx; idx != stop; idx += direction {
-			curFilename := man.queueFilenames[idx]
-			// fmt.Println("Finding:", filename, "on index", idx, "found ->", curFilename)
-			if man.dirtyFlag[idx] {
-				man.fileIndexes[filename] = idx
-				man.dirtyFlag[idx] = false
-			}
-
-			if curFilename == filename {
-				// fmt.Println("FOUND at index", idx)
-				resultIdx = idx
-				found = true
-
-				break
-			}
-		}
-
-		if !found { //nolint:ignore,nestif
-			direction = -direction
-
-			stop = -1
-			if direction > 0 {
-				stop = len(man.queueFilenames)
-			}
-
-			for idx := guessIdx; idx != stop; idx += direction {
-				curFilename := man.queueFilenames[idx]
-				// fmt.Println("Finding:", filename, "on index", idx, "found ->", curFilename)
-				if man.dirtyFlag[idx] {
-					man.fileIndexes[filename] = idx
-					man.dirtyFlag[idx] = false
+		for cycles < len(man.queueFilenames) {
+			if left > -1 {
+				leftFilename := man.queueFilenames[left]
+				// fmt.Println("Finding:", filename, "on index", idx, "left found ->", leftFilename)
+				if man.dirtyFlag[left] {
+					man.fileIndexes[filename] = left
+					man.dirtyFlag[left] = false
 				}
 
-				if curFilename == filename {
+				if leftFilename == filename {
 					// fmt.Println("FOUND at index", idx)
-					resultIdx = idx
+					resultIdx = left
 					found = true
 
 					break
 				}
+
+				left--
+				cycles++
+			}
+
+			if right < len(man.queueFilenames) {
+				rightFilename := man.queueFilenames[right]
+				// fmt.Println("Finding:", filename, "on index", idx, "right found ->", rightFilename)
+				if man.dirtyFlag[right] {
+					man.fileIndexes[filename] = right
+					man.dirtyFlag[right] = false
+				}
+
+				if rightFilename == filename {
+					// fmt.Println("FOUND at index", idx)
+					resultIdx = right
+					found = true
+
+					break
+				}
+
+				right++
+				cycles++
 			}
 		}
 
 		if !found {
-			panic("ERROR: file to remove not found with guess...")
+			panic("ERROR: file index not found...")
 		}
 	case guessedFilename == filename:
 		resultIdx = guessIdx
