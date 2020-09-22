@@ -19,7 +19,7 @@ def main():
     parser.add_argument('analysis', default="dailystats",
                         choices=[
                             "dailystats", "weekstats", "globalstats",
-                            "feature_bins"
+                            "feature_bins", "upper_limits"
                         ],
                         help='Folder or file to open')
     parser.add_argument('--output-filename', type=str,
@@ -114,6 +114,15 @@ def main():
         elif args.analysis == "globalstats":
             print(f"{STATUS_ARROW}Extract year stats...")
             plotter.plot_global_stats(
+                df,
+                output_filename=args.output_filename,
+                output_type=args.output_type,
+                region=args.region,
+                concatenated=args.concat,
+            )
+        elif args.analysis == "upper_limits":
+            print(f"{STATUS_ARROW}Extract upper limit of each day of the year...")
+            plotter.plot_global_upper_limits(
                 df,
                 output_filename=args.output_filename,
                 output_type=args.output_type,

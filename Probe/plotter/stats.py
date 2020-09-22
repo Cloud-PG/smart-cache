@@ -10,7 +10,17 @@ from bokeh.plotting import figure, output_file, save, show
 from bokeh.transform import dodge
 from tqdm import tqdm
 
+import plotly.graph_objects as go
+
 from ..utils import STATUS_ARROW
+
+
+LAYOUT = Layout(
+    paper_bgcolor='rgb(255,255,255)',
+    plot_bgcolor='rgb(255,255,255)',
+    yaxis={'gridcolor': 'black'},
+    xaxis={'gridcolor': 'black'},
+)
 
 
 class FileStats(object):
@@ -26,6 +36,84 @@ class FileStats(object):
         self.sizes = [start_size]
         self.users = set()
         self.sites = set()
+
+
+def plot_global_upper_limits(df: 'pd.DataFrame',
+                             output_filename: str = 'daily_upper_bounds',
+                             output_type: str = 'show',
+                             region: str = 'all',
+                             concatenated: bool = True):
+
+    if concatenated:
+        print(f"{STATUS_ARROW}ERROR: you have to use not concatenated data...")
+        exit(-1)
+
+    print(f"{STATUS_ARROW}Filter DataType data and mc")
+    for idx in tqdm(range(len(df))):
+        cur_df = df[idx]
+        df[idx] = cur_df[(cur_df.DataType == "data")
+                         | (cur_df.DataType == "mc")]
+
+    print(f"{STATUS_ARROW}Filter success jobs")
+    for idx in tqdm(range(len(df))):
+        cur_df = df[idx]
+        df[idx] = cur_df[cur_df.JobSuccess.astype(bool)]
+
+    fig = go.Figure(layout=LAYOUT)
+
+    x = []
+    max_hit_rate_list = []
+    max_read_on_hit_list = []
+
+    print(f"{STATUS_ARROW}Calculate limits")
+    for idx in tqdm(range(len(df))):
+        cur_df = df[idx]
+        sum_sizes = cur_df.Size.sum()
+        file_sizes = cur_df[['Filename', 'Size']
+                            ].drop_duplicates('Filename').Size.sum()
+        num_req = len(cur_df.index)
+        num_files = cur_df.Filename.nunique()
+
+        max_hit_rate = ((num_req-num_files) / num_req) * 100.
+        max_read_on_hit = ((sum_sizes - file_sizes) / sum_sizes) * 100.
+
+        x.append(pd.to_datetime(cur_df.reqDay.unique()[-1], unit='s'))
+        max_hit_rate_list.append(max_hit_rate)
+        max_read_on_hit_list.append(max_read_on_hit)
+
+    fig.add_trace(
+        go.Scatter(
+            x=x,
+            y=max_hit_rate_list,
+            mode='lines',
+            name="Hit rate",
+        ),
+    )
+
+    fig.add_trace(
+        go.Scatter(
+            x=x,
+            y=max_read_on_hit_list,
+            mode='lines',
+            name="Read on hit",
+        ),
+    )
+
+    fig.update_layout(
+        title="Upper bounds",
+        xaxis_title='day',
+        yaxis_title='%',
+    )
+
+    if output_type == 'html':
+        fig.write_html(
+            output_filename,
+            include_plotlyjs=True,
+        )
+    elif output_type == 'show':
+        fig.show()
+    else:
+        raise Exception(f"ERROR: output {output_type} not supported...")
 
 
 def plot_global_stats(df: 'pd.DataFrame',
