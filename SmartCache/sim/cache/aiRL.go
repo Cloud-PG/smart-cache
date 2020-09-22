@@ -207,9 +207,10 @@ func (cache *AIRL) ClearStats() {
 	if cache.evictionAgentOK {
 		cache.numDailyCategories = cache.numDailyCategories[:0]
 		cache.sumNumDailyCategories = 0
+
 		if cache.evictionType == EvictionOnDayEnd {
 			if cache.choicesLogFile != nil {
-				cache.toChoiceBuffer([]string{
+				cache.toLogBuffer([]string{
 					fmt.Sprintf("%d", cache.tick),
 					eventEvictionOnDayEnd,
 					fmt.Sprintf("%0.2f", cache.size),
@@ -488,7 +489,7 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) { //nolint:funlen
 				cache.stats.AddDeletedFileMiss(curFile.Filename)
 
 				if cache.choicesLogFile != nil {
-					cache.toChoiceBuffer([]string{
+					cache.toLogBuffer([]string{
 						fmt.Sprintf("%d", cache.tick),
 						ChoiceDelete,
 						fmt.Sprintf("%0.2f", cache.size),
@@ -550,7 +551,7 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) { //nolint:funlen
 				cache.stats.AddDeletedFileMiss(curFile.Filename)
 
 				if cache.choicesLogFile != nil {
-					cache.toChoiceBuffer([]string{
+					cache.toLogBuffer([]string{
 						fmt.Sprintf("%d", cache.tick),
 						ChoiceDelete,
 						fmt.Sprintf("%0.2f", cache.size),
@@ -605,7 +606,7 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) { //nolint:funlen
 			cache.stats.AddDeletedFileMiss(curFile.Filename)
 
 			if cache.choicesLogFile != nil {
-				cache.toChoiceBuffer([]string{
+				cache.toLogBuffer([]string{
 					fmt.Sprintf("%d", cache.tick),
 					ChoiceDelete,
 					fmt.Sprintf("%0.2f", cache.size),
@@ -640,7 +641,7 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) { //nolint:funlen
 				})
 
 				if cache.choicesLogFile != nil {
-					cache.toChoiceBuffer([]string{
+					cache.toLogBuffer([]string{
 						fmt.Sprintf("%d", cache.tick),
 						ChoiceKeep,
 						fmt.Sprintf("%0.2f", cache.size),
@@ -1002,7 +1003,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			switch curAction {
 			case qlearn.ActionNotStore:
 				if cache.choicesLogFile != nil {
-					cache.toChoiceBuffer([]string{
+					cache.toLogBuffer([]string{
 						fmt.Sprintf("%d", cache.tick),
 						ChoiceSkip,
 						fmt.Sprintf("%0.2f", cache.size),
@@ -1025,7 +1026,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 						switch cache.evictionType {
 						case EvictionOnDayEnd, EvictionOnK:
 							if cache.choicesLogFile != nil {
-								cache.toChoiceBuffer([]string{
+								cache.toLogBuffer([]string{
 									fmt.Sprintf("%d", cache.tick),
 									eventEvictionOnForcedCall,
 									fmt.Sprintf("%0.2f", cache.size),
@@ -1041,7 +1042,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 							cache.callEvictionAgent()
 						case EvictionOnFree:
 							if cache.choicesLogFile != nil {
-								cache.toChoiceBuffer([]string{
+								cache.toLogBuffer([]string{
 									fmt.Sprintf("%d", cache.tick),
 									eventEvictionOnFree,
 									fmt.Sprintf("%0.2f", cache.size),
@@ -1084,7 +1085,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				}
 
 				if cache.choicesLogFile != nil {
-					cache.toChoiceBuffer([]string{
+					cache.toLogBuffer([]string{
 						fmt.Sprintf("%d", cache.tick),
 						ChoiceAdd,
 						fmt.Sprintf("%0.2f", cache.size),
@@ -1128,7 +1129,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					switch cache.evictionType {
 					case EvictionOnDayEnd, EvictionOnK:
 						if cache.choicesLogFile != nil {
-							cache.toChoiceBuffer([]string{
+							cache.toLogBuffer([]string{
 								fmt.Sprintf("%d", cache.tick),
 								eventEvictionOnForcedCall,
 								fmt.Sprintf("%0.2f", cache.size),
@@ -1144,7 +1145,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 						cache.callEvictionAgent()
 					case EvictionOnFree:
 						if cache.choicesLogFile != nil {
-							cache.toChoiceBuffer([]string{
+							cache.toLogBuffer([]string{
 								fmt.Sprintf("%d", cache.tick),
 								eventEvictionOnFree,
 								fmt.Sprintf("%0.2f", cache.size),
@@ -1185,7 +1186,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			}
 
 			if cache.choicesLogFile != nil {
-				cache.toChoiceBuffer([]string{
+				cache.toLogBuffer([]string{
 					fmt.Sprintf("%d", cache.tick),
 					ChoiceAdd,
 					fmt.Sprintf("%0.2f", cache.size),
@@ -1229,7 +1230,7 @@ func (cache *AIRL) AfterRequest(request *Request, fileStats *FileStats, hit bool
 			// fmt.Println(cache.evictionAgentStep)
 			if cache.evictionAgentStep <= 0 {
 				if cache.choicesLogFile != nil {
-					cache.toChoiceBuffer([]string{
+					cache.toLogBuffer([]string{
 						fmt.Sprintf("%d", cache.tick),
 						eventEvictionOnK,
 						fmt.Sprintf("%0.2f", cache.size),

@@ -84,7 +84,7 @@ type SimpleCache struct {
 	redirectSize                       float64
 	tick                               int64
 	choicesLogFile                     *OutputCSV
-	choicesBuffer                      [][]string
+	choicesBuffer                      chan []string
 	maxNumDayDiff                      float64
 	deltaDaysStep                      float64
 	logger                             *zap.Logger
@@ -115,7 +115,18 @@ func (cache *SimpleCache) Init(param InitParameters) interface{} {
 		cache.choicesLogFile = &OutputCSV{}
 		cache.choicesLogFile.Create("simulationLogFile.csv", true)
 		cache.choicesLogFile.Write(ChoiceLogHeader)
-		cache.choicesBuffer = make([][]string, 0)
+		cache.choicesBuffer = make(chan []string, 256)
+
+		go func(file *OutputCSV, c chan []string) {
+			defer close(c)
+			for {
+				curLine := <-c
+				if curLine[0] == "EXIT" {
+					break
+				}
+				file.Write(curLine)
+			}
+		}(cache.choicesLogFile, cache.choicesBuffer)
 	}
 
 	cache.logger = zap.L()
@@ -355,7 +366,7 @@ func (cache *SimpleCache) UpdatePolicy(request *Request, fileStats *FileStats, h
 			cache.files.Insert(fileStats)
 
 			if cache.choicesLogFile != nil {
-				cache.toChoiceBuffer([]string{
+				cache.toLogBuffer([]string{
 					fmt.Sprintf("%d", cache.tick),
 					ChoiceAdd,
 					fmt.Sprintf("%0.2f", cache.size),
@@ -449,7 +460,7 @@ func (cache *SimpleCache) Free(amount float64, percentage bool) float64 {
 	}
 	if sizeToDelete > 0. {
 		if cache.choicesLogFile != nil {
-			cache.toChoiceBuffer([]string{
+			cache.toLogBuffer([]string{
 				fmt.Sprintf("%d", cache.tick),
 				ChoiceFree,
 				fmt.Sprintf("%0.2f", cache.size),
@@ -486,7 +497,7 @@ func (cache *SimpleCache) Free(amount float64, percentage bool) float64 {
 			cache.stats.AddDeletedFileMiss(curFile.Filename)
 
 			if cache.choicesLogFile != nil {
-				cache.toChoiceBuffer([]string{
+				cache.toLogBuffer([]string{
 					fmt.Sprintf("%d", cache.tick),
 					ChoiceDelete,
 					fmt.Sprintf("%0.2f", cache.size),
@@ -517,7 +528,7 @@ func (cache *SimpleCache) CheckRedirect(filename int64, size float64) bool {
 			cache.redirectSize += size
 
 			if cache.choicesLogFile != nil {
-				cache.toChoiceBuffer([]string{
+				cache.toLogBuffer([]string{
 					fmt.Sprintf("%d", cache.tick),
 					ChoiceRedirect,
 					fmt.Sprintf("%0.2f", cache.size),
@@ -634,7 +645,7 @@ func (cache *SimpleCache) Check(filename int64) bool {
 			event = LogEventHit
 		}
 
-		cache.toChoiceBuffer([]string{
+		cache.toLogBuffer([]string{
 			fmt.Sprintf("%d", cache.tick),
 			event,
 			fmt.Sprintf("%0.2f", cache.size),
@@ -759,28 +770,31 @@ func (cache *SimpleCache) NumHits() int64 {
 	return int64(cache.hit)
 }
 
-func (cache *SimpleCache) toChoiceBuffer(curChoice []string) {
-	if cache.choicesLogFile != nil {
-		cache.choicesBuffer = append(cache.choicesBuffer, curChoice)
-
-		if len(cache.choicesBuffer) > ChoiceLogBufferDim {
-			cache.flushChoices()
-		}
-	}
+func (cache *SimpleCache) toLogBuffer(curChoice []string) {
+	cache.choicesBuffer <- curChoice
 }
 
-func (cache *SimpleCache) flushChoices() {
-	for _, choice := range cache.choicesBuffer {
-		cache.choicesLogFile.Write(choice)
+func IsClosed(ch <-chan []string) bool {
+	select {
+	case <-ch:
+		return true
+	default:
 	}
 
-	cache.choicesBuffer = cache.choicesBuffer[:0]
+	return false
+}
+
+func (cache *SimpleCache) flushLog() {
+	cache.choicesBuffer <- []string{"EXIT"}
+
+	for !IsClosed(cache.choicesBuffer) {
+	}
 }
 
 // Terminate close all pending things of the cache
 func (cache *SimpleCache) Terminate() error {
 	if cache.choicesLogFile != nil {
-		cache.flushChoices()
+		cache.flushLog()
 		cache.choicesLogFile.Close()
 	}
 
