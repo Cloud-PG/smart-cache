@@ -57,7 +57,7 @@ func TestLRUQueueBehaviorRandomActions(t *testing.T) {
 
 		stats = append(stats, &FileStats{
 			Filename:  filename,
-			Frequency: -1,
+			Frequency: 0,
 			Recency:   -1,
 			Size:      1.,
 		},
@@ -129,6 +129,124 @@ func TestLRUQueueBehaviorRandomActions(t *testing.T) {
 			t.Log("ERROR: File '", curStat.Filename, "' not found...")
 			t.Fatal()
 		}
+	}
+
+	var prevRecency int64 = -1
+	for _, file := range man.GetFromWorst() {
+		if prevRecency > file.Recency {
+			t.Log("ERROR: Recency order not correct...")
+			t.Fatal()
+		}
+		prevRecency = file.Recency
+	}
+
+	if man.Len() != len(inserted) {
+		t.Log("ERROR: Len manager != len inserted")
+		t.Fatal()
+	}
+}
+
+func TestLFUQueueBehaviorRandomActions(t *testing.T) {
+	r := rand.New(rand.NewSource(42))
+	man := Manager{}
+	man.Init(LFUQueue)
+
+	stats := make([]*FileStats, 0)
+
+	for idx := 0; idx < numFiles; idx++ {
+		filename := 100000 + int64(idx)
+
+		stats = append(stats, &FileStats{
+			Filename:  filename,
+			Frequency: 0,
+			Recency:   -1,
+			Size:      1.,
+		},
+		)
+	}
+
+	inserted := make([]int, 0)
+
+	for i := 0; i < numSteps; i++ {
+		opDone := false
+
+		// fmt.Printf("%d\r", i)
+
+		for opDone == false {
+			switch r.Intn(3) {
+			case 0: // INSERT
+				curIdx := r.Intn(len(stats))
+				// fmt.Printf("[%d] INSERT -> %d\n", i, curIdx)
+
+				found := false
+				for _, idx := range inserted {
+					if idx == curIdx {
+						found = true
+					}
+				}
+
+				if found {
+					break
+				}
+
+				curStat := stats[curIdx]
+
+				curStat.Recency = int64(i)
+				curStat.Frequency++
+
+				man.Insert(curStat)
+
+				inserted = append(inserted, curIdx)
+
+				opDone = true
+			case 1: // UPDATE
+				if len(inserted) > 0 {
+					curIdx := r.Intn(len(inserted))
+					// fmt.Printf("[%d] UPDATE -> %d\n", i, inserted[curIdx])
+
+					curStat := stats[inserted[curIdx]]
+
+					curStat.Recency = int64(i)
+					curStat.Frequency++
+
+					man.Update(curStat)
+
+					opDone = true
+				}
+			case 2: // REMOVE
+				if len(inserted) > 0 {
+					curIdx := r.Intn(len(inserted))
+					// fmt.Printf("[%d] REMOVE -> %d\n", i, inserted[curIdx])
+
+					curStat := stats[inserted[curIdx]]
+					curStat.Frequency = 0
+
+					man.Remove([]int64{curStat.Filename})
+
+					copy(inserted[curIdx:], inserted[curIdx+1:])
+					inserted = inserted[:len(inserted)-1]
+
+					opDone = true
+				}
+			}
+		}
+	}
+
+	for _, idx := range inserted {
+		curStat := stats[idx]
+		if !man.Check(curStat.Filename) {
+			t.Log("ERROR: File '", curStat.Filename, "' not found...")
+			t.Fatal()
+		}
+	}
+
+	var prevFreq int64 = -1
+	for _, file := range man.GetFromWorst() {
+		if prevFreq > file.Frequency {
+			t.Log("ERROR: Frequency order not correct...")
+			t.Fatal()
+		}
+		prevFreq = file.Frequency
 	}
 
 	if man.Len() != len(inserted) {
