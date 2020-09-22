@@ -144,8 +144,15 @@ func (man *Manager) getFileIndex(filename int64) int { //nolint:ignore,funlen
 
 	switch {
 	case guessedFilename != filename:
-		left := guessIdx - 1
-		right := guessIdx + 1
+		left := -1
+		right := len(man.queueFilenames)
+
+		if guessIdx-1 > -1 {
+			left = guessIdx - 1
+		}
+		if guessIdx+1 < len(man.queueFilenames) {
+			right = guessIdx + 1
+		}
 
 		prevVal := man.prevVal[filename]
 
