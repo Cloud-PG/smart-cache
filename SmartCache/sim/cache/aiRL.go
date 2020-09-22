@@ -209,7 +209,7 @@ func (cache *AIRL) ClearStats() {
 		cache.sumNumDailyCategories = 0
 
 		if cache.evictionType == EvictionOnDayEnd {
-			if cache.choicesLogFile != nil {
+			if cache.logFile != nil {
 				cache.toLogBuffer([]string{
 					fmt.Sprintf("%d", cache.tick),
 					eventEvictionOnDayEnd,
@@ -488,7 +488,7 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) { //nolint:funlen
 
 				cache.stats.AddDeletedFileMiss(curFile.Filename)
 
-				if cache.choicesLogFile != nil {
+				if cache.logFile != nil {
 					cache.toLogBuffer([]string{
 						fmt.Sprintf("%d", cache.tick),
 						ChoiceDelete,
@@ -550,7 +550,7 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) { //nolint:funlen
 
 				cache.stats.AddDeletedFileMiss(curFile.Filename)
 
-				if cache.choicesLogFile != nil {
+				if cache.logFile != nil {
 					cache.toLogBuffer([]string{
 						fmt.Sprintf("%d", cache.tick),
 						ChoiceDelete,
@@ -605,7 +605,7 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) { //nolint:funlen
 
 			cache.stats.AddDeletedFileMiss(curFile.Filename)
 
-			if cache.choicesLogFile != nil {
+			if cache.logFile != nil {
 				cache.toLogBuffer([]string{
 					fmt.Sprintf("%d", cache.tick),
 					ChoiceDelete,
@@ -640,7 +640,7 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) { //nolint:funlen
 					Frequency: curFileStats.Frequency,
 				})
 
-				if cache.choicesLogFile != nil {
+				if cache.logFile != nil {
 					cache.toLogBuffer([]string{
 						fmt.Sprintf("%d", cache.tick),
 						ChoiceKeep,
@@ -1002,7 +1002,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 			switch curAction {
 			case qlearn.ActionNotStore:
-				if cache.choicesLogFile != nil {
+				if cache.logFile != nil {
 					cache.toLogBuffer([]string{
 						fmt.Sprintf("%d", cache.tick),
 						ChoiceSkip,
@@ -1025,7 +1025,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 
 						switch cache.evictionType {
 						case EvictionOnDayEnd, EvictionOnK:
-							if cache.choicesLogFile != nil {
+							if cache.logFile != nil {
 								cache.toLogBuffer([]string{
 									fmt.Sprintf("%d", cache.tick),
 									eventEvictionOnForcedCall,
@@ -1041,7 +1041,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 							cache.punishEvictionAgentOnForcedCall()
 							cache.callEvictionAgent()
 						case EvictionOnFree:
-							if cache.choicesLogFile != nil {
+							if cache.logFile != nil {
 								cache.toLogBuffer([]string{
 									fmt.Sprintf("%d", cache.tick),
 									eventEvictionOnFree,
@@ -1084,7 +1084,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					cache.rewardEvictionAfterForcedCall(added)
 				}
 
-				if cache.choicesLogFile != nil {
+				if cache.logFile != nil {
 					cache.toLogBuffer([]string{
 						fmt.Sprintf("%d", cache.tick),
 						ChoiceAdd,
@@ -1128,7 +1128,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					forced = true
 					switch cache.evictionType {
 					case EvictionOnDayEnd, EvictionOnK:
-						if cache.choicesLogFile != nil {
+						if cache.logFile != nil {
 							cache.toLogBuffer([]string{
 								fmt.Sprintf("%d", cache.tick),
 								eventEvictionOnForcedCall,
@@ -1144,7 +1144,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 						cache.punishEvictionAgentOnForcedCall()
 						cache.callEvictionAgent()
 					case EvictionOnFree:
-						if cache.choicesLogFile != nil {
+						if cache.logFile != nil {
 							cache.toLogBuffer([]string{
 								fmt.Sprintf("%d", cache.tick),
 								eventEvictionOnFree,
@@ -1185,7 +1185,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				cache.rewardEvictionAfterForcedCall(added)
 			}
 
-			if cache.choicesLogFile != nil {
+			if cache.logFile != nil {
 				cache.toLogBuffer([]string{
 					fmt.Sprintf("%d", cache.tick),
 					ChoiceAdd,
@@ -1229,7 +1229,7 @@ func (cache *AIRL) AfterRequest(request *Request, fileStats *FileStats, hit bool
 		if cache.evictionAgentOK && cache.evictionType == EvictionOnK {
 			// fmt.Println(cache.evictionAgentStep)
 			if cache.evictionAgentStep <= 0 {
-				if cache.choicesLogFile != nil {
+				if cache.logFile != nil {
 					cache.toLogBuffer([]string{
 						fmt.Sprintf("%d", cache.tick),
 						eventEvictionOnK,

@@ -41,8 +41,13 @@ const (
 	LogEventMiss = "MISS"
 )
 
+const (
+	logBufferLen        = 1024
+	logBufferExitString = "EXIT"
+)
+
 var (
-	ChoiceLogHeader = []string{
+	logHeader = []string{
 		"tick",
 		"action or event",
 		"cache size",
@@ -83,8 +88,9 @@ type SimpleCache struct {
 	bandwidth                          float64
 	redirectSize                       float64
 	tick                               int64
-	choicesLogFile                     *OutputCSV
-	choicesBuffer                      chan []string
+	logFile                            *OutputCSV
+	logBuffer                          chan []string
+	logClose                           chan bool
 	maxNumDayDiff                      float64
 	deltaDaysStep                      float64
 	logger                             *zap.Logger
@@ -112,21 +118,27 @@ func (cache *SimpleCache) Init(param InitParameters) interface{} {
 	}
 
 	if cache.logSimulation {
-		cache.choicesLogFile = &OutputCSV{}
-		cache.choicesLogFile.Create("simulationLogFile.csv", true)
-		cache.choicesLogFile.Write(ChoiceLogHeader)
-		cache.choicesBuffer = make(chan []string, 256)
+		cache.logFile = &OutputCSV{}
+		cache.logFile.Create("simulationLogFile.csv", true)
+		cache.logFile.Write(logHeader)
+		cache.logBuffer = make(chan []string, logBufferLen)
+		cache.logClose = make(chan bool)
 
-		go func(file *OutputCSV, c chan []string) {
-			defer close(c)
+		go func(file *OutputCSV, stream chan []string, done chan bool) {
 			for {
-				curLine := <-c
-				if curLine[0] == "EXIT" {
+				curLine := <-stream
+				if len(curLine) == 1 && curLine[0] == logBufferExitString {
 					break
 				}
+
 				file.Write(curLine)
 			}
-		}(cache.choicesLogFile, cache.choicesBuffer)
+
+			file.Close()
+			close(stream)
+			done <- true
+
+		}(cache.logFile, cache.logBuffer, cache.logClose)
 	}
 
 	cache.logger = zap.L()
@@ -246,11 +258,13 @@ func (cache *SimpleCache) Dump(filename string, fileAndStats bool) {
 // Loads the SimpleCache cache
 func (cache *SimpleCache) Loads(inputString [][]byte, _ ...interface{}) {
 	cache.logger.Info("Load cache dump string")
+
 	var (
 		curRecord     DumpRecord
 		curRecordInfo DumpInfo
 		unmarshalErr  error
 	)
+
 	for _, record := range inputString {
 		unmarshalErr = json.Unmarshal(record, &curRecord)
 		if unmarshalErr != nil {
@@ -297,9 +311,11 @@ func (cache *SimpleCache) Load(filename string) [][]byte {
 		panic(gzipErr)
 	}
 
-	var records [][]byte
-	var buffer []byte
-	var charBuffer []byte
+	var (
+		records    [][]byte
+		buffer     []byte
+		charBuffer []byte
+	)
 
 	buffer = make([]byte, 0)
 	charBuffer = make([]byte, 1)
@@ -316,6 +332,7 @@ func (cache *SimpleCache) Load(filename string) [][]byte {
 
 				break
 			}
+
 			panic(err)
 		}
 		if string(charBuffer) == "\n" {
@@ -340,7 +357,6 @@ func (cache *SimpleCache) BeforeRequest(request *Request, hit bool) (*FileStats,
 	// cache.prevTime = cache.curTime
 	// cache.curTime = request.DayTime
 	// if !cache.curTime.Equal(cache.prevTime) {}
-
 	cache.numReq++
 
 	curStats, _ := cache.stats.GetOrCreate(request.Filename, request.Size, request.DayTime, cache.tick)
@@ -360,12 +376,13 @@ func (cache *SimpleCache) UpdatePolicy(request *Request, fileStats *FileStats, h
 		if cache.Size()+requestedFileSize > cache.MaxSize {
 			cache.Free(requestedFileSize, false)
 		}
+
 		if cache.Size()+requestedFileSize <= cache.MaxSize {
 			cache.size += requestedFileSize
 
 			cache.files.Insert(fileStats)
 
-			if cache.choicesLogFile != nil {
+			if cache.logFile != nil {
 				cache.toLogBuffer([]string{
 					fmt.Sprintf("%d", cache.tick),
 					ChoiceAdd,
@@ -438,7 +455,7 @@ func (cache *SimpleCache) AfterRequest(request *Request, fileStats *FileStats, h
 }
 
 // Free removes files from the cache
-func (cache *SimpleCache) Free(amount float64, percentage bool) float64 {
+func (cache *SimpleCache) Free(amount float64, percentage bool) float64 { // nolint:ignore,funlen
 	// cache.logger.Debug(
 	// 	"Cache free",
 	// 	zap.Float64("mean size", cache.MeanSize()),
@@ -446,7 +463,6 @@ func (cache *SimpleCache) Free(amount float64, percentage bool) float64 {
 	// 	zap.Float64("mean recency", cache.MeanRecency()),
 	// 	zap.Int("num. files", cache.NumFiles()),
 	// )
-
 	cache.stats.ClearDeletedFileMiss()
 
 	var (
@@ -459,7 +475,7 @@ func (cache *SimpleCache) Free(amount float64, percentage bool) float64 {
 		sizeToDelete = amount
 	}
 	if sizeToDelete > 0. {
-		if cache.choicesLogFile != nil {
+		if cache.logFile != nil {
 			cache.toLogBuffer([]string{
 				fmt.Sprintf("%d", cache.tick),
 				ChoiceFree,
@@ -496,7 +512,7 @@ func (cache *SimpleCache) Free(amount float64, percentage bool) float64 {
 
 			cache.stats.AddDeletedFileMiss(curFile.Filename)
 
-			if cache.choicesLogFile != nil {
+			if cache.logFile != nil {
 				cache.toLogBuffer([]string{
 					fmt.Sprintf("%d", cache.tick),
 					ChoiceDelete,
@@ -527,7 +543,7 @@ func (cache *SimpleCache) CheckRedirect(filename int64, size float64) bool {
 			cache.numRedirected++
 			cache.redirectSize += size
 
-			if cache.choicesLogFile != nil {
+			if cache.logFile != nil {
 				cache.toLogBuffer([]string{
 					fmt.Sprintf("%d", cache.tick),
 					ChoiceRedirect,
@@ -568,7 +584,6 @@ func (cache *SimpleCache) CheckWatermark() bool {
 func (cache *SimpleCache) HitRate() float64 {
 	perc := (cache.hit / (cache.hit + cache.miss)) * 100.
 	if math.IsNaN(perc) {
-
 		return 0.0
 	}
 
@@ -638,7 +653,7 @@ func (cache *SimpleCache) Check(filename int64) bool {
 		cache.stats.IncDeletedFileMiss(filename)
 	}
 
-	if cache.choicesLogFile != nil {
+	if cache.logFile != nil {
 		event := LogEventMiss
 
 		if hit {
@@ -730,6 +745,7 @@ func (cache *SimpleCache) AvgFreeSpace() float64 {
 // StdDevFreeSpace returns the standard deviation of the free space of the cache
 func (cache *SimpleCache) StdDevFreeSpace() float64 {
 	mean := cache.AvgFreeSpace()
+
 	var sum float64
 
 	for _, value := range cache.dailyfreeSpace {
@@ -771,31 +787,18 @@ func (cache *SimpleCache) NumHits() int64 {
 }
 
 func (cache *SimpleCache) toLogBuffer(curChoice []string) {
-	cache.choicesBuffer <- curChoice
+	cache.logBuffer <- curChoice
 }
 
-func IsClosed(ch <-chan []string) bool {
-	select {
-	case <-ch:
-		return true
-	default:
-	}
-
-	return false
-}
-
-func (cache *SimpleCache) flushLog() {
-	cache.choicesBuffer <- []string{"EXIT"}
-
-	for !IsClosed(cache.choicesBuffer) {
-	}
+func (cache *SimpleCache) flushAndCloseLog() {
+	cache.logBuffer <- []string{logBufferExitString}
+	<-cache.logClose
 }
 
 // Terminate close all pending things of the cache
 func (cache *SimpleCache) Terminate() error {
-	if cache.choicesLogFile != nil {
-		cache.flushLog()
-		cache.choicesLogFile.Close()
+	if cache.logFile != nil {
+		cache.flushAndCloseLog()
 	}
 
 	return nil
