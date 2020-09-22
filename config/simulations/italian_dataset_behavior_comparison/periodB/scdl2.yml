@@ -3,6 +3,7 @@ sim:
   data: ../../../../datasets/source2018_numeric_it_with_avro_order/
   outputFolder: ../../../../results/sim_italian_dataset_behavior_comparison/periodB
   type: normal
+  log: true
   window:
     start: 12
     stop: 24
