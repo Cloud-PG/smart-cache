@@ -356,7 +356,7 @@ class LogDeleteEvaluator(object):
 def parse_simulation_report(files2plot: list, prefix: str, generator: bool = False) -> dict:
     del_evaluator = {}
 
-    for file_, df, choices in tqdm(files2plot, desc="Parse log", position=0):
+    for file_, _, choices in tqdm(files2plot, desc="Parse log", position=1):
         name = file_.replace(
             prefix,
             ""
@@ -369,9 +369,11 @@ def parse_simulation_report(files2plot: list, prefix: str, generator: bool = Fal
         curLog = None
         state = "AFTERDELETE"
 
+        # print(file_, choices)
+
         # choices = choices[:1000000]
         for row in tqdm(choices.itertuples(), desc=f"Parse {name}",
-                        total=len(choices.index), position=1):
+                        total=len(choices.index), position=2):
             event = row[2]
             if state == "AFTERDELETE":
                 if event in ["ONFREE", "ONDAYEND", "ONK", "FORCEDCALL", "FREE"]:

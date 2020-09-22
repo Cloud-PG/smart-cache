@@ -52,9 +52,9 @@ def plot_num_miss_after_del(results: list):
 
     fig.write_html(
         "./test_num_miss.html",
-    include_plotlyjs=True,
+        include_plotlyjs=True,
     )
     fig_cum.write_html(
         "./test_cumulative.html",
-    include_plotlyjs=True,
+        include_plotlyjs=True,
     )
