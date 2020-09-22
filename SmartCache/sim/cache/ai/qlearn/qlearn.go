@@ -420,7 +420,7 @@ func (agent *Agent) UpdateTable(stateIdx int, newStateIdx int, action ActionType
 
 	actionIdx, inActionTable := agent.QTable.ActionTypeIdxs[action]
 	if !inActionTable {
-		panic("ERROR: wrong action passed...")
+		panic(fmt.Sprintf("ERROR: wrong action passed... action -> %d\n", action))
 	}
 
 	switch agent.UpdateAlgorithm {
