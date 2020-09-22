@@ -793,6 +793,7 @@ func (cache *SimpleCache) toLogBuffer(curChoice []string) {
 func (cache *SimpleCache) flushAndCloseLog() {
 	cache.logBuffer <- []string{logBufferExitString}
 	<-cache.logClose
+	close(cache.logClose)
 }
 
 // Terminate close all pending things of the cache
