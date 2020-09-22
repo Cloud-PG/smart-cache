@@ -51,6 +51,7 @@ func configureViper(configFilenameWithNoExt string) { //nolint:ignore,funlen
 	viper.SetDefault("sim.coldstart", false)
 	viper.SetDefault("sim.coldstartnostats", false)
 	viper.SetDefault("sim.log", false)
+	viper.SetDefault("sim.seed", 42)
 
 	viper.SetDefault("sim.cpuprofile", "")
 	viper.SetDefault("sim.memprofile", "")
@@ -88,6 +89,7 @@ func simCommand() *cobra.Command { //nolint:ignore,funlen
 	var (
 		logLevel string
 		// Simulation
+		randSeed              int64
 		simOverwrite          bool
 		simBandwidth          float64
 		simRedirectReq        bool
@@ -221,6 +223,9 @@ func simCommand() *cobra.Command { //nolint:ignore,funlen
 					panic(err)
 				}
 			}
+
+			randSeed = viper.GetInt64("sim.seed")
+			logger.Info("CONF_VAR", zap.Int64("randSeed", randSeed))
 
 			cacheSize = viper.GetFloat64("sim.cache.size.value")
 			logger.Info("CONF_VAR", zap.Float64("cacheSize", cacheSize))
@@ -506,6 +511,7 @@ func simCommand() *cobra.Command { //nolint:ignore,funlen
 					AIRLEpsilonDecay:       aiRLEpsilonDecay,
 					MaxNumDayDiff:          maxNumDayDiff,
 					DeltaDaysStep:          deltaDaysStep,
+					RandSeed:               randSeed,
 				},
 			)
 

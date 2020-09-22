@@ -535,6 +535,7 @@ type InitParameters struct {
 	WeightBeta             float64
 	WeightGamma            float64
 	EvictionAgentType      string
+	RandSeed               int64
 	AIRLEvictionK          int64
 	AIRLType               string
 	AIRLAdditionFeatureMap string

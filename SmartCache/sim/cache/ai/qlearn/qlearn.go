@@ -55,21 +55,20 @@ const (
 	maxStoredPastChoices = 32
 )
 
-var randomGenerator = rand.New(rand.NewSource(42))
-
 // QTable struct used by agents.
 type QTable struct {
-	States         [][]int                    `json:"states"`
-	Actions        [][]float64                `json:"actions"`
-	FeatureManager *featuremap.FeatureManager `json:"featureManager"`
-	ActionTypeIdxs map[ActionType]int         `json:"actionTypeIdxs"`
-	ActionTypes    []ActionType               `json:"actionTypes"`
-	IndexWeights   []int                      `json:"indexWeights"`
-	logger         *zap.Logger
+	States          [][]int                    `json:"states"`
+	Actions         [][]float64                `json:"actions"`
+	FeatureManager  *featuremap.FeatureManager `json:"featureManager"`
+	ActionTypeIdxs  map[ActionType]int         `json:"actionTypeIdxs"`
+	ActionTypes     []ActionType               `json:"actionTypes"`
+	IndexWeights    []int                      `json:"indexWeights"`
+	logger          *zap.Logger
+	RandomGenerator *rand.Rand
 }
 
 // Init prepare the QTable States and Actions
-func (table *QTable) Init(featureManager *featuremap.FeatureManager, actions []ActionType) { //nolint:ignore,funlen
+func (table *QTable) Init(featureManager *featuremap.FeatureManager, actions []ActionType, randSeed int64) { //nolint:ignore,funlen
 	table.logger = zap.L()
 
 	table.States = make([][]int, 0)
@@ -77,6 +76,7 @@ func (table *QTable) Init(featureManager *featuremap.FeatureManager, actions []A
 	table.FeatureManager = featureManager
 	table.ActionTypeIdxs = make(map[ActionType]int, len(actions))
 	table.ActionTypes = make([]ActionType, len(actions))
+	table.RandomGenerator = rand.New(rand.NewSource(randSeed))
 
 	for idx, action := range actions {
 		table.ActionTypeIdxs[action] = idx
@@ -209,7 +209,7 @@ type Agent struct {
 }
 
 // Init initilizes the Agent struct
-func (agent *Agent) Init(featureManager *featuremap.FeatureManager, role AgentRole, initEpsilon float64, decayRateEpsilon float64) {
+func (agent *Agent) Init(featureManager *featuremap.FeatureManager, role AgentRole, initEpsilon float64, decayRateEpsilon float64, randSeed int64) {
 	agent.logger = zap.L()
 
 	agent.LearningRate = 0.9 // also named Alpha
@@ -229,6 +229,7 @@ func (agent *Agent) Init(featureManager *featuremap.FeatureManager, role AgentRo
 				ActionNotStore,
 				ActionStore,
 			},
+			randSeed,
 		)
 	case EvictionAgent:
 		// With getArgMax the first action is the default choice
@@ -241,11 +242,12 @@ func (agent *Agent) Init(featureManager *featuremap.FeatureManager, role AgentRo
 				ActionDeleteHalf,
 				ActionDeleteAll,
 			},
+			randSeed,
 		)
 	}
 
 	agent.UpdateAlgorithm = RLQLearning
-	agent.RGenerator = randomGenerator
+	agent.RGenerator = agent.QTable.RandomGenerator
 
 	agent.NumStates = len(agent.QTable.States)
 	agent.NumVars = agent.NumStates * len(agent.QTable.Actions[0])
@@ -386,7 +388,7 @@ func (agent Agent) GetActionValue(stateIdx int, action ActionType) float64 {
 // GetBestActionValue returns the best action for the given state
 func (agent Agent) GetBestActionValue(stateIdx int) float64 {
 	values := agent.QTable.Actions[stateIdx]
-	maxValueIdx, maxValue := getArgMax(values)
+	maxValueIdx, maxValue := agent.getArgMax(values)
 	agent.logger.Debug("Get best action",
 		zap.Float64s("values", values),
 		zap.Int("idx max value", maxValueIdx),
@@ -398,7 +400,7 @@ func (agent Agent) GetBestActionValue(stateIdx int) float64 {
 // GetBestAction returns the best action for the given state
 func (agent Agent) GetBestAction(stateIdx int) ActionType {
 	values := agent.QTable.Actions[stateIdx]
-	maxValueIdx, _ := getArgMax(values)
+	maxValueIdx, _ := agent.getArgMax(values)
 	bestAction := agent.QTable.ActionTypes[maxValueIdx]
 	agent.logger.Debug("Get best action",
 		zap.Float64s("values", values),
@@ -516,11 +518,7 @@ func (agent *Agent) Remember(key interface{}) ([]Choice, bool) {
 	return memories, inMemory
 }
 
-//##############################################################################
-//#                            Support functions                               #
-//##############################################################################
-
-func getArgMax(array []float64) (int, float64) {
+func (agent *Agent) getArgMax(array []float64) (int, float64) {
 	maxIdx := 0
 	maxElm := array[maxIdx]
 	allEqual := true
@@ -536,12 +534,16 @@ func getArgMax(array []float64) (int, float64) {
 	}
 
 	if allEqual {
-		maxIdx = randomGenerator.Intn(len(array))
+		maxIdx = agent.RGenerator.Intn(len(array))
 		maxElm = array[maxIdx]
 	}
 
 	return maxIdx, maxElm
 }
+
+//##############################################################################
+//#                            Support functions                               #
+//##############################################################################
 
 func createOneHot(length int, targetIdx int) []bool {
 	res := make([]bool, length)
