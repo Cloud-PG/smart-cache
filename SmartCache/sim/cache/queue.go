@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"fmt"
 	"sort"
 )
 
@@ -154,7 +155,11 @@ func (man *Manager) getFileIndex(filename int64) int { //nolint:ignore,funlen
 			right = guessIdx + 1
 		}
 
-		prevVal := man.prevVal[filename]
+		prevVal, inPrevVal := man.prevVal[filename]
+
+		if !inPrevVal {
+			panic(fmt.Sprintf("ERROR: file %d has no previous value", filename))
+		}
 
 		switch man.qType {
 		case NoQueue:
@@ -366,6 +371,10 @@ func (man *Manager) getFeature(file *FileStats) interface{} {
 		feature = file.Weight
 	}
 
+	if feature == nil {
+		panic(fmt.Sprintf("ERROR: cannot extract feature from file %#v", file))
+	}
+
 	return feature
 }
 
@@ -509,7 +518,7 @@ func (man *Manager) Update(file *FileStats) {
 		man.insertFeature(insertIdx, feature)
 		man.insertFilename(insertIdx, filename)
 
-		man.fileIndexes[file.Filename] = insertIdx
+		man.fileIndexes[filename] = insertIdx
 	}
 	// fmt.Println("--- AFTER ---")
 	// fmt.Println(man.orderedValues)
