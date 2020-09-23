@@ -18,7 +18,7 @@ def plot_num_miss_after_del(results: list):
                 "ERROR: result element is not a log del evaluator")
 
         if name not in res:
-            res[name] = {'x': [], 'y': [], 'cumsum': []}
+            res[name] = {'x': [], 'y': [], 'cumulative': []}
 
         res[name]['x'].append(delEvaluator.tick)
         res[name]['y'].append(delEvaluator.total_num_req_after_delete)
@@ -26,7 +26,7 @@ def plot_num_miss_after_del(results: list):
     for name, obj in res.items():
         obj['x'] = np.array(obj['x'])
         obj['y'] = np.array(obj['y'])
-        obj['cumsum'] = np.cumsum(obj['y'])
+        obj['cumulative'] = np.cumsum(obj['y'])
 
         x = obj['x']
         y = obj['y']
