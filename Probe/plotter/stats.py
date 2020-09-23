@@ -64,6 +64,7 @@ def plot_global_upper_limits(df: 'pd.DataFrame',
     x = []
     max_hit_rate_list = []
     max_read_on_hit_list = []
+    cache_optimal_size = []
 
     print(f"{STATUS_ARROW}Calculate limits")
     for idx in tqdm(range(len(df))):
@@ -76,10 +77,12 @@ def plot_global_upper_limits(df: 'pd.DataFrame',
 
         max_hit_rate = ((num_req-num_files) / num_req) * 100.
         max_read_on_hit = ((sum_sizes - file_sizes) / sum_sizes) * 100.
+        optimal_size = file_sizes
 
         x.append(pd.to_datetime(cur_df.reqDay.unique()[-1], unit='s'))
         max_hit_rate_list.append(max_hit_rate)
         max_read_on_hit_list.append(max_read_on_hit)
+        cache_optimal_size.append(optimal_size / 1024**2)
 
     fig.add_trace(
         go.Scatter(
@@ -96,6 +99,15 @@ def plot_global_upper_limits(df: 'pd.DataFrame',
             y=max_read_on_hit_list,
             mode='lines',
             name="Read on hit",
+        ),
+    )
+
+    fig.add_trace(
+        go.Scatter(
+            x=x,
+            y=cache_optimal_size,
+            mode='lines',
+            name="Size (GB)",
         ),
     )
 
