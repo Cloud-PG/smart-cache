@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import plotly.graph_objects as go
 import seaborn as sns
 from bokeh.io import export_png
 from bokeh.layouts import column, row
@@ -8,12 +9,10 @@ from bokeh.models import BasicTickFormatter, ColumnDataSource, Span
 from bokeh.palettes import Accent
 from bokeh.plotting import figure, output_file, save, show
 from bokeh.transform import dodge
+from plotly.graph_objs import Layout
 from tqdm import tqdm
 
-import plotly.graph_objects as go
-
 from ..utils import STATUS_ARROW
-
 
 LAYOUT = Layout(
     paper_bgcolor='rgb(255,255,255)',
