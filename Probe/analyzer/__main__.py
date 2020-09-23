@@ -28,6 +28,9 @@ def main():
     parser.add_argument('--output-folder', type=str,
                         default="analysis",
                         help='The output folder name [DEFAULT: "analysis"]')
+    parser.add_argument('--output-type', choices=['show', 'html', 'png'],
+                        type=str, default='show',
+                        help='How to plot the results [DEFAULT: show]')
     parser.add_argument('--group-by', type=str,
                         choices=['d', 'w', 'm'],
                         default="d",
@@ -50,9 +53,6 @@ def main():
     parser.add_argument('--month', type=int,
                         default=-1,
                         help='Month to extract [DEFAULT: -1]')
-    parser.add_argument('--output-type', choices=['show', 'html', 'png'],
-                        type=str, default='show',
-                        help='How to plot the results [DEFAULT: show]')
     parser.add_argument('--file-type', type=str,
                         default="all",
                         help='File type of the data to analyse [DEFAULT: "all"]')

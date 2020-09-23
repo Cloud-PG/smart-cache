@@ -68,6 +68,7 @@ def plot_global_upper_limits(df: 'pd.DataFrame',
     print(f"{STATUS_ARROW}Calculate limits")
     for idx in tqdm(range(len(df))):
         cur_df = df[idx]
+        print(cur_df)
         sum_sizes = cur_df.Size.sum()
         file_sizes = cur_df[['Filename', 'Size']
                             ].drop_duplicates('Filename').Size.sum()
@@ -81,7 +82,7 @@ def plot_global_upper_limits(df: 'pd.DataFrame',
         x.append(pd.to_datetime(cur_df.reqDay.unique()[-1], unit='s'))
         max_hit_rate_list.append(max_hit_rate)
         max_read_on_hit_list.append(max_read_on_hit)
-        cache_optimal_size.append(optimal_size / 1024**2)
+        cache_optimal_size.append(optimal_size / 1024**4)  # TB
 
     fig.add_trace(
         go.Scatter(
@@ -118,7 +119,7 @@ def plot_global_upper_limits(df: 'pd.DataFrame',
 
     if output_type == 'html':
         fig.write_html(
-            output_filename,
+            f"{output_filename}.html",
             include_plotlyjs=True,
         )
     elif output_type == 'show':
