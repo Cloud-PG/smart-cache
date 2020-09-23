@@ -206,7 +206,7 @@ def measure_cost(df: 'pd.DataFrame') -> 'pd.Series':
 
 
 def measure_read_on_hit_ratio(df: 'pd.DataFrame') -> 'pd.Series':
-    return df['read on hit data']/df['read data']
+    return (df['read on hit data']/df['read data']) * 100.
 
 
 def measure_cpu_eff(df: 'pd.DataFrame') -> 'pd.Series':
@@ -442,6 +442,7 @@ def make_table(files2plot: list, prefix: str) -> 'pd.DataFrame':
 
 def get_measures(cache_filename: str, df: 'pd.DataFrame') -> list:
     measures = [cache_filename]
+    print(cache_filename)
 
     # Throughput ratio
     measures.append(
