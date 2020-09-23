@@ -379,7 +379,10 @@ def parse_simulation_report(files2plot: list, prefix: str, generator: bool = Fal
                 if event in ["ONFREE", "ONDAYEND", "ONK", "FORCEDCALL", "FREE"]:
                     if curLog is not None:
                         curLog.prepare(['Index'] + list(choices.columns))
-                        curEvents.append(curLog)
+                        if not generator:
+                            curEvents.append(curLog)
+                        else:
+                            yield name, curLog
                     curLog = LogDeleteEvaluator(row)
                     state = "DELETING"
                 elif curLog is not None:
@@ -392,12 +395,15 @@ def parse_simulation_report(files2plot: list, prefix: str, generator: bool = Fal
                     curLog.trace(row)
         else:
             curLog.prepare(['Index'] + list(choices.columns))
-            curEvents.append(curLog)
+            if not generator:
+                curEvents.append(curLog)
+            else:
+                yield name, curLog
 
         if generator:
             yield name, curEvents
-
-        del_evaluator[name] = curEvents
+        else:
+            del_evaluator[name] = curEvents
 
     # print(del_evaluator)
 

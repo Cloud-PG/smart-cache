@@ -10,15 +10,27 @@ def plot_num_miss_after_del(results: list):
     fig = go.Figure(layout=LAYOUT)
     fig_cum = go.Figure(layout=LAYOUT)
 
-    for name, delEvaluatorList in results:
-        if not all([isinstance(elm, LogDeleteEvaluator) for elm in delEvaluatorList]):
+    res = {}
+
+    for name, delEvaluator in results:
+        if not isinstance(delEvaluator, LogDeleteEvaluator):
             raise Exception(
                 "ERROR: result element are not all log del evaluator")
 
-        x = [item.tick for item in delEvaluatorList]
-        y = np.array(
-            [item.total_num_req_after_delete for item in delEvaluatorList])
-        cumulative = np.cumsum(y)
+        if name not in res:
+            res[name] = {'x': [], 'y': [], 'cumsum': []}
+
+        res[name]['x'].append(delEvaluator.tick)
+        res[name]['y'].append(delEvaluator.total_num_req_after_delete)
+
+    for name, obj in res.items():
+        obj['x'] = np.array(obj['x'])
+        obj['y'] = np.array(obj['y'])
+        obj['cumsum'] = np.cumsum(obj['y'])
+
+        x = obj['x']
+        y = obj['y']
+        cumulative = obj['cumulative']
 
         print(x)
         print(y)
