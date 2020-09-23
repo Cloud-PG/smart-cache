@@ -433,7 +433,7 @@ def make_table(files2plot: list, prefix: str) -> 'pd.DataFrame':
         ]
     )
     df = df.sort_values(
-        by=["Throughput ratio", "Cost ratio", "Hit rate"],
+        by=["Throughput ratio", "Cost ratio", "Num. miss after del."],
         ascending=[False, True, False],
     )
     df = df.round(3)
