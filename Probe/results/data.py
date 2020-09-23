@@ -400,9 +400,7 @@ def parse_simulation_report(files2plot: list, prefix: str, generator: bool = Fal
             else:
                 yield name, curLog
 
-        if generator:
-            yield name, curEvents
-        else:
+        if not generator:
             del_evaluator[name] = curEvents
 
     # print(del_evaluator)

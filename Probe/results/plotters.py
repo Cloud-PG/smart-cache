@@ -15,7 +15,7 @@ def plot_num_miss_after_del(results: list):
     for name, delEvaluator in results:
         if not isinstance(delEvaluator, LogDeleteEvaluator):
             raise Exception(
-                "ERROR: result element are not all log del evaluator")
+                "ERROR: result element is not a log del evaluator")
 
         if name not in res:
             res[name] = {'x': [], 'y': [], 'cumsum': []}
