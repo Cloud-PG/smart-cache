@@ -268,7 +268,7 @@ tasks:
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/1000T/scdl2-onDayEnd.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/1000T/scdl2-onFree.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/1000T/scdl2-onK.yml"
-  
+
   italian-dataset-with-watermarks:
     desc: Run only italian dataset with watermarks simulations
     deps:
@@ -329,7 +329,7 @@ tasks:
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/1000T/scdl2-onDayEnd.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/1000T/scdl2-onFree.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/1000T/scdl2-onK.yml"
-  
+
   italian-dataset-with-watermarks-only-addition:
     desc: Run only italian dataset with watermarks simulations and only addition agent
     deps:
@@ -425,7 +425,7 @@ tasks:
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/periodD/scdl2-onFree.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/periodD/scdl2-onK.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/periodD/scdl2.yml"
-  
+
   us-dataset-behavior-comparison:
     desc: Run only us dataset simulations with logs to compare behaviors
     deps:
