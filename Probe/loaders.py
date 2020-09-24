@@ -106,12 +106,14 @@ def gen_csv_data(input_path: str, region_filter: str = None,
 def csv_data(input_path: str, region_filter: str = None,
              file_type_filter: str = None,
              month_filter: int = -1,
-             concat: bool = True) -> 'pd.DataFrame':
+             concat: bool = True,
+             generate: bool = False) -> 'pd.DataFrame':
     """Open csv data folder and files
 
     :return: The whole dataset
     :rtype: pandas.DataFrame
     """
+    assert concat != generate, "You cannot concat and generate data..."
     if path.isdir(input_path):
         data_frames = []
         files = [
@@ -122,13 +124,17 @@ def csv_data(input_path: str, region_filter: str = None,
             if month_filter != -1:
                 if _get_month(filename) != month_filter:
                     continue
-            data_frames.append(
-                _load_csv_file(
-                    path.join(input_path, filename),
-                    region_filter,
-                    file_type_filter
-                )
+            cur_dataframe = _load_csv_file(
+                path.join(input_path, filename),
+                region_filter,
+                file_type_filter
             )
+            if generate:
+                yield cur_dataframe
+            else:
+                data_frames.append(
+                    cur_dataframe
+                )
         else:
             if data_frames:
                 if concat:

@@ -41,22 +41,16 @@ def plot_global_upper_limits(df: 'pd.DataFrame',
                              output_filename: str = 'daily_upper_bounds',
                              output_type: str = 'show',
                              region: str = 'all',
-                             concatenated: bool = True):
+                             concatenated: bool = False,
+                             data_generator: bool = True,):
 
     if concatenated:
         print(f"{STATUS_ARROW}ERROR: you have to use not concatenated data...")
         exit(-1)
 
-    print(f"{STATUS_ARROW}Filter DataType data and mc")
-    for idx in tqdm(range(len(df))):
-        cur_df = df[idx]
-        df[idx] = cur_df[(cur_df.DataType == "data")
-                         | (cur_df.DataType == "mc")]
-
-    print(f"{STATUS_ARROW}Filter success jobs")
-    for idx in tqdm(range(len(df))):
-        cur_df = df[idx]
-        df[idx] = cur_df[cur_df.JobSuccess.astype(bool)]
+    if not data_generator:
+        print(f"{STATUS_ARROW}ERROR: you have to use a data generator...")
+        exit(-1)
 
     fig = go.Figure(layout=LAYOUT)
 
@@ -65,10 +59,16 @@ def plot_global_upper_limits(df: 'pd.DataFrame',
     max_read_on_hit_list = []
     cache_optimal_size = []
 
-    print(f"{STATUS_ARROW}Calculate limits")
-    for idx in tqdm(range(len(df))):
-        cur_df = df[idx]
-        print(cur_df)
+    for num, cur_df in enumerate(df, 1):
+        print(f"{STATUS_ARROW}[{num:03d}] Filter DataType data and mc")
+        cur_df = cur_df[(cur_df.DataType == "data")
+                        | (cur_df.DataType == "mc")]
+
+        print(f"{STATUS_ARROW}[{num:03d}] Filter success jobs")
+        cur_df = cur_df[cur_df.JobSuccess.astype(bool)]
+
+        print(f"{STATUS_ARROW}[{num:03d}] Calculate limits")
+
         sum_sizes = cur_df.Size.sum()
         file_sizes = cur_df[['Filename', 'Size']
                             ].drop_duplicates('Filename').Size.sum()
@@ -83,6 +83,10 @@ def plot_global_upper_limits(df: 'pd.DataFrame',
         max_hit_rate_list.append(max_hit_rate)
         max_read_on_hit_list.append(max_read_on_hit)
         cache_optimal_size.append(optimal_size / 1024**4)  # TB
+
+    avg_hit_rate = sum(max_hit_rate_list) / len(max_hit_rate_list)
+    avg_read_on_hit = sum(max_read_on_hit_list) / len(max_read_on_hit_list)
+    avg_cache_opt_size = sum(cache_optimal_size) / len(cache_optimal_size)
 
     fig.add_trace(
         go.Scatter(
@@ -107,7 +111,34 @@ def plot_global_upper_limits(df: 'pd.DataFrame',
             x=x,
             y=cache_optimal_size,
             mode='lines',
-            name="Size (GB)",
+            name="Size (TB)",
+        ),
+    )
+
+    fig.add_trace(
+        go.Scatter(
+            x=x,
+            y=[avg_hit_rate for _ in range(len(max_hit_rate_list))],
+            mode='lines',
+            name="Avg. Hit rate",
+        ),
+    )
+
+    fig.add_trace(
+        go.Scatter(
+            x=x,
+            y=[avg_read_on_hit for _ in range(len(max_read_on_hit_list))],
+            mode='lines',
+            name="Read on hit",
+        ),
+    )
+
+    fig.add_trace(
+        go.Scatter(
+            x=x,
+            y=[avg_cache_opt_size for _ in range(len(cache_optimal_size))],
+            mode='lines',
+            name="Avg. Size (TB)",
         ),
     )
 

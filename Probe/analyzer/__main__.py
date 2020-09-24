@@ -47,6 +47,9 @@ def main():
     parser.add_argument('--concat', type='bool',
                         default=True,
                         help='Indicates if the DataFrames have to be concatenated [DEFAULT: True]')
+    parser.add_argument('--generate', type='bool',
+                        default=False,
+                        help='Indicates if the DataFrames have to be generated one at time [DEFAULT: False]')
     parser.add_argument('--reset-stat-days', type=int,
                         default=7,
                         help='Number of days after the stats are reset [DEFAULT: 7]')
@@ -70,6 +73,7 @@ def main():
             file_type_filter=args.file_type,
             month_filter=args.month,
             concat=args.concat,
+            generate=args.generate,
         )
         if args.analysis == "feature_bins":
             print(f"{STATUS_ARROW}Open feature file...")
