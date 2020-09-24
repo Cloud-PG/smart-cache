@@ -2,8 +2,8 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 
-from .data import LogDeleteEvaluator
-from .utils import LAYOUT
+from .dashboard import LAYOUT
+from .utils import LogDeleteEvaluator
 
 
 def plot_num_miss_after_del(results: list):

@@ -6,7 +6,7 @@ from colorama import init
 from ..utils import STATUS_ARROW, str2bool
 from .data import aggregate_results, parse_simulation_report
 from .plotters import plot_num_miss_after_del
-from .utils import dashboard, get_prefix
+from .dashboard import dashboard
 
 
 def main():
