@@ -147,16 +147,6 @@ func (man *Manager) getFileIndex(filename int64) int { //nolint:ignore,funlen
 
 	switch {
 	case guessedFilename != filename:
-		left := -1
-		right := len(man.queueFilenames)
-
-		if guessIdx-1 > -1 {
-			left = guessIdx - 1
-		}
-		if guessIdx+1 < len(man.queueFilenames) {
-			right = guessIdx + 1
-		}
-
 		prevVal, inPrevVal := man.prevVal[filename]
 
 		if !inPrevVal {
@@ -165,67 +155,46 @@ func (man *Manager) getFileIndex(filename int64) int { //nolint:ignore,funlen
 
 		switch man.qType {
 		case NoQueue:
-			if left > -1 && man.queueFilenames[left] < prevVal.(int64) {
-				left = -1
-			} else if right < len(man.queueFilenames) && man.queueFilenames[right] > prevVal.(int64) {
-				right = len(man.queueFilenames)
-			}
+			intFeature := prevVal.(int64)
+			guessIdx = sort.Search(len(man.queueFilenames), func(idx int) bool {
+				return man.queueFilenames[idx] > intFeature
+			})
 		case LRUQueue, LFUQueue:
-			if left > -1 && man.queueI[left] < prevVal.(int64) {
-				left = -1
-			} else if right < len(man.queueFilenames) && man.queueI[right] > prevVal.(int64) {
-				right = len(man.queueFilenames)
-			}
-		case SizeSmallQueue, WeightQueue:
-			if left > -1 && man.queueF[left] < prevVal.(float64) {
-				left = -1
-			} else if right < len(man.queueFilenames) && man.queueF[right] > prevVal.(float64) {
-				right = len(man.queueFilenames)
-			}
+			intFeature := prevVal.(int64)
+			guessIdx = sort.Search(len(man.queueI), func(idx int) bool {
+				return man.queueI[idx] > intFeature
+			})
 		case SizeBigQueue:
-			if left > -1 && man.queueF[left] > prevVal.(float64) {
-				left = -1
-			} else if right < len(man.queueFilenames) && man.queueF[right] < prevVal.(float64) {
-				right = len(man.queueFilenames)
-			}
+			floatFeature := prevVal.(float64)
+			guessIdx = sort.Search(len(man.queueF), func(idx int) bool {
+				return man.queueF[idx] < floatFeature
+			})
+		case SizeSmallQueue, WeightQueue:
+			floatFeature := prevVal.(float64)
+			guessIdx = sort.Search(len(man.queueF), func(idx int) bool {
+				return man.queueF[idx] > floatFeature
+			})
+		}
+
+		// fmt.Println("GUESSIDX:", guessIdx)
+
+		if guessIdx == len(man.queueFilenames) {
+			guessIdx--
 		}
 
 		found := false
-		cycles := 0
 
-		for cycles < len(man.queueFilenames) {
-			if left > -1 {
-				leftFilename := man.queueFilenames[left]
-				// fmt.Println("Finding:", filename, "on index", idx, "left found ->", leftFilename)
-				man.fileIndexes[filename] = left
+		for idx := guessIdx; idx > -1; idx-- {
+			curFilename := man.queueFilenames[idx]
+			// fmt.Println("Finding:", filename, "on index", idx, "idx found ->", curFilename)
+			man.fileIndexes[filename] = idx
 
-				if leftFilename == filename {
-					// fmt.Println("FOUND at index", idx)
-					resultIdx = left
-					found = true
+			if curFilename == filename {
+				// fmt.Println("FOUND at index", idx)
+				resultIdx = idx
+				found = true
 
-					break
-				}
-
-				left--
-				cycles++
-			}
-
-			if right < len(man.queueFilenames) {
-				rightFilename := man.queueFilenames[right]
-				// fmt.Println("Finding:", filename, "on index", idx, "right found ->", rightFilename)
-				man.fileIndexes[filename] = right
-
-				if rightFilename == filename {
-					// fmt.Println("FOUND at index", idx)
-					resultIdx = right
-					found = true
-
-					break
-				}
-
-				right++
-				cycles++
+				break
 			}
 		}
 
