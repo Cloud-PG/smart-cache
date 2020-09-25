@@ -24,10 +24,13 @@ const (
 	NoQueue
 )
 
+const (
+	estimatedNumFiles = 500000
+)
+
 // Manager manages the files in cache
 type Manager struct {
-	files map[int64]*FileStats
-	// Local scope to force the stack memory (hopefully)
+	files          map[int64]*FileStats
 	fileIndexes    map[int64]int
 	prevVal        map[int64]interface{}
 	queueFilenames []int64
@@ -40,13 +43,13 @@ type Manager struct {
 
 // Init initialize the struct
 func (man *Manager) Init(qType queueType) {
-	man.files = make(map[int64]*FileStats)
-	man.fileIndexes = make(map[int64]int)
-	man.prevVal = make(map[int64]interface{})
-	man.queueFilenames = make([]int64, 0)
-	man.queueI = make([]int64, 0)
-	man.queueF = make([]float64, 0)
-	man.buffer = make([]*FileStats, 0)
+	man.files = make(map[int64]*FileStats, estimatedNumFiles)
+	man.fileIndexes = make(map[int64]int, estimatedNumFiles)
+	man.prevVal = make(map[int64]interface{}, estimatedNumFiles)
+	man.queueFilenames = make([]int64, 0, estimatedNumFiles)
+	man.queueI = make([]int64, 0, estimatedNumFiles)
+	man.queueF = make([]float64, 0, estimatedNumFiles)
+	man.buffer = make([]*FileStats, 0, estimatedNumFiles)
 	man.qType = qType
 }
 
@@ -453,7 +456,7 @@ func (man *Manager) insertFilename(insertIdx int, filename int64) {
 		copy(man.queueFilenames[insertIdx+1:], man.queueFilenames[insertIdx:])
 		man.queueFilenames[insertIdx] = filename
 
-		man.dirtyFlag = append(man.dirtyFlag, false)
+		man.dirtyFlag = append(man.dirtyFlag, true)
 		copy(man.dirtyFlag[insertIdx+1:], man.dirtyFlag[insertIdx:])
 		man.dirtyFlag[insertIdx] = false
 		man.setDirtyFrom(insertIdx + 1)
@@ -466,21 +469,20 @@ func (man *Manager) Insert(file *FileStats) { //nolint:ignore,funlen
 	// Force inserto check
 
 	filename := file.Filename
-	_, inCache := man.files[filename]
-	if inCache {
+	if man.Check(filename) {
 		panic("ERROR: File already in manager...")
 	}
 
 	feature := man.getFeature(file)
-	man.prevVal[filename] = feature
 
 	insertIdx := man.getInsertIndex(feature, file)
 
 	man.insertFeature(insertIdx, feature)
 	man.insertFilename(insertIdx, filename)
 
-	man.fileIndexes[file.Filename] = insertIdx
 	man.files[file.Filename] = file
+	man.fileIndexes[file.Filename] = insertIdx
+	man.prevVal[filename] = feature
 
 	// fmt.Println("[QUEUE] INSERT: ", file, file.Filename, key)
 }
@@ -513,12 +515,12 @@ func (man *Manager) Update(file *FileStats) {
 		man.removeIndexes([]int{man.getFileIndex(filename)})
 
 		feature := man.getFeature(file)
-		man.prevVal[filename] = feature
 		insertIdx := man.getInsertIndex(feature, file)
 		man.insertFeature(insertIdx, feature)
 		man.insertFilename(insertIdx, filename)
 
 		man.fileIndexes[filename] = insertIdx
+		man.prevVal[filename] = feature
 	}
 	// fmt.Println("--- AFTER ---")
 	// fmt.Println(man.orderedValues)
