@@ -27,8 +27,8 @@ type Stats struct {
 
 // Init initialize Stats
 func (statStruct *Stats) Init(maxNumDayDiff float64, deltaDaysStep float64, calcWeight bool) {
-	statStruct.fileStats = make(map[int64]*FileStats)
-	statStruct.deletedFileMiss = make(map[int64]int)
+	statStruct.fileStats = make(map[int64]*FileStats, estimatedNumFiles)
+	statStruct.deletedFileMiss = make(map[int64]int, estimatedNumFiles)
 	statStruct.calcWeight = calcWeight
 	statStruct.maxNumDayDiff = maxNumDayDiff
 	statStruct.deltaDaysStep = deltaDaysStep
