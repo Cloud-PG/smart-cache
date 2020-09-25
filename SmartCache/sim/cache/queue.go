@@ -36,7 +36,6 @@ type Manager struct {
 	queueFilenames []int64
 	queueI         []int64
 	queueF         []float64
-	dirtyFlag      []bool
 	qType          queueType
 	buffer         []*FileStats
 }
@@ -49,7 +48,6 @@ func (man *Manager) Init(qType queueType) {
 	man.queueFilenames = make([]int64, 0, estimatedNumFiles)
 	man.queueI = make([]int64, 0, estimatedNumFiles)
 	man.queueF = make([]float64, 0, estimatedNumFiles)
-	man.dirtyFlag = make([]bool, 0, estimatedNumFiles)
 	man.buffer = make([]*FileStats, 0, estimatedNumFiles)
 	man.qType = qType
 }
@@ -199,10 +197,7 @@ func (man *Manager) getFileIndex(filename int64) int { //nolint:ignore,funlen
 			if left > -1 {
 				leftFilename := man.queueFilenames[left]
 				// fmt.Println("Finding:", filename, "on index", idx, "left found ->", leftFilename)
-				if man.dirtyFlag[left] {
-					man.fileIndexes[filename] = left
-					man.dirtyFlag[left] = false
-				}
+				man.fileIndexes[filename] = left
 
 				if leftFilename == filename {
 					// fmt.Println("FOUND at index", idx)
@@ -219,10 +214,7 @@ func (man *Manager) getFileIndex(filename int64) int { //nolint:ignore,funlen
 			if right < len(man.queueFilenames) {
 				rightFilename := man.queueFilenames[right]
 				// fmt.Println("Finding:", filename, "on index", idx, "right found ->", rightFilename)
-				if man.dirtyFlag[right] {
-					man.fileIndexes[filename] = right
-					man.dirtyFlag[right] = false
-				}
+				man.fileIndexes[filename] = right
 
 				if rightFilename == filename {
 					// fmt.Println("FOUND at index", idx)
@@ -293,7 +285,6 @@ func (man *Manager) removeIndexes(idx2Remove []int) {
 		}
 
 		man.queueFilenames = man.queueFilenames[collapsedIdx+1:]
-		man.dirtyFlag = man.dirtyFlag[collapsedIdx+1:]
 	} else {
 		for _, curIdx := range idx2Remove {
 			switch man.qType {
@@ -309,8 +300,6 @@ func (man *Manager) removeIndexes(idx2Remove []int) {
 
 			copy(man.queueFilenames[curIdx:], man.queueFilenames[curIdx+1:])
 			man.queueFilenames = man.queueFilenames[:len(man.queueFilenames)-1]
-			copy(man.dirtyFlag[curIdx:], man.dirtyFlag[curIdx+1:])
-			man.dirtyFlag = man.dirtyFlag[:len(man.dirtyFlag)-1]
 		}
 	}
 }
@@ -440,27 +429,15 @@ func (man *Manager) insertFeature(insertIdx int, feature interface{}) { //nolint
 	}
 }
 
-func (man *Manager) setDirtyFrom(index int) {
-	for idx := index; idx < len(man.dirtyFlag); idx++ {
-		man.dirtyFlag[idx] = true
-	}
-}
-
 func (man *Manager) insertFilename(insertIdx int, filename int64) {
 	if insertIdx == len(man.queueFilenames) {
 		man.queueFilenames = append(man.queueFilenames, filename)
-		man.dirtyFlag = append(man.dirtyFlag, true)
 	} else {
 		// Trick
 		// https://github.com/golang/go/wiki/SliceTricks#insert
 		man.queueFilenames = append(man.queueFilenames, -1)
 		copy(man.queueFilenames[insertIdx+1:], man.queueFilenames[insertIdx:])
 		man.queueFilenames[insertIdx] = filename
-
-		man.dirtyFlag = append(man.dirtyFlag, true)
-		copy(man.dirtyFlag[insertIdx+1:], man.dirtyFlag[insertIdx:])
-		man.dirtyFlag[insertIdx] = false
-		man.setDirtyFrom(insertIdx + 1)
 	}
 }
 
