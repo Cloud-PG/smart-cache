@@ -49,6 +49,7 @@ func (man *Manager) Init(qType queueType) {
 	man.queueFilenames = make([]int64, 0, estimatedNumFiles)
 	man.queueI = make([]int64, 0, estimatedNumFiles)
 	man.queueF = make([]float64, 0, estimatedNumFiles)
+	man.dirtyFlag = make([]bool, 0, estimatedNumFiles)
 	man.buffer = make([]*FileStats, 0, estimatedNumFiles)
 	man.qType = qType
 }
