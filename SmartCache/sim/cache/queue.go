@@ -149,6 +149,8 @@ func (man *Manager) getFileIndex(filename int64) int { //nolint:ignore,funlen
 	case guessedFilename != filename:
 		prevVal, inPrevVal := man.prevVal[filename]
 
+		// fmt.Println("PREVVAL:", prevVal)
+
 		if !inPrevVal {
 			panic(fmt.Sprintf("ERROR: file %d has no previous value", filename))
 		}
@@ -178,13 +180,9 @@ func (man *Manager) getFileIndex(filename int64) int { //nolint:ignore,funlen
 
 		// fmt.Println("GUESSIDX:", guessIdx)
 
-		if guessIdx == len(man.queueFilenames) {
-			guessIdx--
-		}
-
 		found := false
 
-		for idx := guessIdx; idx > -1; idx-- {
+		for idx := guessIdx; idx < len(man.queueFilenames); idx++ {
 			curFilename := man.queueFilenames[idx]
 			// fmt.Println("Finding:", filename, "on index", idx, "idx found ->", curFilename)
 			man.fileIndexes[filename] = idx
