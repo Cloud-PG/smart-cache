@@ -157,22 +157,22 @@ func (man *Manager) getFileIndex(filename int64) int { //nolint:ignore,funlen
 		case NoQueue:
 			intFeature := prevVal.(int64)
 			guessIdx = sort.Search(len(man.queueFilenames), func(idx int) bool {
-				return man.queueFilenames[idx] > intFeature
+				return man.queueFilenames[idx] >= intFeature
 			})
 		case LRUQueue, LFUQueue:
 			intFeature := prevVal.(int64)
 			guessIdx = sort.Search(len(man.queueI), func(idx int) bool {
-				return man.queueI[idx] > intFeature
+				return man.queueI[idx] >= intFeature
 			})
 		case SizeBigQueue:
 			floatFeature := prevVal.(float64)
 			guessIdx = sort.Search(len(man.queueF), func(idx int) bool {
-				return man.queueF[idx] < floatFeature
+				return man.queueF[idx] <= floatFeature
 			})
 		case SizeSmallQueue, WeightQueue:
 			floatFeature := prevVal.(float64)
 			guessIdx = sort.Search(len(man.queueF), func(idx int) bool {
-				return man.queueF[idx] > floatFeature
+				return man.queueF[idx] >= floatFeature
 			})
 		}
 
