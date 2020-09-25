@@ -155,45 +155,44 @@ func (man *Manager) getFileIndex(filename int64) int { //nolint:ignore,funlen
 			panic(fmt.Sprintf("ERROR: file %d has no previous value", filename))
 		}
 
-		switch man.qType {
-		case NoQueue:
-			intFeature := prevVal.(int64)
-			guessIdx = sort.Search(len(man.queueFilenames), func(idx int) bool {
-				return man.queueFilenames[idx] >= intFeature
-			})
-		case LRUQueue, LFUQueue:
-			intFeature := prevVal.(int64)
-			guessIdx = sort.Search(len(man.queueI), func(idx int) bool {
-				return man.queueI[idx] >= intFeature
-			})
-		case SizeBigQueue:
-			floatFeature := prevVal.(float64)
-			guessIdx = sort.Search(len(man.queueF), func(idx int) bool {
-				return man.queueF[idx] <= floatFeature
-			})
-		case SizeSmallQueue, WeightQueue:
-			floatFeature := prevVal.(float64)
-			guessIdx = sort.Search(len(man.queueF), func(idx int) bool {
-				return man.queueF[idx] >= floatFeature
-			})
-		}
+		leftIdx := man.getGuessNewIndex(prevVal)
+		rightIdx := man.getInsertIndex(prevVal)
 
 		// fmt.Println("GUESSIDX:", guessIdx)
 
+		if rightIdx == len(man.queueFilenames) {
+			rightIdx--
+		}
+
 		found := false
 
-		for idx := guessIdx; idx < len(man.queueFilenames); idx++ {
-			curFilename := man.queueFilenames[idx]
-			// fmt.Println("Finding:", filename, "on index", idx, "idx found ->", curFilename)
-			man.fileIndexes[filename] = idx
+		for leftIdx <= rightIdx {
+			leftFilename := man.queueFilenames[leftIdx]
+			// fmt.Println("Finding:", filename, "on index", idx, "idx found ->", leftFilename)
+			man.fileIndexes[filename] = leftIdx
 
-			if curFilename == filename {
+			if leftFilename == filename {
 				// fmt.Println("FOUND at index", idx)
-				resultIdx = idx
+				resultIdx = leftIdx
 				found = true
 
 				break
 			}
+
+			rightFilename := man.queueFilenames[rightIdx]
+			// fmt.Println("Finding:", filename, "on index", idx, "idx found ->", rightFilename)
+			man.fileIndexes[filename] = rightIdx
+
+			if rightFilename == filename {
+				// fmt.Println("FOUND at index", idx)
+				resultIdx = rightIdx
+				found = true
+
+				break
+			}
+
+			leftIdx++
+			rightIdx--
 		}
 
 		if !found {
@@ -338,7 +337,36 @@ func (man *Manager) getFeature(file *FileStats) interface{} {
 	return feature
 }
 
-func (man *Manager) getInsertIndex(feature interface{}, file *FileStats) int { //nolint: ignore,funlen
+func (man *Manager) getGuessNewIndex(feature interface{}) int { //nolint: ignore,funlen
+	var insertIdx = -1
+
+	switch man.qType {
+	case NoQueue:
+		intFeature := feature.(int64)
+		insertIdx = sort.Search(len(man.queueFilenames), func(idx int) bool {
+			return man.queueFilenames[idx] >= intFeature
+		})
+	case LRUQueue, LFUQueue:
+		intFeature := feature.(int64)
+		insertIdx = sort.Search(len(man.queueI), func(idx int) bool {
+			return man.queueI[idx] >= intFeature
+		})
+	case SizeBigQueue:
+		floatFeature := feature.(float64)
+		insertIdx = sort.Search(len(man.queueF), func(idx int) bool {
+			return man.queueF[idx] <= floatFeature
+		})
+	case SizeSmallQueue, WeightQueue:
+		floatFeature := feature.(float64)
+		insertIdx = sort.Search(len(man.queueF), func(idx int) bool {
+			return man.queueF[idx] >= floatFeature
+		})
+	}
+
+	return insertIdx
+}
+
+func (man *Manager) getInsertIndex(feature interface{}) int { //nolint: ignore,funlen
 	var insertIdx = -1
 
 	switch man.qType {
@@ -420,7 +448,7 @@ func (man *Manager) Insert(file *FileStats) { //nolint:ignore,funlen
 
 	feature := man.getFeature(file)
 
-	insertIdx := man.getInsertIndex(feature, file)
+	insertIdx := man.getInsertIndex(feature)
 
 	man.insertFeature(insertIdx, feature)
 	man.insertFilename(insertIdx, filename)
@@ -460,7 +488,7 @@ func (man *Manager) Update(file *FileStats) {
 		man.removeIndexes([]int{man.getFileIndex(filename)})
 
 		feature := man.getFeature(file)
-		insertIdx := man.getInsertIndex(feature, file)
+		insertIdx := man.getInsertIndex(feature)
 		man.insertFeature(insertIdx, feature)
 		man.insertFilename(insertIdx, filename)
 
