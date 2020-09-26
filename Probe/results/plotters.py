@@ -125,8 +125,6 @@ def plot_miss_freq(results: list):
         fig.update_xaxes(title='freq. class', type='category', row=idx, col=1)
         fig.update_yaxes(title='#', type="log", row=idx, col=1)
 
-    fig.show()
-
     fig.write_html(
         "./test_miss_freq.html",
         include_plotlyjs=True,
