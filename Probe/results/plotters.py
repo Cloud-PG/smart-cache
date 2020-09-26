@@ -95,7 +95,7 @@ def plot_miss_freq(results: list):
             'title': name,
         })
 
-    all_plots = sorted(all_plots, key=lambda elm: elm['title'])
+    all_plots = list(sorted(all_plots, key=lambda elm: elm['title']))
 
     fig = make_subplots(
         rows=len(all_plots), cols=1,
@@ -109,8 +109,9 @@ def plot_miss_freq(results: list):
         plot_bgcolor='rgb(255,255,255)',
         yaxis={'gridcolor': 'black'},
         xaxis={'gridcolor': 'black'},
-        height=2048,
+        height=240*len(all_plots),
         width=1280,
+        showlegend=False,
     )
 
     for idx, values in enumerate(all_plots, 1):
