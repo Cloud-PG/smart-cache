@@ -75,8 +75,10 @@ def plot_num_miss_after_del(results: list):
 
 def _get_bins(data: list, bins: list):
     counts = {}
+    prevBin = 0
     for bin_ in bins:
-        counts[bin_] = len([elm for elm in data if elm <= bin_])
+        counts[bin_] = len([elm for elm in data if prevBin < elm <= bin_])
+        prevBin = bin_
     max_val = bins[-1]
     counts[int(max_val * 2)] = len([elm for elm in data if elm > max_val])
     tot = len(data)
