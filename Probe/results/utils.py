@@ -112,31 +112,79 @@ class LogDeleteEvaluator(object):
         self.after.loc[selectRows, 'delta t'] = new_max * 2.
 
 
-def parse_sim_log(log_df: 'pd.DataFrame'):
-    curLog = None
-    state = "AFTERDELETE"
+def parse_sim_log(log_df: 'pd.DataFrame', target: str = "AFTERDELETE"):
+    if target == "AFTERDELETE":
+        curLog = None
+        state = "AFTERDELETE"
 
-    # print(file_, log_df)
+        # print(file_, log_df)
 
-    # log_df = log_df[:1000000]
-    for row in tqdm(log_df.itertuples(), desc="Parse log",
-                    total=len(log_df.index), position=2):
-        event = row[2]
-        if state == "AFTERDELETE":
-            if event in ["ONFREE", "ONDAYEND", "ONK", "FORCEDCALL", "FREE"]:
-                if curLog is not None:
-                    curLog.prepare(['Index'] + list(log_df.columns))
-                    yield curLog
-                curLog = LogDeleteEvaluator(row)
+        # log_df = log_df[:1000000]
+        for row in tqdm(log_df.itertuples(), desc="Parse log",
+                        total=len(log_df.index), position=2):
+            event = row[2]
+            if state == "AFTERDELETE":
+                if event in ["ONFREE", "ONDAYEND", "ONK", "FORCEDCALL", "FREE"]:
+                    if curLog is not None:
+                        curLog.prepare(['Index'] + list(log_df.columns))
+                        yield curLog
+                    curLog = LogDeleteEvaluator(row)
+                    state = "DELETING"
+                elif curLog is not None:
+                    curLog.trace(row)
+            elif state == "DELETING":
+                if event in ["KEEP", "DELETE"]:
+                    curLog.add(row)
+                else:
+                    state = "AFTERDELETE"
+                    curLog.trace(row)
+        else:
+            curLog.prepare(['Index'] + list(log_df.columns))
+            yield curLog
+    elif target == "MISSFREQ":
+        deleted_files = {}
+        name2check = None
+
+        freq_deleted = []
+        freq_skip = []
+
+        state = "AFTERDELETE"
+
+        for row in tqdm(log_df.itertuples(), desc="Parse log",
+                        total=len(log_df.index), position=2):
+            event = row[2]
+            filename = row[5]
+
+            if event == "MISS":
+                if state == "DELETING":
+                    state = "AFTERDELETE"
+
+                name2check = filename
+
+                if filename in deleted_files:
+                    freq_deleted.append(deleted_files[filename])
+
+            elif event == "DELETE":
+                if state == "AFTERDELETE":
+                    deleted_files = {}
+
+                freq = int(row[7])
+                deleted_files[filename] = freq
                 state = "DELETING"
-            elif curLog is not None:
-                curLog.trace(row)
-        elif state == "DELETING":
-            if event in ["KEEP", "DELETE"]:
-                curLog.add(row)
-            else:
-                state = "AFTERDELETE"
-                curLog.trace(row)
+
+            elif event == "SKIP":
+                if state == "DELETING":
+                    state = "AFTERDELETE"
+
+                if filename not in deleted_files:
+                    assert filename == name2check, f"SKIPPED filename is different... {filename}!={name2check}"
+
+                    freq = int(row[7])
+                    freq_skip.append(freq)
+
+                    name2check = None
+
+        yield freq_deleted, freq_skip
+
     else:
-        curLog.prepare(['Index'] + list(log_df.columns))
-        yield curLog
+        raise Exception(f"ERROR: target {target} not available...")

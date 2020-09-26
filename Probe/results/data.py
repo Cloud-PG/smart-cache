@@ -244,7 +244,7 @@ def measure_hit_over_miss(df: 'pd.DataFrame') -> 'pd.Series':
     return df['read on hit data'] / df['read on miss data']
 
 
-def parse_simulation_report(files2plot: list, prefix: str, generator: bool = False) -> dict:
+def parse_simulation_report(files2plot: list, prefix: str, generator: bool = False, target: str = "AFTERDELETE") -> dict:
     del_evaluators = {}
 
     for file_, _, sim_log in tqdm(files2plot, desc="Parse log", position=1):
@@ -258,7 +258,7 @@ def parse_simulation_report(files2plot: list, prefix: str, generator: bool = Fal
 
         curEvents = []
 
-        for del_evaluator in parse_sim_log(sim_log):
+        for del_evaluator in parse_sim_log(sim_log, target):
             if generator:
                 yield name, del_evaluator
             else:

@@ -1,6 +1,7 @@
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 from .dashboard import LAYOUT
 from .utils import LogDeleteEvaluator
@@ -68,5 +69,65 @@ def plot_num_miss_after_del(results: list):
     )
     fig_cum.write_html(
         "./test_cumulative.html",
+        include_plotlyjs=True,
+    )
+
+
+def _get_bins(data: list, bins: list):
+    counts = {}
+    for bin_ in bins:
+        counts[bin_] = len([elm for elm in data if elm <= bin_])
+    max_val = bins[-1]
+    counts[int(max_val * 2)] = len([elm for elm in data if elm > max_val])
+    return list(counts.values()), list(counts.keys())
+
+
+def plot_miss_freq(results: list):
+    all_plots = []
+
+    for name, (freq_deleted, freq_skip) in results:
+        counts_del, bins_del = _get_bins(freq_deleted, bins=[1, 2, 6])
+        counts_skip, bins_skip = _get_bins(freq_skip, bins=[1, 2, 6])
+
+        all_plots.append({
+            'deleted': (bins_del, counts_del),
+            'skipped': (bins_skip, counts_skip),
+            'title': name,
+        })
+
+    fig = make_subplots(
+        rows=len(all_plots), cols=1,
+        subplot_titles=[elm['title'] for elm in all_plots],
+    )
+
+    fig.update_layout(
+        title="Frequency distribution of miss files",
+        paper_bgcolor='rgb(255,255,255)',
+        plot_bgcolor='rgb(255,255,255)',
+        yaxis={'gridcolor': 'black'},
+        xaxis={'gridcolor': 'black'},
+        height=1920,
+        width=1280,
+    )
+
+    for idx, values in enumerate(all_plots, 1):
+        bins_del, counts_del = values['deleted']
+        bins_skip, counts_skip = values['skipped']
+        fig.add_trace(
+            go.Bar(name='deleted', x=bins_del, y=counts_del),
+            row=idx, col=1,
+        )
+        fig.add_trace(
+            go.Bar(name='skipped', x=bins_skip, y=counts_skip),
+            row=idx, col=1,
+        )
+
+        fig.update_xaxes(title='freq. class', type='category', row=idx, col=1)
+        fig.update_yaxes(title='#', type="log", row=idx, col=1)
+
+    fig.show()
+
+    fig.write_html(
+        "./test_miss_freq.html",
         include_plotlyjs=True,
     )

@@ -4,9 +4,9 @@ from os import path
 from colorama import init
 
 from ..utils import STATUS_ARROW, str2bool
-from .data import aggregate_results, parse_simulation_report
-from .plotters import plot_num_miss_after_del
 from .dashboard import dashboard
+from .data import aggregate_results, parse_simulation_report
+from .plotters import plot_miss_freq, plot_num_miss_after_del
 
 
 def main():
@@ -22,8 +22,8 @@ def main():
     parser.add_argument('folder', default=None,
                         help='Folder to inspect for results')
 
-    parser.add_argument('--p-type', default="num_miss_after_del",
-                        choices=['num_miss_after_del'],
+    parser.add_argument('--p-type', default="AFTERDELETE",
+                        choices=['AFTERDELETE', 'MISSFREQ'],
                         help='Plot type')
 
     parser.add_argument('--dash-ip', default="localhost", type=str,
@@ -40,11 +40,20 @@ def main():
         print(f"{STATUS_ARROW}Start dashboard...")
         dashboard(results, args.dash_ip)
     elif args.action == 'plot':
-        if args.p_type == "num_miss_after_del":
+        if args.p_type == "AFTERDELETE":
             plot_num_miss_after_del(
                 parse_simulation_report(
                     results.get_all(), path.commonprefix(results.files),
                     generator=True,
+                    target=args.p_type,
+                )
+            )
+        elif args.p_type == "MISSFREQ":
+            plot_miss_freq(
+                parse_simulation_report(
+                    results.get_all(), path.commonprefix(results.files),
+                    generator=True,
+                    target=args.p_type,
                 )
             )
 
