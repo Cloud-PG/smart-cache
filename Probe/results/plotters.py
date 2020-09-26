@@ -81,7 +81,8 @@ def _get_bins(data: list, bins: list):
     counts[int(max_val * 2)] = len([elm for elm in data if elm > max_val])
     tot = len(data)
     for key, value in counts.items():
-        counts[key] = (value / tot) * 100.
+        if value > 0.:
+            counts[key] = (value / tot) * 100.
     return list(counts.values()), list(counts.keys())
 
 
