@@ -123,6 +123,7 @@ def parse_sim_log(log_df: 'pd.DataFrame', target: str = "AFTERDELETE"):
         for row in tqdm(log_df.itertuples(), desc="Parse log",
                         total=len(log_df.index), position=2):
             event = row[2]
+
             if state == "AFTERDELETE":
                 if event in ["ONFREE", "ONDAYEND", "ONK", "FORCEDCALL", "FREE"]:
                     if curLog is not None:
@@ -132,6 +133,7 @@ def parse_sim_log(log_df: 'pd.DataFrame', target: str = "AFTERDELETE"):
                     state = "DELETING"
                 elif curLog is not None:
                     curLog.trace(row)
+
             elif state == "DELETING":
                 if event in ["KEEP", "DELETE"]:
                     curLog.add(row)
@@ -141,6 +143,7 @@ def parse_sim_log(log_df: 'pd.DataFrame', target: str = "AFTERDELETE"):
         else:
             curLog.prepare(['Index'] + list(log_df.columns))
             yield curLog
+
     elif target == "MISSFREQ":
         deleted_files = {}
         name2check = None

@@ -95,6 +95,8 @@ def plot_miss_freq(results: list):
             'title': name,
         })
 
+    all_plots = sorted(all_plots, key=lambda elm: elm['title'])
+
     fig = make_subplots(
         rows=len(all_plots), cols=1,
         subplot_titles=[elm['title'] for elm in all_plots],
@@ -110,8 +112,6 @@ def plot_miss_freq(results: list):
         height=2048,
         width=1280,
     )
-
-    all_plots = sorted(all_plots, key=lambda elm: elm['title'])
 
     for idx, values in enumerate(all_plots, 1):
         bins_del, counts_del = values['deleted']
