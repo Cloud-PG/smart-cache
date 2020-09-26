@@ -79,6 +79,9 @@ def _get_bins(data: list, bins: list):
         counts[bin_] = len([elm for elm in data if elm <= bin_])
     max_val = bins[-1]
     counts[int(max_val * 2)] = len([elm for elm in data if elm > max_val])
+    tot = len(data)
+    for key, value in counts.items():
+        counts[key] = (value / tot) * 100.
     return list(counts.values()), list(counts.keys())
 
 
@@ -126,7 +129,13 @@ def plot_miss_freq(results: list):
             row=idx, col=1,
         )
         fig.update_xaxes(title='freq. class', type='category', row=idx, col=1)
-        fig.update_yaxes(title='#', type="log", row=idx, col=1, showgrid=True)
+        fig.update_yaxes(
+            title='%',
+            #  type="log",
+            row=idx,
+            col=1,
+            showgrid=True,
+        )
 
     fig.write_html(
         "./test_miss_freq.html",
