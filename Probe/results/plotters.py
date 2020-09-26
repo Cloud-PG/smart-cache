@@ -98,6 +98,7 @@ def plot_miss_freq(results: list):
     fig = make_subplots(
         rows=len(all_plots), cols=1,
         subplot_titles=[elm['title'] for elm in all_plots],
+        shared_yaxes=True,
     )
 
     fig.update_layout(
@@ -106,9 +107,11 @@ def plot_miss_freq(results: list):
         plot_bgcolor='rgb(255,255,255)',
         yaxis={'gridcolor': 'black'},
         xaxis={'gridcolor': 'black'},
-        height=1920,
+        height=2048,
         width=1280,
     )
+
+    all_plots = sorted(all_plots, key=lambda elm: elm['title'])
 
     for idx, values in enumerate(all_plots, 1):
         bins_del, counts_del = values['deleted']
@@ -121,9 +124,8 @@ def plot_miss_freq(results: list):
             go.Bar(name='skipped', x=bins_skip, y=counts_skip),
             row=idx, col=1,
         )
-
         fig.update_xaxes(title='freq. class', type='category', row=idx, col=1)
-        fig.update_yaxes(title='#', type="log", row=idx, col=1)
+        fig.update_yaxes(title='#', type="log", row=idx, col=1, showgrid=True)
 
     fig.write_html(
         "./test_miss_freq.html",

@@ -163,26 +163,29 @@ def parse_sim_log(log_df: 'pd.DataFrame', target: str = "AFTERDELETE"):
 
                 if filename in deleted_files:
                     freq_deleted.append(deleted_files[filename])
+                    del deleted_files[filename]
 
             elif event == "DELETE":
                 if state == "AFTERDELETE":
                     deleted_files = {}
+                    state = "DELETING"
 
                 freq = int(row[7])
                 deleted_files[filename] = freq
-                state = "DELETING"
 
             elif event == "SKIP":
                 if state == "DELETING":
                     state = "AFTERDELETE"
 
-                if filename not in deleted_files:
-                    assert filename == name2check, f"SKIPPED filename is different... {filename}!={name2check}"
+                assert filename == name2check, f"SKIPPED filename is different... {filename}!={name2check}"
 
-                    freq = int(row[7])
-                    freq_skip.append(freq)
+                freq = int(row[7])
+                freq_skip.append(freq)
 
-                    name2check = None
+                name2check = None
+            else:
+                if state == "DELETING":
+                    state = "AFTERDELETE"
 
         yield freq_deleted, freq_skip
 
