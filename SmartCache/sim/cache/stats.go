@@ -91,10 +91,10 @@ func (statStruct Stats) Dirty() bool {
 }
 
 // Purge remove older stats
-func (statStruct *Stats) Purge(man Manager) {
+func (statStruct *Stats) Purge(q Queue) {
 	numDeletedFiles := 0
 	for filename, stats := range statStruct.fileStats {
-		if inCache := man.Check(filename); !inCache && stats.DiffLastUpdate(statStruct.lastUpdateTime) >= statStruct.maxNumDayDiff {
+		if inCache := QueueCheck(q, filename); !inCache && stats.DiffLastUpdate(statStruct.lastUpdateTime) >= statStruct.maxNumDayDiff {
 			statStruct.logger.Debug("Purge", zap.Bool("in cache", inCache))
 			if statStruct.calcWeight {
 				statStruct.weightSum -= stats.Weight

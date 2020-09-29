@@ -23,7 +23,7 @@ func (cache *LRUDatasetVerifier) Init(param InitParameters) interface{} {
 	param.QueueType = LRUQueue
 	cache.SimpleCache.Init(param)
 
-	cache.files = Manager{}
+	cache.files = &QueueLRU{}
 	cache.stats.fileStats = make(map[int64]*FileStats)
 
 	cache.datasetFileMap = make(map[int64]bool)
@@ -68,14 +68,14 @@ func (cache *LRUDatasetVerifier) UpdatePolicy(request *Request, fileStats *FileS
 				cache.Free(requestedFileSize, false)
 			}
 			if cache.Size()+requestedFileSize <= cache.MaxSize {
-				cache.files.Insert(fileStats)
+				QueueInsert(cache.files, fileStats)
 
 				cache.size += requestedFileSize
 				added = true
 			}
 		}
 	} else {
-		cache.files.Update(fileStats)
+		QueueUpdate(cache.files, fileStats)
 	}
 
 	return added

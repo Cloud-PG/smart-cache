@@ -35,7 +35,7 @@ func (cache *WeightFun) Dumps(fileAndStats bool) [][]byte {
 	if fileAndStats {
 		// ----- Files -----
 		cache.logger.Info("Dump cache files")
-		for _, file := range cache.files.GetQueue() {
+		for _, file := range QueueGetQueue(cache.files) {
 			dumpInfo, _ := json.Marshal(DumpInfo{Type: "FILES"})
 			dumpFile, _ := json.Marshal(file)
 			record, _ := json.Marshal(DumpRecord{
@@ -80,7 +80,7 @@ func (cache *WeightFun) Loads(inputString [][]byte, _ ...interface{}) {
 			if unmarshalErr != nil {
 				panic(unmarshalErr)
 			}
-			cache.files.Insert(&curFileStats)
+			QueueInsert(cache.files, &curFileStats)
 			cache.size += curFileStats.Size
 			cache.stats.fileStats[curRecord.Filename] = &curFileStats
 		case "STATS":
@@ -133,12 +133,12 @@ func (cache *WeightFun) UpdatePolicy(request *Request, fileStats *FileStats, hit
 		if cache.Size()+requestedFileSize <= cache.MaxSize {
 			cache.size += requestedFileSize
 
-			cache.files.Insert(fileStats)
+			QueueInsert(cache.files, fileStats)
 
 			added = true
 		}
 	} else {
-		cache.files.Update(fileStats)
+		QueueUpdate(cache.files, fileStats)
 	}
 	return added
 }

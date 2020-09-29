@@ -236,7 +236,7 @@ func (cache *AIRL) Dumps(fileAndStats bool) [][]byte { //nolint:funlen
 	if fileAndStats {
 		// ----- Files -----
 		cache.logger.Info("Dump cache files")
-		for _, file := range cache.files.GetQueue() {
+		for _, file := range QueueGetQueue(cache.files) {
 			dumpInfo, _ := json.Marshal(DumpInfo{Type: "FILES"})
 			dumpFile, _ := json.Marshal(file)
 			record, _ := json.Marshal(DumpRecord{
@@ -355,7 +355,7 @@ func (cache *AIRL) Loads(inputString [][]byte, vars ...interface{}) {
 		case "FILES":
 			var curFileStats FileStats
 			unmarshalErr = json.Unmarshal([]byte(curRecord.Data), &curFileStats)
-			cache.files.Insert(&curFileStats)
+			QueueInsert(cache.files, &curFileStats)
 			cache.size += curFileStats.Size
 			cache.stats.fileStats[curRecord.Filename] = &curFileStats
 		case "STATS":
@@ -663,7 +663,7 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) { //nolint:funlen
 	}
 
 	// fmt.Println("[CATMANAGER] Deleted files -> ", deletedFiles)
-	cache.files.Remove(deletedFiles)
+	QueueRemove(cache.files, deletedFiles)
 
 	return totalDeleted, deletedFiles
 }
@@ -1070,7 +1070,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					return false
 				}
 
-				cache.files.Insert(fileStats)
+				QueueInsert(cache.files, fileStats)
 
 				if cache.evictionAgentOK {
 					fileCategory := cache.evictionCategoryManager.GetFileCategory(fileStats)
@@ -1101,7 +1101,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			// #######################
 			// ##### HIT branch  #####
 			// #######################
-			cache.files.Update(fileStats)
+			QueueUpdate(cache.files, fileStats)
 
 			if cache.evictionAgentOK {
 				fileCategory := cache.evictionCategoryManager.GetFileCategory(fileStats)
@@ -1171,7 +1171,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				return false
 			}
 
-			cache.files.Insert(fileStats)
+			QueueInsert(cache.files, fileStats)
 
 			if cache.evictionAgentOK {
 				fileCategory := cache.evictionCategoryManager.GetFileCategory(fileStats)
@@ -1202,7 +1202,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			// ##### HIT branch  #####
 			// #######################
 			cache.logger.Debug("NO ADDITION AGENT - Normal hit branch")
-			cache.files.Update(fileStats)
+			QueueUpdate(cache.files, fileStats)
 
 			if cache.evictionAgentOK {
 				fileCategory := cache.evictionCategoryManager.GetFileCategory(fileStats)

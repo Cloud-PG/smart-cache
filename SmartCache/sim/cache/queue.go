@@ -25,8 +25,81 @@ const (
 )
 
 const (
-	estimatedNumFiles = 500000
+	estimatedNumFiles = 1 << 19
+	bufferSize        = estimatedNumFiles >> 2
 )
+
+type Queue interface {
+	init()
+	check(file int64) bool
+	len() int
+
+	getFileStats(filename int64) *FileStats
+	getQueue() []*FileStats
+	getFromWorst() []*FileStats
+	getWorstFilesUp2Size(totSize float64) []*FileStats
+
+	insert(file *FileStats) error
+	update(file *FileStats) error
+	remove(files []int64) error
+	removeWorst(files []int64) error
+}
+
+func QueueInit(queue Queue) {
+	queue.init()
+}
+
+func QueueCheck(queue Queue, file int64) bool {
+	return queue.check(file)
+}
+
+func QueueLen(queue Queue) int {
+	return queue.len()
+}
+
+func QueueGetFileStats(queue Queue, filename int64) *FileStats {
+	return queue.getFileStats(filename)
+}
+
+func QueueInsert(queue Queue, file *FileStats) {
+	err := queue.insert(file)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func QueueUpdate(queue Queue, file *FileStats) {
+	err := queue.update(file)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func QueueRemove(queue Queue, files []int64) {
+	err := queue.remove(files)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func QueueRemoveWorst(queue Queue, files []int64) {
+	err := queue.removeWorst(files)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func QueueGetQueue(queue Queue) []*FileStats {
+	return queue.getQueue()
+}
+
+func QueueGetFromWorst(queue Queue) []*FileStats {
+	return queue.getFromWorst()
+}
+
+func QueueGetWorstFilesUp2Size(queue Queue, totSize float64) []*FileStats {
+	return queue.getWorstFilesUp2Size(totSize)
+}
 
 // Manager manages the files in cache
 type Manager struct {
@@ -62,11 +135,6 @@ func (man *Manager) Check(file int64) bool {
 // Len returns the number of files in cache
 func (man *Manager) Len() int {
 	return len(man.files)
-}
-
-// GetFile returns a specific file support data
-func (man *Manager) GetFileStats(id int64) *FileStats {
-	return man.files[id]
 }
 
 // GetQueue values from a queue
@@ -135,7 +203,7 @@ func (man *Manager) getFileIndex(filename int64) int { //nolint:ignore,funlen
 	case guessIdx >= len(man.queueFilenames):
 		guessIdx = len(man.queueFilenames) >> 1
 	case guessIdx < 0:
-		panic("ERROR: negative guess index...")
+		panic("ERROR: negative guess index")
 	}
 
 	guessedFilename := man.queueFilenames[guessIdx]
@@ -196,12 +264,12 @@ func (man *Manager) getFileIndex(filename int64) int { //nolint:ignore,funlen
 		}
 
 		if !found {
-			panic("ERROR: file index not found...")
+			panic("ERROR: file index not found")
 		}
 	case guessedFilename == filename:
 		resultIdx = guessIdx
 	default:
-		panic("ERROR: file to remove not found...")
+		panic("ERROR: file to remove not found")
 	}
 
 	return resultIdx
@@ -443,7 +511,7 @@ func (man *Manager) Insert(file *FileStats) { //nolint:ignore,funlen
 
 	filename := file.Filename
 	if man.Check(filename) {
-		panic("ERROR: File already in manager...")
+		panic("ERROR: File already in manager")
 	}
 
 	feature := man.getFeature(file)
@@ -470,13 +538,13 @@ func (man *Manager) Update(file *FileStats) {
 	// }
 	// curFileStats := man.files[file.Filename]
 	// if curFileStats != file {
-	// 	panic("Different file stats...")
+	// 	panic("Different file stats")
 	// }
 	oldStats, inMap := man.files[file.Filename]
 
 	switch {
 	case !inMap:
-		panic("ERROR: file not stored...")
+		panic("ERROR: file not stored")
 	case file != oldStats:
 		// fmt.Println(file, man.files[file.Filename])
 		// fmt.Println(file.Filename, man.files[file.Filename].Filename)

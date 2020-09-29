@@ -62,7 +62,7 @@ var (
 // SimpleCache cache
 type SimpleCache struct {
 	stats                              Stats
-	files                              Manager
+	files                              Queue
 	ordType                            queueType
 	canRedirect                        bool
 	useWatermarks                      bool
@@ -109,7 +109,10 @@ func (cache *SimpleCache) Init(param InitParameters) interface{} {
 	cache.calcWeight = param.CalcWeight
 
 	cache.stats.Init(cache.maxNumDayDiff, cache.deltaDaysStep, cache.calcWeight)
-	cache.files.Init(cache.ordType)
+
+	// cache.files.Init(cache.ordType)
+	cache.files = &QueueLRU{}
+	QueueInit(cache.files)
 
 	cache.dailyfreeSpace = make([]float64, 0)
 
@@ -158,7 +161,7 @@ func (cache *SimpleCache) SetBandwidth(bandwidth float64) {
 
 // ClearFiles remove the cache files
 func (cache *SimpleCache) ClearFiles() {
-	cache.files.Init(cache.ordType)
+	QueueInit(cache.files)
 	cache.stats.Clear()
 	cache.size = 0.
 }
@@ -206,7 +209,7 @@ func (cache *SimpleCache) Dumps(fileAndStats bool) [][]byte {
 	if fileAndStats {
 		// ----- Files -----
 		cache.logger.Info("Dump cache files")
-		for _, file := range cache.files.GetQueue() {
+		for _, file := range QueueGetQueue(cache.files) {
 			dumpInfo, _ := json.Marshal(DumpInfo{Type: "FILES"})
 			dumpFile, _ := json.Marshal(file)
 			record, _ := json.Marshal(DumpRecord{
@@ -279,7 +282,7 @@ func (cache *SimpleCache) Loads(inputString [][]byte, _ ...interface{}) {
 		case "FILES":
 			var curFileStats FileStats
 			unmarshalErr = json.Unmarshal([]byte(curRecord.Data), &curFileStats)
-			cache.files.Insert(&curFileStats)
+			QueueInsert(cache.files, &curFileStats)
 			if unmarshalErr != nil {
 				panic(unmarshalErr)
 			}
@@ -380,7 +383,7 @@ func (cache *SimpleCache) UpdatePolicy(request *Request, fileStats *FileStats, h
 		if cache.Size()+requestedFileSize <= cache.MaxSize {
 			cache.size += requestedFileSize
 
-			cache.files.Insert(fileStats)
+			QueueInsert(cache.files, fileStats)
 
 			if cache.logFile != nil {
 				cache.toLogBuffer([]string{
@@ -398,7 +401,7 @@ func (cache *SimpleCache) UpdatePolicy(request *Request, fileStats *FileStats, h
 			added = true
 		}
 	} else {
-		cache.files.Update(fileStats)
+		QueueUpdate(cache.files, fileStats)
 	}
 	return added
 }
@@ -489,7 +492,7 @@ func (cache *SimpleCache) Free(amount float64, percentage bool) float64 { // nol
 		}
 
 		deletedFiles := make([]int64, 0)
-		for _, curFile := range cache.files.GetWorstFilesUp2Size(sizeToDelete) {
+		for _, curFile := range QueueGetWorstFilesUp2Size(cache.files, sizeToDelete) {
 			cache.logger.Debug("delete",
 				zap.Int64("filename", curFile.Filename),
 				zap.Float64("fileSize", curFile.Size),
@@ -528,7 +531,7 @@ func (cache *SimpleCache) Free(amount float64, percentage bool) float64 { // nol
 			cache.numDeleted++
 		}
 
-		cache.files.Remove(deletedFiles)
+		QueueRemoveWorst(cache.files, deletedFiles)
 	}
 	return totalDeleted
 }
@@ -647,7 +650,7 @@ func (cache *SimpleCache) DataDeleted() float64 {
 
 // Check returns if a file is in cache or not
 func (cache *SimpleCache) Check(filename int64) bool {
-	hit := cache.files.Check(filename)
+	hit := QueueCheck(cache.files, filename)
 
 	if !hit {
 		cache.stats.IncDeletedFileMiss(filename)
@@ -734,7 +737,7 @@ func (cache *SimpleCache) CPUEffBoundDiff() float64 {
 
 // NumFiles returns the number of files in cache
 func (cache *SimpleCache) NumFiles() int {
-	return cache.files.Len()
+	return QueueLen(cache.files)
 }
 
 // AvgFreeSpace returns the average free space of the cache

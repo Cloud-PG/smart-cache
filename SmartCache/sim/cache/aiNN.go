@@ -79,7 +79,7 @@ func (cache *AINN) Dumps(fileAndStats bool) [][]byte {
 	if fileAndStats {
 		// ----- Files -----
 		cache.logger.Info("Dump cache files")
-		for file := range cache.files.GetQueue() {
+		for file := range QueueGetQueue(cache.files) {
 			dumpInfo, _ := json.Marshal(DumpInfo{Type: "FILES"})
 			dumpFile, _ := json.Marshal(file)
 			record, _ := json.Marshal(DumpRecord{
@@ -119,7 +119,7 @@ func (cache *AINN) Loads(inputString [][]byte, _ ...interface{}) {
 		case "FILES":
 			var curFile FileStats
 			json.Unmarshal([]byte(curRecord.Data), &curFile)
-			cache.files.Insert(&curFile)
+			QueueInsert(cache.files, &curFile)
 			cache.size += curFile.Size
 		case "STATS":
 			json.Unmarshal([]byte(curRecord.Data), &cache.stats.fileStats)
@@ -232,7 +232,7 @@ func (cache *AINN) Loads(inputString [][]byte, _ ...interface{}) {
 // // GetPoints returns the total amount of points for the files in cache
 // func (cache *AINN) GetPoints() float64 {
 // 	points := 0.0
-// 	for file := range cache.files.Get(LRUQueue) {
+// 	for file := range QueueGet(cache.files, LRUQueue) {
 // 		points += cache.stats.updateFilesPoints(file.Filename, &cache.curTime)
 // 	}
 // 	return float64(points)
@@ -306,7 +306,7 @@ func (cache *AINN) Loads(inputString [][]byte, _ ...interface{}) {
 // 			cache.Free(requestedFileSize, false)
 // 		}
 // 		if cache.Size()+requestedFileSize <= cache.MaxSize {
-// 			cache.files.Insert(FileSupportData{
+// 			QueueInsert(cache.files, FileSupportData{
 // 				Filename:  request.Filename,
 // 				Size:      request.Size,
 // 				Frequency: fileStats.Frequency,
@@ -318,7 +318,7 @@ func (cache *AINN) Loads(inputString [][]byte, _ ...interface{}) {
 // 			added = true
 // 		}
 // 	} else {
-// 		cache.files.Update(FileSupportData{
+// 		QueueUpdate(cache.files, FileSupportData{
 // 			Filename:  request.Filename,
 // 			Size:      request.Size,
 // 			Frequency: fileStats.Frequency,
