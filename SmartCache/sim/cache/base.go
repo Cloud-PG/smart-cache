@@ -96,40 +96,43 @@ func GetFile(cache Cache, vars ...interface{}) (bool, bool) {
 	/* vars:
 	[0] -> filename int64
 	[1] -> size     float64
-	[2] -> wTime    float64
-	[3] -> cpuTime  float64
+	[2] -> protocol int64
+	[3] -> cpuEff   float64
 	[4] -> day      int64
 	[5] -> siteName int64
 	[6] -> userID   int64
-	[7] -> fileType   int64
+	[7] -> fileType int64
 	*/
 
 	cacheRequest := Request{
 		Filename: vars[0].(int64),
+		Size:     vars[1].(float64),
 	}
 
 	switch {
 	case len(vars) > 7:
 		cacheRequest.FileType = vars[7].(int64)
+
 		fallthrough
 	case len(vars) > 6:
 		cacheRequest.UserID = vars[6].(int64)
+
 		fallthrough
 	case len(vars) > 5:
 		cacheRequest.SiteName = vars[5].(int64)
+
 		fallthrough
 	case len(vars) > 4:
 		cacheRequest.Day = vars[4].(int64)
 		cacheRequest.DayTime = time.Unix(cacheRequest.Day, 0)
+
 		fallthrough
 	case len(vars) > 3:
 		cacheRequest.CPUEff = vars[3].(float64)
+
 		fallthrough
 	case len(vars) > 2:
 		cacheRequest.Protocol = vars[2].(int64)
-		fallthrough
-	case len(vars) > 1:
-		cacheRequest.Size = vars[1].(float64)
 	}
 
 	// Check file
