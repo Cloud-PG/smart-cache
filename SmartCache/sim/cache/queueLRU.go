@@ -162,8 +162,6 @@ func (q *QueueLRU) findIndex(filename int64, lastIdx int) int {
 
 // removeWorst a file from the LRU queue from worsts (head)
 func (q *QueueLRU) removeWorst(files []int64) (err error) {
-	lastWorstIdx := -1
-
 	for idx, name := range files {
 		filename := name
 		queueFilename := q.queue[idx]
@@ -174,15 +172,13 @@ func (q *QueueLRU) removeWorst(files []int64) (err error) {
 
 		delete(q.lastIndex, filename)
 		delete(q.files, filename)
-
-		lastWorstIdx = idx
 	}
 
 	// fmt.Println("QUEUE", q.queue)
 	// fmt.Println("2REMOVE", files)
 
-	copy(q.queue, q.queue[lastWorstIdx+1:])
-	q.queue = q.queue[:len(q.queue)-(lastWorstIdx+1)]
+	copy(q.queue, q.queue[len(files):])
+	q.queue = q.queue[:len(q.queue)-len(files)]
 
 	// fmt.Println("QUEUE", q.queue)
 
