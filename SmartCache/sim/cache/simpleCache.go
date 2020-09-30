@@ -120,6 +120,10 @@ func (cache *SimpleCache) Init(param InitParameters) interface{} {
 		cache.files = &QueueSizeBig{}
 	case SizeSmallQueue:
 		cache.files = &QueueSizeSmall{}
+	case WeightQueue:
+		cache.files = &QueueWeight{}
+	case NoQueue:
+		cache.files = &QueueNone{}
 	default:
 		panic(fmt.Errorf("type %d not implemented...", param.QueueType))
 	}
