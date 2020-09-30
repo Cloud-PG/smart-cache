@@ -6,17 +6,20 @@ import (
 	"sort"
 )
 
-type QueueSizeBig struct {
-	files         map[int64]*FileStats
-	lastVal       map[int64]float64
-	lastIndex     map[int64]int
-	orderedValues []float64
-	queue         map[float64][]int64
-	buffer        []*FileStats
+type QueueBaseFloat struct {
+	files           map[int64]*FileStats
+	lastVal         map[int64]float64
+	lastIndex       map[int64]int
+	orderedValues   []float64
+	queue           map[float64][]int64
+	buffer          []*FileStats
+	getFeature      func(file *FileStats) float64
+	getInsertIdx    func(orderedValues []float64, oVal float64) int
+	getIndex2Remove func(orderedValues []float64, alue2remove float64) int
 }
 
 // init initialize the struct
-func (q *QueueSizeBig) init() {
+func (q *QueueBaseFloat) init() {
 	q.files = make(map[int64]*FileStats, estimatedNumFiles)
 	q.lastVal = make(map[int64]float64, estimatedNumFiles)
 	q.lastIndex = make(map[int64]int, estimatedNumFiles)
@@ -26,18 +29,18 @@ func (q *QueueSizeBig) init() {
 }
 
 // getFileStats from a file in queue
-func (q *QueueSizeBig) getFileStats(filename int64) *FileStats {
+func (q *QueueBaseFloat) getFileStats(filename int64) *FileStats {
 	stats, inQueue := q.files[filename]
 
 	if !inQueue {
-		log.Fatal(fmt.Errorf("size Big getFileStats: file %d already in queue", filename))
+		log.Fatal(fmt.Errorf("size small getFileStats: file %d already in queue", filename))
 	}
 
 	return stats
 }
 
 // getQueue values from a queue
-func (q *QueueSizeBig) getQueue() []*FileStats {
+func (q *QueueBaseFloat) getQueue() []*FileStats {
 	// Filtering trick
 	// https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
 	q.buffer = q.buffer[:0]
@@ -51,7 +54,7 @@ func (q *QueueSizeBig) getQueue() []*FileStats {
 			if inQueue {
 				q.buffer = append(q.buffer, fileStats)
 			} else {
-				log.Fatal(fmt.Errorf("size Big getQueue: file %d not in queue", filename))
+				log.Fatal(fmt.Errorf("size small getQueue: file %d not in queue", filename))
 			}
 		}
 	}
@@ -60,7 +63,7 @@ func (q *QueueSizeBig) getQueue() []*FileStats {
 }
 
 // getFromWorst values from worst queue values
-func (q *QueueSizeBig) getFromWorst() []*FileStats {
+func (q *QueueBaseFloat) getFromWorst() []*FileStats {
 	// Filtering trick
 	// https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
 	q.buffer = q.buffer[:0]
@@ -74,7 +77,7 @@ func (q *QueueSizeBig) getFromWorst() []*FileStats {
 			if inQueue {
 				q.buffer = append(q.buffer, fileStats)
 			} else {
-				log.Fatal(fmt.Errorf("size Big getQueue: file %d not in queue", filename))
+				log.Fatal(fmt.Errorf("size small getQueue: file %d not in queue", filename))
 			}
 		}
 	}
@@ -83,7 +86,7 @@ func (q *QueueSizeBig) getFromWorst() []*FileStats {
 }
 
 // getWorstFilesUp2Size values from a queue until size is reached
-func (q *QueueSizeBig) getWorstFilesUp2Size(totSize float64) []*FileStats {
+func (q *QueueBaseFloat) getWorstFilesUp2Size(totSize float64) []*FileStats {
 	if totSize <= 0. {
 		panic("ERROR: tot size is negative or equal to 0")
 	}
@@ -107,7 +110,7 @@ func (q *QueueSizeBig) getWorstFilesUp2Size(totSize float64) []*FileStats {
 					break
 				}
 			} else {
-				log.Fatal(fmt.Errorf("size Big getQueue: file %d not in queue", filename))
+				log.Fatal(fmt.Errorf("size small getQueue: file %d not in queue", filename))
 			}
 		}
 		if sended >= totSize {
@@ -121,28 +124,26 @@ func (q *QueueSizeBig) getWorstFilesUp2Size(totSize float64) []*FileStats {
 }
 
 // check if a file is in cache
-func (q *QueueSizeBig) check(file int64) bool {
+func (q *QueueBaseFloat) check(file int64) bool {
 	_, inQueue := q.files[file]
 
 	return inQueue
 }
 
 // checkOVal if an ordered value is in cache
-func (q *QueueSizeBig) checkOVal(oVal float64) bool {
+func (q *QueueBaseFloat) checkOVal(oVal float64) bool {
 	_, present := q.queue[oVal]
 
 	return present
 }
 
 // len returns the number of files in cache
-func (q *QueueSizeBig) len() int {
+func (q *QueueBaseFloat) len() int {
 	return len(q.files)
 }
 
-func (q *QueueSizeBig) insertOrderedValue(oVal float64) {
-	insertIdx := sort.Search(len(q.orderedValues), func(idx int) bool {
-		return q.orderedValues[idx] < oVal
-	})
+func (q *QueueBaseFloat) insertOrderedValue(oVal float64) {
+	insertIdx := q.getInsertIdx(q.orderedValues, oVal)
 
 	if insertIdx == len(q.orderedValues) {
 		q.orderedValues = append(q.orderedValues, oVal)
@@ -155,13 +156,12 @@ func (q *QueueSizeBig) insertOrderedValue(oVal float64) {
 	}
 }
 
-// insert a file into the SizeBig queue
-func (q *QueueSizeBig) insert(file *FileStats) (err error) {
-	filename := file.Filename
-	oVal := file.Size
+// insert a file into the SizeSmall queue
+func (q *QueueBaseFloat) insert(file *FileStats) (err error) {
+	oVal := q.getFeature(file)
 
-	if q.check(filename) {
-		return fmt.Errorf("size Big insert: file %d already in queue", filename)
+	if q.check(file.Filename) {
+		return fmt.Errorf("size small insert: file %d already in queue", file.Filename)
 	}
 
 	if !q.checkOVal(oVal) {
@@ -174,17 +174,17 @@ func (q *QueueSizeBig) insert(file *FileStats) (err error) {
 
 	// fmt.Printf("INSERT -> %d in %d\n", file.Filename, curIdx)
 
-	curQueue = append(curQueue, filename)
+	curQueue = append(curQueue, file.Filename)
 
 	q.queue[oVal] = curQueue
-	q.lastVal[filename] = oVal
-	q.lastIndex[filename] = curIdx
-	q.files[filename] = file
+	q.lastVal[file.Filename] = oVal
+	q.lastIndex[file.Filename] = curIdx
+	q.files[file.Filename] = file
 
 	return nil
 }
 
-func (q *QueueSizeBig) findIndex(filename int64, curQueue []int64, lastIdx int) int {
+func (q *QueueBaseFloat) findIndex(filename int64, curQueue []int64, lastIdx int) int {
 	newIdx := -1
 
 	start := lastIdx
@@ -207,8 +207,8 @@ func (q *QueueSizeBig) findIndex(filename int64, curQueue []int64, lastIdx int) 
 	return newIdx
 }
 
-// removeWorst a file from the SizeBig queue from worsts (head)
-func (q *QueueSizeBig) removeWorst(files []int64) (err error) {
+// removeWorst a file from the SizeSmall queue from worsts (head)
+func (q *QueueBaseFloat) removeWorst(files []int64) (err error) {
 	ordValues2remove := make([]float64, 0)
 
 	for idxOVal := 0; idxOVal < len(q.orderedValues); idxOVal++ {
@@ -223,7 +223,7 @@ func (q *QueueSizeBig) removeWorst(files []int64) (err error) {
 			filename2remove := files[idx]
 
 			if filename2remove != queueFilename {
-				return fmt.Errorf("size Big remove worst: file %d != %d", filename2remove, queueFilename)
+				return fmt.Errorf("size small remove worst: file %d != %d", filename2remove, queueFilename)
 			}
 
 			delete(q.lastIndex, filename2remove)
@@ -261,22 +261,20 @@ func (q *QueueSizeBig) removeWorst(files []int64) (err error) {
 	return nil
 }
 
-func (q *QueueSizeBig) removeOrderedValue(value2remove float64) error {
-	ordValIdx := sort.Search(len(q.orderedValues), func(idx int) bool {
-		return q.orderedValues[idx] <= value2remove
-	})
+func (q *QueueBaseFloat) removeOrderedValue(value2remove float64) error {
+	ordValIdx := q.getIndex2Remove(q.orderedValues, value2remove)
 	if ordValIdx < len(q.orderedValues) && q.orderedValues[ordValIdx] == value2remove {
 		copy(q.orderedValues[ordValIdx:], q.orderedValues[ordValIdx+1:])
 		q.orderedValues = q.orderedValues[:len(q.orderedValues)-1]
 	} else {
-		return fmt.Errorf("size Big remove: freq %f not present", value2remove)
+		return fmt.Errorf("size small remove: freq %f not present", value2remove)
 	}
 
 	return nil
 }
 
-// remove a file from the SizeBig queue
-func (q *QueueSizeBig) remove(files []int64) (err error) {
+// remove a file from the SizeSmall queue
+func (q *QueueBaseFloat) remove(files []int64) (err error) {
 
 	for _, name := range files {
 		filename := name
@@ -287,9 +285,9 @@ func (q *QueueSizeBig) remove(files []int64) (err error) {
 		// fmt.Printf("REMOVE -> %d from %d\n", filename, idx2remove)
 
 		if !inIndexes {
-			return fmt.Errorf("size Big remove: file %d has no index", filename)
+			return fmt.Errorf("size small remove: file %d has no index", filename)
 		} else if !inOrdVal {
-			return fmt.Errorf("size Big remove: file %d has no freq", filename)
+			return fmt.Errorf("size small remove: file %d has no freq", filename)
 		}
 
 		curQueue := q.queue[ordVal2remove]
@@ -318,8 +316,8 @@ func (q *QueueSizeBig) remove(files []int64) (err error) {
 	return nil
 }
 
-// update a file of the SizeBig queue
-func (q *QueueSizeBig) update(file *FileStats) (err error) {
+// update a file of the SizeSmall queue
+func (q *QueueBaseFloat) update(file *FileStats) (err error) {
 	// fmt.Printf("UPDATE -> %d\n", file.Filename)
 	filename := file.Filename
 
@@ -327,15 +325,94 @@ func (q *QueueSizeBig) update(file *FileStats) (err error) {
 
 	switch {
 	case !inMap:
-		return fmt.Errorf("size Big update: file %d not stored in queue", filename)
+		return fmt.Errorf("size small update: file %d not stored in queue", filename)
 	case file != stats:
 		// fmt.Println(file, man.files[file.Filename])
 		// fmt.Println(file.Filename, man.files[file.Filename].Filename)
-		return fmt.Errorf("size Big update: different stats -> %v != %v", file, stats)
+		return fmt.Errorf("size small update: different stats -> %v != %v", file, stats)
 	}
 
-	q.remove([]int64{filename})
-	q.insert(file)
+	err = q.remove([]int64{filename})
+	if err != nil {
+		return err
+	}
+	err = q.insert(file)
+	if err != nil {
+		return err
+	}
 
 	return nil
+}
+
+type QueueSizeSmall struct {
+	QueueBaseFloat
+}
+
+func (q *QueueSizeSmall) init() {
+	q.QueueBaseFloat.init()
+
+	q.getFeature = func(file *FileStats) float64 {
+		return file.Size
+	}
+
+	q.getInsertIdx = func(orderedValues []float64, oVal float64) int {
+		return sort.Search(len(orderedValues), func(idx int) bool {
+			return orderedValues[idx] > oVal
+		})
+	}
+
+	q.getIndex2Remove = func(orderedValues []float64, value2remove float64) int {
+		return sort.Search(len(orderedValues), func(idx int) bool {
+			return orderedValues[idx] >= value2remove
+		})
+	}
+}
+
+type QueueSizeBig struct {
+	QueueBaseFloat
+}
+
+func (q *QueueSizeBig) init() {
+	q.QueueBaseFloat.init()
+
+	q.getFeature = func(file *FileStats) float64 {
+		return file.Size
+	}
+
+	q.getInsertIdx = func(orderedValues []float64, oVal float64) int {
+		return sort.Search(len(orderedValues), func(idx int) bool {
+			return orderedValues[idx] < oVal
+		})
+	}
+
+	q.getIndex2Remove = func(orderedValues []float64, value2remove float64) int {
+		return sort.Search(len(orderedValues), func(idx int) bool {
+			return orderedValues[idx] <= value2remove
+		})
+	}
+}
+
+type QueueWeight struct {
+	QueueBaseFloat
+}
+
+func (q *QueueWeight) init() {
+	q.QueueBaseFloat.init()
+
+	q.getFeature = func(file *FileStats) float64 {
+		return file.Weight
+	}
+
+	q.getInsertIdx = func(orderedValues []float64, oVal float64) int {
+		return sort.Search(len(orderedValues), func(idx int) bool {
+			return orderedValues[idx] > oVal
+		})
+	}
+
+	q.getIndex2Remove = func(orderedValues []float64, value2remove float64) int {
+		return sort.Search(len(orderedValues), func(idx int) bool {
+			return orderedValues[idx] >= value2remove
+		})
+	}
+
 }
