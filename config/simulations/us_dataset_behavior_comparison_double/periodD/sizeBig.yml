@@ -1,0 +1,19 @@
+--- # Simulation parameters
+sim:
+  data: ../../../../datasets/source2018_numeric_us_with_avro_order/
+  outputFolder: ../../../../results/sim_us_dataset_behavior_comparison_double/periodD
+  type: normal
+  log: true
+  window:
+    start: 48
+    stop: 52
+  region: us
+  cache:
+    type: sizeBig
+    watermarks: true
+    size:
+      value: 400
+      unit: T
+    bandwidth:
+      value: 10
+      redirect: true
