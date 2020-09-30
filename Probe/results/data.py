@@ -1,4 +1,5 @@
 import pathlib
+import re
 
 import pandas as pd
 from tqdm import tqdm
@@ -286,6 +287,14 @@ def make_table(files2plot: list, prefix: str) -> 'pd.DataFrame':
         values[0] = values[0].replace(
             prefix, "").replace(
             f"/{SIM_RESULT_FILENAME}", "")
+        search_size = re.search("[\/]?[0-9]*T\/", values[0])
+        values[0] = values[0].replace("run_full_normal/", "")
+        if search_size != None:
+            values[0] = values[0].replace(
+                search_size.group(),
+                "",
+                # f"{search_size.group().replace('/', '')} - "
+            )
         table.append(values)
     df = pd.DataFrame(
         table,
