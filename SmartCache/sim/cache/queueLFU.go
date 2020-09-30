@@ -207,24 +207,26 @@ func (q *QueueLFU) findIndex(filename int64, curQueue []int64, lastIdx int) int 
 	return newIdx
 }
 
-// // removeWorst a file from the LFU queue from worsts (head)
+// removeWorst a file from the LFU queue from worsts (head)
 func (q *QueueLFU) removeWorst(files []int64) (err error) {
-
 	for idxFreq := 0; idxFreq < len(q.frequencies); idxFreq++ {
 		curFreq := q.frequencies[idxFreq]
 		curQueue := q.queue[curFreq]
 
-		for idx, name := range files {
-			filename := name
-			queueFilename := curQueue[idx]
+		// fmt.Println("FILES", files)
+		// fmt.Println("QUEUE", curQueue)
 
-			if filename != queueFilename {
-				return fmt.Errorf("lfu remove worst: file %d != %d", filename, queueFilename)
+		for idx := 0; idx < len(curQueue) && idx < len(files); idx++ {
+			queueFilename := curQueue[idx]
+			filename2remove := files[idx]
+
+			if filename2remove != queueFilename {
+				return fmt.Errorf("lfu remove worst: file %d != %d", filename2remove, queueFilename)
 			}
 
-			delete(q.lastIndex, filename)
-			delete(q.lastFreq, filename)
-			delete(q.files, filename)
+			delete(q.lastIndex, filename2remove)
+			delete(q.lastFreq, filename2remove)
+			delete(q.files, filename2remove)
 		}
 
 		if len(files) >= len(curQueue) {
@@ -238,6 +240,7 @@ func (q *QueueLFU) removeWorst(files []int64) (err error) {
 			copy(curQueue, curQueue[len(files):])
 			curQueue = curQueue[:len(curQueue)-len(files)]
 			q.queue[curFreq] = curQueue
+
 			break
 		}
 	}
