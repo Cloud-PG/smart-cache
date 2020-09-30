@@ -426,6 +426,53 @@ tasks:
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/periodD/scdl2-onK.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/periodD/scdl2.yml"
 
+  italian-dataset-behavior-comparison-double:
+    desc: Run only italian dataset simulations with logs to compare behaviors
+    deps:
+      - release
+    cmds:
+      - echo "Italian dataset behavior comparison double simulations"
+      # periodA
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodA/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodA/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodA/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodA/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodA/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodA/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodA/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodA/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodA/scdl2.yml"
+      # periodB
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodB/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodB/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodB/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodB/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodB/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodB/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodB/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodB/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodB/scdl2.yml"
+      # periodC
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodC/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodC/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodC/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodC/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodC/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodC/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodC/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodC/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodC/scdl2.yml"
+      # periodD
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodD/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodD/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodD/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodD/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodD/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodD/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodD/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodD/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodD/scdl2.yml"
+
   us-dataset-behavior-comparison:
     desc: Run only us dataset simulations with logs to compare behaviors
     deps:
@@ -472,6 +519,53 @@ tasks:
       - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison/periodD/scdl2-onFree.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison/periodD/scdl2-onK.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison/periodD/scdl2.yml"
+
+  us-dataset-behavior-comparison-double:
+    desc: Run only us dataset simulations with logs to compare behaviors
+    deps:
+      - release
+    cmds:
+      - echo "us dataset behavior comparison double simulations"
+      # periodA
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodA/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodA/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodA/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodA/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodA/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodA/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodA/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodA/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodA/scdl2.yml"
+      # periodB
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodB/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodB/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodB/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodB/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodB/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodB/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodB/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodB/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodB/scdl2.yml"
+      # periodC
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodC/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodC/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodC/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodC/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodC/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodC/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodC/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodC/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodC/scdl2.yml"
+      # periodD
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodD/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodD/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodD/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodD/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodD/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodD/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodD/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodD/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodD/scdl2.yml"
 
   make-weight-function-configs:
     desc: Make all weight function configuration files
