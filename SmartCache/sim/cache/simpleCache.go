@@ -111,7 +111,18 @@ func (cache *SimpleCache) Init(param InitParameters) interface{} {
 	cache.stats.Init(cache.maxNumDayDiff, cache.deltaDaysStep, cache.calcWeight)
 
 	// cache.files.Init(cache.ordType)
-	cache.files = &QueueLRU{}
+	switch param.QueueType {
+	case LRUQueue:
+		cache.files = &QueueLRU{}
+	case LFUQueue:
+		cache.files = &QueueLFU{}
+	case SizeBigQueue:
+		cache.files = &QueueSizeBig{}
+	case SizeSmallQueue:
+		cache.files = &QueueSizeSmall{}
+	default:
+		panic(fmt.Errorf("type %d not implemented...", param.QueueType))
+	}
 	QueueInit(cache.files)
 
 	cache.dailyfreeSpace = make([]float64, 0)

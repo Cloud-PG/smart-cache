@@ -6,38 +6,38 @@ import (
 	"sort"
 )
 
-type QueueLFU struct {
+type QueueSizeBig struct {
 	files         map[int64]*FileStats
-	lastVal       map[int64]int64
+	lastVal       map[int64]float64
 	lastIndex     map[int64]int
-	orderedValues []int64
-	queue         map[int64][]int64
+	orderedValues []float64
+	queue         map[float64][]int64
 	buffer        []*FileStats
 }
 
 // init initialize the struct
-func (q *QueueLFU) init() {
+func (q *QueueSizeBig) init() {
 	q.files = make(map[int64]*FileStats, estimatedNumFiles)
-	q.lastVal = make(map[int64]int64, estimatedNumFiles)
+	q.lastVal = make(map[int64]float64, estimatedNumFiles)
 	q.lastIndex = make(map[int64]int, estimatedNumFiles)
-	q.orderedValues = make([]int64, 0)
-	q.queue = make(map[int64][]int64, estimatedNumFiles)
+	q.orderedValues = make([]float64, 0)
+	q.queue = make(map[float64][]int64, estimatedNumFiles)
 	q.buffer = make([]*FileStats, 0, bufferSize)
 }
 
 // getFileStats from a file in queue
-func (q *QueueLFU) getFileStats(filename int64) *FileStats {
+func (q *QueueSizeBig) getFileStats(filename int64) *FileStats {
 	stats, inQueue := q.files[filename]
 
 	if !inQueue {
-		log.Fatal(fmt.Errorf("lfu getFileStats: file %d already in queue", filename))
+		log.Fatal(fmt.Errorf("size Big getFileStats: file %d already in queue", filename))
 	}
 
 	return stats
 }
 
 // getQueue values from a queue
-func (q *QueueLFU) getQueue() []*FileStats {
+func (q *QueueSizeBig) getQueue() []*FileStats {
 	// Filtering trick
 	// https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
 	q.buffer = q.buffer[:0]
@@ -51,7 +51,7 @@ func (q *QueueLFU) getQueue() []*FileStats {
 			if inQueue {
 				q.buffer = append(q.buffer, fileStats)
 			} else {
-				log.Fatal(fmt.Errorf("lfu getQueue: file %d not in queue", filename))
+				log.Fatal(fmt.Errorf("size Big getQueue: file %d not in queue", filename))
 			}
 		}
 	}
@@ -60,7 +60,7 @@ func (q *QueueLFU) getQueue() []*FileStats {
 }
 
 // getFromWorst values from worst queue values
-func (q *QueueLFU) getFromWorst() []*FileStats {
+func (q *QueueSizeBig) getFromWorst() []*FileStats {
 	// Filtering trick
 	// https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
 	q.buffer = q.buffer[:0]
@@ -74,7 +74,7 @@ func (q *QueueLFU) getFromWorst() []*FileStats {
 			if inQueue {
 				q.buffer = append(q.buffer, fileStats)
 			} else {
-				log.Fatal(fmt.Errorf("lfu getQueue: file %d not in queue", filename))
+				log.Fatal(fmt.Errorf("size Big getQueue: file %d not in queue", filename))
 			}
 		}
 	}
@@ -83,7 +83,7 @@ func (q *QueueLFU) getFromWorst() []*FileStats {
 }
 
 // getWorstFilesUp2Size values from a queue until size is reached
-func (q *QueueLFU) getWorstFilesUp2Size(totSize float64) []*FileStats {
+func (q *QueueSizeBig) getWorstFilesUp2Size(totSize float64) []*FileStats {
 	if totSize <= 0. {
 		panic("ERROR: tot size is negative or equal to 0")
 	}
@@ -107,7 +107,7 @@ func (q *QueueLFU) getWorstFilesUp2Size(totSize float64) []*FileStats {
 					break
 				}
 			} else {
-				log.Fatal(fmt.Errorf("lfu getQueue: file %d not in queue", filename))
+				log.Fatal(fmt.Errorf("size Big getQueue: file %d not in queue", filename))
 			}
 		}
 		if sended >= totSize {
@@ -121,27 +121,27 @@ func (q *QueueLFU) getWorstFilesUp2Size(totSize float64) []*FileStats {
 }
 
 // check if a file is in cache
-func (q *QueueLFU) check(file int64) bool {
+func (q *QueueSizeBig) check(file int64) bool {
 	_, inQueue := q.files[file]
 
 	return inQueue
 }
 
 // checkOVal if an ordered value is in cache
-func (q *QueueLFU) checkOVal(oVal int64) bool {
+func (q *QueueSizeBig) checkOVal(oVal float64) bool {
 	_, present := q.queue[oVal]
 
 	return present
 }
 
 // len returns the number of files in cache
-func (q *QueueLFU) len() int {
+func (q *QueueSizeBig) len() int {
 	return len(q.files)
 }
 
-func (q *QueueLFU) insertOrderedValue(oVal int64) {
+func (q *QueueSizeBig) insertOrderedValue(oVal float64) {
 	insertIdx := sort.Search(len(q.orderedValues), func(idx int) bool {
-		return q.orderedValues[idx] > oVal
+		return q.orderedValues[idx] < oVal
 	})
 
 	if insertIdx == len(q.orderedValues) {
@@ -155,13 +155,13 @@ func (q *QueueLFU) insertOrderedValue(oVal int64) {
 	}
 }
 
-// insert a file into the LFU queue
-func (q *QueueLFU) insert(file *FileStats) (err error) {
+// insert a file into the SizeBig queue
+func (q *QueueSizeBig) insert(file *FileStats) (err error) {
 	filename := file.Filename
-	oVal := file.Frequency
+	oVal := file.Size
 
 	if q.check(filename) {
-		return fmt.Errorf("lfu insert: file %d already in queue", filename)
+		return fmt.Errorf("size Big insert: file %d already in queue", filename)
 	}
 
 	if !q.checkOVal(oVal) {
@@ -184,7 +184,7 @@ func (q *QueueLFU) insert(file *FileStats) (err error) {
 	return nil
 }
 
-func (q *QueueLFU) findIndex(filename int64, curQueue []int64, lastIdx int) int {
+func (q *QueueSizeBig) findIndex(filename int64, curQueue []int64, lastIdx int) int {
 	newIdx := -1
 
 	start := lastIdx
@@ -207,9 +207,9 @@ func (q *QueueLFU) findIndex(filename int64, curQueue []int64, lastIdx int) int 
 	return newIdx
 }
 
-// removeWorst a file from the LFU queue from worsts (head)
-func (q *QueueLFU) removeWorst(files []int64) (err error) {
-	ordValues2remove := make([]int64, 0)
+// removeWorst a file from the SizeBig queue from worsts (head)
+func (q *QueueSizeBig) removeWorst(files []int64) (err error) {
+	ordValues2remove := make([]float64, 0)
 
 	for idxOVal := 0; idxOVal < len(q.orderedValues); idxOVal++ {
 		curOVal := q.orderedValues[idxOVal]
@@ -223,7 +223,7 @@ func (q *QueueLFU) removeWorst(files []int64) (err error) {
 			filename2remove := files[idx]
 
 			if filename2remove != queueFilename {
-				return fmt.Errorf("lfu remove worst: file %d != %d", filename2remove, queueFilename)
+				return fmt.Errorf("size Big remove worst: file %d != %d", filename2remove, queueFilename)
 			}
 
 			delete(q.lastIndex, filename2remove)
@@ -261,22 +261,22 @@ func (q *QueueLFU) removeWorst(files []int64) (err error) {
 	return nil
 }
 
-func (q *QueueLFU) removeOrderedValue(value2remove int64) error {
+func (q *QueueSizeBig) removeOrderedValue(value2remove float64) error {
 	ordValIdx := sort.Search(len(q.orderedValues), func(idx int) bool {
-		return q.orderedValues[idx] >= value2remove
+		return q.orderedValues[idx] <= value2remove
 	})
 	if ordValIdx < len(q.orderedValues) && q.orderedValues[ordValIdx] == value2remove {
 		copy(q.orderedValues[ordValIdx:], q.orderedValues[ordValIdx+1:])
 		q.orderedValues = q.orderedValues[:len(q.orderedValues)-1]
 	} else {
-		return fmt.Errorf("lfu remove: freq %d not present", value2remove)
+		return fmt.Errorf("size Big remove: freq %f not present", value2remove)
 	}
 
 	return nil
 }
 
-// remove a file from the LFU queue
-func (q *QueueLFU) remove(files []int64) (err error) {
+// remove a file from the SizeBig queue
+func (q *QueueSizeBig) remove(files []int64) (err error) {
 
 	for _, name := range files {
 		filename := name
@@ -287,9 +287,9 @@ func (q *QueueLFU) remove(files []int64) (err error) {
 		// fmt.Printf("REMOVE -> %d from %d\n", filename, idx2remove)
 
 		if !inIndexes {
-			return fmt.Errorf("lfu remove: file %d has no index", filename)
+			return fmt.Errorf("size Big remove: file %d has no index", filename)
 		} else if !inOrdVal {
-			return fmt.Errorf("lfu remove: file %d has no freq", filename)
+			return fmt.Errorf("size Big remove: file %d has no freq", filename)
 		}
 
 		curQueue := q.queue[ordVal2remove]
@@ -318,8 +318,8 @@ func (q *QueueLFU) remove(files []int64) (err error) {
 	return nil
 }
 
-// update a file of the LFU queue
-func (q *QueueLFU) update(file *FileStats) (err error) {
+// update a file of the SizeBig queue
+func (q *QueueSizeBig) update(file *FileStats) (err error) {
 	// fmt.Printf("UPDATE -> %d\n", file.Filename)
 	filename := file.Filename
 
@@ -327,11 +327,11 @@ func (q *QueueLFU) update(file *FileStats) (err error) {
 
 	switch {
 	case !inMap:
-		return fmt.Errorf("lfu update: file %d not stored in queue", filename)
+		return fmt.Errorf("size Big update: file %d not stored in queue", filename)
 	case file != stats:
 		// fmt.Println(file, man.files[file.Filename])
 		// fmt.Println(file.Filename, man.files[file.Filename].Filename)
-		return fmt.Errorf("lfu update: different stats -> %v != %v", file, stats)
+		return fmt.Errorf("size Big update: different stats -> %v != %v", file, stats)
 	}
 
 	q.remove([]int64{filename})
