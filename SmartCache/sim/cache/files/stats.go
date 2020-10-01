@@ -213,7 +213,7 @@ type Stats struct {
 }
 
 // DiffLastUpdate returns the number of days from the last update stats
-func (stats Stats) DiffLastUpdate(curTime time.Time) float64 {
+func (stats *Stats) DiffLastUpdate(curTime time.Time) float64 {
 	return curTime.Sub(stats.StatLastUpdateTime).Hours() / numHoursInADay
 }
 
@@ -278,7 +278,7 @@ func (stats *Stats) updateWeight(functionType functions.FunctionType, alpha floa
 	return stats.Weight
 }
 
-func (stats Stats) getMeanReqTimes() float64 {
+func (stats *Stats) getMeanReqTimes() float64 {
 	var timeDiffSum time.Duration
 
 	for idx := 0; idx < len(stats.RequestedTimes); idx++ {
