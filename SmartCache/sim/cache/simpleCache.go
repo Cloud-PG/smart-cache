@@ -227,7 +227,7 @@ func (cache *SimpleCache) Dumps(fileAndStats bool) [][]byte {
 	if fileAndStats {
 		// ----- Files -----
 		cache.logger.Info("Dump cache files")
-		for _, file := range queue.Get(cache.files) {
+		for _, file := range queue.GetFromWorst(cache.files) {
 			dumpInfo, _ := json.Marshal(DumpInfo{Type: "FILES"})
 			dumpFile, _ := json.Marshal(file)
 			record, _ := json.Marshal(DumpRecord{
