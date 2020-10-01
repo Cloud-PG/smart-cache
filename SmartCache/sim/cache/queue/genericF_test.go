@@ -1,38 +1,40 @@
-package cache
+package queue
 
 import (
 	"math/rand"
 	"testing"
+
+	cacheFiles "simulator/v2/cache/files"
 )
 
 func TestSizeSmallQueueBehavior(t *testing.T) {
 	r := rand.New(rand.NewSource(42))
-	q := &QueueSizeSmall{}
-	QueueInit(q)
+	q := &SizeSmall{}
+	Init(q)
 
 	files := make([]int64, numFiles)
 	for idx := 0; idx < numFiles; idx++ {
 		files[idx] = 100000 + int64(idx)
 	}
 
-	stats := make(map[int64]*FileStats)
+	stats := make(map[int64]*cacheFiles.Stats)
 
 	for _, filename := range files {
-		curStat := FileStats{
+		curStat := cacheFiles.Stats{
 			Filename:  filename,
 			Frequency: -1,
 			Recency:   r.Int63n(numFiles),
 			Size:      r.Float64() * 1024.,
 		}
 		stats[curStat.Filename] = &curStat
-		QueueInsert(q, stats[curStat.Filename])
+		Insert(q, stats[curStat.Filename])
 	}
 
 	toRemove := make([]int64, len(files)/2)
 	toRemove = toRemove[:0]
 
 	// fmt.Println("INSERT")
-	for _, curFile := range QueueGetFromWorst(q) {
+	for _, curFile := range GetFromWorst(q) {
 		// fmt.Println(curFile.Filename, "->", curFile.Recency)
 		inserted := false
 		for _, filename := range files {
@@ -50,13 +52,13 @@ func TestSizeSmallQueueBehavior(t *testing.T) {
 		}
 	}
 
-	QueueRemove(q, toRemove)
+	Remove(q, toRemove)
 
-	toUpdate := make([]int64, QueueLen(q))
+	toUpdate := make([]int64, Len(q))
 	toUpdate = toUpdate[:0]
 
 	// fmt.Println("REMOVE ->", toRemove)
-	for _, curFile := range QueueGetFromWorst(q) {
+	for _, curFile := range GetFromWorst(q) {
 		// fmt.Println(curFile.Filename, "->", curFile.Size)
 		notDeleted := true
 		for _, filename := range toRemove {
@@ -78,14 +80,14 @@ func TestSizeSmallQueueBehavior(t *testing.T) {
 		oldValues := make(map[int64]float64)
 		// fmt.Println("UPDATE ->", toUpdate)
 		for _, filename := range toUpdate {
-			oldValues[filename] = QueueGetFileStats(q, filename).Size
+			oldValues[filename] = GetFileStats(q, filename).Size
 			stats[filename].Recency = r.Int63n(numFiles) + numFiles*int64(numUpdate)
 			stats[filename].Size = oldValues[filename] + r.Float64()*1024. + 1.0
-			QueueUpdate(q, stats[filename])
+			Update(q, stats[filename])
 		}
 
 		var prevSize float64 = -1.
-		for _, curFile := range QueueGetFromWorst(q) {
+		for _, curFile := range GetFromWorst(q) {
 			// fmt.Println(curFile.Filename, "->", curFile.Size)
 			_, inToUpdate := oldValues[curFile.Filename]
 			if inToUpdate && curFile.Size <= oldValues[curFile.Filename] {
@@ -103,32 +105,32 @@ func TestSizeSmallQueueBehavior(t *testing.T) {
 
 func TestSizeBigQueueBehavior(t *testing.T) {
 	r := rand.New(rand.NewSource(73))
-	q := &QueueSizeBig{}
-	QueueInit(q)
+	q := &SizeBig{}
+	Init(q)
 
 	files := make([]int64, numFiles)
 	for idx := 0; idx < numFiles; idx++ {
 		files[idx] = 100000 + int64(idx)
 	}
 
-	stats := make(map[int64]*FileStats)
+	stats := make(map[int64]*cacheFiles.Stats)
 
 	for _, filename := range files {
-		curStat := FileStats{
+		curStat := cacheFiles.Stats{
 			Filename:  filename,
 			Frequency: -1,
 			Recency:   r.Int63n(numFiles),
 			Size:      r.Float64() * 1024.,
 		}
 		stats[curStat.Filename] = &curStat
-		QueueInsert(q, stats[curStat.Filename])
+		Insert(q, stats[curStat.Filename])
 	}
 
 	toRemove := make([]int64, len(files)/2)
 	toRemove = toRemove[:0]
 
 	// fmt.Println("INSERT")
-	for _, curFile := range QueueGetFromWorst(q) {
+	for _, curFile := range GetFromWorst(q) {
 		// fmt.Println(curFile.Filename, "->", curFile.Recency)
 		inserted := false
 		for _, filename := range files {
@@ -146,13 +148,13 @@ func TestSizeBigQueueBehavior(t *testing.T) {
 		}
 	}
 
-	QueueRemove(q, toRemove)
+	Remove(q, toRemove)
 
-	toUpdate := make([]int64, QueueLen(q))
+	toUpdate := make([]int64, Len(q))
 	toUpdate = toUpdate[:0]
 
 	// fmt.Println("REMOVE ->", toRemove)
-	for _, curFile := range QueueGetFromWorst(q) {
+	for _, curFile := range GetFromWorst(q) {
 		// fmt.Println(curFile.Filename, "->", curFile.Size)
 		notDeleted := true
 		for _, filename := range toRemove {
@@ -174,14 +176,14 @@ func TestSizeBigQueueBehavior(t *testing.T) {
 		oldValues := make(map[int64]float64)
 		// fmt.Println("UPDATE ->", toUpdate)
 		for _, filename := range toUpdate {
-			oldValues[filename] = QueueGetFileStats(q, filename).Size
+			oldValues[filename] = GetFileStats(q, filename).Size
 			stats[filename].Recency = r.Int63n(numFiles) + numFiles*int64(numUpdate)
 			stats[filename].Size = oldValues[filename] + r.Float64()*1024. + 1.0
-			QueueUpdate(q, stats[filename])
+			Update(q, stats[filename])
 		}
 
 		var prevSize float64 = -1.
-		for _, curFile := range QueueGetFromWorst(q) {
+		for _, curFile := range GetFromWorst(q) {
 			// fmt.Println(curFile.Filename, "->", curFile.Size)
 			_, inToUpdate := oldValues[curFile.Filename]
 			if inToUpdate && curFile.Size <= oldValues[curFile.Filename] {

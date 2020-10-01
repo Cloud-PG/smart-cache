@@ -9,6 +9,8 @@ import (
 	"os"
 	"simulator/v2/cache/ai/featuremap"
 	"simulator/v2/cache/ai/qlearn"
+	"simulator/v2/cache/files"
+	"simulator/v2/cache/queue"
 	"sort"
 
 	"go.uber.org/zap"
@@ -93,7 +95,7 @@ func (cache *AIRL) Init(params InitParameters) interface{} { //nolint:ignore,fun
 	case "scdl", "SCDL":
 		cache.rlType = SCDL
 
-		params.QueueType = LRUQueue
+		params.QueueType = queue.LRUQueue
 		cache.SimpleCache.Init(params)
 
 		if additionFeatureMap == "" {
@@ -123,7 +125,7 @@ func (cache *AIRL) Init(params InitParameters) interface{} { //nolint:ignore,fun
 		cache.evictionRO = 1.0
 
 		if evictionFeatureMap != "" {
-			params.QueueType = NoQueue
+			params.QueueType = queue.NoQueue
 			cache.SimpleCache.Init(params)
 
 			cache.logger.Info("Create eviction feature manager")
@@ -158,7 +160,7 @@ func (cache *AIRL) Init(params InitParameters) interface{} { //nolint:ignore,fun
 		} else {
 			cache.evictionAgentOK = false
 
-			params.QueueType = LRUQueue
+			params.QueueType = queue.LRUQueue
 			cache.SimpleCache.Init(params)
 		}
 	default:
@@ -236,7 +238,7 @@ func (cache *AIRL) Dumps(fileAndStats bool) [][]byte { //nolint:funlen
 	if fileAndStats {
 		// ----- Files -----
 		cache.logger.Info("Dump cache files")
-		for _, file := range QueueGetQueue(cache.files) {
+		for _, file := range queue.Get(cache.files) {
 			dumpInfo, _ := json.Marshal(DumpInfo{Type: "FILES"})
 			dumpFile, _ := json.Marshal(file)
 			record, _ := json.Marshal(DumpRecord{
@@ -248,7 +250,7 @@ func (cache *AIRL) Dumps(fileAndStats bool) [][]byte { //nolint:funlen
 		}
 		// ----- Stats -----
 		cache.logger.Info("Dump cache stats")
-		for filename, stats := range cache.stats.fileStats {
+		for filename, stats := range cache.stats.Data {
 			dumpInfo, _ := json.Marshal(DumpInfo{Type: "STATS"})
 			dumpStats, _ := json.Marshal(stats)
 			record, _ := json.Marshal(DumpRecord{
@@ -353,16 +355,16 @@ func (cache *AIRL) Loads(inputString [][]byte, vars ...interface{}) {
 
 		switch curRecordInfo.Type {
 		case "FILES":
-			var curFileStats FileStats
+			var curFileStats files.Stats
 			unmarshalErr = json.Unmarshal([]byte(curRecord.Data), &curFileStats)
-			QueueInsert(cache.files, &curFileStats)
+			queue.Insert(cache.files, &curFileStats)
 			cache.size += curFileStats.Size
-			cache.stats.fileStats[curRecord.Filename] = &curFileStats
+			cache.stats.Data[curRecord.Filename] = &curFileStats
 		case "STATS":
-			var curFileStats FileStats
+			var curFileStats files.Stats
 			unmarshalErr = json.Unmarshal([]byte(curRecord.Data), &curFileStats)
-			if _, inStats := cache.stats.fileStats[curRecord.Filename]; !inStats {
-				cache.stats.fileStats[curRecord.Filename] = &curFileStats
+			if _, inStats := cache.stats.Data[curRecord.Filename]; !inStats {
+				cache.stats.Data[curRecord.Filename] = &curFileStats
 			}
 		case "ADDAGENT":
 			unmarshalErr = json.Unmarshal([]byte(curRecord.Data), &cache.additionAgent)
@@ -384,7 +386,7 @@ func (cache *AIRL) Loads(inputString [][]byte, vars ...interface{}) {
 
 }
 
-func (cache *AIRL) getState4AdditionAgent(hit bool, curFileStats *FileStats) int {
+func (cache *AIRL) getState4AdditionAgent(hit bool, curFileStats *files.Stats) int {
 	cache.bufferIdxVector = cache.bufferIdxVector[:0]
 
 	for _, feature := range cache.additionFeatureManager.Features {
@@ -504,7 +506,7 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) { //nolint:funlen
 		case qlearn.ActionDeleteHalf, qlearn.ActionDeleteQuarter:
 			curFileList := catState.Files
 			// Sort by LRU
-			sort.Sort(sortStatsByRecency(curFileList))
+			sort.Sort(files.SortStatsByRecency(curFileList))
 
 			numDeletes := 0
 
@@ -571,7 +573,7 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) { //nolint:funlen
 		case qlearn.ActionDeleteOne:
 			curFileList := catState.Files
 			// Sort by LRU
-			sort.Sort(sortStatsByRecency(curFileList))
+			sort.Sort(files.SortStatsByRecency(curFileList))
 
 			curFile := curFileList[0]
 			curFileStats := cache.stats.Get(curFile.Filename)
@@ -663,7 +665,7 @@ func (cache *AIRL) callEvictionAgent() (float64, []int64) { //nolint:funlen
 	}
 
 	// fmt.Println("[CATMANAGER] Deleted files -> ", deletedFiles)
-	QueueRemove(cache.files, deletedFiles)
+	queue.Remove(cache.files, deletedFiles)
 
 	return totalDeleted, deletedFiles
 }
@@ -846,7 +848,7 @@ func (cache *AIRL) rewardEvictionAfterForcedCall(added bool) {
 }
 
 // BeforeRequest of LRU cache
-func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) { //nolint:ignore,funlen
+func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*files.Stats, bool) { //nolint:ignore,funlen
 	// fmt.Println("+++ REQUESTED FILE +++-> ", request.Filename)
 
 	fileStats, _ := cache.stats.GetOrCreate(request.Filename, request.Size, request.DayTime, cache.tick)
@@ -910,13 +912,13 @@ func (cache *AIRL) BeforeRequest(request *Request, hit bool) (*FileStats, bool) 
 
 	cache.numReq++
 
-	fileStats.updateStats(hit, request.Size, request.UserID, request.SiteName, request.DayTime)
+	fileStats.UpdateStats(hit, request.Size, request.UserID, request.SiteName, request.DayTime)
 
 	return fileStats, hit
 }
 
 // UpdatePolicy of AIRL cache
-func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool) bool { //nolint:ignore,funlen
+func (cache *AIRL) UpdatePolicy(request *Request, fileStats *files.Stats, hit bool) bool { //nolint:ignore,funlen
 	var (
 		added             = false
 		curAction         qlearn.ActionType
@@ -1070,7 +1072,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 					return false
 				}
 
-				QueueInsert(cache.files, fileStats)
+				queue.Insert(cache.files, fileStats)
 
 				if cache.evictionAgentOK {
 					fileCategory := cache.evictionCategoryManager.GetFileCategory(fileStats)
@@ -1101,7 +1103,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			// #######################
 			// ##### HIT branch  #####
 			// #######################
-			QueueUpdate(cache.files, fileStats)
+			queue.Update(cache.files, fileStats)
 
 			if cache.evictionAgentOK {
 				fileCategory := cache.evictionCategoryManager.GetFileCategory(fileStats)
@@ -1171,7 +1173,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 				return false
 			}
 
-			QueueInsert(cache.files, fileStats)
+			queue.Insert(cache.files, fileStats)
 
 			if cache.evictionAgentOK {
 				fileCategory := cache.evictionCategoryManager.GetFileCategory(fileStats)
@@ -1202,7 +1204,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 			// ##### HIT branch  #####
 			// #######################
 			cache.logger.Debug("NO ADDITION AGENT - Normal hit branch")
-			QueueUpdate(cache.files, fileStats)
+			queue.Update(cache.files, fileStats)
 
 			if cache.evictionAgentOK {
 				fileCategory := cache.evictionCategoryManager.GetFileCategory(fileStats)
@@ -1215,7 +1217,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *FileStats, hit bool
 }
 
 // AfterRequest of the cache
-func (cache *AIRL) AfterRequest(request *Request, fileStats *FileStats, hit bool, added bool) {
+func (cache *AIRL) AfterRequest(request *Request, fileStats *files.Stats, hit bool, added bool) {
 	if cache.rlType == SCDL2 { //nolint:ignore,nestif
 		if cache.additionAgentOK { //nolint:ignore,nestif
 			cache.delayedRewardAdditionAgent(request.Filename, hit)

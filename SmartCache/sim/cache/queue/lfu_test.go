@@ -1,21 +1,23 @@
-package cache
+package queue
 
 import (
 	"math/rand"
 	"testing"
+
+	cacheFiles "simulator/v2/cache/files"
 )
 
 func TestLFUQueueBehaviorRandomActions(t *testing.T) {
 	r := rand.New(rand.NewSource(42))
-	q := &QueueLFU{}
-	QueueInit(q)
+	q := &LFU{}
+	Init(q)
 
-	stats := make([]*FileStats, 0)
+	stats := make([]*cacheFiles.Stats, 0)
 
 	for idx := 0; idx < numFiles; idx++ {
 		filename := 100000 + int64(idx)
 
-		stats = append(stats, &FileStats{
+		stats = append(stats, &cacheFiles.Stats{
 			Filename:  filename,
 			Frequency: 0,
 			Recency:   -1,
@@ -53,7 +55,7 @@ func TestLFUQueueBehaviorRandomActions(t *testing.T) {
 				curStat.Recency = int64(i)
 				curStat.Frequency++
 
-				QueueInsert(q, curStat)
+				Insert(q, curStat)
 
 				inserted = append(inserted, curIdx)
 
@@ -68,7 +70,7 @@ func TestLFUQueueBehaviorRandomActions(t *testing.T) {
 					curStat.Recency = int64(i)
 					curStat.Frequency++
 
-					QueueUpdate(q, curStat)
+					Update(q, curStat)
 
 					opDone = true
 				}
@@ -80,7 +82,7 @@ func TestLFUQueueBehaviorRandomActions(t *testing.T) {
 					curStat := stats[inserted[curIdx]]
 					curStat.Frequency = 0
 
-					QueueRemove(q, []int64{curStat.Filename})
+					Remove(q, []int64{curStat.Filename})
 
 					copy(inserted[curIdx:], inserted[curIdx+1:])
 					inserted = inserted[:len(inserted)-1]
@@ -93,14 +95,14 @@ func TestLFUQueueBehaviorRandomActions(t *testing.T) {
 
 	for _, idx := range inserted {
 		curStat := stats[idx]
-		if !QueueCheck(q, curStat.Filename) {
+		if !Check(q, curStat.Filename) {
 			t.Log("ERROR: File '", curStat.Filename, "' not found...")
 			t.Fatal()
 		}
 	}
 
 	var prevFreq int64 = -1
-	for _, file := range QueueGetFromWorst(q) {
+	for _, file := range GetFromWorst(q) {
 		if prevFreq > file.Frequency {
 			t.Log("ERROR: Frequency order not correct...")
 			t.Fatal()
@@ -108,7 +110,7 @@ func TestLFUQueueBehaviorRandomActions(t *testing.T) {
 		prevFreq = file.Frequency
 	}
 
-	if QueueLen(q) != len(inserted) {
+	if Len(q) != len(inserted) {
 		t.Log("ERROR: Len manager != len inserted")
 		t.Fatal()
 	}
@@ -116,32 +118,32 @@ func TestLFUQueueBehaviorRandomActions(t *testing.T) {
 
 func TestLFUQueueBehavior(t *testing.T) {
 	r := rand.New(rand.NewSource(28))
-	q := &QueueLFU{}
-	QueueInit(q)
+	q := &LFU{}
+	Init(q)
 
 	files := make([]int64, numFiles)
 	for idx := 0; idx < numFiles; idx++ {
 		files[idx] = 100000 + int64(idx)
 	}
 
-	stats := make(map[int64]*FileStats)
+	stats := make(map[int64]*cacheFiles.Stats)
 
 	for _, filename := range files {
-		curStat := FileStats{
+		curStat := cacheFiles.Stats{
 			Filename:  filename,
 			Frequency: r.Int63n(numFiles),
 			Recency:   -1,
 			Size:      1.,
 		}
 		stats[curStat.Filename] = &curStat
-		QueueInsert(q, stats[curStat.Filename])
+		Insert(q, stats[curStat.Filename])
 	}
 
 	toRemove := make([]int64, len(files)/2)
 	toRemove = toRemove[:0]
 
 	// fmt.Println("INSERT")
-	for _, curFile := range QueueGetFromWorst(q) {
+	for _, curFile := range GetFromWorst(q) {
 		// fmt.Println(curFile.Filename, "->", curFile.Frequency)
 		inserted := false
 		for _, filename := range files {
@@ -164,13 +166,13 @@ func TestLFUQueueBehavior(t *testing.T) {
 	// fmt.Println(QueuequeueI)q,
 	// fmt.Println(QueuefileIndexes)q,
 
-	QueueRemove(q, toRemove)
+	Remove(q, toRemove)
 
-	toUpdate := make([]int64, QueueLen(q))
+	toUpdate := make([]int64, Len(q))
 	toUpdate = toUpdate[:0]
 
 	// fmt.Println("REMOVE ->", toRemove)
-	for _, curFile := range QueueGetFromWorst(q) {
+	for _, curFile := range GetFromWorst(q) {
 		// fmt.Println(curFile.Filename, "->", curFile.Frequency)
 		notDeleted := true
 		for _, filename := range toRemove {
@@ -193,13 +195,13 @@ func TestLFUQueueBehavior(t *testing.T) {
 		oldValues := make(map[int64]int64)
 		// fmt.Println("UPDATE ->", toUpdate)
 		for _, filename := range toUpdate {
-			oldValues[filename] = QueueGetFileStats(q, filename).Frequency
+			oldValues[filename] = GetFileStats(q, filename).Frequency
 			stats[filename].Frequency = r.Int63n(numFiles) + numFiles*int64(numUpdate)
-			QueueUpdate(q, stats[filename])
+			Update(q, stats[filename])
 		}
 
 		var prevFrequency int64 = -1
-		for _, curFile := range QueueGetFromWorst(q) {
+		for _, curFile := range GetFromWorst(q) {
 			// fmt.Println(curFile.Filename, "->", curFile.Frequency)
 			_, inToUpdate := oldValues[curFile.Filename]
 			if inToUpdate && curFile.Frequency == oldValues[curFile.Filename] {
@@ -214,17 +216,17 @@ func TestLFUQueueBehavior(t *testing.T) {
 		}
 	}
 
-	for QueueLen(q) > 0 {
+	for Len(q) > 0 {
 		// fmt.Println(q.queue)
-		stats := QueueGetWorstFilesUp2Size(q, 2.0)
+		stats := GetWorstFilesUp2Size(q, 2.0)
 		toRemove := make([]int64, 0, len(stats))
 		// fmt.Println("--- To REMOVE ---")
 		for _, curFile := range stats {
 			// fmt.Printf("[%d]->%d\n", idx, curFile.Filename)
 			toRemove = append(toRemove, curFile.Filename)
 		}
-		QueueRemoveWorst(q, toRemove)
-		if QueueLen(q) > 0 && len(toRemove) != 2 {
+		RemoveWorst(q, toRemove)
+		if Len(q) > 0 && len(toRemove) != 2 {
 			panic("ERROR: GetWorstFilesUp2Size not work properly")
 		}
 	}

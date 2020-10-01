@@ -12,6 +12,8 @@ import (
 	"path"
 	"path/filepath"
 	"runtime/pprof"
+	"simulator/v2/cache/functions"
+	"simulator/v2/cache/queue"
 	"sort"
 	"strconv"
 	"strings"
@@ -487,18 +489,18 @@ func Create(cacheType string, cacheSize float64, cacheSizeUnit string, weightFun
 		)
 
 		var (
-			selFunctionType FunctionType
+			selFunctionType functions.FunctionType
 		)
 
 		switch weightFunc {
 		case "FuncAdditive":
-			selFunctionType = FuncAdditive
+			selFunctionType = functions.FuncAdditive
 		case "FuncAdditiveExp":
-			selFunctionType = FuncAdditiveExp
+			selFunctionType = functions.FuncAdditiveExp
 		case "FuncMultiplicative":
-			selFunctionType = FuncMultiplicative
+			selFunctionType = functions.FuncMultiplicative
 		case "FuncWeightedRequests":
-			selFunctionType = FuncWeightedRequests
+			selFunctionType = functions.FuncWeightedRequests
 		default:
 			fmt.Println("ERR: You need to specify a correct weight function.")
 			os.Exit(-1)
@@ -523,14 +525,14 @@ type InitParameters struct {
 	RedirectReq            bool
 	Watermarks             bool
 	CalcWeight             bool
-	QueueType              queueType
+	QueueType              queue.QueueType
 	HighWatermark          float64
 	LowWatermark           float64
 	Dataset2TestPath       string
 	AIFeatureMap           string
 	AIModel                string
 	FunctionTypeString     string
-	FunctionType           FunctionType
+	FunctionType           functions.FunctionType
 	WeightAlpha            float64
 	WeightBeta             float64
 	WeightGamma            float64
@@ -552,18 +554,18 @@ func InitInstance(cacheType string, cacheInstance Cache, params InitParameters) 
 	switch cacheType {
 	case "lru":
 		logger.Info("Init LRU Cache")
-		params.QueueType = LRUQueue
+		params.QueueType = queue.LRUQueue
 		InitCache(cacheInstance, params)
 	case "lfu":
 		logger.Info("Init LFU Cache")
-		params.QueueType = LFUQueue
+		params.QueueType = queue.LFUQueue
 		InitCache(cacheInstance, params)
 	case "sizeBig":
 		logger.Info("Init Size Big Cache")
-		params.QueueType = SizeBigQueue
+		params.QueueType = queue.SizeBigQueue
 		InitCache(cacheInstance, params)
 	case "sizeSmall":
-		params.QueueType = SizeSmallQueue
+		params.QueueType = queue.SizeSmallQueue
 		InitCache(cacheInstance, params)
 	case "lruDatasetVerifier":
 		logger.Info("Init lruDatasetVerifier Cache")
@@ -586,13 +588,13 @@ func InitInstance(cacheType string, cacheInstance Cache, params InitParameters) 
 
 		switch params.FunctionTypeString {
 		case "FuncAdditive":
-			params.FunctionType = FuncAdditive
+			params.FunctionType = functions.FuncAdditive
 		case "FuncAdditiveExp":
-			params.FunctionType = FuncAdditiveExp
+			params.FunctionType = functions.FuncAdditiveExp
 		case "FuncMultiplicative":
-			params.FunctionType = FuncMultiplicative
+			params.FunctionType = functions.FuncMultiplicative
 		case "FuncWeightedRequests":
-			params.FunctionType = FuncWeightedRequests
+			params.FunctionType = functions.FuncWeightedRequests
 		default:
 			fmt.Println("ERR: You need to specify a correct weight function.")
 			os.Exit(-1)
@@ -601,7 +603,7 @@ func InitInstance(cacheType string, cacheInstance Cache, params InitParameters) 
 		InitCache(cacheInstance, params)
 	case "weightFunLRU":
 		logger.Info("Init Weight Function Cache")
-		params.QueueType = LRUQueue
+		params.QueueType = queue.LRUQueue
 		params.CalcWeight = true
 		InitCache(cacheInstance, params)
 	default:

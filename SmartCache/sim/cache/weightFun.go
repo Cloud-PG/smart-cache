@@ -3,6 +3,10 @@ package cache
 import (
 	"encoding/json"
 	"fmt"
+
+	"simulator/v2/cache/files"
+	"simulator/v2/cache/functions"
+	"simulator/v2/cache/queue"
 )
 
 // WeightFunctionParameters are the input parameters of the weighted function
@@ -16,7 +20,7 @@ type WeightFunctionParameters struct {
 type WeightFun struct {
 	SimpleCache
 	Parameters      WeightFunctionParameters
-	SelFunctionType FunctionType
+	SelFunctionType functions.FunctionType
 }
 
 // Init the WeightFun struct
@@ -35,7 +39,7 @@ func (cache *WeightFun) Dumps(fileAndStats bool) [][]byte {
 	if fileAndStats {
 		// ----- Files -----
 		cache.logger.Info("Dump cache files")
-		for _, file := range QueueGetQueue(cache.files) {
+		for _, file := range queue.Get(cache.files) {
 			dumpInfo, _ := json.Marshal(DumpInfo{Type: "FILES"})
 			dumpFile, _ := json.Marshal(file)
 			record, _ := json.Marshal(DumpRecord{
@@ -47,7 +51,7 @@ func (cache *WeightFun) Dumps(fileAndStats bool) [][]byte {
 		}
 		// ----- Stats -----
 		cache.logger.Info("Dump cache stats")
-		for _, stats := range cache.stats.fileStats {
+		for _, stats := range cache.stats.Data {
 			dumpInfo, _ := json.Marshal(DumpInfo{Type: "STATS"})
 			dumpStats, _ := json.Marshal(stats)
 			record, _ := json.Marshal(DumpRecord{
@@ -75,29 +79,29 @@ func (cache *WeightFun) Loads(inputString [][]byte, _ ...interface{}) {
 		json.Unmarshal([]byte(curRecord.Info), &curRecordInfo)
 		switch curRecordInfo.Type {
 		case "FILES":
-			var curFileStats FileStats
+			var curFileStats files.Stats
 			unmarshalErr = json.Unmarshal([]byte(curRecord.Data), &curFileStats)
 			if unmarshalErr != nil {
 				panic(unmarshalErr)
 			}
-			QueueInsert(cache.files, &curFileStats)
+			queue.Insert(cache.files, &curFileStats)
 			cache.size += curFileStats.Size
-			cache.stats.fileStats[curRecord.Filename] = &curFileStats
+			cache.stats.Data[curRecord.Filename] = &curFileStats
 		case "STATS":
-			var curFileStats FileStats
+			var curFileStats files.Stats
 			unmarshalErr = json.Unmarshal([]byte(curRecord.Data), &curFileStats)
 			if unmarshalErr != nil {
 				panic(unmarshalErr)
 			}
-			if _, inStats := cache.stats.fileStats[curRecord.Filename]; !inStats {
-				cache.stats.fileStats[curRecord.Filename] = &curFileStats
+			if _, inStats := cache.stats.Data[curRecord.Filename]; !inStats {
+				cache.stats.Data[curRecord.Filename] = &curFileStats
 			}
 		}
 	}
 }
 
 // BeforeRequest of LRU cache
-func (cache *WeightFun) BeforeRequest(request *Request, hit bool) (*FileStats, bool) {
+func (cache *WeightFun) BeforeRequest(request *Request, hit bool) (*files.Stats, bool) {
 	// cache.prevTime = cache.curTime
 	// cache.curTime = request.DayTime
 	// if !cache.curTime.Equal(cache.prevTime) {}
@@ -105,8 +109,8 @@ func (cache *WeightFun) BeforeRequest(request *Request, hit bool) (*FileStats, b
 	cache.numReq++
 
 	curStats, newFile := cache.stats.GetOrCreate(request.Filename, request.Size, request.DayTime, cache.tick)
-	curStats.updateStats(hit, request.Size, request.UserID, request.SiteName, request.DayTime)
-	cache.stats.updateWeight(curStats, newFile,
+	curStats.UpdateStats(hit, request.Size, request.UserID, request.SiteName, request.DayTime)
+	cache.stats.UpdateWeight(curStats, newFile,
 		cache.SelFunctionType,
 		cache.Parameters.Alpha, cache.Parameters.Beta, cache.Parameters.Gamma,
 	)
@@ -114,7 +118,7 @@ func (cache *WeightFun) BeforeRequest(request *Request, hit bool) (*FileStats, b
 }
 
 // UpdatePolicy of WeightFun cache
-func (cache *WeightFun) UpdatePolicy(request *Request, fileStats *FileStats, hit bool) bool {
+func (cache *WeightFun) UpdatePolicy(request *Request, fileStats *files.Stats, hit bool) bool {
 	var added = false
 
 	requestedFileSize := request.Size
@@ -133,12 +137,12 @@ func (cache *WeightFun) UpdatePolicy(request *Request, fileStats *FileStats, hit
 		if cache.Size()+requestedFileSize <= cache.MaxSize {
 			cache.size += requestedFileSize
 
-			QueueInsert(cache.files, fileStats)
+			queue.Insert(cache.files, fileStats)
 
 			added = true
 		}
 	} else {
-		QueueUpdate(cache.files, fileStats)
+		queue.Update(cache.files, fileStats)
 	}
 	return added
 }

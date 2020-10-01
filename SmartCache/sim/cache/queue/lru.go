@@ -1,27 +1,28 @@
-package cache
+package queue
 
 import (
 	"fmt"
 	"log"
+	"simulator/v2/cache/files"
 )
 
-type QueueLRU struct {
-	files     map[int64]*FileStats
+type LRU struct {
+	files     map[int64]*files.Stats
 	lastIndex map[int64]int
 	queue     []int64
-	buffer    []*FileStats
+	buffer    []*files.Stats
 }
 
 // init initialize the struct
-func (q *QueueLRU) init() {
-	q.files = make(map[int64]*FileStats, estimatedNumFiles)
+func (q *LRU) init() {
+	q.files = make(map[int64]*files.Stats, estimatedNumFiles)
 	q.lastIndex = make(map[int64]int, estimatedNumFiles)
 	q.queue = make([]int64, 0, estimatedNumFiles)
-	q.buffer = make([]*FileStats, 0, bufferSize)
+	q.buffer = make([]*files.Stats, 0, bufferSize)
 }
 
 // getFileStats from a file in queue
-func (q *QueueLRU) getFileStats(filename int64) *FileStats {
+func (q *LRU) getFileStats(filename int64) *files.Stats {
 	stats, inQueue := q.files[filename]
 
 	if !inQueue {
@@ -32,7 +33,7 @@ func (q *QueueLRU) getFileStats(filename int64) *FileStats {
 }
 
 // getQueue values from a queue
-func (q *QueueLRU) getQueue() []*FileStats {
+func (q *LRU) getQueue() []*files.Stats {
 	// Filtering trick
 	// https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
 	q.buffer = q.buffer[:0]
@@ -52,7 +53,7 @@ func (q *QueueLRU) getQueue() []*FileStats {
 }
 
 // getFromWorst values from worst queue values
-func (q *QueueLRU) getFromWorst() []*FileStats {
+func (q *LRU) getFromWorst() []*files.Stats {
 	// Filtering trick
 	// https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
 	q.buffer = q.buffer[:0]
@@ -72,7 +73,7 @@ func (q *QueueLRU) getFromWorst() []*FileStats {
 }
 
 // getWorstFilesUp2Size values from a queue until size is reached
-func (q *QueueLRU) getWorstFilesUp2Size(totSize float64) []*FileStats {
+func (q *LRU) getWorstFilesUp2Size(totSize float64) []*files.Stats {
 	if totSize <= 0. {
 		panic("ERROR: tot size is negative or equal to 0")
 	}
@@ -104,14 +105,14 @@ func (q *QueueLRU) getWorstFilesUp2Size(totSize float64) []*FileStats {
 }
 
 // check if a file is in cache
-func (q *QueueLRU) check(file int64) bool {
+func (q *LRU) check(file int64) bool {
 	_, inQueue := q.files[file]
 
 	return inQueue
 }
 
 // len returns the number of files in cache
-func (q *QueueLRU) len() int {
+func (q *LRU) len() int {
 	if len(q.queue) != len(q.files) {
 		panic("lru len: queue len differ from files")
 	}
@@ -119,7 +120,7 @@ func (q *QueueLRU) len() int {
 }
 
 // insert a file into the LRU queue
-func (q *QueueLRU) insert(file *FileStats) (err error) {
+func (q *LRU) insert(file *files.Stats) (err error) {
 	filename := file.Filename
 
 	if q.check(filename) {
@@ -137,7 +138,7 @@ func (q *QueueLRU) insert(file *FileStats) (err error) {
 	return nil
 }
 
-func (q *QueueLRU) findIndex(filename int64, lastIdx int) int {
+func (q *LRU) findIndex(filename int64, lastIdx int) int {
 	newIdx := -1
 
 	start := lastIdx
@@ -161,7 +162,7 @@ func (q *QueueLRU) findIndex(filename int64, lastIdx int) int {
 }
 
 // removeWorst a file from the LRU queue from worsts (head)
-func (q *QueueLRU) removeWorst(files []int64) (err error) {
+func (q *LRU) removeWorst(files []int64) (err error) {
 	for idx, name := range files {
 		filename := name
 		queueFilename := q.queue[idx]
@@ -186,7 +187,7 @@ func (q *QueueLRU) removeWorst(files []int64) (err error) {
 }
 
 // remove a file from the LRU queue
-func (q *QueueLRU) remove(files []int64) (err error) {
+func (q *LRU) remove(files []int64) (err error) {
 
 	for _, name := range files {
 		filename := name
@@ -214,7 +215,7 @@ func (q *QueueLRU) remove(files []int64) (err error) {
 }
 
 // update a file of the LRU queue
-func (q *QueueLRU) update(file *FileStats) (err error) {
+func (q *LRU) update(file *files.Stats) (err error) {
 	// fmt.Printf("UPDATE -> %d\n", file.Filename)
 	filename := file.Filename
 

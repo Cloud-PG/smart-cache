@@ -4,6 +4,8 @@ import (
 	_ "fmt"
 	"testing"
 	"time"
+
+	"simulator/v2/cache/queue"
 )
 
 const (
@@ -18,7 +20,7 @@ func TestSimpleCacheBaseMultipleInsert(t *testing.T) {
 		HighWatermark: 100.,
 		LowWatermark:  100.,
 	}
-	testCache.Init(InitParameters{QueueType: LRUQueue})
+	testCache.Init(InitParameters{QueueType: queue.LRUQueue})
 
 	res, _ := GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
 
@@ -45,7 +47,7 @@ func TestSimpleCacheClear(t *testing.T) {
 		HighWatermark: 100.,
 		LowWatermark:  100.,
 	}
-	testCache.Init(InitParameters{QueueType: LRUQueue})
+	testCache.Init(InitParameters{QueueType: queue.LRUQueue})
 
 	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
 	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
@@ -75,7 +77,7 @@ func TestSimpleCacheInsert(t *testing.T) {
 		HighWatermark: 100.,
 		LowWatermark:  100.,
 	}
-	testCache.Init(InitParameters{QueueType: LRUQueue})
+	testCache.Init(InitParameters{QueueType: queue.LRUQueue})
 
 	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
 	GetFile(testCache, int64(1), size2, floatZero, floatZero, time.Now().Unix())

@@ -10,6 +10,9 @@ import (
 	"time"
 
 	"go.uber.org/zap"
+
+	"simulator/v2/cache/files"
+	"simulator/v2/cache/queue"
 )
 
 const (
@@ -61,9 +64,9 @@ var (
 
 // SimpleCache cache
 type SimpleCache struct {
-	stats                              Stats
-	files                              Queue
-	ordType                            queueType
+	stats                              files.Manager
+	files                              queue.Queue
+	ordType                            queue.QueueType
 	canRedirect                        bool
 	useWatermarks                      bool
 	logSimulation                      bool
@@ -112,22 +115,22 @@ func (cache *SimpleCache) Init(param InitParameters) interface{} {
 
 	// cache.files.Init(cache.ordType)
 	switch param.QueueType {
-	case LRUQueue:
-		cache.files = &QueueLRU{}
-	case LFUQueue:
-		cache.files = &QueueLFU{}
-	case SizeBigQueue:
-		cache.files = &QueueSizeBig{}
-	case SizeSmallQueue:
-		cache.files = &QueueSizeSmall{}
-	case WeightQueue:
-		cache.files = &QueueWeight{}
-	case NoQueue:
-		cache.files = &QueueNone{}
+	case queue.LRUQueue:
+		cache.files = &queue.LRU{}
+	case queue.LFUQueue:
+		cache.files = &queue.LFU{}
+	case queue.SizeBigQueue:
+		cache.files = &queue.SizeBig{}
+	case queue.SizeSmallQueue:
+		cache.files = &queue.SizeSmall{}
+	case queue.WeightQueue:
+		cache.files = &queue.Weighted{}
+	case queue.NoQueue:
+		cache.files = &queue.QueueNone{}
 	default:
 		panic(fmt.Errorf("type %d not implemented...", param.QueueType))
 	}
-	QueueInit(cache.files)
+	queue.Init(cache.files)
 
 	cache.dailyfreeSpace = make([]float64, 0)
 
@@ -176,7 +179,7 @@ func (cache *SimpleCache) SetBandwidth(bandwidth float64) {
 
 // ClearFiles remove the cache files
 func (cache *SimpleCache) ClearFiles() {
-	QueueInit(cache.files)
+	queue.Init(cache.files)
 	cache.stats.Clear()
 	cache.size = 0.
 }
@@ -224,7 +227,7 @@ func (cache *SimpleCache) Dumps(fileAndStats bool) [][]byte {
 	if fileAndStats {
 		// ----- Files -----
 		cache.logger.Info("Dump cache files")
-		for _, file := range QueueGetQueue(cache.files) {
+		for _, file := range queue.Get(cache.files) {
 			dumpInfo, _ := json.Marshal(DumpInfo{Type: "FILES"})
 			dumpFile, _ := json.Marshal(file)
 			record, _ := json.Marshal(DumpRecord{
@@ -236,7 +239,7 @@ func (cache *SimpleCache) Dumps(fileAndStats bool) [][]byte {
 		}
 		// ----- Stats -----
 		cache.logger.Info("Dump cache stats")
-		for filename, stats := range cache.stats.fileStats {
+		for filename, stats := range cache.stats.Data {
 			dumpInfo, _ := json.Marshal(DumpInfo{Type: "STATS"})
 			dumpStats, _ := json.Marshal(stats)
 			record, _ := json.Marshal(DumpRecord{
@@ -295,22 +298,22 @@ func (cache *SimpleCache) Loads(inputString [][]byte, _ ...interface{}) {
 
 		switch curRecordInfo.Type {
 		case "FILES":
-			var curFileStats FileStats
+			var curFileStats files.Stats
 			unmarshalErr = json.Unmarshal([]byte(curRecord.Data), &curFileStats)
-			QueueInsert(cache.files, &curFileStats)
+			queue.Insert(cache.files, &curFileStats)
 			if unmarshalErr != nil {
 				panic(unmarshalErr)
 			}
 			cache.size += curFileStats.Size
-			cache.stats.fileStats[curRecord.Filename] = &curFileStats
+			cache.stats.Data[curRecord.Filename] = &curFileStats
 		case "STATS":
-			var curFileStats FileStats
+			var curFileStats files.Stats
 			unmarshalErr = json.Unmarshal([]byte(curRecord.Data), &curFileStats)
 			if unmarshalErr != nil {
 				panic(unmarshalErr)
 			}
-			if _, inStats := cache.stats.fileStats[curRecord.Filename]; !inStats {
-				cache.stats.fileStats[curRecord.Filename] = &curFileStats
+			if _, inStats := cache.stats.Data[curRecord.Filename]; !inStats {
+				cache.stats.Data[curRecord.Filename] = &curFileStats
 			}
 		}
 	}
@@ -371,20 +374,20 @@ func (cache *SimpleCache) Load(filename string) [][]byte {
 }
 
 // BeforeRequest of LRU cache
-func (cache *SimpleCache) BeforeRequest(request *Request, hit bool) (*FileStats, bool) {
+func (cache *SimpleCache) BeforeRequest(request *Request, hit bool) (*files.Stats, bool) {
 	// cache.prevTime = cache.curTime
 	// cache.curTime = request.DayTime
 	// if !cache.curTime.Equal(cache.prevTime) {}
 	cache.numReq++
 
 	curStats, _ := cache.stats.GetOrCreate(request.Filename, request.Size, request.DayTime, cache.tick)
-	curStats.updateStats(hit, request.Size, request.UserID, request.SiteName, request.DayTime)
+	curStats.UpdateStats(hit, request.Size, request.UserID, request.SiteName, request.DayTime)
 
 	return curStats, hit
 }
 
 // UpdatePolicy of LRU cache
-func (cache *SimpleCache) UpdatePolicy(request *Request, fileStats *FileStats, hit bool) bool {
+func (cache *SimpleCache) UpdatePolicy(request *Request, fileStats *files.Stats, hit bool) bool {
 	var (
 		added             = false
 		requestedFileSize = request.Size
@@ -398,7 +401,7 @@ func (cache *SimpleCache) UpdatePolicy(request *Request, fileStats *FileStats, h
 		if cache.Size()+requestedFileSize <= cache.MaxSize {
 			cache.size += requestedFileSize
 
-			QueueInsert(cache.files, fileStats)
+			queue.Insert(cache.files, fileStats)
 
 			if cache.logFile != nil {
 				cache.toLogBuffer([]string{
@@ -416,13 +419,13 @@ func (cache *SimpleCache) UpdatePolicy(request *Request, fileStats *FileStats, h
 			added = true
 		}
 	} else {
-		QueueUpdate(cache.files, fileStats)
+		queue.Update(cache.files, fileStats)
 	}
 	return added
 }
 
 // AfterRequest of LRU cache
-func (cache *SimpleCache) AfterRequest(request *Request, fileStats *FileStats, hit bool, added bool) {
+func (cache *SimpleCache) AfterRequest(request *Request, fileStats *files.Stats, hit bool, added bool) {
 	var currentCPUEff float64
 
 	if request.CPUEff != 0. {
@@ -466,7 +469,11 @@ func (cache *SimpleCache) AfterRequest(request *Request, fileStats *FileStats, h
 	cache.sumDailyFreeSpace += freeSpace
 
 	if cache.stats.Dirty() {
-		cache.stats.Purge(cache.files)
+		tmpFilenames := make([]int64, 0, queue.Len(cache.files))
+		for _, fileStats := range queue.Get(cache.files) {
+			tmpFilenames = append(tmpFilenames, fileStats.Filename)
+		}
+		cache.stats.Purge(tmpFilenames)
 	}
 
 	cache.tick++
@@ -507,7 +514,7 @@ func (cache *SimpleCache) Free(amount float64, percentage bool) float64 { // nol
 		}
 
 		deletedFiles := make([]int64, 0)
-		for _, curFile := range QueueGetWorstFilesUp2Size(cache.files, sizeToDelete) {
+		for _, curFile := range queue.GetWorstFilesUp2Size(cache.files, sizeToDelete) {
 			cache.logger.Debug("delete",
 				zap.Int64("filename", curFile.Filename),
 				zap.Float64("fileSize", curFile.Size),
@@ -546,7 +553,7 @@ func (cache *SimpleCache) Free(amount float64, percentage bool) float64 { // nol
 			cache.numDeleted++
 		}
 
-		QueueRemoveWorst(cache.files, deletedFiles)
+		queue.RemoveWorst(cache.files, deletedFiles)
 	}
 	return totalDeleted
 }
@@ -665,7 +672,7 @@ func (cache *SimpleCache) DataDeleted() float64 {
 
 // Check returns if a file is in cache or not
 func (cache *SimpleCache) Check(filename int64) bool {
-	hit := QueueCheck(cache.files, filename)
+	hit := queue.Check(cache.files, filename)
 
 	if !hit {
 		cache.stats.IncDeletedFileMiss(filename)
@@ -752,7 +759,7 @@ func (cache *SimpleCache) CPUEffBoundDiff() float64 {
 
 // NumFiles returns the number of files in cache
 func (cache *SimpleCache) NumFiles() int {
-	return QueueLen(cache.files)
+	return queue.Len(cache.files)
 }
 
 // AvgFreeSpace returns the average free space of the cache

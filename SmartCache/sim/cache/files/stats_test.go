@@ -1,4 +1,4 @@
-package cache
+package files
 
 import (
 	_ "fmt"
@@ -7,7 +7,7 @@ import (
 )
 
 func TestCreateStats(t *testing.T) {
-	stats := Stats{}
+	stats := Manager{}
 	stats.Init(4., 6., true)
 
 	curTime := time.Now()
@@ -29,9 +29,9 @@ func TestCreateStats(t *testing.T) {
 
 	curTime = time.Now()
 
-	fileStats.updateStats(true, float64(42.0), int64(555), int64(0), curTime)
-	fileStats.updateStats(true, float64(42.0), int64(555), int64(1), curTime)
-	fileStats.updateStats(true, float64(42.0), int64(111), int64(2), curTime)
-	fileStats.updateStats(false, float64(42.0), int64(111), int64(0), curTime)
-	fileStats.updateStats(false, float64(42.0), int64(111), int64(1), curTime)
+	fileStats.UpdateStats(true, float64(42.0), int64(555), int64(0), curTime)
+	fileStats.UpdateStats(true, float64(42.0), int64(555), int64(1), curTime)
+	fileStats.UpdateStats(true, float64(42.0), int64(111), int64(2), curTime)
+	fileStats.UpdateStats(false, float64(42.0), int64(111), int64(0), curTime)
+	fileStats.UpdateStats(false, float64(42.0), int64(111), int64(1), curTime)
 }

@@ -3,7 +3,11 @@ package cache
 import (
 	"testing"
 	"time"
+
 	// "fmt"
+
+	"simulator/v2/cache/functions"
+	"simulator/v2/cache/queue"
 )
 
 func TestWeightFunBaseMultipleInsert(t *testing.T) {
@@ -13,9 +17,9 @@ func TestWeightFunBaseMultipleInsert(t *testing.T) {
 			HighWatermark: 100.,
 			LowWatermark:  100.,
 		},
-		SelFunctionType: FuncWeightedRequests,
+		SelFunctionType: functions.FuncWeightedRequests,
 	}
-	testCache.Init(InitParameters{QueueType: LRUQueue})
+	testCache.Init(InitParameters{QueueType: queue.LRUQueue})
 
 	res, _ := GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
 	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
@@ -42,9 +46,9 @@ func TestWeightFunClear(t *testing.T) {
 			HighWatermark: 100.,
 			LowWatermark:  100.,
 		},
-		SelFunctionType: FuncWeightedRequests,
+		SelFunctionType: functions.FuncWeightedRequests,
 	}
-	testCache.Init(InitParameters{QueueType: LRUQueue})
+	testCache.Init(InitParameters{QueueType: queue.LRUQueue})
 
 	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
 	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
@@ -74,9 +78,9 @@ func TestWeightFunInsert(t *testing.T) {
 			HighWatermark: 100.,
 			LowWatermark:  100.,
 		},
-		SelFunctionType: FuncWeightedRequests,
+		SelFunctionType: functions.FuncWeightedRequests,
 	}
-	testCache.Init(InitParameters{QueueType: LRUQueue})
+	testCache.Init(InitParameters{QueueType: queue.LRUQueue})
 
 	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
 	GetFile(testCache, int64(1), size2, floatZero, floatZero, time.Now().Unix())

@@ -8,6 +8,8 @@ import (
 	"simulator/v2/cache/ai/featuremap"
 	"simulator/v2/cache/ai/neuralnet"
 	aiPb "simulator/v2/cache/aiService"
+	"simulator/v2/cache/files"
+	"simulator/v2/cache/queue"
 
 	"google.golang.org/grpc"
 )
@@ -32,7 +34,7 @@ type AINN struct {
 
 // Init the AINN struct
 func (cache *AINN) Init(params InitParameters) interface{} {
-	params.QueueType = LRUQueue
+	params.QueueType = queue.LRUQueue
 	cache.SimpleCache.Init(params)
 
 	featureMapFilePath := params.AIFeatureMap
@@ -79,7 +81,7 @@ func (cache *AINN) Dumps(fileAndStats bool) [][]byte {
 	if fileAndStats {
 		// ----- Files -----
 		cache.logger.Info("Dump cache files")
-		for file := range QueueGetQueue(cache.files) {
+		for file := range queue.Get(cache.files) {
 			dumpInfo, _ := json.Marshal(DumpInfo{Type: "FILES"})
 			dumpFile, _ := json.Marshal(file)
 			record, _ := json.Marshal(DumpRecord{
@@ -91,7 +93,7 @@ func (cache *AINN) Dumps(fileAndStats bool) [][]byte {
 		}
 		// ----- Stats -----
 		cache.logger.Info("Dump cache stats")
-		for _, stats := range cache.stats.fileStats {
+		for _, stats := range cache.stats.Data {
 			dumpInfo, _ := json.Marshal(DumpInfo{Type: "STATS"})
 			dumpStats, _ := json.Marshal(stats)
 			record, _ := json.Marshal(DumpRecord{
@@ -117,12 +119,12 @@ func (cache *AINN) Loads(inputString [][]byte, _ ...interface{}) {
 		json.Unmarshal([]byte(curRecord.Info), &curRecordInfo)
 		switch curRecordInfo.Type {
 		case "FILES":
-			var curFile FileStats
+			var curFile files.Stats
 			json.Unmarshal([]byte(curRecord.Data), &curFile)
-			QueueInsert(cache.files, &curFile)
+			queue.Insert(cache.files, &curFile)
 			cache.size += curFile.Size
 		case "STATS":
-			json.Unmarshal([]byte(curRecord.Data), &cache.stats.fileStats)
+			json.Unmarshal([]byte(curRecord.Data), &cache.stats.Data)
 		}
 	}
 }

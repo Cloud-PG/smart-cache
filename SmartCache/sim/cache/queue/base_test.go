@@ -1,4 +1,4 @@
-package cache
+package queue
 
 const (
 	numTests = 1000

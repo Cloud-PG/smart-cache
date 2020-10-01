@@ -1,4 +1,4 @@
-package cache
+package functions
 
 import (
 	"math"
@@ -18,18 +18,18 @@ const (
 	FuncWeightedRequests
 )
 
-func fileAdditiveWeightFunction(totRequests int64, size float64, meanTicks float64, alpha float64, beta float64, gamma float64) float64 {
+func FileAdditiveWeight(totRequests int64, size float64, meanTicks float64, alpha float64, beta float64, gamma float64) float64 {
 	return alpha*float64(totRequests) + beta*size + gamma*meanTicks
 }
 
-func fileAdditiveExpWeightFunction(totRequests int64, size float64, meanTicks float64, alpha float64, beta float64, gamma float64) float64 {
+func FileAdditiveExpWeight(totRequests int64, size float64, meanTicks float64, alpha float64, beta float64, gamma float64) float64 {
 	return float64(math.Pow(float64(totRequests), alpha) + math.Pow(float64(size), beta) + math.Pow(float64(meanTicks), gamma))
 }
 
-func fileMultiplicativeWeightFunction(totRequests int64, size float64, meanTicks float64, alpha float64, beta float64, gamma float64) float64 {
+func FileMultiplicativeWeight(totRequests int64, size float64, meanTicks float64, alpha float64, beta float64, gamma float64) float64 {
 	return float64(math.Pow(float64(totRequests), alpha) * math.Pow(float64(size), beta) * math.Pow(float64(meanTicks), gamma))
 }
 
-func fileWeightedRequest(totRequests int64, size float64, meanTicks float64) float64 {
+func FileWeightedRequest(totRequests int64, size float64, meanTicks float64) float64 {
 	return meanTicks + (size / math.Exp(float64(totRequests)))
 }

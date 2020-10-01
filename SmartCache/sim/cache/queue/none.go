@@ -1,23 +1,24 @@
-package cache
+package queue
 
 import (
 	"fmt"
 	"log"
+	"simulator/v2/cache/files"
 )
 
 type QueueNone struct {
-	files  map[int64]*FileStats
-	buffer []*FileStats
+	files  map[int64]*files.Stats
+	buffer []*files.Stats
 }
 
 // init initialize the struct
 func (q *QueueNone) init() {
-	q.files = make(map[int64]*FileStats, estimatedNumFiles)
-	q.buffer = make([]*FileStats, 0, bufferSize)
+	q.files = make(map[int64]*files.Stats, estimatedNumFiles)
+	q.buffer = make([]*files.Stats, 0, bufferSize)
 }
 
 // getFileStats from a file in queue
-func (q *QueueNone) getFileStats(filename int64) *FileStats {
+func (q *QueueNone) getFileStats(filename int64) *files.Stats {
 	stats, inQueue := q.files[filename]
 
 	if !inQueue {
@@ -28,7 +29,7 @@ func (q *QueueNone) getFileStats(filename int64) *FileStats {
 }
 
 // getQueue values from a queue
-func (q *QueueNone) getQueue() []*FileStats {
+func (q *QueueNone) getQueue() []*files.Stats {
 	// Filtering trick
 	// https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
 	q.buffer = q.buffer[:0]
@@ -41,7 +42,7 @@ func (q *QueueNone) getQueue() []*FileStats {
 }
 
 // getFromWorst values from worst queue values
-func (q *QueueNone) getFromWorst() []*FileStats {
+func (q *QueueNone) getFromWorst() []*files.Stats {
 	// Filtering trick
 	// https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
 
@@ -49,7 +50,7 @@ func (q *QueueNone) getFromWorst() []*FileStats {
 }
 
 // getWorstFilesUp2Size values from a queue until size is reached
-func (q *QueueNone) getWorstFilesUp2Size(totSize float64) []*FileStats {
+func (q *QueueNone) getWorstFilesUp2Size(totSize float64) []*files.Stats {
 	panic("this is not necessary for a non queue algorithm")
 }
 
@@ -66,7 +67,7 @@ func (q *QueueNone) len() int {
 }
 
 // insert a file into the LRU queue
-func (q *QueueNone) insert(file *FileStats) (err error) {
+func (q *QueueNone) insert(file *files.Stats) (err error) {
 	filename := file.Filename
 
 	if q.check(filename) {
@@ -94,7 +95,7 @@ func (q *QueueNone) remove(files []int64) (err error) {
 }
 
 // update a file of the LRU queue
-func (q *QueueNone) update(file *FileStats) (err error) {
+func (q *QueueNone) update(file *files.Stats) (err error) {
 	// fmt.Printf("UPDATE -> %d\n", file.Filename)
 	filename := file.Filename
 

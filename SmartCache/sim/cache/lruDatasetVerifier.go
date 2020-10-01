@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"log"
 	"os"
+
+	"simulator/v2/cache/files"
+	"simulator/v2/cache/queue"
 )
 
 // DatasetFiles represents the dataset file composition
@@ -20,11 +23,11 @@ type LRUDatasetVerifier struct {
 
 // Init the LRU struct
 func (cache *LRUDatasetVerifier) Init(param InitParameters) interface{} {
-	param.QueueType = LRUQueue
+	param.QueueType = queue.LRUQueue
 	cache.SimpleCache.Init(param)
 
-	cache.files = &QueueLRU{}
-	cache.stats.fileStats = make(map[int64]*FileStats)
+	cache.files = &queue.LRU{}
+	cache.stats.Data = make(map[int64]*files.Stats)
 
 	cache.datasetFileMap = make(map[int64]bool)
 	datasetFilePath := param.Dataset2TestPath
@@ -53,7 +56,7 @@ func (cache *LRUDatasetVerifier) Init(param InitParameters) interface{} {
 }
 
 // UpdatePolicy of LRUDatasetVerifier cache
-func (cache *LRUDatasetVerifier) UpdatePolicy(request *Request, fileStats *FileStats, hit bool) bool {
+func (cache *LRUDatasetVerifier) UpdatePolicy(request *Request, fileStats *files.Stats, hit bool) bool {
 	var (
 		added = false
 
@@ -68,14 +71,14 @@ func (cache *LRUDatasetVerifier) UpdatePolicy(request *Request, fileStats *FileS
 				cache.Free(requestedFileSize, false)
 			}
 			if cache.Size()+requestedFileSize <= cache.MaxSize {
-				QueueInsert(cache.files, fileStats)
+				queue.Insert(cache.files, fileStats)
 
 				cache.size += requestedFileSize
 				added = true
 			}
 		}
 	} else {
-		QueueUpdate(cache.files, fileStats)
+		queue.Update(cache.files, fileStats)
 	}
 
 	return added

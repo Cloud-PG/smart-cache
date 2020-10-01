@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"simulator/v2/cache/files"
 	"time"
 )
 
@@ -85,9 +86,9 @@ type Cache interface {
 	Check(int64) bool
 	CheckWatermark() bool
 	CheckRedirect(filename int64, size float64) bool
-	BeforeRequest(request *Request, hit bool) (*FileStats, bool)
-	UpdatePolicy(request *Request, fileStats *FileStats, hit bool) bool
-	AfterRequest(request *Request, fileStats *FileStats, hit bool, added bool)
+	BeforeRequest(request *Request, hit bool) (*files.Stats, bool)
+	UpdatePolicy(request *Request, fileStats *files.Stats, hit bool) bool
+	AfterRequest(request *Request, fileStats *files.Stats, hit bool, added bool)
 	Terminate() error
 }
 
@@ -313,17 +314,17 @@ func CheckWatermark(cache Cache) bool {
 }
 
 // BeforeRequest of the current cache instance
-func BeforeRequest(cache Cache, request *Request, hit bool) (*FileStats, bool) {
+func BeforeRequest(cache Cache, request *Request, hit bool) (*files.Stats, bool) {
 	return cache.BeforeRequest(request, hit)
 }
 
 // UpdatePolicy of the current cache instance
-func UpdatePolicy(cache Cache, request *Request, fileStats *FileStats, hit bool) bool {
+func UpdatePolicy(cache Cache, request *Request, fileStats *files.Stats, hit bool) bool {
 	return cache.UpdatePolicy(request, fileStats, hit)
 }
 
 // AfterRequest of the current cache instance
-func AfterRequest(cache Cache, request *Request, fileStats *FileStats, hit bool, added bool) {
+func AfterRequest(cache Cache, request *Request, fileStats *files.Stats, hit bool, added bool) {
 	cache.AfterRequest(request, fileStats, hit, added)
 }
 

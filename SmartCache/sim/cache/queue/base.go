@@ -1,17 +1,19 @@
-package cache
+package queue
 
 import (
 	"fmt"
 	"sort"
+
+	"simulator/v2/cache/files"
 )
 
 // Other policy utils
 
-type queueType int
+type QueueType int
 
 const (
 	// LRUQueue is the LRU queue type
-	LRUQueue queueType = iota - 6
+	LRUQueue QueueType = iota - 6
 	// LFUQueue is the LFU queue type
 	LFUQueue
 	// SizeBigQueue is the SizeBig queue type
@@ -34,94 +36,94 @@ type Queue interface {
 	check(file int64) bool
 	len() int
 
-	getFileStats(filename int64) *FileStats
-	getQueue() []*FileStats
-	getFromWorst() []*FileStats
-	getWorstFilesUp2Size(totSize float64) []*FileStats
+	getFileStats(filename int64) *files.Stats
+	getQueue() []*files.Stats
+	getFromWorst() []*files.Stats
+	getWorstFilesUp2Size(totSize float64) []*files.Stats
 
-	insert(file *FileStats) error
-	update(file *FileStats) error
+	insert(file *files.Stats) error
+	update(file *files.Stats) error
 	remove(files []int64) error
 	removeWorst(files []int64) error
 }
 
-func QueueInit(queue Queue) {
+func Init(queue Queue) {
 	queue.init()
 }
 
-func QueueCheck(queue Queue, file int64) bool {
+func Check(queue Queue, file int64) bool {
 	return queue.check(file)
 }
 
-func QueueLen(queue Queue) int {
+func Len(queue Queue) int {
 	return queue.len()
 }
 
-func QueueGetFileStats(queue Queue, filename int64) *FileStats {
+func GetFileStats(queue Queue, filename int64) *files.Stats {
 	return queue.getFileStats(filename)
 }
 
-func QueueInsert(queue Queue, file *FileStats) {
+func Insert(queue Queue, file *files.Stats) {
 	err := queue.insert(file)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func QueueUpdate(queue Queue, file *FileStats) {
+func Update(queue Queue, file *files.Stats) {
 	err := queue.update(file)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func QueueRemove(queue Queue, files []int64) {
+func Remove(queue Queue, files []int64) {
 	err := queue.remove(files)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func QueueRemoveWorst(queue Queue, files []int64) {
+func RemoveWorst(queue Queue, files []int64) {
 	err := queue.removeWorst(files)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func QueueGetQueue(queue Queue) []*FileStats {
+func Get(queue Queue) []*files.Stats {
 	return queue.getQueue()
 }
 
-func QueueGetFromWorst(queue Queue) []*FileStats {
+func GetFromWorst(queue Queue) []*files.Stats {
 	return queue.getFromWorst()
 }
 
-func QueueGetWorstFilesUp2Size(queue Queue, totSize float64) []*FileStats {
+func GetWorstFilesUp2Size(queue Queue, totSize float64) []*files.Stats {
 	return queue.getWorstFilesUp2Size(totSize)
 }
 
 // Manager manages the files in cache
 type Manager struct {
-	files          map[int64]*FileStats
+	files          map[int64]*files.Stats
 	fileIndexes    map[int64]int
 	prevVal        map[int64]interface{}
 	queueFilenames []int64
 	queueI         []int64
 	queueF         []float64
-	qType          queueType
-	buffer         []*FileStats
+	qType          QueueType
+	buffer         []*files.Stats
 }
 
 // Init initialize the struct
-func (man *Manager) Init(qType queueType) {
-	man.files = make(map[int64]*FileStats, estimatedNumFiles)
+func (man *Manager) Init(qType QueueType) {
+	man.files = make(map[int64]*files.Stats, estimatedNumFiles)
 	man.fileIndexes = make(map[int64]int, estimatedNumFiles)
 	man.prevVal = make(map[int64]interface{}, estimatedNumFiles)
 	man.queueFilenames = make([]int64, 0, estimatedNumFiles)
 	man.queueI = make([]int64, 0, estimatedNumFiles)
 	man.queueF = make([]float64, 0, estimatedNumFiles)
-	man.buffer = make([]*FileStats, 0, estimatedNumFiles)
+	man.buffer = make([]*files.Stats, 0, estimatedNumFiles)
 	man.qType = qType
 }
 
@@ -137,8 +139,8 @@ func (man *Manager) Len() int {
 	return len(man.files)
 }
 
-// GetQueue values from a queue
-func (man *Manager) GetQueue() []*FileStats {
+// Get values from a queue
+func (man *Manager) Get() []*files.Stats {
 	// Filtering trick
 	// https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
 	man.buffer = man.buffer[:0]
@@ -152,7 +154,7 @@ func (man *Manager) GetQueue() []*FileStats {
 }
 
 // GetFromWorst values from worst queue values
-func (man *Manager) GetFromWorst() []*FileStats {
+func (man *Manager) GetFromWorst() []*files.Stats {
 	// Filtering trick
 	// https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
 	man.buffer = man.buffer[:0]
@@ -168,7 +170,7 @@ func (man *Manager) GetFromWorst() []*FileStats {
 }
 
 // GetWorstFilesUp2Size values from a queue until size is reached
-func (man *Manager) GetWorstFilesUp2Size(totSize float64) []*FileStats {
+func (man *Manager) GetWorstFilesUp2Size(totSize float64) []*files.Stats {
 	if totSize <= 0. {
 		panic("ERROR: tot size is negative or equal to 0")
 	}
@@ -380,7 +382,7 @@ func (man *Manager) Remove(files []int64) { //nolint:ignore,funlen
 	}
 }
 
-func (man *Manager) getFeature(file *FileStats) interface{} {
+func (man *Manager) getFeature(file *files.Stats) interface{} {
 	var feature interface{}
 
 	switch man.qType {
@@ -505,7 +507,7 @@ func (man *Manager) insertFilename(insertIdx int, filename int64) {
 }
 
 // Insert a file into the queue manager
-func (man *Manager) Insert(file *FileStats) { //nolint:ignore,funlen
+func (man *Manager) Insert(file *files.Stats) { //nolint:ignore,funlen
 	// fmt.Println(file.Filename, "->", file.Recency)
 	// Force inserto check
 
@@ -529,7 +531,7 @@ func (man *Manager) Insert(file *FileStats) { //nolint:ignore,funlen
 }
 
 // Update a file into the queue manager
-func (man *Manager) Update(file *FileStats) {
+func (man *Manager) Update(file *files.Stats) {
 	// fmt.Println("UPDATE:", file.Filename, "->", file.Recency)
 	// fmt.Println("--- BEFORE ---")
 	// fmt.Println(man.orderedValues)
