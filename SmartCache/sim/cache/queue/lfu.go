@@ -200,7 +200,7 @@ func (q *LFU) findIndex(filename int64, curQueue []int64, lastIdx int) int {
 			newIdx = idx
 
 			break
-		} else {
+		} else if q.lastIndex[curFilename] != idx {
 			q.lastIndex[curFilename] = idx
 		}
 	}

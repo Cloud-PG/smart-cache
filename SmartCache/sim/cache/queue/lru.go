@@ -154,7 +154,7 @@ func (q *LRU) findIndex(filename int64, lastIdx int) int {
 			newIdx = idx
 
 			break
-		} else {
+		} else if q.lastIndex[curFilename] != idx {
 			q.lastIndex[curFilename] = idx
 		}
 	}
