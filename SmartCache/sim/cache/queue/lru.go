@@ -116,6 +116,7 @@ func (q *LRU) len() int {
 	if len(q.queue) != len(q.files) {
 		panic("lru len: queue len differ from files")
 	}
+
 	return len(q.files)
 }
 
