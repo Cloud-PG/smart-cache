@@ -30,7 +30,7 @@ const (
 
 type Queue interface {
 	init()
-	check(file int64) bool
+	Check(file int64) bool
 	len() int
 
 	getFileStats(filename int64) *files.Stats
@@ -49,7 +49,7 @@ func Init(queue Queue) {
 }
 
 func Check(queue Queue, file int64) bool {
-	return queue.check(file)
+	return queue.Check(file)
 }
 
 func Len(queue Queue) int {

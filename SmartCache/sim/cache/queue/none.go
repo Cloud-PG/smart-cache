@@ -55,7 +55,7 @@ func (q *QueueNone) getWorstFilesUp2Size(totSize float64) []*files.Stats {
 }
 
 // check if a file is in cache
-func (q *QueueNone) check(file int64) bool {
+func (q *QueueNone) Check(file int64) bool {
 	_, inQueue := q.files[file]
 
 	return inQueue
@@ -70,7 +70,7 @@ func (q *QueueNone) len() int {
 func (q *QueueNone) insert(file *files.Stats) (err error) {
 	filename := file.Filename
 
-	if q.check(filename) {
+	if q.Check(filename) {
 		return fmt.Errorf("none queue insert: file %d already in queue", filename)
 	}
 

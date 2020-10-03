@@ -469,11 +469,7 @@ func (cache *SimpleCache) AfterRequest(request *Request, fileStats *files.Stats,
 	cache.sumDailyFreeSpace += freeSpace
 
 	if cache.stats.Dirty() {
-		tmpFilenames := make([]int64, 0, queue.Len(cache.files))
-		for _, fileStats := range queue.Get(cache.files) {
-			tmpFilenames = append(tmpFilenames, fileStats.Filename)
-		}
-		cache.stats.Purge(tmpFilenames)
+		cache.stats.Purge(cache.files.Check)
 	}
 
 	cache.tick++

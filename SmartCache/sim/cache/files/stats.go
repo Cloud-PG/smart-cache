@@ -93,36 +93,25 @@ func (s Manager) Dirty() bool {
 	return false
 }
 
-func searchFile(filenames *[]int64, target int64) (found bool) {
-	curQueue := *filenames
-	for idx := 0; idx < len(curQueue); idx++ {
-		if (curQueue)[idx] == target {
-			found = true
-
-			curQueue = append(curQueue[:idx], curQueue[idx+1:]...)
-			filenames = &curQueue
-
-			break
-		}
-	}
-
-	return found
-}
-
 // Purge remove older stats
-func (s *Manager) Purge(filenames []int64) {
+func (s *Manager) Purge(has func(int64) bool) {
 	numDeletedFiles := 0
+
 	for filename, stats := range s.Data {
 		curFilename := filename
-		if inCache := searchFile(&filenames, curFilename); !inCache && stats.DiffLastUpdate(s.lastUpdateTime) >= s.maxNumDayDiff {
+
+		if inCache := has(curFilename); !inCache && stats.DiffLastUpdate(s.lastUpdateTime) >= s.maxNumDayDiff {
 			s.logger.Debug("Purge", zap.Bool("in cache", inCache))
+
 			if s.calcWeight {
 				s.weightSum -= stats.Weight
 			}
+
 			delete(s.Data, filename)
 			numDeletedFiles++
 		}
 	}
+
 	s.logger.Debug("Stats purged", zap.Int("NumDeletedFiles", numDeletedFiles))
 	s.firstUpdateTime = s.lastUpdateTime
 }
@@ -133,6 +122,7 @@ func (s Manager) Get(filename int64) *Stats {
 	if !inStats {
 		s.logger.Error("Get: no file found", zap.Int64("filename", filename))
 	}
+
 	return curStats
 }
 
@@ -143,6 +133,7 @@ func (s *Manager) GetOrCreate(filename int64, size float64, reqTime time.Time, c
 		s.logger.Info("Updated first time")
 		s.firstUpdateTime = reqTime
 	}
+
 	s.lastUpdateTime = reqTime
 
 	// Update file stats
