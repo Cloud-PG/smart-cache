@@ -306,6 +306,7 @@ func (cache *AIRL) Dumps(fileAndStats bool) [][]byte { //nolint:funlen
 		record = append(recordFMM, newLine...) //nolint:gocritic
 		outData = append(outData, record)
 	}
+
 	return outData
 }
 
