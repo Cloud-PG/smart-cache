@@ -38,7 +38,7 @@ func (q *LRU) getQueue() []*files.Stats {
 	// https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
 	q.buffer = q.buffer[:0]
 
-	for idx := len(q.queue); idx > -1; idx-- {
+	for idx := len(q.queue) - 1; idx > -1; idx-- {
 		filename := q.queue[idx]
 		fileStats, inQueue := q.files[filename]
 
@@ -116,6 +116,7 @@ func (q *LRU) len() int {
 	if len(q.queue) != len(q.files) {
 		panic("lru len: queue len differ from files")
 	}
+
 	return len(q.files)
 }
 
@@ -153,7 +154,7 @@ func (q *LRU) findIndex(filename int64, lastIdx int) int {
 			newIdx = idx
 
 			break
-		} else {
+		} else if q.lastIndex[curFilename] != idx {
 			q.lastIndex[curFilename] = idx
 		}
 	}
