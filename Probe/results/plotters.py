@@ -33,9 +33,9 @@ def plot_num_miss_after_del(results: list):
         y = obj['y']
         cumulative = obj['cumulative']
 
-        print(x)
-        print(y)
-        print(cumulative)
+        # print(x)
+        # print(y)
+        # print(cumulative)
 
         fig.add_trace(
             go.Scatter(
