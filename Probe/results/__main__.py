@@ -22,7 +22,7 @@ def main():
     parser.add_argument('folder', default=None,
                         help='Folder to inspect for results')
 
-    parser.add_argument('--p-type', default="AFTERDELETE",
+    parser.add_argument('--p-type', default="",
                         choices=['AFTERDELETE', 'MISSFREQ'],
                         help='Plot type')
 
