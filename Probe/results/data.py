@@ -1,3 +1,4 @@
+import json
 import pathlib
 import re
 
@@ -56,6 +57,36 @@ COLUMNS = [
     'Action delete one',
     'Action not delete',
 ]
+
+
+class UpperBounds(object):
+
+    def __init__(self):
+        cur_path = pathlib.Path(__file__)
+        it_bounds = cur_path.resolve().parent.parent.parent.joinpath(
+            "datasets", "it_upper_bounds.json")
+        us_bounds = cur_path.resolve().parent.parent.parent.joinpath(
+            "datasets", "us_upper_bounds.json")
+
+        with open(it_bounds) as in_file:
+            data_it = json.load(in_file)
+
+        self.it_hit_rate = pd.DataFrame(data_it['hit_rate'])
+        self.it_hit_rate['x'] = pd.to_datetime(self.it_hit_rate.x)
+
+        self.it_read_on_hit_ratio = pd.DataFrame(data_it['read_on_hit_ratio'])
+        self.it_read_on_hit_ratio['x'] = pd.to_datetime(
+            self.it_read_on_hit_ratio.x)
+
+        with open(us_bounds) as in_file:
+            data_us = json.load(in_file)
+
+        self.us_hit_rate = pd.DataFrame(data_us['hit_rate'])
+        self.us_hit_rate['x'] = pd.to_datetime(self.us_hit_rate.x)
+
+        self.us_read_on_hit_ratio = pd.DataFrame(data_us['read_on_hit_ratio'])
+        self.us_read_on_hit_ratio['x'] = pd.to_datetime(
+            self.us_read_on_hit_ratio.x)
 
 
 class Element(object):
