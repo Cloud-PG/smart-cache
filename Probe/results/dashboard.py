@@ -13,7 +13,7 @@ import plotly.graph_objects as go
 from dash.dependencies import Input, Output, State
 from plotly.graph_objs import Layout
 
-from .data import (COLUMNS, SIM_RESULT_FILENAME, Results, UpperBounds,
+from .data import (COLUMNS, SIM_RESULT_FILENAME, Results,
                    make_table, measure_avg_free_space, measure_bandwidth,
                    measure_cost, measure_cost_ratio, measure_cpu_eff,
                    measure_hit_over_miss, measure_hit_rate,
@@ -30,8 +30,6 @@ LAYOUT = Layout(
     yaxis={'gridcolor': 'black'},
     xaxis={'gridcolor': 'black'},
 )
-
-_UPPER_BOUNDS = UpperBounds()
 
 _MEASURES = {
     'Throughput ratio': measure_throughput_ratio,
@@ -490,47 +488,15 @@ def dashboard(results: 'Results', server_ip: str = "localhost"):
                         if file_ in new_file2plot
                     ]
                     prefix = get_prefix(files2plot)
-                hit_rate_bounds = False
-                read_on_hit_ratio_bounds = False
                 for measure, function in sorted(
                         _MEASURES.items(), key=lambda elm: elm[0]
                 ):
-                    to_add = []
-                    if measure == "Hit rate" and not hit_rate_bounds:
-                        to_add.append(go.Scatter(
-                            x=_UPPER_BOUNDS.it_hit_rate.x,
-                            y=_UPPER_BOUNDS.it_hit_rate.y,
-                            mode='lines',
-                            name="IT UPPER BOUNDS",
-                        ))
-                        to_add.append(go.Scatter(
-                            x=_UPPER_BOUNDS.us_hit_rate.x,
-                            y=_UPPER_BOUNDS.us_hit_rate.y,
-                            mode='lines',
-                            name="US UPPER BOUNDS",
-                        ))
-                        hit_rate_bounds = True
-                    elif measure == "Read on hit ratio" and not read_on_hit_ratio_bounds:
-                        to_add.append(go.Scatter(
-                            x=_UPPER_BOUNDS.it_read_on_hit_ratio.x,
-                            y=_UPPER_BOUNDS.it_read_on_hit_ratio.y,
-                            mode='lines',
-                            name="IT UPPER BOUNDS",
-                        ))
-                        to_add.append(go.Scatter(
-                            x=_UPPER_BOUNDS.us_read_on_hit_ratio.x,
-                            y=_UPPER_BOUNDS.us_read_on_hit_ratio.y,
-                            mode='lines',
-                            name="US UPPER BOUNDS",
-                        ))
-                        hit_rate_bounds = True
                     figures.append(dcc.Graph(
                         figure=make_line_figures(
                             files2plot,
                             prefix,
                             title=measure,
                             function=function,
-                            additional_traces=to_add,
                         )
                     ))
                     figures.append(html.Hr())
