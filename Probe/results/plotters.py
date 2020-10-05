@@ -7,7 +7,7 @@ from .dashboard import LAYOUT
 from .utils import LogDeleteEvaluator
 
 
-def plot_num_miss_after_del(results: list):
+def plot_num_miss_after_del(results: list, output_filename: str = ""):
     fig = go.Figure(layout=LAYOUT)
     fig_cum = go.Figure(layout=LAYOUT)
 
@@ -63,12 +63,13 @@ def plot_num_miss_after_del(results: list):
         yaxis_title='#',
     )
 
+    filename = "-" + output_filename if output_filename else ""
     fig.write_html(
-        "./test_num_miss.html",
+        f"num_miss{filename}.html",
         include_plotlyjs=True,
     )
     fig_cum.write_html(
-        "./test_cumulative.html",
+        f"num_miss_cumulative{filename}.html",
         include_plotlyjs=True,
     )
 
@@ -80,7 +81,7 @@ def _get_bins(data: list, bins: list, tot: int = 0):
         counts[bin_] = len([elm for elm in data if prevBin < elm <= bin_])
         prevBin = bin_
     max_val = bins[-1]
-    counts[int(max_val * 2)] = len([elm for elm in data if elm > max_val])
+    counts["max"] = len([elm for elm in data if elm > max_val])
     if tot == 0:
         tot = len(data)
     for key, value in counts.items():
@@ -89,7 +90,7 @@ def _get_bins(data: list, bins: list, tot: int = 0):
     return list(counts.values()), list(counts.keys())
 
 
-def plot_miss_freq(results: list):
+def plot_miss_freq(results: list, output_filename: str = ""):
     all_plots = []
 
     for name, (freq_deleted, freq_skip) in results:
@@ -117,7 +118,7 @@ def plot_miss_freq(results: list):
         plot_bgcolor='rgb(255,255,255)',
         yaxis={'gridcolor': 'black'},
         xaxis={'gridcolor': 'black'},
-        height=240*len(all_plots),
+        height=320*len(all_plots),
         width=1280,
         showlegend=False,
     )
@@ -136,13 +137,14 @@ def plot_miss_freq(results: list):
         fig.update_xaxes(title='freq. class', type='category', row=idx, col=1)
         fig.update_yaxes(
             title='%',
-            #  type="log",
+            type="log",
             row=idx,
             col=1,
             showgrid=True,
         )
 
+    filename = "-" + output_filename if output_filename else ""
     fig.write_html(
-        "./test_miss_freq.html",
+        f"miss_freq{filename}.html",
         include_plotlyjs=True,
     )

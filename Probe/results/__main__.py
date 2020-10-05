@@ -29,6 +29,10 @@ def main():
     parser.add_argument('--dash-ip', default="localhost", type=str,
                         help='IP addr where start the dashboard server')
 
+    parser.add_argument('--output-filename', '-o', type=str,
+                        default="",
+                        help='The output file name [DEFAULT: ""]')
+
     args, _ = parser.parse_known_args()
 
     init()
@@ -46,7 +50,8 @@ def main():
                     results.get_all(), path.commonprefix(results.files),
                     generator=True,
                     target=args.p_type,
-                )
+                ),
+                output_filename=args.output_filename,
             )
         elif args.p_type == "MISSFREQ":
             plot_miss_freq(
@@ -54,7 +59,8 @@ def main():
                     results.get_all(), path.commonprefix(results.files),
                     generator=True,
                     target=args.p_type,
-                )
+                ),
+                output_filename=args.output_filename,
             )
 
 
