@@ -587,6 +587,16 @@ tasks:
       - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodD/scdl2-onK.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodD/scdl2.yml"
 
+  infinite-simulations:
+    desc: Run only infinite cache simulations
+    deps:
+      - release-fast
+    cmds:
+      - echo "infinite cache simulations"
+      # 0T
+      - "{{.EXE_PATH}} sim ../../config/simulations/infinite_cache/italian_dataset.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/infinite_cache/us_dataset.yml"
+
   make-weight-function-configs:
     desc: Make all weight function configuration files
     dir: ../../config/simulations/weight_function_italian_dataset/100T

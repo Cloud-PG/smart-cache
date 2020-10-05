@@ -428,6 +428,15 @@ func Create(cacheType string, cacheSize float64, cacheSizeUnit string, weightFun
 	cacheSizeMegabytes := GetCacheSize(cacheSize, cacheSizeUnit)
 
 	switch cacheType {
+	case "infinite":
+		logger.Info("Create infinite Cache",
+			zap.Float64("cacheSize", cacheSizeMegabytes),
+		)
+		cacheInstance = &InfiniteCache{
+			SimpleCache: SimpleCache{
+				MaxSize: cacheSizeMegabytes,
+			},
+		}
 	case "lru":
 		logger.Info("Create LRU Cache",
 			zap.Float64("cacheSize", cacheSizeMegabytes),
@@ -552,6 +561,9 @@ func InitInstance(cacheType string, cacheInstance Cache, params InitParameters) 
 	logger := zap.L()
 
 	switch cacheType {
+	case "infinite":
+		logger.Info("Init infinite Cache")
+		InitCache(cacheInstance, params)
 	case "lru":
 		logger.Info("Init LRU Cache")
 		params.QueueType = queue.LRUQueue
@@ -607,7 +619,7 @@ func InitInstance(cacheType string, cacheInstance Cache, params InitParameters) 
 		params.CalcWeight = true
 		InitCache(cacheInstance, params)
 	default:
-		fmt.Printf("ERR: '%s' is not a valid cache type...\n", cacheType)
+		fmt.Printf("ERR: '%s' is not a valid cache type to init...\n", cacheType)
 		os.Exit(-2)
 	}
 }
