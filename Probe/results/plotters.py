@@ -73,7 +73,7 @@ def plot_num_miss_after_del(results: list):
     )
 
 
-def _get_bins(data: list, bins: list):
+def _get_bins(data: list, bins: list, tot: int = 0):
     counts = {}
     prevBin = 0
     for bin_ in bins:
@@ -81,7 +81,8 @@ def _get_bins(data: list, bins: list):
         prevBin = bin_
     max_val = bins[-1]
     counts[int(max_val * 2)] = len([elm for elm in data if elm > max_val])
-    tot = len(data)
+    if tot == 0:
+        tot = len(data)
     for key, value in counts.items():
         if value > 0.:
             counts[key] = (value / tot) * 100.
@@ -92,8 +93,9 @@ def plot_miss_freq(results: list):
     all_plots = []
 
     for name, (freq_deleted, freq_skip) in results:
-        counts_del, bins_del = _get_bins(freq_deleted, bins=[1, 2, 6])
-        counts_skip, bins_skip = _get_bins(freq_skip, bins=[1, 2, 6])
+        tot = len(freq_deleted) + len(freq_skip)
+        counts_del, bins_del = _get_bins(freq_deleted, bins=[1, 2, 6], tot=tot)
+        counts_skip, bins_skip = _get_bins(freq_skip, bins=[1, 2, 6], tot=tot)
 
         all_plots.append({
             'deleted': (bins_del, counts_del),
