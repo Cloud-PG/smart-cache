@@ -348,7 +348,7 @@ def make_table(files2plot: list, prefix: str) -> 'pd.DataFrame':
 
 def get_measures(cache_filename: str, df: 'pd.DataFrame') -> list:
     measures = [cache_filename]
-    print(cache_filename)
+    # print(cache_filename)
 
     # Throughput ratio
     measures.append(
