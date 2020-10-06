@@ -1,3 +1,4 @@
+import tempfile
 from os import path
 from typing import Tuple
 
@@ -11,16 +12,20 @@ import plotly.express as px
 # import plotly.express as px
 import plotly.graph_objects as go
 from dash.dependencies import Input, Output, State
+from flask import send_file
 from plotly.graph_objs import Layout
 
-from .data import (COLUMNS, SIM_RESULT_FILENAME, Results,
-                   make_table, measure_avg_free_space, measure_bandwidth,
-                   measure_cost, measure_cost_ratio, measure_cpu_eff,
-                   measure_hit_over_miss, measure_hit_rate,
-                   measure_num_miss_after_delete, measure_read_on_hit_ratio,
-                   measure_redirect_volume, measure_std_dev_free_space,
-                   measure_throughput, measure_throughput_ratio,
-                   parse_simulation_report)
+from .data import (COLUMNS, SIM_RESULT_FILENAME, Results, make_table,
+                   measure_avg_free_space, measure_bandwidth, measure_cost,
+                   measure_cost_ratio, measure_cpu_eff, measure_hit_over_miss,
+                   measure_hit_rate, measure_num_miss_after_delete,
+                   measure_read_on_hit_ratio, measure_redirect_volume,
+                   measure_std_dev_free_space, measure_throughput,
+                   measure_throughput_ratio, parse_simulation_report)
+
+_CSV_TEMP_FILE = tempfile.NamedTemporaryFile(mode="w", delete=False)
+_TEX_TEMP_FILE = tempfile.NamedTemporaryFile(mode="w", delete=False)
+_HTML_TEMP_FILE = tempfile.NamedTemporaryFile(mode="w", delete=False)
 
 _EXTERNAL_STYLESHEETS = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
@@ -126,6 +131,37 @@ def dashboard(results: 'Results', server_ip: str = "localhost"):
         _EXTERNAL_STYLESHEETS, dbc.themes.BOOTSTRAP
     ], suppress_callback_exceptions=True)
 
+    @app.server.route('/table/csv')
+    def download_csv():
+        _CSV_TEMP_FILE.seek(0)
+        return send_file(
+            _CSV_TEMP_FILE.name,
+            mimetype='text/csv',
+            attachment_filename='table.csv',
+            as_attachment=True,
+        )
+
+    @app.server.route('/table/tex')
+    def download_tex():
+        _TEX_TEMP_FILE.seek(0)
+        return send_file(
+            _TEX_TEMP_FILE.name,
+            mimetype='text/plain',
+            attachment_filename='table.tex',
+            as_attachment=True,
+        )
+
+    @app.server.route('/table/html')
+    def download_html():
+        print("SEND html")
+        _HTML_TEMP_FILE.seek(0)
+        return send_file(
+            _HTML_TEMP_FILE.name,
+            mimetype='text/plain',
+            attachment_filename='table.html',
+            as_attachment=True,
+        )
+
     _TAB_FILES = dbc.Card(
         dbc.CardBody(
             [
@@ -212,10 +248,30 @@ def dashboard(results: 'Results', server_ip: str = "localhost"):
     )
 
     _TAB_TABLE = dbc.Card(
-        dbc.Spinner(
+        dbc.Spinner([
+            dbc.CardBody(
+                dbc.ListGroup(
+                    [
+                        dbc.ListGroupItem(dcc.Link(
+                            "Download as CSV", refresh=True,
+                            href="/table/csv", target="_blank",)
+                        ),
+                        dbc.ListGroupItem(dcc.Link(
+                            "Download as Latex table", refresh=True,
+                            href="/table/tex", target="_blank",)
+                        ),
+                        dbc.ListGroupItem(dcc.Link(
+                            "Download as html", refresh=True,
+                            href="/table/html", target="_blank",)
+                        ),
+                    ],
+                    horizontal=True,
+                ),
+
+            ),
             dbc.CardBody(
                 id="table",
-            ),
+            )],
             color="primary",
         ),
     )
@@ -557,9 +613,19 @@ def dashboard(results: 'Results', server_ip: str = "localhost"):
                     prefix = get_prefix(files2plot)
                     table = make_table(files2plot, prefix)
 
+                _CSV_TEMP_FILE.seek(0)
+                table.to_csv(_CSV_TEMP_FILE)
+
+                _TEX_TEMP_FILE.seek(0)
+                table.to_latex(_TEX_TEMP_FILE)
+
+                _HTML_TEMP_FILE.seek(0)
+                table.to_html(_HTML_TEMP_FILE)
+
                 table = dbc.Table.from_dataframe(
                     table, striped=True, bordered=True, hover=True
                 )
+
                 _CACHE['tables'][cur_hash] = table
                 return ("", "", "", table, "", "")
         elif at == "tab-compare":
