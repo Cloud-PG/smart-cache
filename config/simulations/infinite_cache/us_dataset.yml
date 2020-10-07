@@ -16,4 +16,4 @@ sim:
       unit: T
     bandwidth:
       value: 10
-      redirect: true
+      redirect: false
