@@ -518,6 +518,8 @@ func (agent *Agent) Remember(key interface{}) ([]Choice, bool) {
 	return memories, inMemory
 }
 
+// returns the max value and its index. If multiple values are the maximum it
+// chooces randomly between them.
 func (agent *Agent) getArgMax(array []float64) (int, float64) {
 	maxIdx := 0
 	maxElm := array[maxIdx]
