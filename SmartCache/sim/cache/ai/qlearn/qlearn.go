@@ -521,20 +521,21 @@ func (agent *Agent) Remember(key interface{}) ([]Choice, bool) {
 func (agent *Agent) getArgMax(array []float64) (int, float64) {
 	maxIdx := 0
 	maxElm := array[maxIdx]
-	allEqual := true
+	equalElms := make([]int, 0, len(array))
 
 	for idx := 1; idx < len(array); idx++ {
 		if array[idx] > maxElm {
 			maxElm = array[idx]
 			maxIdx = idx
-			allEqual = false
+			equalElms = equalElms[:0]
+			equalElms = append(equalElms, idx)
+		} else if array[idx] == maxElm {
+			equalElms = append(equalElms, idx)
 		}
-
-		allEqual = allEqual && (array[idx] == maxElm)
 	}
 
-	if allEqual {
-		maxIdx = agent.RGenerator.Intn(len(array))
+	if len(equalElms) > 1 {
+		maxIdx = equalElms[agent.RGenerator.Intn(len(equalElms))]
 		maxElm = array[maxIdx]
 	}
 
