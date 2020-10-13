@@ -153,7 +153,6 @@ def dashboard(results: 'Results', server_ip: str = "localhost"):
 
     @app.server.route('/table/html')
     def download_html():
-        print("SEND html")
         _HTML_TEMP_FILE.seek(0)
         return send_file(
             _HTML_TEMP_FILE.name,
