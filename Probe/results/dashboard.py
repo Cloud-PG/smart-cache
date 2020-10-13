@@ -506,7 +506,7 @@ def dashboard(results: 'Results', server_ip: str = "localhost"):
                         files2plot = [
                             (file_, df)
                             for file_, df in files2plot
-                            if file_ in new_file2plot
+                            if f'{file_.replace("run_full_normal/", "")}' in new_file2plot
                         ]
                         prefix = get_prefix(files2plot)
                     figures.append(dcc.Graph(
@@ -541,7 +541,7 @@ def dashboard(results: 'Results', server_ip: str = "localhost"):
                     files2plot = [
                         (file_, df)
                         for file_, df in files2plot
-                        if file_ in new_file2plot
+                        if f'{file_.replace("run_full_normal/", "")}' in new_file2plot
                     ]
                     prefix = get_prefix(files2plot)
                 for measure, function in sorted(
@@ -579,7 +579,7 @@ def dashboard(results: 'Results', server_ip: str = "localhost"):
                     files2plot = [
                         (file_, df)
                         for file_, df in files2plot
-                        if file_ in new_file2plot
+                        if f'{file_.replace("run_full_normal/", "")}' in new_file2plot
                     ]
                     prefix = get_prefix(files2plot)
                 figures.extend(
@@ -608,7 +608,7 @@ def dashboard(results: 'Results', server_ip: str = "localhost"):
                     files2plot = [
                         (file_, df)
                         for file_, df in files2plot
-                        if file_ in new_file2plot
+                        if f'{file_.replace("run_full_normal/", "")}' in new_file2plot
                     ]
                     prefix = get_prefix(files2plot)
                     table = make_table(files2plot, prefix)
@@ -913,6 +913,6 @@ def get_top_n(df: 'pd.DataFrame', n: int, prefix: str) -> list:
     :rtype: list
     """
     return [
-        f"{prefix}{filename}{SIM_RESULT_FILENAME}"
+        f"{prefix}{filename}/{SIM_RESULT_FILENAME}"
         for filename in df[:n].file.to_list()
     ]
