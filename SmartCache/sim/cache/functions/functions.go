@@ -4,18 +4,21 @@ import (
 	"math"
 )
 
+// WeightFun is the type of the function exported
+type WeightFun func(int64, float64, float64, float64, float64, float64) float64
+
 // FunctionType is used to select the weight function
-type FunctionType int
+type Type int
 
 const (
-	// FuncAdditive indicates the simple function for weight function cache with parameters
-	FuncAdditive FunctionType = iota - 4
-	// FuncAdditiveExp indicates the simple function for weight function cache with parameters but exponential
-	FuncAdditiveExp
-	// FuncMultiplicative  indicates the simple function for weight function cache with parameter as exponentials
-	FuncMultiplicative
-	// FuncWeightedRequests has a small memory for request time
-	FuncWeightedRequests
+	// Additive indicates the simple function for weight function cache with parameters
+	Additive Type = iota - 4
+	// AdditiveExp indicates the simple function for weight function cache with parameters but exponential
+	AdditiveExp
+	// Multiplicative  indicates the simple function for weight function cache with parameter as exponentials
+	Multiplicative
+	// WeightedRequests has a small memory for request time
+	WeightedRequests
 )
 
 func FileAdditiveWeight(totRequests int64, size float64, meanTicks float64, alpha float64, beta float64, gamma float64) float64 {

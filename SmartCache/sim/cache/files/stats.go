@@ -2,9 +2,8 @@ package files
 
 import (
 	"math"
-	"time"
-
 	"simulator/v2/cache/functions"
+	"time"
 
 	"go.uber.org/zap"
 )
@@ -160,12 +159,12 @@ func (s *Manager) GetOrCreate(filename int64, size float64, reqTime time.Time, c
 }
 
 // UpdateWeight update the weight of a file and also the sum of all weights
-func (s *Manager) UpdateWeight(stats *Stats, newFile bool, functionType functions.FunctionType, alpha float64, beta float64, gamma float64) {
+func (s *Manager) UpdateWeight(stats *Stats, newFile bool, wFun functions.WeightFun, alpha float64, beta float64, gamma float64) {
 	if newFile {
-		s.weightSum += stats.updateWeight(functionType, alpha, beta, gamma)
+		s.weightSum += stats.updateWeight(wFun, alpha, beta, gamma)
 	} else {
 		s.weightSum -= stats.Weight
-		s.weightSum += stats.updateWeight(functionType, alpha, beta, gamma)
+		s.weightSum += stats.updateWeight(wFun, alpha, beta, gamma)
 	}
 }
 
@@ -227,44 +226,17 @@ func (stats *Stats) UpdateStats(hit bool, size float64, userID int64, siteName i
 	stats.idxLastRequest = (stats.idxLastRequest + 1) % NumRequestedTimes
 }
 
-func (stats *Stats) updateWeight(functionType functions.FunctionType, alpha float64, beta float64, gamma float64) float64 {
+func (stats *Stats) updateWeight(wFun functions.WeightFun, alpha float64, beta float64, gamma float64) float64 {
 	stats.RequestedTimesMean = stats.getMeanReqTimes()
 
-	switch functionType {
-	case functions.FuncAdditive:
-		stats.Weight = functions.FileAdditiveWeight(
-			stats.Frequency,
-			stats.Size,
-			stats.RequestedTimesMean,
-			alpha,
-			beta,
-			gamma,
-		)
-	case functions.FuncAdditiveExp:
-		stats.Weight = functions.FileAdditiveExpWeight(
-			stats.Frequency,
-			stats.Size,
-			stats.RequestedTimesMean,
-			alpha,
-			beta,
-			gamma,
-		)
-	case functions.FuncMultiplicative:
-		stats.Weight = functions.FileMultiplicativeWeight(
-			stats.Frequency,
-			stats.Size,
-			stats.RequestedTimesMean,
-			alpha,
-			beta,
-			gamma,
-		)
-	case functions.FuncWeightedRequests:
-		stats.Weight = functions.FileWeightedRequest(
-			stats.Frequency,
-			stats.Size,
-			stats.RequestedTimesMean,
-		)
-	}
+	stats.Weight = wFun(
+		stats.Frequency,
+		stats.Size,
+		stats.RequestedTimesMean,
+		alpha,
+		beta,
+		gamma,
+	)
 
 	return stats.Weight
 }

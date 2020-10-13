@@ -497,30 +497,10 @@ func Create(cacheType string, cacheSize float64, cacheSizeUnit string, weightFun
 			zap.Float64("cacheSize", cacheSizeMegabytes),
 		)
 
-		var (
-			selFunctionType functions.FunctionType
-		)
-
-		switch weightFunc {
-		case "FuncAdditive":
-			selFunctionType = functions.FuncAdditive
-		case "FuncAdditiveExp":
-			selFunctionType = functions.FuncAdditiveExp
-		case "FuncMultiplicative":
-			selFunctionType = functions.FuncMultiplicative
-		case "FuncWeightedRequests":
-			selFunctionType = functions.FuncWeightedRequests
-		default:
-			fmt.Println("ERR: You need to specify a correct weight function.")
-			os.Exit(-1)
-		}
-
 		cacheInstance = &WeightFun{
 			SimpleCache: SimpleCache{
 				MaxSize: cacheSizeMegabytes,
 			},
-			Parameters:      weightFuncParams,
-			SelFunctionType: selFunctionType,
 		}
 	default:
 		fmt.Printf("ERR: '%s' is not a valid cache type...\n", cacheType)
@@ -541,10 +521,8 @@ type InitParameters struct {
 	AIFeatureMap           string
 	AIModel                string
 	FunctionTypeString     string
-	FunctionType           functions.FunctionType
-	WeightAlpha            float64
-	WeightBeta             float64
-	WeightGamma            float64
+	WfType                 functions.Type
+	WfParams               WeightFunctionParameters
 	EvictionAgentType      string
 	RandSeed               int64
 	AIRLEvictionK          int64
@@ -598,25 +576,23 @@ func InitInstance(cacheType string, cacheInstance Cache, params InitParameters) 
 			logger.Info("No eviction feature map indicated...")
 		}
 
-		switch params.FunctionTypeString {
-		case "FuncAdditive":
-			params.FunctionType = functions.FuncAdditive
-		case "FuncAdditiveExp":
-			params.FunctionType = functions.FuncAdditiveExp
-		case "FuncMultiplicative":
-			params.FunctionType = functions.FuncMultiplicative
-		case "FuncWeightedRequests":
-			params.FunctionType = functions.FuncWeightedRequests
-		default:
-			fmt.Println("ERR: You need to specify a correct weight function.")
-			os.Exit(-1)
-		}
-
 		InitCache(cacheInstance, params)
 	case "weightFunLRU":
 		logger.Info("Init Weight Function Cache")
 		params.QueueType = queue.LRUQueue
 		params.CalcWeight = true
+
+		switch params.FunctionTypeString {
+		case "FuncAdditive":
+			params.WfType = functions.Additive
+		case "FuncAdditiveExp":
+			params.WfType = functions.AdditiveExp
+		case "FuncMultiplicative":
+			params.WfType = functions.Multiplicative
+		default:
+			fmt.Println("ERR: No weight function indicated or not correct...")
+			os.Exit(-1)
+		}
 		InitCache(cacheInstance, params)
 	default:
 		fmt.Printf("ERR: '%s' is not a valid cache type to init...\n", cacheType)
