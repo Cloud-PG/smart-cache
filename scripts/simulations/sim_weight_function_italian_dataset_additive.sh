@@ -7,10 +7,11 @@
 # python make_configs.py
 # popd &&
 
-simulator sim ../../config/simulations/weight_function_italian_dataset/100T/lru.yml &&
-  simulator sim ../../config/simulations/weight_function_italian_dataset/100T/lfu.yml &&
-  simulator sim ../../config/simulations/weight_function_italian_dataset/100T/sizeBig.yml &&
-  simulator sim ../../config/simulations/weight_function_italian_dataset/100T/sizeSmall.yml
+WEIGHT_CONFIGS=../../config/simulations/weight_function_italian_dataset/100T/weightFun_FuncAdditive_*.yml
+for conf in $WEIGHT_CONFIGS; do
+  echo "==> $conf"
+  simulator sim $conf
+done
 
 ### ----- Plot results -----
 

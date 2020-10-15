@@ -609,7 +609,36 @@ tasks:
 
   weight-function:
     desc: Make all weight function simulations
+    cmds:
+      - task: weight-function-base
+      - task: weight-function-additive
+      - task: weight-function-additive-exp
+      - task: weight-function-multiplicative
+
+  weight-function-base:
+    desc: Make all weight function simulations
     deps:
       - make-weight-function-configs
     cmds:
       - ./sim_weight_function_italian_dataset.sh
+
+  weight-function-additive:
+    desc: Make all additive weight function simulations
+    deps:
+      - make-weight-function-configs
+    cmds:
+      - ./sim_weight_function_italian_dataset_additive.sh
+
+  weight-function-additive-exp:
+    desc: Make all additive exp weight function simulations
+    deps:
+      - make-weight-function-configs
+    cmds:
+      - ./sim_weight_function_italian_dataset_additiveExp.sh
+
+  weight-function-multiplicative:
+    desc: Make all multiplicative weight function simulations
+    deps:
+      - make-weight-function-configs
+    cmds:
+      - ./sim_weight_function_italian_dataset_multiplicative.sh
