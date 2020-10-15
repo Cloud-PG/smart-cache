@@ -3,7 +3,7 @@
 _TEMPLATE = """--- # Simulation parameters
 sim:
   data: ../../../../datasets/source2018_numeric_it_with_avro_order/
-  outputFolder: ../../../../results/sim_weight_function_italian_dataset/100T
+  outputFolder: ../../../../results/sim_weight_function_italian_dataset/100T/{function}
   type: normal
   window:
     start: 0
