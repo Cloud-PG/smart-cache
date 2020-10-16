@@ -9,7 +9,7 @@ sim:
     start: 0
     stop: 52
   region: it
-  overwrite: true
+  overwrite: false
   cache:
     stats:
       maxNumDayDiff: 14.0
@@ -41,7 +41,7 @@ def main():
     for function in _FUNCTIONS:
         conf_num = 0
         print(f"==> Make function {function} configs...")
-        tot_configs = len(_VALUES)**3
+        tot_configs = len(_VALUES) ** 3
         for alpha_value in _VALUES:
             for beta_value in _VALUES:
                 for gamma_value in _VALUES:
@@ -59,7 +59,7 @@ def main():
                         conf_num += 1
                         print(
                             f"==> Written config {conf_num}/{tot_configs} of {function}",
-                            end="\r"
+                            end="\r",
                         )
 
 
