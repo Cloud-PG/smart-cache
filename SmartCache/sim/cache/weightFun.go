@@ -171,7 +171,7 @@ func (cache *WeightFun) UpdatePolicy(request *Request, fileStats *files.Stats, h
 // ExtraStats for output
 func (cache *WeightFun) ExtraStats() string {
 	return fmt.Sprintf(
-		"a:%0.2f|b:%0.2f|g:%0.2f",
-		cache.fParams.Alpha, cache.fParams.Beta, cache.fParams.Gamma,
+		"a:%0.2f|b:%0.2f|g:%0.2f|wAVG:%0.2f",
+		cache.fParams.Alpha, cache.fParams.Beta, cache.fParams.Gamma, cache.stats.GetWeightMedian(),
 	)
 }
