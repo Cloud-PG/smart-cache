@@ -2,6 +2,7 @@ import json
 import pathlib
 import re
 
+import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
@@ -168,7 +169,7 @@ def aggregate_results(folder: str) -> 'Results':
     ), desc="Opening results"):
         df = pd.read_csv(result_path)
         cur_columns = set(df.columns)
-        if cur_columns.issubset(all_columns):
+        if True or cur_columns.issubset(all_columns):
             df['date'] = pd.to_datetime(
                 df['date'].apply(lambda elm: elm.split()[0]),
                 format="%Y-%m-%d"
@@ -187,61 +188,83 @@ def aggregate_results(folder: str) -> 'Results':
     return results
 
 
+def missing_column(func):
+    def wrapper(df: 'pd.DataFrame'):
+        try:
+            return func(df)
+        except KeyError:
+            return pd.Series(np.zeros(len(df.index)))
+    return wrapper
+
+
+@missing_column
 def measure_throughput_ratio(df: 'pd.DataFrame') -> 'pd.Series':
     cache_size = df['cache size'][0]
     return (df['read on hit data'] - df['written data'])/cache_size
 
 
+@missing_column
 def measure_cost_ratio(df: 'pd.DataFrame') -> 'pd.Series':
     cache_size = df['cache size'][0]
     return (df['written data'] + df['deleted data'])/cache_size
 
 
+@missing_column
 def measure_throughput(df: 'pd.DataFrame') -> 'pd.Series':
     # to Terabytes
     return (df['read on hit data'] - df['written data'])/(1024.**2.)
 
 
+@missing_column
 def measure_cost(df: 'pd.DataFrame') -> 'pd.Series':
     # to Terabytes
     return (df['written data'] + df['deleted data'])/(1024.**2.)
 
 
+@missing_column
 def measure_read_on_hit_ratio(df: 'pd.DataFrame') -> 'pd.Series':
     return (df['read on hit data']/df['read data']) * 100.
 
 
+@missing_column
 def measure_cpu_eff(df: 'pd.DataFrame') -> 'pd.Series':
     return df['CPU efficiency']
 
 
+@missing_column
 def measure_avg_free_space(df: 'pd.DataFrame') -> 'pd.Series':
     cache_size = df['cache size'][0]
     return (df['avg free space'] / cache_size) * 100.
 
 
+@missing_column
 def measure_std_dev_free_space(df: 'pd.DataFrame') -> 'pd.Series':
     cache_size = df['cache size'][0]
     return (df['std dev free space'] / cache_size) * 100.
 
 
+@missing_column
 def measure_bandwidth(df: 'pd.DataFrame') -> 'pd.Series':
     return (df['read on miss data'] / df['bandwidth']) * 100.
 
 
+@missing_column
 def measure_redirect_volume(df: 'pd.DataFrame') -> 'pd.Series':
     cache_size = df['cache size'][0]
     return (df['size redirected'] / cache_size) * 100.
 
 
+@missing_column
 def measure_num_miss_after_delete(df: 'pd.DataFrame') -> 'pd.Series':
     return df['num miss after delete']
 
 
+@missing_column
 def measure_hit_rate(df: 'pd.DataFrame') -> 'pd.Series':
     return df['hit rate']
 
 
+@missing_column
 def measure_hit_over_miss(df: 'pd.DataFrame') -> 'pd.Series':
     return df['read on hit data'] / df['read on miss data']
 
