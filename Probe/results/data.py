@@ -191,19 +191,21 @@ def aggregate_results(folder: str) -> "Results":
     ):
         df = pd.read_csv(result_path)
         cur_columns = set(df.columns)
-        if cur_columns.issubset(all_columns):
-            df["date"] = pd.to_datetime(
-                df["date"].apply(lambda elm: elm.split()[0]), format="%Y-%m-%d"
-            )
-            relative_path = result_path.relative_to(abs_target_folder)
-            *components, filename = relative_path.parts
-            # Check choices
-            choice_file = result_path.parent.joinpath(SIM_CHOICE_LOG_FILE)
-            if choice_file.exists():
-                choices = choice_file
-            else:
-                choices = None
-            results.insert(relative_path, components, filename, df, choices)
+        if not cur_columns.issubset(all_columns):
+            print("Warning: not all columns are present")
+
+        df["date"] = pd.to_datetime(
+            df["date"].apply(lambda elm: elm.split()[0]), format="%Y-%m-%d"
+        )
+        relative_path = result_path.relative_to(abs_target_folder)
+        *components, filename = relative_path.parts
+        # Check choices
+        choice_file = result_path.parent.joinpath(SIM_CHOICE_LOG_FILE)
+        if choice_file.exists():
+            choices = choice_file
+        else:
+            choices = None
+        results.insert(relative_path, components, filename, df, choices)
     return results
 
 
