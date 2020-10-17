@@ -169,7 +169,7 @@ def aggregate_results(folder: str) -> 'Results':
     ), desc="Opening results"):
         df = pd.read_csv(result_path)
         cur_columns = set(df.columns)
-        if True or cur_columns.issubset(all_columns):
+        if cur_columns.issubset(all_columns):
             df['date'] = pd.to_datetime(
                 df['date'].apply(lambda elm: elm.split()[0]),
                 format="%Y-%m-%d"
