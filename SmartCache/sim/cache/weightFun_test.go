@@ -1,108 +1,100 @@
 package cache
 
-import (
-	"testing"
-	"time"
+// "fmt"
 
-	// "fmt"
+// func TestWeightFunBaseMultipleInsert(t *testing.T) {
+// 	testCache := &WeightFun{
+// 		SimpleCache: SimpleCache{
+// 			MaxSize:       3.0,
+// 			HighWatermark: 100.,
+// 			LowWatermark:  100.,
+// 		},
+// 		SelFunctionType: functions.FuncWeightedRequests,
+// 	}
+// 	testCache.Init(InitParameters{QueueType: queue.LRUQueue})
 
-	"simulator/v2/cache/functions"
-	"simulator/v2/cache/queue"
-)
+// 	res, _ := GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
+// 	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
+// 	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
+// 	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
 
-func TestWeightFunBaseMultipleInsert(t *testing.T) {
-	testCache := &WeightFun{
-		SimpleCache: SimpleCache{
-			MaxSize:       3.0,
-			HighWatermark: 100.,
-			LowWatermark:  100.,
-		},
-		SelFunctionType: functions.FuncWeightedRequests,
-	}
-	testCache.Init(InitParameters{QueueType: queue.LRUQueue})
+// 	if !res {
+// 		t.Fatalf("First insert error -> Expected %t but got %t", true, res)
+// 	} else if testCache.HitRate() != 75. {
+// 		t.Fatalf("Hit rate error -> Expected %f but got %f", 75., testCache.HitRate())
+// 	} else if testCache.WeightedHitRate() != 225. {
+// 		t.Fatalf("Weighted hit rate error -> Expected %f but got %f", 225., testCache.WeightedHitRate())
+// 	} else if testCache.Size() != 1.0 {
+// 		t.Fatalf("Size error -> Expected %f but got %f", 1.0, testCache.Size())
+// 	} else if testCache.DataWritten() != 1.0 {
+// 		t.Fatalf("Written data error -> Expected %f but got %f", 1.0, testCache.DataWritten())
+// 	}
+// }
 
-	res, _ := GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
-	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
-	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
-	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
+// func TestWeightFunClear(t *testing.T) {
+// 	testCache := &WeightFun{
+// 		SimpleCache: SimpleCache{
+// 			MaxSize:       3.0,
+// 			HighWatermark: 100.,
+// 			LowWatermark:  100.,
+// 		},
+// 		SelFunctionType: functions.FuncWeightedRequests,
+// 	}
+// 	testCache.Init(InitParameters{QueueType: queue.LRUQueue})
 
-	if !res {
-		t.Fatalf("First insert error -> Expected %t but got %t", true, res)
-	} else if testCache.HitRate() != 75. {
-		t.Fatalf("Hit rate error -> Expected %f but got %f", 75., testCache.HitRate())
-	} else if testCache.WeightedHitRate() != 225. {
-		t.Fatalf("Weighted hit rate error -> Expected %f but got %f", 225., testCache.WeightedHitRate())
-	} else if testCache.Size() != 1.0 {
-		t.Fatalf("Size error -> Expected %f but got %f", 1.0, testCache.Size())
-	} else if testCache.DataWritten() != 1.0 {
-		t.Fatalf("Written data error -> Expected %f but got %f", 1.0, testCache.DataWritten())
-	}
-}
+// 	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
+// 	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
+// 	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
+// 	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
 
-func TestWeightFunClear(t *testing.T) {
-	testCache := &WeightFun{
-		SimpleCache: SimpleCache{
-			MaxSize:       3.0,
-			HighWatermark: 100.,
-			LowWatermark:  100.,
-		},
-		SelFunctionType: functions.FuncWeightedRequests,
-	}
-	testCache.Init(InitParameters{QueueType: queue.LRUQueue})
+// 	testCache.Clear()
 
-	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
-	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
-	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
-	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
+// 	if testCache.HitRate() != 0. {
+// 		t.Fatalf("Hit rate error -> Expected %f but got %f", 0., testCache.HitRate())
+// 	} else if testCache.Size() != 0. {
+// 		t.Fatalf("Size error -> Expected %f but got %f", 0., testCache.Size())
+// 	} else if testCache.DataWritten() != 0. {
+// 		t.Fatalf("Written data error -> Expected %f but got %f", 0., testCache.DataWritten())
+// 	} else if testCache.DataReadOnHit() != 0. {
+// 		t.Fatalf("Read on hit error -> Expected %f but got %f", 0., testCache.DataReadOnHit())
+// 	}
+// 	// } else if testCache.files.Len() != 0 {
+// 	// 	t.Fatalf("Queue error -> Expected %d but got %d", 0, testCache.files.Len())
+// 	// }
+// }
 
-	testCache.Clear()
+// func TestWeightFunInsert(t *testing.T) {
+// 	testCache := &WeightFun{
+// 		SimpleCache: SimpleCache{
+// 			MaxSize:       5.0,
+// 			HighWatermark: 100.,
+// 			LowWatermark:  100.,
+// 		},
+// 		SelFunctionType: functions.FuncWeightedRequests,
+// 	}
+// 	testCache.Init(InitParameters{QueueType: queue.LRUQueue})
 
-	if testCache.HitRate() != 0. {
-		t.Fatalf("Hit rate error -> Expected %f but got %f", 0., testCache.HitRate())
-	} else if testCache.Size() != 0. {
-		t.Fatalf("Size error -> Expected %f but got %f", 0., testCache.Size())
-	} else if testCache.DataWritten() != 0. {
-		t.Fatalf("Written data error -> Expected %f but got %f", 0., testCache.DataWritten())
-	} else if testCache.DataReadOnHit() != 0. {
-		t.Fatalf("Read on hit error -> Expected %f but got %f", 0., testCache.DataReadOnHit())
-	}
-	// } else if testCache.files.Len() != 0 {
-	// 	t.Fatalf("Queue error -> Expected %d but got %d", 0, testCache.files.Len())
-	// }
-}
+// 	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
+// 	GetFile(testCache, int64(1), size2, floatZero, floatZero, time.Now().Unix())
+// 	GetFile(testCache, int64(2), size1, floatZero, floatZero, time.Now().Unix())
+// 	GetFile(testCache, int64(3), size1, floatZero, floatZero, time.Now().Unix())
+// 	GetFile(testCache, int64(1), size2, floatZero, floatZero, time.Now().Unix())
+// 	GetFile(testCache, int64(1), size2, floatZero, floatZero, time.Now().Unix())
+// 	GetFile(testCache, int64(1), size2, floatZero, floatZero, time.Now().Unix())
+// 	GetFile(testCache, int64(4), size1, floatZero, floatZero, time.Now().Unix())
+// 	GetFile(testCache, int64(3), size1, floatZero, floatZero, time.Now().Unix())
+// 	GetFile(testCache, int64(4), size1, floatZero, floatZero, time.Now().Unix())
 
-func TestWeightFunInsert(t *testing.T) {
-	testCache := &WeightFun{
-		SimpleCache: SimpleCache{
-			MaxSize:       5.0,
-			HighWatermark: 100.,
-			LowWatermark:  100.,
-		},
-		SelFunctionType: functions.FuncWeightedRequests,
-	}
-	testCache.Init(InitParameters{QueueType: queue.LRUQueue})
-
-	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
-	GetFile(testCache, int64(1), size2, floatZero, floatZero, time.Now().Unix())
-	GetFile(testCache, int64(2), size1, floatZero, floatZero, time.Now().Unix())
-	GetFile(testCache, int64(3), size1, floatZero, floatZero, time.Now().Unix())
-	GetFile(testCache, int64(1), size2, floatZero, floatZero, time.Now().Unix())
-	GetFile(testCache, int64(1), size2, floatZero, floatZero, time.Now().Unix())
-	GetFile(testCache, int64(1), size2, floatZero, floatZero, time.Now().Unix())
-	GetFile(testCache, int64(4), size1, floatZero, floatZero, time.Now().Unix())
-	GetFile(testCache, int64(3), size1, floatZero, floatZero, time.Now().Unix())
-	GetFile(testCache, int64(4), size1, floatZero, floatZero, time.Now().Unix())
-
-	if testCache.HitRate() != 30.0 {
-		t.Fatalf("Hit rate error -> Expected %f but got %f", 30.0, testCache.HitRate())
-	} else if testCache.Size() != 5.0 {
-		t.Fatalf("Size error -> Expected %f but got %f", 5.0, testCache.Size())
-	} else if testCache.DataWritten() != 6. {
-		t.Fatalf("Written data error -> Expected %f but got %f", 6., testCache.DataWritten())
-	} else if testCache.DataReadOnHit() != 5. {
-		t.Fatalf("Read on hit error -> Expected %f but got %f", 5., testCache.DataReadOnHit())
-	}
-}
+// 	if testCache.HitRate() != 30.0 {
+// 		t.Fatalf("Hit rate error -> Expected %f but got %f", 30.0, testCache.HitRate())
+// 	} else if testCache.Size() != 5.0 {
+// 		t.Fatalf("Size error -> Expected %f but got %f", 5.0, testCache.Size())
+// 	} else if testCache.DataWritten() != 6. {
+// 		t.Fatalf("Written data error -> Expected %f but got %f", 6., testCache.DataWritten())
+// 	} else if testCache.DataReadOnHit() != 5. {
+// 		t.Fatalf("Read on hit error -> Expected %f but got %f", 5., testCache.DataReadOnHit())
+// 	}
+// }
 
 // func BenchmarkWeightFun(b *testing.B) {
 // 	var maxSize float64 = 1024. * 1024. * 10.

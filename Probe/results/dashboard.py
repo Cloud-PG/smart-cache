@@ -5,57 +5,79 @@ from typing import Tuple
 import dash
 import dash_bootstrap_components as dbc
 import dash_core_components as dcc
+import dash_daq as daq
 import dash_html_components as html
+
 # Create random data with numpy
 import pandas as pd
 import plotly.express as px
+
 # import plotly.express as px
 import plotly.graph_objects as go
 from dash.dependencies import Input, Output, State
 from flask import send_file
 from plotly.graph_objs import Layout
 
-from .data import (COLUMNS, SIM_RESULT_FILENAME, Results, make_table,
-                   measure_avg_free_space, measure_bandwidth, measure_cost,
-                   measure_cost_ratio, measure_cpu_eff, measure_hit_over_miss,
-                   measure_hit_rate, measure_num_miss_after_delete,
-                   measure_read_on_hit_ratio, measure_redirect_volume,
-                   measure_std_dev_free_space, measure_throughput,
-                   measure_throughput_ratio, parse_simulation_report)
+from .data import (
+    COLUMNS,
+    SIM_RESULT_FILENAME,
+    Results,
+    make_table,
+    measure_avg_free_space,
+    measure_bandwidth,
+    measure_cost,
+    measure_cost_ratio,
+    measure_cpu_eff,
+    measure_hit_over_miss,
+    measure_hit_rate,
+    measure_num_miss_after_delete,
+    measure_read_on_hit_ratio,
+    measure_redirect_volume,
+    measure_std_dev_free_space,
+    measure_throughput,
+    measure_throughput_ratio,
+    parse_simulation_report,
+)
 
 _CSV_TEMP_FILE = tempfile.NamedTemporaryFile(mode="w", delete=False)
 _TEX_TEMP_FILE = tempfile.NamedTemporaryFile(mode="w", delete=False)
 _HTML_TEMP_FILE = tempfile.NamedTemporaryFile(mode="w", delete=False)
 
-_EXTERNAL_STYLESHEETS = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
+_EXTERNAL_STYLESHEETS = ["https://codepen.io/chriddyp/pen/bWLwgP.css"]
 
 LAYOUT = Layout(
-    paper_bgcolor='rgb(255,255,255)',
-    plot_bgcolor='rgb(255,255,255)',
-    yaxis={'gridcolor': 'black'},
-    xaxis={'gridcolor': 'black'},
+    paper_bgcolor="rgb(255,255,255)",
+    plot_bgcolor="rgb(255,255,255)",
+    yaxis={"gridcolor": "black"},
+    xaxis={"gridcolor": "black"},
 )
 
 _MEASURES = {
-    'Throughput ratio': measure_throughput_ratio,
-    'Cost ratio': measure_cost_ratio,
-    'Throughput (TB)': measure_throughput,
-    'Cost (TB)': measure_cost,
-    'Read on hit ratio': measure_read_on_hit_ratio,
-    'CPU Eff.': measure_cpu_eff,
-    'Avg. Free Space': measure_avg_free_space,
-    'Std. Dev. Free Space': measure_std_dev_free_space,
-    'Bandwidth': measure_bandwidth,
-    'Redirect Vol.': measure_redirect_volume,
-    'Hit over Miss': measure_hit_over_miss,
+    "Throughput ratio": measure_throughput_ratio,
+    "Cost ratio": measure_cost_ratio,
+    "Throughput (TB)": measure_throughput,
+    "Cost (TB)": measure_cost,
+    "Read on hit ratio": measure_read_on_hit_ratio,
+    "CPU Eff.": measure_cpu_eff,
+    "Avg. Free Space": measure_avg_free_space,
+    "Std. Dev. Free Space": measure_std_dev_free_space,
+    "Bandwidth": measure_bandwidth,
+    "Redirect Vol.": measure_redirect_volume,
+    "Hit over Miss": measure_hit_over_miss,
     "Num. miss after del.": measure_num_miss_after_delete,
-    'Hit rate': measure_hit_rate,
+    "Hit rate": measure_hit_rate,
 }
 
 
-def get_files2plot(results: 'Results', files: list, filters_all: list,
-                   filters_any: list, column: str = "",
-                   agents: bool = False, with_log: bool = False) -> list:
+def get_files2plot(
+    results: "Results",
+    files: list,
+    filters_all: list,
+    filters_any: list,
+    column: str = "",
+    agents: bool = False,
+    with_log: bool = False,
+) -> list:
     """Returns a filtered list of files to plot (name and dataframe)
 
     :param results: the result object with simulation data
@@ -80,8 +102,7 @@ def get_files2plot(results: 'Results', files: list, filters_all: list,
             if column != "":
                 if column in df.columns:
                     if with_log:
-                        log_df = results.get_log(
-                            file_, filters_all, filters_any)
+                        log_df = results.get_log(file_, filters_all, filters_any)
                         if log_df is not None:
                             files2plot.append((file_, df, log_df))
                     else:
@@ -89,16 +110,14 @@ def get_files2plot(results: 'Results', files: list, filters_all: list,
             elif agents:
                 if "Addition epsilon" in df.columns:
                     if with_log:
-                        log_df = results.get_log(
-                            file_, filters_all, filters_any)
+                        log_df = results.get_log(file_, filters_all, filters_any)
                         if log_df is not None:
                             files2plot.append((file_, df, log_df))
                     else:
                         files2plot.append((file_, df))
             else:
                 if with_log:
-                    log_df = results.get_log(
-                        file_, filters_all, filters_any)
+                    log_df = results.get_log(file_, filters_all, filters_any)
                     if log_df is not None:
                         files2plot.append((file_, df, log_df))
                 else:
@@ -117,48 +136,43 @@ def get_prefix(files2plot: list) -> str:
     return path.commonprefix([file_ for file_, *_ in files2plot])
 
 
-def dashboard(results: 'Results', server_ip: str = "localhost"):
+def dashboard(results: "Results", server_ip: str = "localhost"):
 
-    _CACHE = {
-        'columns': {},
-        'measures': {},
-        'agents': {},
-        'tables': {},
-        'compare': {}
-    }
+    _CACHE = {"columns": {}, "measures": {}, "agents": {}, "tables": {}, "compare": {}}
 
-    app = dash.Dash("Result Dashboard", external_stylesheets=[
-        _EXTERNAL_STYLESHEETS, dbc.themes.BOOTSTRAP
-    ], suppress_callback_exceptions=True)
+    app = dash.Dash(
+        "Result Dashboard",
+        external_stylesheets=[_EXTERNAL_STYLESHEETS, dbc.themes.BOOTSTRAP],
+        suppress_callback_exceptions=True,
+    )
 
-    @app.server.route('/table/csv')
+    @app.server.route("/table/csv")
     def download_csv():
         _CSV_TEMP_FILE.seek(0)
         return send_file(
             _CSV_TEMP_FILE.name,
-            mimetype='text/csv',
-            attachment_filename='table.csv',
+            mimetype="text/csv",
+            attachment_filename="table.csv",
             as_attachment=True,
         )
 
-    @app.server.route('/table/tex')
+    @app.server.route("/table/tex")
     def download_tex():
         _TEX_TEMP_FILE.seek(0)
         return send_file(
             _TEX_TEMP_FILE.name,
-            mimetype='text/plain',
-            attachment_filename='table.tex',
+            mimetype="text/plain",
+            attachment_filename="table.tex",
             as_attachment=True,
         )
 
-    @app.server.route('/table/html')
+    @app.server.route("/table/html")
     def download_html():
-        print("SEND html")
         _HTML_TEMP_FILE.seek(0)
         return send_file(
             _HTML_TEMP_FILE.name,
-            mimetype='text/plain',
-            attachment_filename='table.html',
+            mimetype="text/plain",
+            attachment_filename="table.html",
             as_attachment=True,
         )
 
@@ -166,19 +180,25 @@ def dashboard(results: 'Results', server_ip: str = "localhost"):
         dbc.CardBody(
             [
                 dbc.Button(
-                    "Unselect all", color="warning", block=True, id="unselect-files",
+                    "Unselect all",
+                    color="warning",
+                    block=True,
+                    id="unselect-files",
                 ),
                 dbc.Button(
-                    "Select all", color="success", block=True, id="select-files",
+                    "Select all",
+                    color="success",
+                    block=True,
+                    id="select-files",
                 ),
                 html.Hr(),
                 dcc.Checklist(
                     options=[
-                        {'label': f" {filename}", 'value': filename}
+                        {"label": f" {filename}", "value": filename}
                         for filename in results.files
                     ],
                     value=results.files,
-                    labelStyle={'display': 'block'},
+                    labelStyle={"display": "block"},
                     id="selected-files",
                 ),
             ]
@@ -198,22 +218,22 @@ def dashboard(results: 'Results', server_ip: str = "localhost"):
                 html.H2("All"),
                 dcc.Checklist(
                     options=[
-                        {'label': f" {component}", 'value': component}
+                        {"label": f" {component}", "value": component}
                         for component in results.components
                     ],
                     value=[],
-                    labelStyle={'display': 'block'},
+                    labelStyle={"display": "block"},
                     id="selected-filters-all",
                 ),
                 html.Br(),
                 html.H2("Any"),
                 dcc.Checklist(
                     options=[
-                        {'label': f" {component}", 'value': component}
+                        {"label": f" {component}", "value": component}
                         for component in results.components
                     ],
                     value=[],
-                    labelStyle={'display': 'block'},
+                    labelStyle={"display": "block"},
                     id="selected-filters-any",
                 ),
             ]
@@ -248,74 +268,118 @@ def dashboard(results: 'Results', server_ip: str = "localhost"):
     )
 
     _TAB_TABLE = dbc.Card(
-        dbc.Spinner([
+        [
             dbc.CardBody(
                 dbc.ListGroup(
                     [
-                        dbc.ListGroupItem(dcc.Link(
-                            "Download as CSV", refresh=True,
-                            href="/table/csv", target="_blank",)
+                        dbc.ListGroupItem(
+                            dbc.Button(
+                                "",
+                                color="info",
+                                disabled=True,
+                                id="toggle-extended-table-output",
+                            ),
                         ),
-                        dbc.ListGroupItem(dcc.Link(
-                            "Download as Latex table", refresh=True,
-                            href="/table/tex", target="_blank",)
-                        ),
-                        dbc.ListGroupItem(dcc.Link(
-                            "Download as html", refresh=True,
-                            href="/table/html", target="_blank",)
+                        dbc.ListGroupItem(
+                            daq.ToggleSwitch(
+                                id="toggle-extended-table",
+                                value=False,
+                            )
                         ),
                     ],
                     horizontal=True,
-                ),
-
-            ),
-            dbc.CardBody(
-                id="table",
-            )],
-            color="primary",
-        ),
-    )
-
-    _TAB_COMPARE = dbc.Card([
-        dbc.Spinner(
-            dbc.CardBody(
-                id="compare",
-            ),
-            color="primary",
-            type="grow",
-        ),
-        dbc.CardBody([
-            dbc.Input(id="sel-num-sim",
-                      placeholder="Number of simulation", type="number"),
-            dbc.Input(id="sel-tick",
-                      placeholder="tick of simulation", type="number"),
-            dbc.Spinner([
-                dbc.CardBody(
-                    id="sel-sim-compare-plot-actions",
-                ),
-                dbc.CardBody(
-                    id="sel-sim-compare-plot-actions-hist-numReq",
-                ),
-                dbc.CardBody(
-                    id="sel-sim-compare-plot-actions-hist-size",
-                ),
-                dbc.CardBody(
-                    id="sel-sim-compare-plot-actions-hist-deltaT",
-                ),
-                dbc.CardBody(
-                    id="sel-sim-compare-plot-after",
                 )
-            ],
-                color="warning",
-                type="grow",
+            ),
+            dbc.Spinner(
+                [
+                    dbc.CardBody(
+                        dbc.ListGroup(
+                            [
+                                dbc.ListGroupItem(
+                                    dcc.Link(
+                                        "Download as CSV",
+                                        refresh=True,
+                                        href="/table/csv",
+                                        target="_blank",
+                                    )
+                                ),
+                                dbc.ListGroupItem(
+                                    dcc.Link(
+                                        "Download as Latex table",
+                                        refresh=True,
+                                        href="/table/tex",
+                                        target="_blank",
+                                    )
+                                ),
+                                dbc.ListGroupItem(
+                                    dcc.Link(
+                                        "Download as html",
+                                        refresh=True,
+                                        href="/table/html",
+                                        target="_blank",
+                                    )
+                                ),
+                            ],
+                            horizontal=True,
+                        ),
+                    ),
+                    dbc.CardBody(
+                        id="table",
+                    ),
+                ],
+                color="primary",
             ),
         ],
-            id="compare-row",
-        ),
-        dbc.CardBody(
-            id="compare-tables",
-        ),
-    ])
+    )
+
+    _TAB_COMPARE = dbc.Card(
+        [
+            dbc.Spinner(
+                dbc.CardBody(
+                    id="compare",
+                ),
+                color="primary",
+                type="grow",
+            ),
+            dbc.CardBody(
+                [
+                    dbc.Input(
+                        id="sel-num-sim",
+                        placeholder="Number of simulation",
+                        type="number",
+                    ),
+                    dbc.Input(
+                        id="sel-tick", placeholder="tick of simulation", type="number"
+                    ),
+                    dbc.Spinner(
+                        [
+                            dbc.CardBody(
+                                id="sel-sim-compare-plot-actions",
+                            ),
+                            dbc.CardBody(
+                                id="sel-sim-compare-plot-actions-hist-numReq",
+                            ),
+                            dbc.CardBody(
+                                id="sel-sim-compare-plot-actions-hist-size",
+                            ),
+                            dbc.CardBody(
+                                id="sel-sim-compare-plot-actions-hist-deltaT",
+                            ),
+                            dbc.CardBody(
+                                id="sel-sim-compare-plot-after",
+                            ),
+                        ],
+                        color="warning",
+                        type="grow",
+                    ),
+                ],
+                id="compare-row",
+            ),
+            dbc.CardBody(
+                id="compare-tables",
+            ),
+        ]
+    )
 
     _TABS = dbc.Tabs(
         [
@@ -325,19 +389,43 @@ def dashboard(results: 'Results', server_ip: str = "localhost"):
             dbc.Tab(_TAB_MEASURES, label="Measures", tab_id="tab-measures"),
             dbc.Tab(_TAB_AGENTS, label="Agents", tab_id="tab-agents"),
             dbc.Tab(_TAB_TABLE, label="Table", tab_id="tab-table"),
-            dbc.Tab(_TAB_COMPARE, label="Compare eviction",
-                    tab_id="tab-compare"),
+            dbc.Tab(_TAB_COMPARE, label="Compare eviction", tab_id="tab-compare"),
         ],
         id="tabs",
     )
 
-    app.layout = html.Div(children=[
-        html.H1(children='Result Dashboard'),
-        _TABS,
-    ], style={'padding': "1em"})
+    app.layout = html.Div(
+        children=[
+            html.H1(children="Result Dashboard"),
+            _TABS,
+        ],
+        style={"padding": "1em"},
+    )
 
-    def selection2hash(files: list, filters_all: list, filters_any: list, num_of_results: int) -> str:
-        return str(hash(" ".join(files + filters_all + filters_any + [str(num_of_results)])))
+    def selection2hash(
+        files: list,
+        filters_all: list,
+        filters_any: list,
+        num_of_results: int,
+        extended: bool = False,
+    ) -> str:
+        return str(
+            hash(
+                " ".join(
+                    files
+                    + filters_all
+                    + filters_any
+                    + [str(num_of_results), str(extended)]
+                )
+            )
+        )
+
+    @app.callback(
+        dash.dependencies.Output("toggle-extended-table-output", "children"),
+        [dash.dependencies.Input("toggle-extended-table", "value")],
+    )
+    def extended_table(value):
+        return "Extended table: {}.".format(value)
 
     @app.callback(
         [
@@ -347,23 +435,18 @@ def dashboard(results: 'Results', server_ip: str = "localhost"):
             Output("sel-sim-compare-plot-actions-hist-deltaT", "children"),
             Output("sel-sim-compare-plot-after", "children"),
         ],
-        [
-            Input("sel-num-sim", "value"),
-            Input("sel-tick", "value")
-        ],
+        [Input("sel-num-sim", "value"), Input("sel-tick", "value")],
         [
             State("selected-files", "value"),
             State("selected-filters-all", "value"),
             State("selected-filters-any", "value"),
-            State("num-of-results", "value")
-        ]
+            State("num-of-results", "value"),
+        ],
     )
-    def output_text(num_sim, tick, files, filters_all, filters_any, num_of_results):
-        cur_hash = selection2hash(
-            files, filters_all, filters_any, num_of_results
-        )
-        if cur_hash in _CACHE['compare']:
-            data, *_ = _CACHE['compare'][cur_hash]
+    def compare_results(num_sim, tick, files, filters_all, filters_any, num_of_results):
+        cur_hash = selection2hash(files, filters_all, filters_any, num_of_results)
+        if cur_hash in _CACHE["compare"]:
+            data, *_ = _CACHE["compare"][cur_hash]
             keys = list(data.keys())
             try:
                 cur_sim = keys[num_sim]
@@ -371,31 +454,28 @@ def dashboard(results: 'Results', server_ip: str = "localhost"):
                     if evaluator.tick == tick:
                         scatterActionsFig = px.scatter_3d(
                             evaluator.actions,
-                            x='num req',
-                            y='size',
-                            z='filename',
-                            color='delta t',
-                            size='size',
+                            x="num req",
+                            y="size",
+                            z="filename",
+                            color="delta t",
+                            size="size",
                             opacity=0.9,
                         )
                         scatterActionsFig.update_layout(LAYOUT)
-                        histActionNumReq = px.histogram(
-                            evaluator.actions, x='num req')
+                        histActionNumReq = px.histogram(evaluator.actions, x="num req")
                         histActionNumReq.update_layout(LAYOUT)
-                        histActionSize = px.histogram(
-                            evaluator.actions, x='size')
+                        histActionSize = px.histogram(evaluator.actions, x="size")
                         histActionSize.update_layout(LAYOUT)
-                        histActionDeltaT = px.histogram(
-                            evaluator.actions, x='delta t')
+                        histActionDeltaT = px.histogram(evaluator.actions, x="delta t")
                         histActionDeltaT.update_layout(LAYOUT)
                         after_data = evaluator.after4scatter
                         scatterAfterFig = px.scatter_3d(
                             after_data,
-                            x='num req',
-                            y='size',
-                            z='filename',
-                            color='delta t',
-                            size='size',
+                            x="num req",
+                            y="size",
+                            z="filename",
+                            color="delta t",
+                            size="size",
                             opacity=0.9,
                         )
                         scatterAfterFig.update_layout(LAYOUT)
@@ -407,9 +487,29 @@ def dashboard(results: 'Results', server_ip: str = "localhost"):
                             [dcc.Graph(figure=scatterAfterFig)],
                         )
                 else:
-                    return [dbc.Alert(f"No tick found in simulation {num_sim}", color="danger")], [""], [""], [""], [""]
+                    return (
+                        [
+                            dbc.Alert(
+                                f"No tick found in simulation {num_sim}", color="danger"
+                            )
+                        ],
+                        [""],
+                        [""],
+                        [""],
+                        [""],
+                    )
             except (IndexError, TypeError):
-                return [dbc.Alert(f"No simulation found at index {num_sim}", color="danger")], [""], [""], [""], [""]
+                return (
+                    [
+                        dbc.Alert(
+                            f"No simulation found at index {num_sim}", color="danger"
+                        )
+                    ],
+                    [""],
+                    [""],
+                    [""],
+                    [""],
+                )
         else:
             return [dbc.Alert("No results", color="warning")], [""], [""], [""], [""]
 
@@ -439,21 +539,20 @@ def dashboard(results: 'Results', server_ip: str = "localhost"):
         return res
 
     @app.callback(
-        dash.dependencies.Output('selected-files', 'value'),
+        dash.dependencies.Output("selected-files", "value"),
         [
-            dash.dependencies.Input('unselect-files', 'n_clicks'),
-            dash.dependencies.Input('select-files', 'n_clicks'),
+            dash.dependencies.Input("unselect-files", "n_clicks"),
+            dash.dependencies.Input("select-files", "n_clicks"),
         ],
     )
     def unselect_all_files(unselect_n_clicks, select_n_clicks):
         # Ref: https://dash.plotly.com/advanced-callbacks
         changed_id = [
-            p['prop_id'].split('.')[0]
-            for p in dash.callback_context.triggered
+            p["prop_id"].split(".")[0] for p in dash.callback_context.triggered
         ][0]
-        if changed_id == 'unselect-files':
+        if changed_id == "unselect-files":
             return []
-        elif changed_id == 'select-files':
+        elif changed_id == "select-files":
             return results.files
         return results.files
 
@@ -468,17 +567,20 @@ def dashboard(results: 'Results', server_ip: str = "localhost"):
         ],
         [
             Input("tabs", "active_tab"),
+            Input("toggle-extended-table", "value"),
         ],
         [
             State("selected-files", "value"),
             State("selected-filters-all", "value"),
             State("selected-filters-any", "value"),
-            State("num-of-results", "value")
-        ]
+            State("num-of-results", "value"),
+        ],
     )
-    def switch_tab(at, files, filters_all, filters_any, num_of_results):
+    def switch_tab(at, extended, files, filters_all, filters_any, num_of_results):
         cur_hash = selection2hash(
-            files, filters_all, filters_any, num_of_results)
+            files, filters_all, filters_any, num_of_results, extended
+        )
+
         if at == "tab-files":
             return ("", "", "", "", "", "")
 
@@ -486,8 +588,8 @@ def dashboard(results: 'Results', server_ip: str = "localhost"):
             return ("", "", "", "", "", "")
 
         elif at == "tab-columns":
-            if cur_hash in _CACHE['columns']:
-                return (_CACHE['columns'][cur_hash], "", "", "", "", "")
+            if cur_hash in _CACHE["columns"]:
+                return (_CACHE["columns"][cur_hash], "", "", "", "", "")
             else:
                 figures = []
                 for column in COLUMNS[1:]:
@@ -499,32 +601,33 @@ def dashboard(results: 'Results', server_ip: str = "localhost"):
                         column,
                     )
                     prefix = get_prefix(files2plot)
-                    if num_of_results != 0:
-                        table = make_table(files2plot, prefix)
-                        new_file2plot = get_top_n(
-                            table, num_of_results, prefix)
+
+                    if num_of_results != 0 and num_of_results is not None:
+                        table, new_file2plot = make_table(
+                            files2plot, prefix, num_of_results
+                        )
                         files2plot = [
                             (file_, df)
                             for file_, df in files2plot
-                            if f'{file_.replace("run_full_normal/", "")}' in new_file2plot
+                            if file_ in new_file2plot
                         ]
                         prefix = get_prefix(files2plot)
-                    figures.append(dcc.Graph(
-                        figure=make_line_figures(
-                            files2plot,
-                            prefix,
-                            title=column,
-                            column=column
+
+                    figures.append(
+                        dcc.Graph(
+                            figure=make_line_figures(
+                                files2plot, prefix, title=column, column=column
+                            )
                         )
-                    ))
+                    )
                     figures.append(html.Hr())
 
-                _CACHE['columns'][cur_hash] = figures
+                _CACHE["columns"][cur_hash] = figures
                 return (figures, "", "", "", "", "")
 
         elif at == "tab-measures":
-            if cur_hash in _CACHE['measures']:
-                return ("", _CACHE['measures'][cur_hash], "", "", "", "")
+            if cur_hash in _CACHE["measures"]:
+                return ("", _CACHE["measures"][cur_hash], "", "", "", "")
             else:
                 figures = []
                 files2plot = get_files2plot(
@@ -534,66 +637,69 @@ def dashboard(results: 'Results', server_ip: str = "localhost"):
                     filters_any,
                 )
                 prefix = get_prefix(files2plot)
-                if num_of_results != 0:
-                    table = make_table(files2plot, prefix)
-                    new_file2plot = get_top_n(
-                        table, num_of_results, prefix)
+
+                if num_of_results != 0 and num_of_results is not None:
+                    table, new_file2plot = make_table(
+                        files2plot, prefix, num_of_results
+                    )
                     files2plot = [
                         (file_, df)
                         for file_, df in files2plot
-                        if f'{file_.replace("run_full_normal/", "")}' in new_file2plot
+                        if file_ in new_file2plot
                     ]
                     prefix = get_prefix(files2plot)
+
                 for measure, function in sorted(
-                        _MEASURES.items(), key=lambda elm: elm[0]
+                    _MEASURES.items(), key=lambda elm: elm[0]
                 ):
-                    figures.append(dcc.Graph(
-                        figure=make_line_figures(
-                            files2plot,
-                            prefix,
-                            title=measure,
-                            function=function,
+                    figures.append(
+                        dcc.Graph(
+                            figure=make_line_figures(
+                                files2plot,
+                                prefix,
+                                title=measure,
+                                function=function,
+                            )
                         )
-                    ))
+                    )
                     figures.append(html.Hr())
 
-                _CACHE['measures'][cur_hash] = figures
+                _CACHE["measures"][cur_hash] = figures
                 return ("", figures, "", "", "", "")
 
         elif at == "tab-agents":
-            if cur_hash in _CACHE['agents']:
-                return ("", "", _CACHE['agents'][cur_hash], "", "", "")
+            if cur_hash in _CACHE["agents"]:
+                return ("", "", _CACHE["agents"][cur_hash], "", "", "")
             else:
                 figures = []
                 files2plot = get_files2plot(
-                    results,
-                    files,
-                    filters_all,
-                    filters_any,
-                    agents=True
+                    results, files, filters_all, filters_any, agents=True
                 )
                 prefix = get_prefix(files2plot)
-                if num_of_results != 0:
-                    table = make_table(files2plot, prefix)
-                    new_file2plot = get_top_n(table, num_of_results, prefix)
+
+                if num_of_results != 0 and num_of_results is not None:
+                    table, new_file2plot = make_table(
+                        files2plot, prefix, num_of_results
+                    )
                     files2plot = [
                         (file_, df)
                         for file_, df in files2plot
-                        if f'{file_.replace("run_full_normal/", "")}' in new_file2plot
+                        if file_ in new_file2plot
                     ]
                     prefix = get_prefix(files2plot)
+
                 figures.extend(
                     make_agent_figures(
                         files2plot,
                         prefix,
                     )
                 )
-                _CACHE['agents'][cur_hash] = figures
+                _CACHE["agents"][cur_hash] = figures
                 return ("", "", figures, "", "", "")
 
         elif at == "tab-table":
-            if cur_hash in _CACHE['tables']:
-                return ("", "", "", _CACHE['tables'][cur_hash], "", "")
+            if cur_hash in _CACHE["tables"]:
+                return ("", "", "", _CACHE["tables"][cur_hash], "", "")
             else:
                 files2plot = get_files2plot(
                     results,
@@ -602,16 +708,20 @@ def dashboard(results: 'Results', server_ip: str = "localhost"):
                     filters_any,
                 )
                 prefix = get_prefix(files2plot)
-                table = make_table(files2plot, prefix)
-                if num_of_results != 0:
-                    new_file2plot = get_top_n(table, num_of_results, prefix)
+
+                if num_of_results != 0 and num_of_results is not None:
+                    table, new_file2plot = make_table(
+                        files2plot, prefix, num_of_results, extended=extended
+                    )
                     files2plot = [
                         (file_, df)
                         for file_, df in files2plot
-                        if f'{file_.replace("run_full_normal/", "")}' in new_file2plot
+                        if file_ in new_file2plot
                     ]
                     prefix = get_prefix(files2plot)
-                    table = make_table(files2plot, prefix)
+                    table, _ = make_table(files2plot, prefix, extended=extended)
+                else:
+                    table, _ = make_table(files2plot, prefix, extended=extended)
 
                 _CSV_TEMP_FILE.seek(0)
                 table.to_csv(_CSV_TEMP_FILE)
@@ -626,11 +736,11 @@ def dashboard(results: 'Results', server_ip: str = "localhost"):
                     table, striped=True, bordered=True, hover=True
                 )
 
-                _CACHE['tables'][cur_hash] = table
+                _CACHE["tables"][cur_hash] = table
                 return ("", "", "", table, "", "")
         elif at == "tab-compare":
-            if cur_hash in _CACHE['compare']:
-                _, figs, tables = _CACHE['compare'][cur_hash]
+            if cur_hash in _CACHE["compare"]:
+                _, figs, tables = _CACHE["compare"][cur_hash]
                 return ("", "", "", "", figs, tables)
             else:
                 files2plot = get_files2plot(
@@ -642,10 +752,8 @@ def dashboard(results: 'Results', server_ip: str = "localhost"):
                 )
                 prefix = get_prefix(files2plot)
                 data = parse_simulation_report(files2plot, prefix)
-                figs, tables = parse_simulation_report_stuff(
-                    data, len(results)
-                )
-                _CACHE['compare'][cur_hash] = (data, figs, tables)
+                figs, tables = parse_simulation_report_stuff(data, len(results))
+                _CACHE["compare"][cur_hash] = (data, figs, tables)
 
                 return ("", "", "", "", figs, tables)
         else:
@@ -657,7 +765,7 @@ def dashboard(results: 'Results', server_ip: str = "localhost"):
     )
 
 
-def _add_columns(fig: 'go.Figure', df: 'pd.DataFrame', name: str, column: str):
+def _add_columns(fig: "go.Figure", df: "pd.DataFrame", name: str, column: str):
     """Add a specific column to plot as trace line
 
     :param fig: the figure where insert the trace
@@ -673,7 +781,7 @@ def _add_columns(fig: 'go.Figure', df: 'pd.DataFrame', name: str, column: str):
         go.Scatter(
             x=df["date"],
             y=df[column],
-            mode='lines',
+            mode="lines",
             name=f"{name}[{column}]",
         )
     )
@@ -691,24 +799,34 @@ def make_agent_figures(files2plot: list, prefix: str) -> list:
     """
     figures = []
     _AGENT_COLUMNS = {
-        "Epsilon": ['Addition epsilon', 'Eviction epsilon'],
-        "QValue": ['Addition qvalue function', 'Eviction qvalue function', ],
-        "Eviction calls": ['Eviction calls', 'Eviction forced calls'],
-        "Eviction categories": ['Eviction mean num categories', 'Eviction std dev num categories'],
-        "Addition actions": ['Action store', 'Action not store'],
-        "Eviction actions": ['Action delete all', 'Action delete half', 'Action delete quarter', 'Action delete one', 'Action not delete'],
+        "Epsilon": ["Addition epsilon", "Eviction epsilon"],
+        "QValue": [
+            "Addition qvalue function",
+            "Eviction qvalue function",
+        ],
+        "Eviction calls": ["Eviction calls", "Eviction forced calls"],
+        "Eviction categories": [
+            "Eviction mean num categories",
+            "Eviction std dev num categories",
+        ],
+        "Addition actions": ["Action store", "Action not store"],
+        "Eviction actions": [
+            "Action delete all",
+            "Action delete half",
+            "Action delete quarter",
+            "Action delete one",
+            "Action not delete",
+        ],
     }
     for plot, columns in _AGENT_COLUMNS.items():
         fig_epsilon = go.Figure(layout=LAYOUT)
         for file_, df in files2plot:
-            name = file_.replace(
-                prefix, "").replace(
-                    SIM_RESULT_FILENAME, "")
+            name = file_.replace(prefix, "").replace(SIM_RESULT_FILENAME, "")
             for column in columns:
                 _add_columns(fig_epsilon, df, name, column)
         fig_epsilon.update_layout(
             title=plot,
-            xaxis_title='day',
+            xaxis_title="day",
             yaxis_title=plot,
             autosize=True,
             # width=1920,
@@ -720,7 +838,9 @@ def make_agent_figures(files2plot: list, prefix: str) -> list:
     return figures
 
 
-def parse_simulation_report_stuff(delEvaluators: list, tot_results: int) -> Tuple[list, list]:
+def parse_simulation_report_stuff(
+    delEvaluators: list, tot_results: int
+) -> Tuple[list, list]:
     figs = []
     tables = []
 
@@ -732,16 +852,18 @@ def parse_simulation_report_stuff(delEvaluators: list, tot_results: int) -> Tupl
             go.Scatter(
                 x=x,
                 y=[evaluator.num_deleted_files for evaluator in evaluators],
-                mode='lines+markers',
+                mode="lines+markers",
                 name=f"{name} - # del. files",
             )
         )
         fig.add_trace(
             go.Scatter(
                 x=x,
-                y=[int(evaluator.total_size_deleted_files / 1024.)
-                   for evaluator in evaluators],
-                mode='lines+markers',
+                y=[
+                    int(evaluator.total_size_deleted_files / 1024.0)
+                    for evaluator in evaluators
+                ],
+                mode="lines+markers",
                 name=f"{name} - tot. Size (GB)",
             )
         )
@@ -749,14 +871,14 @@ def parse_simulation_report_stuff(delEvaluators: list, tot_results: int) -> Tupl
             go.Scatter(
                 x=x,
                 y=[evaluator.total_num_req_after_delete for evaluator in evaluators],
-                mode='lines+markers',
+                mode="lines+markers",
                 name=f"{name} - # req. after del.",
             )
         )
     fig.update_layout(
         title="Report",
-        xaxis_title='tick',
-        yaxis_title='',
+        xaxis_title="tick",
+        yaxis_title="",
         autosize=True,
         # width=1920,
         height=480,
@@ -767,15 +889,17 @@ def parse_simulation_report_stuff(delEvaluators: list, tot_results: int) -> Tupl
 
     table_header = [
         html.Thead(
-            html.Tr([
-                html.Th("Tick"),
-                html.Th("Event"),
-                html.Th("# Del. Files"),
-                html.Th("Tot. Size (GB)"),
-                html.Th("Tot. # req after del."),
-                html.Th("Cache Size"),
-                html.Th("Cache Occupancy"),
-            ])
+            html.Tr(
+                [
+                    html.Th("Tick"),
+                    html.Th("Event"),
+                    html.Th("# Del. Files"),
+                    html.Th("Tot. Size (GB)"),
+                    html.Th("Tot. # req after del."),
+                    html.Th("Cache Size"),
+                    html.Th("Cache Occupancy"),
+                ]
+            )
         )
     ]
 
@@ -798,29 +922,33 @@ def parse_simulation_report_stuff(delEvaluators: list, tot_results: int) -> Tupl
         cur_rows = []
         for evaluator in evaluators:
             cur_rows.append(
-                html.Tr([
-                    html.Td(evaluator.tick),
-                    html.Td(evaluator.event),
-                    html.Td(evaluator.num_deleted_files),
-                    html.Td(int(evaluator.total_size_deleted_files / 1024.)),
-                    html.Td(evaluator.total_num_req_after_delete),
-                    html.Td(evaluator.on_delete_cache_size),
-                    html.Td(evaluator.on_delete_cache_occupancy),
-                ])
+                html.Tr(
+                    [
+                        html.Td(evaluator.tick),
+                        html.Td(evaluator.event),
+                        html.Td(evaluator.num_deleted_files),
+                        html.Td(int(evaluator.total_size_deleted_files / 1024.0)),
+                        html.Td(evaluator.total_num_req_after_delete),
+                        html.Td(evaluator.on_delete_cache_size),
+                        html.Td(evaluator.on_delete_cache_occupancy),
+                    ]
+                )
             )
         table_body = [html.Tbody(cur_rows)]
         tables.append(
             dbc.Collapse(
-                dbc.CardBody([
-                    dbc.Table(
-                        # using the same table as in the above example
-                        table_header + table_body,
-                        bordered=True,
-                        hover=True,
-                        responsive=True,
-                        striped=True,
-                    )
-                ]),
+                dbc.CardBody(
+                    [
+                        dbc.Table(
+                            # using the same table as in the above example
+                            table_header + table_body,
+                            bordered=True,
+                            hover=True,
+                            responsive=True,
+                            striped=True,
+                        )
+                    ]
+                ),
                 id=f"collapse-{idx}",
             )
         )
@@ -836,24 +964,28 @@ def parse_simulation_report_stuff(delEvaluators: list, tot_results: int) -> Tupl
                         id=f"group-{idx}-toggle",
                     )
                 ),
-                style={'display': "none"},
+                style={"display": "none"},
             )
         )
         tables.append(
             dbc.Collapse(
                 dbc.CardBody(f"This is the content of group {idx}..."),
                 id=f"collapse-{idx}",
-                style={'display': "none"},
+                style={"display": "none"},
             )
         )
 
     return figs, tables
 
 
-def make_line_figures(files2plot: list, prefix: str, title: str,
-                      function: callable = None, column: str = "",
-                      additional_traces: list = [],
-                      ) -> 'go.Figure':
+def make_line_figures(
+    files2plot: list,
+    prefix: str,
+    title: str,
+    function: callable = None,
+    column: str = "",
+    additional_traces: list = [],
+) -> "go.Figure":
     """Make measure plots
 
     :param files2plot: list of files to plot with their dataframes
@@ -876,9 +1008,7 @@ def make_line_figures(files2plot: list, prefix: str, title: str,
             fig.add_trace(trace)
 
     for file_, df in files2plot:
-        name = file_.replace(
-            prefix, "").replace(
-                SIM_RESULT_FILENAME, "")
+        name = file_.replace(prefix, "").replace(SIM_RESULT_FILENAME, "")
         if function is not None:
             y_ax = function(df)
         elif column != "":
@@ -887,32 +1017,16 @@ def make_line_figures(files2plot: list, prefix: str, title: str,
             go.Scatter(
                 x=df["date"],
                 y=y_ax,
-                mode='lines',
+                mode="lines",
                 name=name,
             )
         )
     fig.update_layout(
         title=title,
-        xaxis_title='day',
+        xaxis_title="day",
         yaxis_title=title,
         autosize=True,
         # width=1920,
         height=800,
     )
     return fig
-
-
-def get_top_n(df: 'pd.DataFrame', n: int, prefix: str) -> list:
-    """Returns the top n files from a table ordered results
-
-    :param df: the table dataframe
-    :type df: pd.DataFrame
-    :param n: the number of results to extract
-    :type n: int
-    :return: list of file names
-    :rtype: list
-    """
-    return [
-        f"{prefix}{filename}/{SIM_RESULT_FILENAME}"
-        for filename in df[:n].file.to_list()
-    ]

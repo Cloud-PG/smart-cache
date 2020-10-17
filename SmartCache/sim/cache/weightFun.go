@@ -3,6 +3,7 @@ package cache
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 
 	"simulator/v2/cache/files"
 	"simulator/v2/cache/functions"
@@ -19,13 +20,31 @@ type WeightFunctionParameters struct {
 // WeightFun cache
 type WeightFun struct {
 	SimpleCache
-	Parameters      WeightFunctionParameters
-	SelFunctionType functions.FunctionType
+	weightFunction functions.WeightFun
+	fParams        WeightFunctionParameters
 }
 
 // Init the WeightFun struct
 func (cache *WeightFun) Init(params InitParameters) interface{} {
 	cache.SimpleCache.Init(params)
+
+	switch params.WfType {
+	case functions.Additive:
+		cache.weightFunction = functions.FileAdditiveWeight
+	case functions.AdditiveExp:
+		cache.weightFunction = functions.FileAdditiveExpWeight
+	case functions.Multiplicative:
+		cache.weightFunction = functions.FileMultiplicativeWeight
+	default:
+		fmt.Println("ERR: You need to specify a correct weight function.")
+		os.Exit(-1)
+	}
+
+	cache.fParams = WeightFunctionParameters{
+		Alpha: params.WfParams.Alpha,
+		Beta:  params.WfParams.Beta,
+		Gamma: params.WfParams.Gamma,
+	}
 
 	return cache
 }
@@ -111,8 +130,10 @@ func (cache *WeightFun) BeforeRequest(request *Request, hit bool) (*files.Stats,
 	curStats, newFile := cache.stats.GetOrCreate(request.Filename, request.Size, request.DayTime, cache.tick)
 	curStats.UpdateStats(hit, request.Size, request.UserID, request.SiteName, request.DayTime)
 	cache.stats.UpdateWeight(curStats, newFile,
-		cache.SelFunctionType,
-		cache.Parameters.Alpha, cache.Parameters.Beta, cache.Parameters.Gamma,
+		cache.weightFunction,
+		cache.fParams.Alpha,
+		cache.fParams.Beta,
+		cache.fParams.Gamma,
 	)
 	return curStats, hit
 }
@@ -150,7 +171,7 @@ func (cache *WeightFun) UpdatePolicy(request *Request, fileStats *files.Stats, h
 // ExtraStats for output
 func (cache *WeightFun) ExtraStats() string {
 	return fmt.Sprintf(
-		"a:%0.2f|b:%0.2f|g:%0.2f",
-		cache.Parameters.Alpha, cache.Parameters.Beta, cache.Parameters.Gamma,
+		"a:%0.2f|b:%0.2f|g:%0.2f|wAVG:%0.2f",
+		cache.fParams.Alpha, cache.fParams.Beta, cache.fParams.Gamma, cache.stats.GetWeightMedian(),
 	)
 }
