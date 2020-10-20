@@ -65,8 +65,7 @@ class Element(object):
     def __init__(self, components: list, filename: str, df: "pd.DataFrame"):
         self._df = df
         self._filename = filename
-        self._components = set(
-            [elm for elm in self.__parse_components(components)])
+        self._components = set([elm for elm in self.__parse_components(components)])
 
     @staticmethod
     def __parse_components(components: list) -> list:
@@ -142,8 +141,7 @@ class Results(object):
     ) -> "pd.DataFrame":
         cur_elm = self._elemets[file_]
         all_ = (
-            len(cur_elm.components.intersection(
-                set(filters_all))) == len(filters_all)
+            len(cur_elm.components.intersection(set(filters_all))) == len(filters_all)
             if len(filters_all) > 0
             else True
         )
@@ -161,8 +159,7 @@ class Results(object):
     ) -> "pd.DataFrame":
         cur_elm = self._elemets[file_]
         all_ = (
-            len(cur_elm.components.intersection(
-                set(filters_all))) == len(filters_all)
+            len(cur_elm.components.intersection(set(filters_all))) == len(filters_all)
             if len(filters_all) > 0
             else True
         )
@@ -210,84 +207,85 @@ def aggregate_results(folder: str) -> "Results":
 
 
 def missing_column(func):
-    def wrapper(df: 'pd.DataFrame'):
+    def wrapper(df: "pd.DataFrame"):
         try:
             return func(df)
         except KeyError:
             return pd.Series(np.zeros(len(df.index)))
+
     return wrapper
 
 
 @missing_column
-def measure_throughput_ratio(df: 'pd.DataFrame') -> 'pd.Series':
-    cache_size = df['cache size'][0]
-    return (df['read on hit data'] - df['written data'])/cache_size
+def measure_throughput_ratio(df: "pd.DataFrame") -> "pd.Series":
+    cache_size = df["cache size"][0]
+    return (df["read on hit data"] - df["written data"]) / cache_size
 
 
 @missing_column
-def measure_cost_ratio(df: 'pd.DataFrame') -> 'pd.Series':
-    cache_size = df['cache size'][0]
-    return (df['written data'] + df['deleted data'])/cache_size
+def measure_cost_ratio(df: "pd.DataFrame") -> "pd.Series":
+    cache_size = df["cache size"][0]
+    return (df["written data"] + df["deleted data"]) / cache_size
 
 
 @missing_column
-def measure_throughput(df: 'pd.DataFrame') -> 'pd.Series':
+def measure_throughput(df: "pd.DataFrame") -> "pd.Series":
     # to Terabytes
     return (df["read on hit data"] - df["written data"]) / (1024.0 ** 2.0)
 
 
 @missing_column
-def measure_cost(df: 'pd.DataFrame') -> 'pd.Series':
+def measure_cost(df: "pd.DataFrame") -> "pd.Series":
     # to Terabytes
     return (df["written data"] + df["deleted data"]) / (1024.0 ** 2.0)
 
 
 @missing_column
-def measure_read_on_hit_ratio(df: 'pd.DataFrame') -> 'pd.Series':
-    return (df['read on hit data']/df['read data']) * 100.
+def measure_read_on_hit_ratio(df: "pd.DataFrame") -> "pd.Series":
+    return (df["read on hit data"] / df["read data"]) * 100.0
 
 
 @missing_column
-def measure_cpu_eff(df: 'pd.DataFrame') -> 'pd.Series':
-    return df['CPU efficiency']
+def measure_cpu_eff(df: "pd.DataFrame") -> "pd.Series":
+    return df["CPU efficiency"]
 
 
 @missing_column
-def measure_avg_free_space(df: 'pd.DataFrame') -> 'pd.Series':
-    cache_size = df['cache size'][0]
-    return (df['avg free space'] / cache_size) * 100.
+def measure_avg_free_space(df: "pd.DataFrame") -> "pd.Series":
+    cache_size = df["cache size"][0]
+    return (df["avg free space"] / cache_size) * 100.0
 
 
 @missing_column
-def measure_std_dev_free_space(df: 'pd.DataFrame') -> 'pd.Series':
-    cache_size = df['cache size'][0]
-    return (df['std dev free space'] / cache_size) * 100.
+def measure_std_dev_free_space(df: "pd.DataFrame") -> "pd.Series":
+    cache_size = df["cache size"][0]
+    return (df["std dev free space"] / cache_size) * 100.0
 
 
 @missing_column
-def measure_bandwidth(df: 'pd.DataFrame') -> 'pd.Series':
-    return (df['read on miss data'] / df['bandwidth']) * 100.
+def measure_bandwidth(df: "pd.DataFrame") -> "pd.Series":
+    return (df["read on miss data"] / df["bandwidth"]) * 100.0
 
 
 @missing_column
-def measure_redirect_volume(df: 'pd.DataFrame') -> 'pd.Series':
-    cache_size = df['cache size'][0]
-    return (df['size redirected'] / cache_size) * 100.
+def measure_redirect_volume(df: "pd.DataFrame") -> "pd.Series":
+    cache_size = df["cache size"][0]
+    return (df["size redirected"] / cache_size) * 100.0
 
 
 @missing_column
-def measure_num_miss_after_delete(df: 'pd.DataFrame') -> 'pd.Series':
-    return df['num miss after delete']
+def measure_num_miss_after_delete(df: "pd.DataFrame") -> "pd.Series":
+    return df["num miss after delete"]
 
 
 @missing_column
-def measure_hit_rate(df: 'pd.DataFrame') -> 'pd.Series':
-    return df['hit rate']
+def measure_hit_rate(df: "pd.DataFrame") -> "pd.Series":
+    return df["hit rate"]
 
 
 @missing_column
-def measure_hit_over_miss(df: 'pd.DataFrame') -> 'pd.Series':
-    return df['read on hit data'] / df['read on miss data']
+def measure_hit_over_miss(df: "pd.DataFrame") -> "pd.Series":
+    return df["read on hit data"] / df["read on miss data"]
 
 
 def parse_simulation_report(
@@ -327,8 +325,7 @@ def make_table(
     table = []
     for file_, df in files2plot:
         values = get_measures(file_, df, extended=extended)
-        values[0] = values[0].replace(prefix, "").replace(
-            f"/{SIM_RESULT_FILENAME}", "")
+        values[0] = values[0].replace(prefix, "").replace(f"/{SIM_RESULT_FILENAME}", "")
         search_size = re.search("[\/]?[0-9]*T\/", values[0])
         values[0] = values[0].replace("run_full_normal/", "")
         if search_size != None:
@@ -364,14 +361,19 @@ def make_table(
             "Throughput ratio",
             "Cost ratio",
             "Bandwidth",
+            "Read on hit ratio",
             "Num. miss after del.",
-            "Hit rate",
             "CPU Eff.",
         ]
     df = pd.DataFrame(table, columns=columns)
     df = df.sort_values(
-        by=["Throughput ratio", "Cost ratio", "Num. miss after del."],
-        ascending=[False, True, False],
+        by=[
+            "Throughput ratio",
+            "Cost ratio",
+            "Read on hit ratio",
+            "Num. miss after del.",
+        ],
+        ascending=[False, True, False, False],
     )
     df = df.round(6)
     if top_n != 0:
