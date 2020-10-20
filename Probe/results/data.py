@@ -340,8 +340,8 @@ def make_table(
         columns = [
             "source",
             "file",
-            "Throughput ratio",
-            "Cost ratio",
+            "Throughput",
+            "Cost",
             "Throughput (TB)",
             "Cost (TB)",
             "Read on hit ratio",
@@ -358,18 +358,18 @@ def make_table(
         columns = [
             "source",
             "file",
-            "Throughput ratio",
-            "Cost ratio",
-            "Bandwidth",
+            "Throughput",
+            "Cost",
             "Read on hit ratio",
+            "Bandwidth",
             "Num. miss after del.",
             "CPU Eff.",
         ]
     df = pd.DataFrame(table, columns=columns)
     df = df.sort_values(
         by=[
-            "Throughput ratio",
-            "Cost ratio",
+            "Throughput",
+            "Cost",
             "Read on hit ratio",
             "Num. miss after del.",
         ],
@@ -404,8 +404,8 @@ def get_measures(
         # Cost (TB)
         measures.append(measure_cost(df).mean())
 
-        # Read on hit ratio
-        measures.append(measure_read_on_hit_ratio(df).mean())
+    # Read on hit ratio
+    measures.append(measure_read_on_hit_ratio(df).mean())
 
     # Bandwidth
     measures.append(measure_bandwidth(df).mean())
@@ -426,8 +426,9 @@ def get_measures(
     # Num. miss after delete
     measures.append(measure_num_miss_after_delete(df).mean())
 
-    # Hit rate
-    measures.append(measure_hit_rate(df).mean())
+    if extended:
+        # Hit rate
+        measures.append(measure_hit_rate(df).mean())
 
     # CPU Efficiency
     measures.append(measure_cpu_eff(df).mean())
