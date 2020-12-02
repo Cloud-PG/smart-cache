@@ -1,5 +1,11 @@
 # How to
 
+Generate a certificate:
+
+```bash
+./create_cert.sh ipaddress
+```
+
 After generating the certificates for the server, create a `.env` file with the following content:
 
 ```env
