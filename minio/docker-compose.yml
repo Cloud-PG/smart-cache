@@ -5,7 +5,7 @@ services:
     network_mode: "host"
     volumes:
       - ${PATH_TO_MINIO_DATA}:/data
-      - ./CAs/:~/.minio/certs/CAs/
+      - ./CAs/:${HOME}/.minio/certs/CAs/
     environment:
       - MINIO_ACCESS_KEY
       - MINIO_SECRET_KEY
