@@ -1,4 +1,5 @@
-version: "3"
+version: "3.7"
+
 services:
   minio:
     image: minio/minio
@@ -9,7 +10,7 @@ services:
     environment:
       - MINIO_ACCESS_KEY
       - MINIO_SECRET_KEY
-    command: server /data
+    command: server https://minio/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s
