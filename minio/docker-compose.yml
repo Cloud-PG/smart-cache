@@ -1,14 +1,14 @@
-version: '3'
+version: "3"
 services:
   minio:
     image: minio/minio
     network_mode: "host"
     volumes:
-        - ${PATH_TO_MINIO_DATA}:/data
-        - ./CAs/:/root/.minio/certs/CAs/
+      - ${PATH_TO_MINIO_DATA}:/data
+      - ./CAs/:~/.minio/certs/CAs/
     environment:
-        - MINIO_ACCESS_KEY
-        - MINIO_SECRET_KEY
+      - MINIO_ACCESS_KEY
+      - MINIO_SECRET_KEY
     command: server /data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
