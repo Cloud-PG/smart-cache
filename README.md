@@ -2,13 +2,14 @@
 
 ## Install
 
-```
+```bash
 python3 -m pip install git+https://github.com/Cloud-PG/smart-cache.git
 ```
 
-## References
+## Use the dashboard
 
-* [Netflix MetaFlow](https://www.youtube.com/watch?v=XV5VGddmP24)
-  * [Drake vs Metaflow](https://github.com/ropensci/drake/issues/472)
-* [Michelangelo PyML](https://eng.uber.com/michelangelo-pyml/)
-* [TensorFlow Extended](https://www.tensorflow.org/tfx)
+Open the result folder with the following command:
+
+```bash
+python3 -m Probe.results dashboard result_folder
+```
