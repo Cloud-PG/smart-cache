@@ -1,7 +1,7 @@
 # smart-cache
 ## Use the Probe module
 
-### Install
+### Installation
 
 ```bash
 cd Probe
