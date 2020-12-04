@@ -1,15 +1,17 @@
 # smart-cache
+## Use the Probe module
 
-## Install
+### Install
 
 ```bash
-python3 -m pip install git+https://github.com/Cloud-PG/smart-cache.git
+cd Probe
+python3 setup.py install
 ```
 
-## Use the dashboard
+### Open the dashboard
 
 Open the result folder with the following command:
 
 ```bash
-python3 -m Probe.results dashboard result_folder
+python3 -m probe.results dashboard result_folder
 ```
