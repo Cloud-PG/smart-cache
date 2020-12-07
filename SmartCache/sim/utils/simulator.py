@@ -7,7 +7,7 @@ import pathlib
 
 import coloredlogs
 
-from .simulator.utils import str2bool
+from .utils import str2bool
 
 SIM_NAME = "simulator"
 
@@ -26,8 +26,8 @@ def get_logger(filename: str = __name__, level: str = 'INFO') -> 'logger.Logger'
     return logger
 
 
-def get_simulator_path() -> 'pathlib.Path':
-    cur_dir = pathlib.Path(__file__).parent.absolute()
+def get_simulator_path() -> tuple['pathlib.Path', 'pathlib.Path']:
+    cur_dir = pathlib.Path(__file__).parent.parent.absolute()
     sim_path = cur_dir.joinpath('bin', SIM_NAME)
     return cur_dir, sim_path
 
@@ -55,7 +55,7 @@ def get_simulator_exe(force_creation: bool = False, release: bool = False, fast:
         except subprocess.CalledProcessError as err:
             logger.info(f"[BUILD]->[ERROR]{err.output.decode('utf-8')}")
             exit(-1)
-    return sim_path
+    return sim_path.as_posix()
 
 
 if __name__ == "__main__":
