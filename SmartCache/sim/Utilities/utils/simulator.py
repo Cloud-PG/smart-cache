@@ -23,7 +23,7 @@ def get_logger(filename: str = __name__, level: str = 'INFO') -> 'logger.Logger'
 
 
 def get_simulator_path() -> tuple['pathlib.Path', 'pathlib.Path']:
-    cur_dir = pathlib.Path(__file__).parent.parent.absolute()
+    cur_dir = pathlib.Path(__file__).parent.parent.parent.absolute()
     sim_path = cur_dir.joinpath('bin', SIM_NAME)
     return cur_dir, sim_path
 
