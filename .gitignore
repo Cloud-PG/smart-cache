@@ -339,3 +339,5 @@ minio/CAs
 
 # TASK temp
 **/.task/
+.fake
+.ionide
