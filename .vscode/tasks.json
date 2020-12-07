@@ -2,16 +2,14 @@
     // See https://go.microsoft.com/fwlink/?LinkId=733558
     // for the documentation about the tasks.json format
     "version": "2.0.0",
-    "tasks": [
-        {
-            "label": "build simulator",
-            "type": "shell",
-            "command": "pipenv run python -m SmartCache.sim.utils compile --fast 'true'",
-            "problemMatcher": [],
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            }
+    "tasks": [{
+        "label": "build simulator",
+        "type": "shell",
+        "command": "pipenv run python -m utils compile --fast 'true'",
+        "problemMatcher": [],
+        "group": {
+            "kind": "build",
+            "isDefault": true
         }
-    ]
+    }]
 }

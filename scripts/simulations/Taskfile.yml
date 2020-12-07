@@ -2,13 +2,13 @@ version: "3"
 
 vars:
   EXE_PATH:
-    sh: python -m SmartCache.sim.utils simPath
+    sh: python -m utils simPath
 
 tasks:
   debug:
     desc: Build simulator binary in debug mode
     cmds:
-      - python -m SmartCache.sim.utils compile
+      - python -m utils compile
     sources:
       - ../../SmartCache/**/*.go
     generates:
@@ -16,7 +16,7 @@ tasks:
   release:
     desc: Build simulator binary in release mode
     cmds:
-      - python -m SmartCache.sim.utils compile --release "true"
+      - python -m utils compile --release "true"
     sources:
       - ../../SmartCache/**/*.go
     generates:
@@ -24,7 +24,7 @@ tasks:
   debug-fast:
     desc: Build simulator binary in debug mode
     cmds:
-      - python -m SmartCache.sim.utils compile --fast "true"
+      - python -m utils compile --fast "true"
     sources:
       - ../../SmartCache/**/*.go
     generates:
@@ -32,7 +32,7 @@ tasks:
   release-fast:
     desc: Build simulator binary in release mode
     cmds:
-      - python -m SmartCache.sim.utils compile --release "true" --fast "true"
+      - python -m utils compile --release "true" --fast "true"
     sources:
       - ../../SmartCache/**/*.go
     generates:
