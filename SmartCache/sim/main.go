@@ -75,10 +75,17 @@ func configureViper(configFilenameWithNoExt string) { //nolint:ignore,funlen
 
 	viper.SetDefault("sim.ai.featuremap", "")
 	viper.SetDefault("sim.ai.rl.type", "SCDL2")
+
 	viper.SetDefault("sim.ai.rl.addition.featuremap", "")
+	viper.SetDefault("sim.ai.rl.addition.epsilon.start", -1.0)
+	viper.SetDefault("sim.ai.rl.addition.epsilon.decay", -1.0)
+
 	viper.SetDefault("sim.ai.rl.eviction.featuremap", "")
 	viper.SetDefault("sim.ai.rl.eviction.k", 32)
 	viper.SetDefault("sim.ai.rl.eviction.type", "onK")
+	viper.SetDefault("sim.ai.rl.eviction.epsilon.start", -1.0)
+	viper.SetDefault("sim.ai.rl.eviction.epsilon.decay", -1.0)
+
 	viper.SetDefault("sim.ai.model", "")
 
 	viper.SetDefault("sim.dataset2testpath", "")
@@ -123,14 +130,18 @@ func simCommand() *cobra.Command { //nolint:ignore,funlen
 		weightBeta  float64
 		weightGamma float64
 		// ai
-		aiFeatureMap           string
-		aiModel                string
-		aiRLType               string
-		aiRLAdditionFeatureMap string
-		aiRLEvictionFeatureMap string
-		aiRLEpsilonStart       float64
-		aiRLEpsilonDecay       float64
-		aiRLEvictionK          int64
+		aiFeatureMap             string
+		aiModel                  string
+		aiRLType                 string
+		aiRLAdditionFeatureMap   string
+		aiRLEvictionFeatureMap   string
+		aiRLEpsilonStart         float64
+		aiRLEpsilonDecay         float64
+		aiRLEvictionK            int64
+		aiRLAdditionEpsilonStart float64
+		aiRLAdditionEpsilonDecay float64
+		aiRLEvictionEpsilonStart float64
+		aiRLEvictionEpsilonDecay float64
 		// cache
 		cacheType     string
 		cacheSize     float64
@@ -379,6 +390,30 @@ func simCommand() *cobra.Command { //nolint:ignore,funlen
 			aiRLEpsilonDecay = viper.GetFloat64("sim.ai.rl.epsilon.decay")
 			logger.Info("CONF_VAR", zap.Float64("aiRLEpsilonDecay", aiRLEpsilonDecay))
 
+			aiRLAdditionEpsilonStart = viper.GetFloat64("sim.ai.rl.addition.epsilon.start")
+			logger.Info("CONF_VAR", zap.Float64("aiRLAdditionEpsilonStart", aiRLEpsilonStart))
+			if aiRLAdditionEpsilonStart == -1.0 {
+				aiRLAdditionEpsilonStart = aiRLEpsilonStart
+			}
+
+			aiRLAdditionEpsilonDecay = viper.GetFloat64("sim.ai.rl.addition.epsilon.decay")
+			logger.Info("CONF_VAR", zap.Float64("aiRLAdditionEpsilonDecay", aiRLEpsilonDecay))
+			if aiRLAdditionEpsilonDecay == -1.0 {
+				aiRLAdditionEpsilonDecay = aiRLEpsilonDecay
+			}
+
+			aiRLEvictionEpsilonStart = viper.GetFloat64("sim.ai.rl.eviction.epsilon.start")
+			logger.Info("CONF_VAR", zap.Float64("aiRLEvictionEpsilonStart", aiRLEpsilonStart))
+			if aiRLEvictionEpsilonStart == -1.0 {
+				aiRLEvictionEpsilonStart = aiRLEpsilonStart
+			}
+
+			aiRLEvictionEpsilonDecay = viper.GetFloat64("sim.ai.rl.eviction.epsilon.decay")
+			logger.Info("CONF_VAR", zap.Float64("aiRLEvictionEpsilonDecay", aiRLEpsilonDecay))
+			if aiRLEvictionEpsilonDecay == -1.0 {
+				aiRLEvictionEpsilonDecay = aiRLEpsilonDecay
+			}
+
 			simEvictionType = viper.GetString("sim.ai.rl.eviction.type")
 			logger.Info("CONF_VAR", zap.String("simEvictionType", simEvictionType))
 
@@ -504,16 +539,18 @@ func simCommand() *cobra.Command { //nolint:ignore,funlen
 						Beta:  weightBeta,
 						Gamma: weightGamma,
 					},
-					EvictionAgentType:      simEvictionType,
-					AIRLEvictionK:          aiRLEvictionK,
-					AIRLType:               aiRLType,
-					AIRLAdditionFeatureMap: aiRLAdditionFeatureMap,
-					AIRLEvictionFeatureMap: aiRLEvictionFeatureMap,
-					AIRLEpsilonStart:       aiRLEpsilonStart,
-					AIRLEpsilonDecay:       aiRLEpsilonDecay,
-					MaxNumDayDiff:          maxNumDayDiff,
-					DeltaDaysStep:          deltaDaysStep,
-					RandSeed:               randSeed,
+					EvictionAgentType:        simEvictionType,
+					AIRLEvictionK:            aiRLEvictionK,
+					AIRLType:                 aiRLType,
+					AIRLAdditionFeatureMap:   aiRLAdditionFeatureMap,
+					AIRLEvictionFeatureMap:   aiRLEvictionFeatureMap,
+					AIRLAdditionEpsilonStart: aiRLAdditionEpsilonStart,
+					AIRLAdditionEpsilonDecay: aiRLAdditionEpsilonDecay,
+					AIRLEvictionEpsilonStart: aiRLEvictionEpsilonStart,
+					AIRLEvictionEpsilonDecay: aiRLEvictionEpsilonDecay,
+					MaxNumDayDiff:            maxNumDayDiff,
+					DeltaDaysStep:            deltaDaysStep,
+					RandSeed:                 randSeed,
 				},
 			)
 

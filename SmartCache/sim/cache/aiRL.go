@@ -77,9 +77,6 @@ func (cache *AIRL) Init(params InitParameters) interface{} { //nolint:ignore,fun
 	additionFeatureMap := params.AIRLAdditionFeatureMap
 	evictionFeatureMap := params.AIRLEvictionFeatureMap
 
-	initEpsilon := params.AIRLEpsilonStart
-	decayRateEpsilon := params.AIRLEpsilonDecay
-
 	cache.actionCounters = make(map[qlearn.ActionType]int)
 
 	if cache.logger == nil {
@@ -135,8 +132,8 @@ func (cache *AIRL) Init(params InitParameters) interface{} { //nolint:ignore,fun
 			cache.evictionAgent.Init(
 				&cache.evictionFeatureManager,
 				qlearn.EvictionAgent,
-				initEpsilon,
-				decayRateEpsilon,
+				params.AIRLEvictionEpsilonStart,
+				params.AIRLEvictionEpsilonDecay,
 				params.RandSeed,
 			)
 			cache.evictionCategoryManager = CategoryManager{}
@@ -175,8 +172,8 @@ func (cache *AIRL) Init(params InitParameters) interface{} { //nolint:ignore,fun
 		cache.additionAgent.Init(
 			&cache.additionFeatureManager,
 			qlearn.AdditionAgent,
-			initEpsilon,
-			decayRateEpsilon,
+			params.AIRLAdditionEpsilonStart,
+			params.AIRLAdditionEpsilonDecay,
 			params.RandSeed,
 		)
 
