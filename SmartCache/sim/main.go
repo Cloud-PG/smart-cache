@@ -391,27 +391,31 @@ func simCommand() *cobra.Command { //nolint:ignore,funlen
 			logger.Info("CONF_VAR", zap.Float64("aiRLEpsilonDecay", aiRLEpsilonDecay))
 
 			aiRLAdditionEpsilonStart = viper.GetFloat64("sim.ai.rl.addition.epsilon.start")
-			logger.Info("CONF_VAR", zap.Float64("aiRLAdditionEpsilonStart", aiRLEpsilonStart))
+			logger.Info("CONF_VAR", zap.Float64("aiRLAdditionEpsilonStart", aiRLAdditionEpsilonStart))
 			if aiRLAdditionEpsilonStart == -1.0 {
 				aiRLAdditionEpsilonStart = aiRLEpsilonStart
+				logger.Info("CONF_VAR", zap.Float64("aiRLAdditionEpsilonStartOverwrite", aiRLAdditionEpsilonStart))
 			}
 
 			aiRLAdditionEpsilonDecay = viper.GetFloat64("sim.ai.rl.addition.epsilon.decay")
-			logger.Info("CONF_VAR", zap.Float64("aiRLAdditionEpsilonDecay", aiRLEpsilonDecay))
+			logger.Info("CONF_VAR", zap.Float64("aiRLAdditionEpsilonDecay", aiRLAdditionEpsilonDecay))
 			if aiRLAdditionEpsilonDecay == -1.0 {
 				aiRLAdditionEpsilonDecay = aiRLEpsilonDecay
+				logger.Info("CONF_VAR", zap.Float64("aiRLAdditionEpsilonDecayOverwrite", aiRLAdditionEpsilonDecay))
 			}
 
 			aiRLEvictionEpsilonStart = viper.GetFloat64("sim.ai.rl.eviction.epsilon.start")
-			logger.Info("CONF_VAR", zap.Float64("aiRLEvictionEpsilonStart", aiRLEpsilonStart))
+			logger.Info("CONF_VAR", zap.Float64("aiRLEvictionEpsilonStart", aiRLEvictionEpsilonStart))
 			if aiRLEvictionEpsilonStart == -1.0 {
 				aiRLEvictionEpsilonStart = aiRLEpsilonStart
+				logger.Info("CONF_VAR", zap.Float64("aiRLEvictionEpsilonStartOverwrite", aiRLEvictionEpsilonStart))
 			}
 
 			aiRLEvictionEpsilonDecay = viper.GetFloat64("sim.ai.rl.eviction.epsilon.decay")
-			logger.Info("CONF_VAR", zap.Float64("aiRLEvictionEpsilonDecay", aiRLEpsilonDecay))
+			logger.Info("CONF_VAR", zap.Float64("aiRLEvictionEpsilonDecay", aiRLEvictionEpsilonDecay))
 			if aiRLEvictionEpsilonDecay == -1.0 {
 				aiRLEvictionEpsilonDecay = aiRLEpsilonDecay
+				logger.Info("CONF_VAR", zap.Float64("aiRLEvictionEpsilonDecayOverwrite", aiRLEvictionEpsilonDecay))
 			}
 
 			simEvictionType = viper.GetString("sim.ai.rl.eviction.type")
