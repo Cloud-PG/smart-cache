@@ -31,8 +31,8 @@ func main() {
 
 	rootCmd.PersistentFlags().StringVar(&serviceHost, "host", "localhost", "Ip to listen to")
 	rootCmd.PersistentFlags().Int32Var(&servicePort, "port", 5432, "cache sim service port")
-	rootCmd.PersistentFlags().StringVar(&weightedFunc, "weightFunction", "FuncWeightedRequests", "function to use with weighted cache")
-	rootCmd.PersistentFlags().Float32Var(&weightExp, "weightExp", 2.0, "Exponential to use with weighted cache function")
+	rootCmd.PersistentFlags().StringVar(&weightedFunc, "weightFunction", "FuncWeightedRequests", "function to use with weight function cache")
+	rootCmd.PersistentFlags().Float32Var(&weightExp, "weightExp", 2.0, "Exponential to use with weight function cache function")
 
 	if err := rootCmd.Execute(); err != nil {
 		println(err.Error())
@@ -70,7 +70,7 @@ func commandRun() *cobra.Command {
 
 			switch serviceType {
 			case "weightedLRU":
-				fmt.Printf("[Create Weighted Cache]")
+				fmt.Printf("[Create weight function cache]")
 				serviceInstance = service.PluginServiceServer{
 					Exp:             weightExp,
 					SelFunctionType: function,

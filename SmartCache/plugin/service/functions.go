@@ -9,7 +9,7 @@ import (
 type FunctionType int
 
 const (
-	// FuncFileWeight indicates the simple function for weighted cache
+	// FuncFileWeight indicates the simple function for weight function cache
 	FuncFileWeight FunctionType = iota
 	// FuncFileWeightAndTime indicates the function that uses time
 	FuncFileWeightAndTime

@@ -1,0 +1,26 @@
+--- # Simulation parameters
+sim:
+  data: ../../../../datasets/RecencyFocusedDataset/
+  outputFolder: ../../../../results/sim_synthetic_dataset/RecencyFocusedDataset
+  type: normal
+  window:
+    start: 0
+    stop: 52
+  region: it
+  overwrite: true
+  cache:
+    type: aiRL
+    watermarks: false
+    size:
+      value: 10
+      unit: G
+    bandwidth: 
+      value: 1
+      redirect: true
+  ai:
+    rl:
+      type: SCDL
+      epsilon:
+        decay: 0.001
+      addition:
+        featuremap: ../../../../featureMaps/rlAdditionFeatureMap.json

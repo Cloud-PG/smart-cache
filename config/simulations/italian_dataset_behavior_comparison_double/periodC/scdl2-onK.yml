@@ -1,0 +1,30 @@
+--- # Simulation parameters
+sim:
+  data: ../../../../datasets/source2018_numeric_it_with_avro_order/
+  outputFolder: ../../../../results/sim_italian_dataset_behavior_comparison_double/periodC
+  type: normal
+  log: true
+  window:
+    start: 36
+    stop: 48
+  region: it
+  overwrite: true
+  cache:
+    type: aiRL
+    watermarks: false
+    size:
+      value: 200
+      unit: T
+    bandwidth:
+      value: 10
+      redirect: true
+  ai:
+    rl:
+      epsilon:
+        decay: 0.0001
+      addition:
+        featuremap: ../../../../featureMaps/rlAdditionFeatureMap.json
+      eviction:
+        type: onK
+        k: 8192
+        featuremap: ../../../../featureMaps/rlEvictionFeatureMap.json

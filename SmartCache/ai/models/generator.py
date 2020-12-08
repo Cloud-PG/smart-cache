@@ -8,8 +8,7 @@ from time import time
 
 import grpc
 import numpy as np
-import tensorflow as tf
-from tensorflow import keras
+
 
 from ..service import ai_pb2, ai_pb2_grpc
 
@@ -31,6 +30,10 @@ class DonkeyModel(ai_pb2_grpc.AIServiceServicer):
     def __compile_model(self, input_size: int, output_size: int,
                         cnn: bool = False
                         ):
+        try:
+            from tensorflow import keras
+        except ImportError:
+            print("Warning: TF not present or AVX instructions are not supported!")
         if cnn:
             self._model = keras.Sequential([
                 keras.layers.Conv1D(
@@ -139,6 +142,10 @@ class DonkeyModel(ai_pb2_grpc.AIServiceServicer):
         return self
 
     def load(self, filename: str):
+        try:
+            from tensorflow import keras
+        except ImportError:
+            print("Warning: TF not present or AVX instructions are not supported!")
         self._model = keras.models.load_model(filename)
 
     def serve(self, host: str = "127.0.0.1",
@@ -167,6 +174,10 @@ class CMSTest0ModelGenerator(object):
         self._model = None
 
     def __compile_model(self, input_size: int, output_size: int):
+        try:
+            from tensorflow import keras
+        except ImportError:
+            print("Warning: TF not present or AVX instructions are not supported!")
         self._model = keras.Sequential([
             keras.layers.Flatten(input_shape=(input_size, )),
             keras.layers.Dense(512, activation='hard_sigmoid'),
@@ -224,6 +235,10 @@ class CMSTest0ModelGenerator(object):
         self._model.save("{}.h5".format(out_name))
 
     def load(self, filename: str):
+        try:
+            from tensorflow import keras
+        except ImportError:
+            print("Warning: TF not present or AVX instructions are not supported!")
         self._model = keras.models.load_model(filename)
 
 

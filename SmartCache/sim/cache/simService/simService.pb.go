@@ -6,12 +6,13 @@ package simservice
 import (
 	context "context"
 	fmt "fmt"
+	math "math"
+
 	proto "github.com/golang/protobuf/proto"
 	empty "github.com/golang/protobuf/ptypes/empty"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
-	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -73,16 +74,16 @@ func (m *ActionResult) GetAdded() bool {
 }
 
 type SimCacheStatus struct {
-	HitRate              float32  `protobuf:"fixed32,1,opt,name=hitRate,proto3" json:"hitRate,omitempty"`
-	WeightedHitRate      float32  `protobuf:"fixed32,2,opt,name=weightedHitRate,proto3" json:"weightedHitRate,omitempty"`
-	HitOverMiss          float32  `protobuf:"fixed32,3,opt,name=hitOverMiss,proto3" json:"hitOverMiss,omitempty"`
-	Size                 float32  `protobuf:"fixed32,4,opt,name=size,proto3" json:"size,omitempty"`
-	Capacity             float32  `protobuf:"fixed32,5,opt,name=capacity,proto3" json:"capacity,omitempty"`
-	DataWritten          float32  `protobuf:"fixed32,6,opt,name=dataWritten,proto3" json:"dataWritten,omitempty"`
-	DataRead             float32  `protobuf:"fixed32,7,opt,name=dataRead,proto3" json:"dataRead,omitempty"`
-	DataReadOnHit        float32  `protobuf:"fixed32,8,opt,name=dataReadOnHit,proto3" json:"dataReadOnHit,omitempty"`
-	DataReadOnMiss       float32  `protobuf:"fixed32,9,opt,name=dataReadOnMiss,proto3" json:"dataReadOnMiss,omitempty"`
-	DataDeleted          float32  `protobuf:"fixed32,10,opt,name=dataDeleted,proto3" json:"dataDeleted,omitempty"`
+	HitRate              float64  `protobuf:"fixed32,1,opt,name=hitRate,proto3" json:"hitRate,omitempty"`
+	WeightedHitRate      float64  `protobuf:"fixed32,2,opt,name=weightedHitRate,proto3" json:"weightedHitRate,omitempty"`
+	HitOverMiss          float64  `protobuf:"fixed32,3,opt,name=hitOverMiss,proto3" json:"hitOverMiss,omitempty"`
+	Size                 float64  `protobuf:"fixed32,4,opt,name=size,proto3" json:"size,omitempty"`
+	Capacity             float64  `protobuf:"fixed32,5,opt,name=capacity,proto3" json:"capacity,omitempty"`
+	DataWritten          float64  `protobuf:"fixed32,6,opt,name=dataWritten,proto3" json:"dataWritten,omitempty"`
+	DataRead             float64  `protobuf:"fixed32,7,opt,name=dataRead,proto3" json:"dataRead,omitempty"`
+	DataReadOnHit        float64  `protobuf:"fixed32,8,opt,name=dataReadOnHit,proto3" json:"dataReadOnHit,omitempty"`
+	DataReadOnMiss       float64  `protobuf:"fixed32,9,opt,name=dataReadOnMiss,proto3" json:"dataReadOnMiss,omitempty"`
+	DataDeleted          float64  `protobuf:"fixed32,10,opt,name=dataDeleted,proto3" json:"dataDeleted,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -113,70 +114,70 @@ func (m *SimCacheStatus) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_SimCacheStatus proto.InternalMessageInfo
 
-func (m *SimCacheStatus) GetHitRate() float32 {
+func (m *SimCacheStatus) GetHitRate() float64 {
 	if m != nil {
 		return m.HitRate
 	}
 	return 0
 }
 
-func (m *SimCacheStatus) GetWeightedHitRate() float32 {
+func (m *SimCacheStatus) GetWeightedHitRate() float64 {
 	if m != nil {
 		return m.WeightedHitRate
 	}
 	return 0
 }
 
-func (m *SimCacheStatus) GetHitOverMiss() float32 {
+func (m *SimCacheStatus) GetHitOverMiss() float64 {
 	if m != nil {
 		return m.HitOverMiss
 	}
 	return 0
 }
 
-func (m *SimCacheStatus) GetSize() float32 {
+func (m *SimCacheStatus) GetSize() float64 {
 	if m != nil {
 		return m.Size
 	}
 	return 0
 }
 
-func (m *SimCacheStatus) GetCapacity() float32 {
+func (m *SimCacheStatus) GetCapacity() float64 {
 	if m != nil {
 		return m.Capacity
 	}
 	return 0
 }
 
-func (m *SimCacheStatus) GetDataWritten() float32 {
+func (m *SimCacheStatus) GetDataWritten() float64 {
 	if m != nil {
 		return m.DataWritten
 	}
 	return 0
 }
 
-func (m *SimCacheStatus) GetDataRead() float32 {
+func (m *SimCacheStatus) GetDataRead() float64 {
 	if m != nil {
 		return m.DataRead
 	}
 	return 0
 }
 
-func (m *SimCacheStatus) GetDataReadOnHit() float32 {
+func (m *SimCacheStatus) GetDataReadOnHit() float64 {
 	if m != nil {
 		return m.DataReadOnHit
 	}
 	return 0
 }
 
-func (m *SimCacheStatus) GetDataReadOnMiss() float32 {
+func (m *SimCacheStatus) GetDataReadOnMiss() float64 {
 	if m != nil {
 		return m.DataReadOnMiss
 	}
 	return 0
 }
 
-func (m *SimCacheStatus) GetDataDeleted() float32 {
+func (m *SimCacheStatus) GetDataDeleted() float64 {
 	if m != nil {
 		return m.DataDeleted
 	}
@@ -185,7 +186,7 @@ func (m *SimCacheStatus) GetDataDeleted() float32 {
 
 type SimCommonFile struct {
 	Filename             string   `protobuf:"bytes,1,opt,name=filename,proto3" json:"filename,omitempty"`
-	Size                 float32  `protobuf:"fixed32,2,opt,name=size,proto3" json:"size,omitempty"`
+	Size                 float64  `protobuf:"fixed32,2,opt,name=size,proto3" json:"size,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -223,7 +224,7 @@ func (m *SimCommonFile) GetFilename() string {
 	return ""
 }
 
-func (m *SimCommonFile) GetSize() float32 {
+func (m *SimCommonFile) GetSize() float64 {
 	if m != nil {
 		return m.Size
 	}

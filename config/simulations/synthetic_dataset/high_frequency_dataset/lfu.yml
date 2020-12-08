@@ -1,0 +1,18 @@
+--- # Simulation parameters
+sim:
+  data: ../../../../datasets/HighFrequencyDataset/
+  outputFolder: ../../../../results/sim_synthetic_dataset/HighFrequencyDataset
+  type: normal
+  window:
+    start: 0
+    stop: 52
+  region: it
+  cache:
+    type: lfu
+    watermarks: false
+    size:
+      value: 10
+      unit: G
+    bandwidth: 
+      value: 1
+      redirect: true

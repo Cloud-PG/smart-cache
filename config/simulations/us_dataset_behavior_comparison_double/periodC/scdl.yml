@@ -1,0 +1,27 @@
+--- # Simulation parameters
+sim:
+  data: ../../../../datasets/source2018_numeric_us_with_avro_order/
+  outputFolder: ../../../../results/sim_us_dataset_behavior_comparison_double/periodC
+  type: normal
+  log: true
+  window:
+    start: 36
+    stop: 48
+  region: us
+  overwrite: true
+  cache:
+    type: aiRL
+    watermarks: true
+    size:
+      value: 400
+      unit: T
+    bandwidth:
+      value: 10
+      redirect: true
+  ai:
+    rl:
+      type: SCDL
+      epsilon:
+        decay: 0.00001
+      addition:
+        featuremap: ../../../../featureMaps/rlAdditionFeatureMap.json

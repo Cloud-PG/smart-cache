@@ -1,14 +1,36 @@
 # smart-cache
+## Use the simulator utilities
 
-## Install
+### Installation
 
+```bash
+cd SmartCache/sim/Utilities
+python3 setup.py install
 ```
-python3 -m pip install git+https://github.com/Cloud-PG/smart-cache.git
+
+### Use the simulator utilities
+
+```bash
+python3 -m utils -h
+# Example to fast compile
+python3 -m utils compile --fast 'true'
+# Example to get the simulator executable path
+python3 -m utils simPath
 ```
 
-## References
+## Use the Probe module
 
-* [Netflix MetaFlow](https://www.youtube.com/watch?v=XV5VGddmP24)
-  * [Drake vs Metaflow](https://github.com/ropensci/drake/issues/472)
-* [Michelangelo PyML](https://eng.uber.com/michelangelo-pyml/)
-* [TensorFlow Extended](https://www.tensorflow.org/tfx)
+### Installation
+
+```bash
+cd Probe
+python3 setup.py install
+```
+
+### Open the dashboard
+
+Open the result folder with the following command:
+
+```bash
+python3 -m probe.results dashboard result_folder
+```

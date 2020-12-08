@@ -11,7 +11,7 @@
 		"[go]": {
 			"editor.snippetSuggestions": "none",
 			"editor.formatOnSave": true,
-			"editor.codeActionsOnSaveTimeout": 2000,
+			"editor.codeActionsOnSaveTimeout": 1200,
 			"editor.codeActionsOnSave": {
 				"source.organizeImports": true,
 			}
@@ -36,9 +36,49 @@
 
 			// Experimental settings
 			"completeUnimported": true, // autocomplete unimported packages
-			"watchFileChanges": true, // watch file changes outside of the editor
 			"deepCompletion": true, // enable deep completion
 		},
-		"files.eol": "\n", // formatting only supports LF line endings
+		"files.eol": "\n",
+		"liveServer.settings.multiRootWorkspaceName": "smart-cache-data",
+		"workbench.colorCustomizations": {
+			"activityBar.activeBackground": "#1f6fd0",
+			"activityBar.activeBorder": "#ee90bb",
+			"activityBar.background": "#1f6fd0",
+			"activityBar.foreground": "#e7e7e7",
+			"activityBar.inactiveForeground": "#e7e7e799",
+			"activityBarBadge.background": "#ee90bb",
+			"activityBarBadge.foreground": "#15202b",
+			"statusBar.background": "#1857a4",
+			"statusBar.border": "#1857a4",
+			"statusBar.foreground": "#e7e7e7",
+			"statusBarItem.hoverBackground": "#1f6fd0",
+			"titleBar.activeBackground": "#1857a4",
+			"titleBar.activeForeground": "#e7e7e7",
+			"titleBar.border": "#1857a4",
+			"titleBar.inactiveBackground": "#1857a499",
+			"titleBar.inactiveForeground": "#e7e7e799"
+		},
+		"peacock.color": "#1857a4",
+	},
+	"launch": {
+		"version": "0.2.0",
+		"configurations": [
+		{
+			"name": "Launch file",
+			"type": "go",
+			"request": "launch",
+			"mode": "debug",
+			"program": "${file}"
+		},
+			{
+				"name": "Launch",
+				"type": "go",
+				"request": "launch",
+				"mode": "auto",
+				"program": "${file}",
+				"env": {},
+				"args": ["sim", "${fileDirname}/../../config/simulations/example_ai.yml"]
+			}
+		]
 	}
 }

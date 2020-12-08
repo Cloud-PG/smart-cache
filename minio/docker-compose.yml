@@ -1,13 +1,16 @@
-version: '3'
+version: "3.7"
+
 services:
   minio:
-    image: minio/minio
+    image: minio/minio:RELEASE.2020-11-25T22-36-25Z
     network_mode: "host"
     volumes:
-        - /path/to/minio/data:/data
+      - ${PATH_TO_MINIO_DATA}:/data
+      # ref: https://docs.minio.io/docs/how-to-secure-access-to-minio-server-with-tls.html
+      - ./CAs/:/root/.minio/certs
     environment:
-        - MINIO_ACCESS_KEY=insert a key!!!
-        - MINIO_SECRET_KEY=insert a passwd!!!
+      - MINIO_ACCESS_KEY
+      - MINIO_SECRET_KEY
     command: server /data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]

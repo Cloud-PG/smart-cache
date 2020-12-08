@@ -1,0 +1,644 @@
+version: "3"
+
+vars:
+  EXE_PATH:
+    sh: python -m utils simPath
+
+tasks:
+  debug:
+    desc: Build simulator binary in debug mode
+    cmds:
+      - python -m utils compile
+    sources:
+      - ../../SmartCache/**/*.go
+    generates:
+      - "{{.EXE_PATH}}"
+  release:
+    desc: Build simulator binary in release mode
+    cmds:
+      - python -m utils compile --release "true"
+    sources:
+      - ../../SmartCache/**/*.go
+    generates:
+      - "{{.EXE_PATH}}"
+  debug-fast:
+    desc: Build simulator binary in debug mode
+    cmds:
+      - python -m utils compile --fast "true"
+    sources:
+      - ../../SmartCache/**/*.go
+    generates:
+      - "{{.EXE_PATH}}"
+  release-fast:
+    desc: Build simulator binary in release mode
+    cmds:
+      - python -m utils compile --release "true" --fast "true"
+    sources:
+      - ../../SmartCache/**/*.go
+    generates:
+      - "{{.EXE_PATH}}"
+
+  all-simulations:
+    desc: Run all simulations
+    cmds:
+      - task: only-synthetic-simulations
+      - task: only-it-simulations
+      - task: only-us-simulations
+
+  only-synthetic-simulations:
+    desc: Run only synthetic simulations
+    cmds:
+      - task: synthetic-dataset-with-watermarks
+      - task: synthetic-dataset
+
+  only-it-simulations:
+    desc: Run only IT simulations
+    cmds:
+      - task: italian-dataset-with-watermarks
+      - task: italian-dataset-with-watermarks-only-addition
+      - task: italian-dataset
+
+  only-us-simulations:
+    desc: Run only US simulations
+    cmds:
+      - task: us-dataset-with-watermarks
+      - task: us-dataset
+
+  synthetic-dataset:
+    desc: Run only synthetic dataset simulations
+    deps:
+      - release
+    cmds:
+      - echo "Synthetic dataset simulations"
+      # High Frequency Dataset
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/high_frequency_dataset/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/high_frequency_dataset/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/high_frequency_dataset/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/high_frequency_dataset/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/high_frequency_dataset/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/high_frequency_dataset/scdl2.yml"
+      # Recency Focused Dataset
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/recency_focused_dataset/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/recency_focused_dataset/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/recency_focused_dataset/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/recency_focused_dataset/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/recency_focused_dataset/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/recency_focused_dataset/scdl2.yml"
+      # Size Focused Dataset
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/size_focused_dataset/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/size_focused_dataset/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/size_focused_dataset/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/size_focused_dataset/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/size_focused_dataset/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/size_focused_dataset/scdl2."
+
+  synthetic-dataset-with-watermarks:
+    desc: Run only synthetic dataset with watermarks simulations
+    deps:
+      - release
+    cmds:
+      - echo "Synthetic dataset with watermarks simulations"
+      # High Frequency Datset
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/high_frequency_dataset/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/high_frequency_dataset/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/high_frequency_dataset/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/high_frequency_dataset/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/high_frequency_dataset/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/high_frequency_dataset/scdl2.yml"
+      # Recency Focused Datset
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/recency_focused_dataset/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/recency_focused_dataset/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/recency_focused_dataset/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/recency_focused_dataset/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/recency_focused_dataset/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/recency_focused_dataset/scdl2.yml"
+      # Size Focused Datset
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/size_focused_dataset/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/size_focused_dataset/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/size_focused_dataset/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/size_focused_dataset/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/size_focused_dataset/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/size_focused_dataset/scdl2.yml"
+
+  us-dataset:
+    desc: Run only us dataset simulations
+    deps:
+      - release
+    ignore_error: true
+    cmds:
+      - echo "US dataset simulations"
+      # 100T
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/100T/lru.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/100T/lfu.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/100T/sizeBig.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/100T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/100T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/100T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/100T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/100T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/100T/scdl2.yml"
+      # 200T
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/200T/lru.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/200T/lfu.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/200T/sizeBig.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/200T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/200T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/200T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/200T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/200T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/200T/scdl2.yml"
+      # 500T
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/500T/lru.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/500T/lfu.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/500T/sizeBig.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/500T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/500T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/500T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/500T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/500T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/500T/scdl2.yml"
+      # 1000T
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/1000T/lru.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/1000T/lfu.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/1000T/sizeBig.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/1000T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/1000T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/1000T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/1000T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/1000T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset/1000T/scdl2.yml"
+
+  us-dataset-with-watermarks:
+    desc: Run only us dataset with watermarks simulations
+    deps:
+      - release
+    ignore_error: true
+    cmds:
+      - echo "US dataset with watermarks simulations"
+      # 100T
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/100T/lru.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/100T/lfu.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/100T/sizeBig.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/100T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/100T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/100T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/100T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/100T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/100T/scdl2.yml"
+      # 200T
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/200T/lru.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/200T/lfu.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/200T/sizeBig.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/200T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/200T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/200T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/200T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/200T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/200T/scdl2.yml"
+      # 500T
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/500T/lru.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/500T/lfu.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/500T/sizeBig.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/500T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/500T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/500T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/500T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/500T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/500T/scdl2.yml"
+      # 1000T
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/1000T/lru.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/1000T/lfu.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/1000T/sizeBig.yml"
+      # - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/1000T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/1000T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/1000T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/1000T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/1000T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks/1000T/scdl2.yml"
+
+  italian-dataset:
+    desc: Run only italian dataset simulations
+    deps:
+      - release
+    cmds:
+      - echo "Italian dataset simulations"
+      # 10T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/10T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/10T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/10T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/10T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/10T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/10T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/10T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/10T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/10T/scdl2.yml"
+      # 50T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/50T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/50T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/50T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/50T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/50T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/50T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/50T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/50T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/50T/scdl2.yml"
+      # 100T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/100T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/100T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/100T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/100T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/100T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/100T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/100T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/100T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/100T/scdl2.yml"
+      # 200T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/200T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/200T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/200T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/200T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/200T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/200T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/200T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/200T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/200T/scdl2.yml"
+      # 500T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/500T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/500T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/500T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/500T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/500T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/500T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/500T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/500T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/500T/scdl2.yml"
+      # 1000T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/1000T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/1000T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/1000T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/1000T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/1000T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/1000T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/1000T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/1000T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset/1000T/scdl2.yml"
+
+  italian-dataset-with-watermarks:
+    desc: Run only italian dataset with watermarks simulations
+    deps:
+      - release
+    cmds:
+      - echo "Italian dataset with watermarks simulations"
+      # 10T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/10T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/10T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/10T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/10T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/10T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/10T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/10T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/10T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/10T/scdl2.yml"
+      # 50T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/50T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/50T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/50T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/50T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/50T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/50T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/50T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/50T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/50T/scdl2.yml"
+      # 100T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/100T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/100T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/100T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/100T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/100T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/100T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/100T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/100T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/100T/scdl2.yml"
+      # 200T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/200T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/200T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/200T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/200T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/200T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/200T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/200T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/200T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/200T/scdl2.yml"
+      # 500T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/500T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/500T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/500T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/500T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/500T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/500T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/500T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/500T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/500T/scdl2.yml"
+      # 1000T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/1000T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/1000T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/1000T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/1000T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/1000T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/1000T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/1000T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/1000T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/1000T/scdl2.yml"
+
+  italian-dataset-with-watermarks-only-addition:
+    desc: Run only italian dataset with watermarks simulations and only addition agent
+    deps:
+      - release
+    cmds:
+      - echo "Italian dataset with watermarks and only addition simulations"
+      # 10T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/10T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/10T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/10T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/10T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/10T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/10T/scdl2.yml"
+      # 50T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/50T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/50T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/50T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/50T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/50T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/50T/scdl2.yml"
+      # 100T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/100T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/100T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/100T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/100T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/100T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/100T/scdl2.yml"
+      # 200T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/200T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/200T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/200T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/200T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/200T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/200T/scdl2.yml"
+      # 500T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/500T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/500T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/500T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/500T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/500T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/500T/scdl2.yml"
+      # 1000T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/1000T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/1000T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/1000T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/1000T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/1000T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_only_addition/1000T/scdl2.yml"
+
+  italian-dataset-behavior-comparison:
+    desc: Run only italian dataset simulations with logs to compare behaviors
+    deps:
+      - release
+    cmds:
+      - echo "Italian dataset behavior comparison simulations"
+      # periodA
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/periodA/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/periodA/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/periodA/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/periodA/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/periodA/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/periodA/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/periodA/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/periodA/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/periodA/scdl2.yml"
+      # periodB
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/periodB/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/periodB/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/periodB/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/periodB/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/periodB/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/periodB/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/periodB/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/periodB/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/periodB/scdl2.yml"
+      # periodC
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/periodC/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/periodC/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/periodC/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/periodC/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/periodC/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/periodC/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/periodC/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/periodC/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/periodC/scdl2.yml"
+      # periodD
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/periodD/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/periodD/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/periodD/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/periodD/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/periodD/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/periodD/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/periodD/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/periodD/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison/periodD/scdl2.yml"
+
+  italian-dataset-behavior-comparison-double:
+    desc: Run only italian dataset simulations with logs to compare behaviors
+    deps:
+      - release
+    cmds:
+      - echo "Italian dataset behavior comparison double simulations"
+      # periodA
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodA/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodA/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodA/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodA/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodA/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodA/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodA/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodA/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodA/scdl2.yml"
+      # periodB
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodB/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodB/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodB/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodB/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodB/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodB/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodB/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodB/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodB/scdl2.yml"
+      # periodC
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodC/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodC/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodC/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodC/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodC/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodC/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodC/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodC/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodC/scdl2.yml"
+      # periodD
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodD/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodD/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodD/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodD/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodD/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodD/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodD/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodD/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_behavior_comparison_double/periodD/scdl2.yml"
+
+  us-dataset-behavior-comparison:
+    desc: Run only us dataset simulations with logs to compare behaviors
+    deps:
+      - release
+    cmds:
+      - echo "us dataset behavior comparison simulations"
+      # periodA
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison/periodA/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison/periodA/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison/periodA/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison/periodA/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison/periodA/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison/periodA/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison/periodA/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison/periodA/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison/periodA/scdl2.yml"
+      # periodB
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison/periodB/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison/periodB/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison/periodB/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison/periodB/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison/periodB/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison/periodB/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison/periodB/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison/periodB/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison/periodB/scdl2.yml"
+      # periodC
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison/periodC/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison/periodC/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison/periodC/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison/periodC/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison/periodC/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison/periodC/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison/periodC/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison/periodC/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison/periodC/scdl2.yml"
+      # periodD
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison/periodD/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison/periodD/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison/periodD/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison/periodD/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison/periodD/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison/periodD/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison/periodD/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison/periodD/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison/periodD/scdl2.yml"
+
+  us-dataset-behavior-comparison-double:
+    desc: Run only us dataset simulations with logs to compare behaviors
+    deps:
+      - release
+    cmds:
+      - echo "us dataset behavior comparison double simulations"
+      # periodA
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodA/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodA/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodA/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodA/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodA/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodA/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodA/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodA/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodA/scdl2.yml"
+      # periodB
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodB/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodB/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodB/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodB/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodB/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodB/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodB/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodB/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodB/scdl2.yml"
+      # periodC
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodC/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodC/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodC/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodC/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodC/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodC/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodC/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodC/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodC/scdl2.yml"
+      # periodD
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodD/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodD/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodD/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodD/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodD/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodD/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodD/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodD/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_behavior_comparison_double/periodD/scdl2.yml"
+
+  infinite-simulations:
+    desc: Run only infinite cache simulations
+    deps:
+      - release-fast
+    cmds:
+      - echo "infinite cache simulations"
+      # 0T
+      - "{{.EXE_PATH}} sim ../../config/simulations/infinite_cache/italian_dataset.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/infinite_cache/us_dataset.yml"
+
+  make-weight-function-configs:
+    desc: Make all weight function configuration files
+    dir: ../../config/simulations/weight_function_italian_dataset/100T
+    cmds:
+      - python make_configs.py
+    sources:
+      - make_configs.py
+    generates:
+      - weightFun_*.yml
+
+  weight-function:
+    desc: Make all weight function simulations
+    cmds:
+      - task: weight-function-base
+      - task: weight-function-additive
+      - task: weight-function-additive-exp
+      - task: weight-function-multiplicative
+
+  weight-function-base:
+    desc: Make all weight function simulations
+    deps:
+      - make-weight-function-configs
+    cmds:
+      - ./sim_weight_function_italian_dataset.sh
+
+  weight-function-additive:
+    desc: Make all additive weight function simulations
+    deps:
+      - make-weight-function-configs
+    cmds:
+      - ./sim_weight_function_italian_dataset_additive.sh
+
+  weight-function-additive-exp:
+    desc: Make all additive exp weight function simulations
+    deps:
+      - make-weight-function-configs
+    cmds:
+      - ./sim_weight_function_italian_dataset_additiveExp.sh
+
+  weight-function-multiplicative:
+    desc: Make all multiplicative weight function simulations
+    deps:
+      - make-weight-function-configs
+    cmds:
+      - ./sim_weight_function_italian_dataset_multiplicative.sh

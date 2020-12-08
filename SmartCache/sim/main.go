@@ -1,68 +1,636 @@
 package main
 
 import (
-	"encoding/csv"
+	"errors"
 	"fmt"
-	"log"
-	"net"
 	"os"
-	"runtime/pprof"
+	"path/filepath"
 	"strings"
-	"time"
 
 	"simulator/v2/cache"
-	pb "simulator/v2/cache/simService"
 
-	"google.golang.org/grpc"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
+
+func initZapLog(level zapcore.Level) *zap.Logger {
+	config := zap.NewDevelopmentConfig()
+	config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+	config.Level = zap.NewAtomicLevelAt(level)
+	logger, _ := config.Build()
+	return logger
+}
 
 var (
-	aiFeatureMap        string
-	aiHost              string
-	aiModel             string
-	aiPort              string
-	aiQLearn            bool
-	buildstamp          string
-	cacheSize           float32
-	cpuprofile          string
-	dataset2TestPath    string
-	githash             string
-	limitStatsPolicy    string
-	memprofile          string
-	outputUpdateDelay   float64
-	serviceHost         string
-	servicePort         int32
-	simColdStart        bool
-	simDump             bool
-	simDumpFileName     string
-	simLoadDump         bool
-	simLoadDumpFileName string
-	simOutFile          string
-	simRegion           string
-	simStartFromWindow  uint32
-	simStopWindow       uint32
-	simWindowSize       uint32
-	statUpdatePolicy    string
-	weightedFunc        string
-	weightExp           float32
+	githash    string
+	buildstamp string
 )
 
-type simDetailCmd int
+func configureViper(configFilenameWithNoExt string) { //nolint:ignore,funlen
+	viper.SetConfigName(configFilenameWithNoExt) // name of config file (without extension)
+	viper.SetConfigType("yaml")                  // REQUIRED if the config file does not have the extension in the name
+	viper.AddConfigPath(".")                     // optionally look for config in the working directory
 
-const (
-	normalSimulationCmd simDetailCmd = iota
-	testAICmd
-	testDatasetCmd
-)
+	viper.SetDefault("sim.region", "all")
+	viper.SetDefault("sim.outputFolder", ".")
+	viper.SetDefault("sim.overwrite", false)
+	viper.SetDefault("sim.dump", false)
+	viper.SetDefault("sim.dumpfilesandstats", true)
+	viper.SetDefault("sim.dumpfilename", "")
+	viper.SetDefault("sim.loaddump", false)
+	viper.SetDefault("sim.loaddumpfilename", "")
+	viper.SetDefault("sim.window.size", 7)
+	viper.SetDefault("sim.window.start", 0)
+	viper.SetDefault("sim.window.stop", 0)
+	viper.SetDefault("sim.cache.watermarks", false)
+	viper.SetDefault("sim.cache.watermark.high", 95.0)
+	viper.SetDefault("sim.cache.watermark.low", 75.0)
+	viper.SetDefault("sim.coldstart", false)
+	viper.SetDefault("sim.coldstartnostats", false)
+	viper.SetDefault("sim.log", false)
+	viper.SetDefault("sim.seed", 42)
+
+	viper.SetDefault("sim.cpuprofile", "")
+	viper.SetDefault("sim.memprofile", "")
+	viper.SetDefault("sim.outputupdatedelay", 2.4)
+
+	viper.SetDefault("sim.cache.size.value", 100.)
+	viper.SetDefault("sim.cache.size.unit", "T")
+	viper.SetDefault("sim.cache.bandwidth.value", 10.0)
+	viper.SetDefault("sim.cache.bandwidth.redirect", false)
+	viper.SetDefault("sim.cache.stats.maxNumDayDiff", 6.0)
+	viper.SetDefault("sim.cache.stats.deltaDaysStep", 7.0)
+
+	viper.SetDefault("sim.weightfunc.name", "FuncAdditiveExp")
+	viper.SetDefault("sim.weightfunc.alpha", 1.0)
+	viper.SetDefault("sim.weightfunc.beta", 1.0)
+	viper.SetDefault("sim.weightfunc.gamma", 1.0)
+	viper.SetDefault("sim.loglevel", "INFO")
+
+	viper.SetDefault("sim.ai.rl.epsilon.start", 1.0)
+	viper.SetDefault("sim.ai.rl.epsilon.decay", 0.0000042)
+
+	viper.SetDefault("sim.ai.featuremap", "")
+	viper.SetDefault("sim.ai.rl.type", "SCDL2")
+
+	viper.SetDefault("sim.ai.rl.addition.featuremap", "")
+	viper.SetDefault("sim.ai.rl.addition.epsilon.start", -1.0)
+	viper.SetDefault("sim.ai.rl.addition.epsilon.decay", -1.0)
+
+	viper.SetDefault("sim.ai.rl.eviction.featuremap", "")
+	viper.SetDefault("sim.ai.rl.eviction.k", 32)
+	viper.SetDefault("sim.ai.rl.eviction.type", "onK")
+	viper.SetDefault("sim.ai.rl.eviction.epsilon.start", -1.0)
+	viper.SetDefault("sim.ai.rl.eviction.epsilon.decay", -1.0)
+
+	viper.SetDefault("sim.ai.model", "")
+
+	viper.SetDefault("sim.dataset2testpath", "")
+}
+
+func simCommand() *cobra.Command { //nolint:ignore,funlen
+	// Simulation config variables
+	var (
+		logLevel string
+		// Simulation
+		randSeed              int64
+		simOverwrite          bool
+		simBandwidth          float64
+		simRedirectReq        bool
+		simCacheWatermarks    bool
+		simCacheHighWatermark float64
+		simCacheLowWatermark  float64
+		simColdStart          bool
+		simColdStartNoStats   bool
+		simDataPath           string
+		simDump               bool
+		simDumpFileName       string
+		simDumpFilesAndStats  bool
+		simFileType           string
+		simLoadDump           bool
+		simLoadDumpFileName   string
+		simLog                bool
+		simOutputFolder       string
+		simRegion             string
+		simType               string
+		simEvictionType       string
+		simWindowStart        int
+		simWindowStop         int
+		simWindowSize         int
+		// Profiling
+		cpuprofile        string
+		memprofile        string
+		outputUpdateDelay float64
+		// Weight function
+		weightFunc  string
+		weightAlpha float64
+		weightBeta  float64
+		weightGamma float64
+		// ai
+		aiFeatureMap             string
+		aiModel                  string
+		aiRLType                 string
+		aiRLAdditionFeatureMap   string
+		aiRLEvictionFeatureMap   string
+		aiRLEpsilonStart         float64
+		aiRLEpsilonDecay         float64
+		aiRLEvictionK            int64
+		aiRLAdditionEpsilonStart float64
+		aiRLAdditionEpsilonDecay float64
+		aiRLEvictionEpsilonStart float64
+		aiRLEvictionEpsilonDecay float64
+		// cache
+		cacheType     string
+		cacheSize     float64
+		cacheSizeUnit string
+		// dataset
+		dataset2TestPath string
+		// Stats
+		maxNumDayDiff float64
+		deltaDaysStep float64
+	)
+
+	simCmd := &cobra.Command{
+		Use:   "sim config",
+		Short: "a simulation environment for Smart Cache in a Data Lake",
+		Long: `a simulation environment for Smart Cache in a Data Lake,
+		used as comparison measure for the new approaches`,
+		Args: func(cmd *cobra.Command, args []string) error {
+			if len(args) < 1 {
+				return errors.New("requires a configuration file")
+			}
+
+			return nil
+		},
+		Run: func(cmd *cobra.Command, args []string) {
+			// Get arguments
+			configFile := args[0]
+
+			// Get logger
+			logger := zap.L()
+			// CHECK DEBUG MODE
+			switch logLevel {
+			case "INFO", "info":
+				logger.Info("ENABLE INFO LOG")
+				loggerMgr := initZapLog(zap.InfoLevel)
+				zap.ReplaceGlobals(loggerMgr)
+
+				defer func() {
+					// TODO: fix error
+					// -> https://github.com/uber-go/zap/issues/772
+					// -> https://github.com/uber-go/zap/issues/328
+					_ = loggerMgr.Sync() // flushes buffer, if any
+				}()
+			case "DEBUG", "debug":
+				logger.Info("ENABLE DEBUG LOG")
+				loggerMgr := initZapLog(zap.DebugLevel)
+				zap.ReplaceGlobals(loggerMgr)
+
+				defer func() {
+					// TODO: fix error
+					// -> https://github.com/uber-go/zap/issues/772
+					// -> https://github.com/uber-go/zap/issues/328
+					_ = loggerMgr.Sync() // flushes buffer, if any
+				}()
+			}
+			// Update logger
+			logger = zap.L()
+
+			logger.Info("Get simulation config file", zap.String("config file", configFile))
+
+			configAbsPath, errAbs := filepath.Abs(configFile)
+			if errAbs != nil {
+				panic(errAbs)
+			}
+			configDir := filepath.Dir(configAbsPath)
+			configFilename := filepath.Base(configAbsPath)
+			configFilenameWithNoExt := strings.TrimSuffix(configFilename, filepath.Ext(configFilename))
+
+			logger.Info("Config file ABS path", zap.String("path", configAbsPath))
+			logger.Info("Config file Directory", zap.String("path", configDir))
+			logger.Info("Config filename", zap.String("file", configFilename))
+			logger.Info("Config filename without extension", zap.String("file", configFilenameWithNoExt))
+
+			logger.Info("Change dir moving on config parent folder", zap.String("path", configDir))
+			errChdir := os.Chdir(configDir)
+			if errChdir != nil {
+				panic(errChdir)
+			}
+			curWd, _ := os.Getwd()
+			logger.Info("Current Working Dir", zap.String("path", curWd))
+
+			logger.Info("Load config file")
+			configureViper(configFilenameWithNoExt)
+
+			if err := viper.ReadInConfig(); err != nil {
+				if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+					// Config file not found; ignore error if desired
+					panic(err)
+				} else {
+					// Config file was found but another error was produced
+					panic(err)
+				}
+			}
+
+			randSeed = viper.GetInt64("sim.seed")
+			logger.Info("CONF_VAR", zap.Int64("randSeed", randSeed))
+
+			cacheSize = viper.GetFloat64("sim.cache.size.value")
+			logger.Info("CONF_VAR", zap.Float64("cacheSize", cacheSize))
+
+			cacheSizeUnit = viper.GetString("sim.cache.size.unit")
+			logger.Info("CONF_VAR", zap.String("cacheSizeUnit", cacheSizeUnit))
+
+			simOverwrite = viper.GetBool("sim.overwrite")
+			logger.Info("CONF_VAR", zap.Bool("simOverwrite", simOverwrite))
+
+			simBandwidth = viper.GetFloat64("sim.cache.bandwidth.value")
+			logger.Info("CONF_VAR", zap.Float64("simBandwidth", simBandwidth))
+
+			simRedirectReq = viper.GetBool("sim.cache.bandwidth.redirect")
+			logger.Info("CONF_VAR", zap.Bool("simRedirectReq", simRedirectReq))
+
+			simCacheWatermarks = viper.GetBool("sim.cache.watermarks")
+			logger.Info("CONF_VAR", zap.Bool("simCacheWatermarks", simCacheWatermarks))
+
+			simCacheHighWatermark = viper.GetFloat64("sim.cache.watermark.high")
+			logger.Info("CONF_VAR", zap.Float64("simCacheHighWatermark", simCacheHighWatermark))
+
+			simCacheLowWatermark = viper.GetFloat64("sim.cache.watermark.low")
+			logger.Info("CONF_VAR", zap.Float64("simCacheLowWatermark", simCacheLowWatermark))
+
+			maxNumDayDiff = viper.GetFloat64("sim.cache.stats.maxNumDayDiff")
+			logger.Info("CONF_VAR", zap.Float64("maxNumDayDiff", maxNumDayDiff))
+
+			deltaDaysStep = viper.GetFloat64("sim.cache.stats.deltaDaysStep")
+			logger.Info("CONF_VAR", zap.Float64("deltaDaysStep", deltaDaysStep))
+
+			simColdStart = viper.GetBool("sim.coldstart")
+			logger.Info("CONF_VAR", zap.Bool("simColdStart", simColdStart))
+
+			simColdStartNoStats = viper.GetBool("sim.coldstartnostats")
+			logger.Info("CONF_VAR", zap.Bool("simColdStartNoStats", simColdStartNoStats))
+
+			simDataPath = viper.GetString("sim.data")
+			simDataPath, errAbs = filepath.Abs(simDataPath)
+			if errAbs != nil {
+				panic(errAbs)
+			}
+			logger.Info("CONF_VAR", zap.String("simDataPath", simDataPath))
+
+			simDump = viper.GetBool("sim.dump")
+			logger.Info("CONF_VAR", zap.Bool("simDump", simDump))
+
+			simDumpFileName = viper.GetString("sim.dumpfilename")
+			logger.Info("CONF_VAR", zap.String("simDumpFileName", simDumpFileName))
+
+			simDumpFilesAndStats = viper.GetBool("sim.dumpfilesandstats")
+			logger.Info("CONF_VAR", zap.Bool("simDumpFilesAndStats", simDumpFilesAndStats))
+
+			simFileType = viper.GetString("sim.filetype")
+			logger.Info("CONF_VAR", zap.String("simFileType", simFileType))
+
+			simLoadDump = viper.GetBool("sim.loaddump")
+			logger.Info("CONF_VAR", zap.Bool("simLoadDump", simLoadDump))
+
+			simLoadDumpFileName = viper.GetString("sim.loaddumpfilename")
+			logger.Info("CONF_VAR", zap.String("simLoadDumpFileName", simLoadDumpFileName))
+
+			simLog = viper.GetBool("sim.log")
+			logger.Info("CONF_VAR", zap.Bool("simLog", simLog))
+
+			simOutputFolder = viper.GetString("sim.outputFolder")
+			simOutputFolder, errAbs = filepath.Abs(simOutputFolder)
+			if errAbs != nil {
+				panic(errAbs)
+			}
+			logger.Info("CONF_VAR", zap.String("simOutputFolder", simOutputFolder))
+
+			simRegion = viper.GetString("sim.region")
+			logger.Info("CONF_VAR", zap.String("simRegion", simRegion))
+
+			simType = viper.GetString("sim.type")
+			logger.Info("CONF_VAR", zap.String("simType", simType))
+
+			simWindowStart = viper.GetInt("sim.window.start")
+			logger.Info("CONF_VAR", zap.Int("simWindowStart", simWindowStart))
+
+			simWindowStop = viper.GetInt("sim.window.stop")
+			logger.Info("CONF_VAR", zap.Int("simWindowStop", simWindowStop))
+
+			simWindowSize = viper.GetInt("sim.window.size")
+			logger.Info("CONF_VAR", zap.Int("simWindowSize", simWindowSize))
+
+			cpuprofile = viper.GetString("sim.cpuprofile")
+			logger.Info("CONF_VAR", zap.String("cpuprofile", cpuprofile))
+
+			memprofile = viper.GetString("sim.memprofile")
+			logger.Info("CONF_VAR", zap.String("memprofile", memprofile))
+
+			outputUpdateDelay = viper.GetFloat64("sim.outputupdatedelay")
+			logger.Info("CONF_VAR", zap.Float64("outputUpdateDelay", outputUpdateDelay))
+
+			weightFunc = viper.GetString("sim.weightfunc.name")
+			logger.Info("CONF_VAR", zap.String("weightFunc", weightFunc))
+
+			weightAlpha = viper.GetFloat64("sim.weightfunc.alpha")
+			logger.Info("CONF_VAR", zap.Float64("weightAlpha", weightAlpha))
+
+			weightBeta = viper.GetFloat64("sim.weightfunc.beta")
+			logger.Info("CONF_VAR", zap.Float64("weightBeta", weightBeta))
+
+			weightGamma = viper.GetFloat64("sim.weightfunc.gamma")
+			logger.Info("CONF_VAR", zap.Float64("weightGamma", weightGamma))
+
+			aiFeatureMap = viper.GetString("sim.ai.featuremap")
+			if aiFeatureMap != "" {
+				aiFeatureMap, errAbs = filepath.Abs(aiFeatureMap)
+				if errAbs != nil {
+					panic(errAbs)
+				}
+			}
+			logger.Info("CONF_VAR", zap.String("aiFeatureMap", aiFeatureMap))
+
+			dataset2TestPath = viper.GetString("sim.ai.dataset2TestPath")
+			logger.Info("CONF_VAR", zap.String("dataset2TestPath", dataset2TestPath))
+
+			aiModel = viper.GetString("sim.ai.model")
+			logger.Info("CONF_VAR", zap.String("aiModel", aiModel))
+
+			aiRLType = viper.GetString("sim.ai.rl.type")
+			logger.Info("CONF_VAR", zap.String("aiRLType", aiRLType))
+
+			aiRLAdditionFeatureMap = viper.GetString("sim.ai.rl.addition.featuremap")
+			if aiRLAdditionFeatureMap != "" {
+				aiRLAdditionFeatureMap, errAbs = filepath.Abs(aiRLAdditionFeatureMap)
+				if errAbs != nil {
+					panic(errAbs)
+				}
+			}
+			logger.Info("CONF_VAR", zap.String("aiRLAdditionFeatureMap", aiRLAdditionFeatureMap))
+
+			aiRLEvictionFeatureMap = viper.GetString("sim.ai.rl.eviction.featuremap")
+			if aiRLEvictionFeatureMap != "" {
+				aiRLEvictionFeatureMap, errAbs = filepath.Abs(aiRLEvictionFeatureMap)
+				if errAbs != nil {
+					panic(errAbs)
+				}
+			}
+			logger.Info("CONF_VAR", zap.String("aiRLEvictionFeatureMap", aiRLEvictionFeatureMap))
+
+			aiRLEvictionK = viper.GetInt64("sim.ai.rl.eviction.k")
+			logger.Info("CONF_VAR", zap.Int64("aiRLEvictionK", aiRLEvictionK))
+
+			aiRLEpsilonStart = viper.GetFloat64("sim.ai.rl.epsilon.start")
+			logger.Info("CONF_VAR", zap.Float64("aiRLEpsilonStart", aiRLEpsilonStart))
+
+			aiRLEpsilonDecay = viper.GetFloat64("sim.ai.rl.epsilon.decay")
+			logger.Info("CONF_VAR", zap.Float64("aiRLEpsilonDecay", aiRLEpsilonDecay))
+
+			aiRLAdditionEpsilonStart = viper.GetFloat64("sim.ai.rl.addition.epsilon.start")
+			logger.Info("CONF_VAR", zap.Float64("aiRLAdditionEpsilonStart", aiRLAdditionEpsilonStart))
+			if aiRLAdditionEpsilonStart == -1.0 {
+				aiRLAdditionEpsilonStart = aiRLEpsilonStart
+				logger.Info("CONF_VAR", zap.Float64("aiRLAdditionEpsilonStartOverwrite", aiRLAdditionEpsilonStart))
+			}
+
+			aiRLAdditionEpsilonDecay = viper.GetFloat64("sim.ai.rl.addition.epsilon.decay")
+			logger.Info("CONF_VAR", zap.Float64("aiRLAdditionEpsilonDecay", aiRLAdditionEpsilonDecay))
+			if aiRLAdditionEpsilonDecay == -1.0 {
+				aiRLAdditionEpsilonDecay = aiRLEpsilonDecay
+				logger.Info("CONF_VAR", zap.Float64("aiRLAdditionEpsilonDecayOverwrite", aiRLAdditionEpsilonDecay))
+			}
+
+			aiRLEvictionEpsilonStart = viper.GetFloat64("sim.ai.rl.eviction.epsilon.start")
+			logger.Info("CONF_VAR", zap.Float64("aiRLEvictionEpsilonStart", aiRLEvictionEpsilonStart))
+			if aiRLEvictionEpsilonStart == -1.0 {
+				aiRLEvictionEpsilonStart = aiRLEpsilonStart
+				logger.Info("CONF_VAR", zap.Float64("aiRLEvictionEpsilonStartOverwrite", aiRLEvictionEpsilonStart))
+			}
+
+			aiRLEvictionEpsilonDecay = viper.GetFloat64("sim.ai.rl.eviction.epsilon.decay")
+			logger.Info("CONF_VAR", zap.Float64("aiRLEvictionEpsilonDecay", aiRLEvictionEpsilonDecay))
+			if aiRLEvictionEpsilonDecay == -1.0 {
+				aiRLEvictionEpsilonDecay = aiRLEpsilonDecay
+				logger.Info("CONF_VAR", zap.Float64("aiRLEvictionEpsilonDecayOverwrite", aiRLEvictionEpsilonDecay))
+			}
+
+			simEvictionType = viper.GetString("sim.ai.rl.eviction.type")
+			logger.Info("CONF_VAR", zap.String("simEvictionType", simEvictionType))
+
+			cacheType = viper.GetString("sim.cache.type")
+			logger.Info("CONF_VAR", zap.String("cacheType", cacheType))
+
+			// Generate simulation file output basename
+			cacheSizeString := fmt.Sprintf("%0.0f%s", cacheSize, strings.ToUpper(cacheSizeUnit))
+			cacheBandwidthString := fmt.Sprintf("%0.0fGbit", simBandwidth)
+
+			var baseName string
+
+			switch cacheType {
+			case "weightFunLRU":
+				parameters := strings.Join([]string{
+					fmt.Sprintf("%0.2f", weightAlpha),
+					fmt.Sprintf("%0.2f", weightBeta),
+					fmt.Sprintf("%0.2f", weightGamma),
+				}, "_")
+				baseName = strings.Join([]string{
+					cacheType,
+					weightFunc,
+					parameters,
+				}, "_")
+			case "aiRL":
+				subAIType := aiRLType
+				if aiRLType == "SCDL2" {
+					subAIType += "-" + simEvictionType
+				}
+				baseName = strings.Join([]string{
+					cacheType,
+					subAIType,
+					cacheSizeString,
+					cacheBandwidthString,
+					simRegion,
+				}, "_")
+			default:
+				baseName = strings.Join([]string{
+					cacheType,
+					cacheSizeString,
+					cacheBandwidthString,
+					simRegion,
+				}, "_")
+			}
+
+			// Output files
+			simOutFile := ""
+			dumpFileName := "cache_dump.json.gz"
+			resultFileName := "simulation_results.csv"
+			resultRunStatsName := "simulation_run_stats.json"
+
+			if simOutFile == "" {
+				simOutFile = resultFileName
+			}
+
+			// Create output folder and move working dir
+			switch simType { //nolint:ignore,nestif
+			case "normal":
+				finalOutputFolder := filepath.Join(simOutputFolder, "run_full_normal", baseName)
+				errMkdir := os.MkdirAll(finalOutputFolder, 0755)
+				if errMkdir != nil && !os.IsExist(errMkdir) {
+					panic(errMkdir)
+				}
+				errChdir = os.Chdir(finalOutputFolder)
+				if errChdir != nil {
+					panic(errChdir)
+				}
+				curWd, _ := os.Getwd()
+				logger.Info("Current Working Dir", zap.String("path", curWd))
+			}
+
+			// Check previous simulation results
+			if !simOverwrite { //nolint:ignore,nestif
+				fileStat, errStat := os.Stat(simOutFile)
+				if errStat != nil {
+					if !os.IsNotExist(errStat) {
+						panic(errStat)
+					}
+				} else {
+					if fileStat.Size() > 600 {
+						// TODO: check if the configuration is the same
+						logger.Info("Simulation already DONE! NO OVERWRITE...")
+						_ = logger.Sync()
+						// TODO: fix error
+						// -> https://github.com/uber-go/zap/issues/772
+						// -> https://github.com/uber-go/zap/issues/328
+						return
+					} else {
+						logger.Info("Simulation results is empty... OVERWRITE...")
+					}
+				}
+			}
+
+			// ------------------------- Create cache --------------------------
+			curCacheInstance := cache.Create(
+				cacheType,
+				cacheSize,
+				cacheSizeUnit,
+				weightFunc,
+				cache.WeightFunctionParameters{
+					Alpha: weightAlpha,
+					Beta:  weightBeta,
+					Gamma: weightGamma,
+				},
+			)
+
+			// ------------------------- Init cache ----------------------------
+			cache.InitInstance(
+				cacheType,
+				curCacheInstance,
+				cache.InitParameters{
+					Log:                simLog,
+					RedirectReq:        simRedirectReq,
+					Watermarks:         simCacheWatermarks,
+					HighWatermark:      simCacheHighWatermark,
+					LowWatermark:       simCacheLowWatermark,
+					Dataset2TestPath:   dataset2TestPath,
+					AIFeatureMap:       aiFeatureMap,
+					AIModel:            aiModel,
+					FunctionTypeString: weightFunc,
+					WfParams: cache.WeightFunctionParameters{
+						Alpha: weightAlpha,
+						Beta:  weightBeta,
+						Gamma: weightGamma,
+					},
+					EvictionAgentType:        simEvictionType,
+					AIRLEvictionK:            aiRLEvictionK,
+					AIRLType:                 aiRLType,
+					AIRLAdditionFeatureMap:   aiRLAdditionFeatureMap,
+					AIRLEvictionFeatureMap:   aiRLEvictionFeatureMap,
+					AIRLAdditionEpsilonStart: aiRLAdditionEpsilonStart,
+					AIRLAdditionEpsilonDecay: aiRLAdditionEpsilonDecay,
+					AIRLEvictionEpsilonStart: aiRLEvictionEpsilonStart,
+					AIRLEvictionEpsilonDecay: aiRLEvictionEpsilonDecay,
+					MaxNumDayDiff:            maxNumDayDiff,
+					DeltaDaysStep:            deltaDaysStep,
+					RandSeed:                 randSeed,
+				},
+			)
+
+			// --------------------- Set cache Bandwidth -----------------------
+			cache.SetBandwidth(curCacheInstance, simBandwidth)
+
+			// ----------------------- Set cache Region ------------------------
+			var (
+				recordFilter   cache.Filter
+				dataTypeFilter cache.Filter
+			)
+			switch simRegion {
+			// TODO: add filter as a parameter
+			case "us":
+				recordFilter = cache.UsMINIAODNOT1andT3{}
+				dataTypeFilter = cache.UsDataMcTypes{}
+				cache.SetRegion(curCacheInstance, "us")
+			case "it":
+				dataTypeFilter = cache.ItDataMcTypes{}
+				cache.SetRegion(curCacheInstance, "it")
+			}
+
+			// --------------------- Prepare simulation ------------------------
+			if simDumpFileName == "" {
+				simDumpFileName = dumpFileName
+			}
+			if simLoadDumpFileName == "" {
+				simLoadDumpFileName = dumpFileName
+			}
+
+			// -------------------------- Simulate -----------------------------
+			cache.Simulate(
+				cacheType,
+				curCacheInstance,
+				cache.SimulationParams{
+					CPUprofile:         cpuprofile,
+					MEMprofile:         memprofile,
+					DataPath:           simDataPath,
+					OutFile:            simOutFile,
+					BaseName:           baseName,
+					ResultRunStatsName: resultRunStatsName,
+					DumpFilename:       simDumpFileName,
+					LoadDump:           simLoadDump,
+					LoadDumpFileName:   simLoadDumpFileName,
+					Dump:               simDump,
+					DumpFileName:       simDumpFileName,
+					DumpFilesAndStats:  simDumpFilesAndStats,
+					AIRLEpsilonStart:   aiRLEpsilonStart,
+					AIRLEpsilonDecay:   aiRLEpsilonDecay,
+					ColdStart:          simColdStart,
+					ColdStartNoStats:   simColdStartNoStats,
+					WindowSize:         simWindowSize,
+					WindowStart:        simWindowStart,
+					WindowStop:         simWindowStop,
+					OutputUpdateDelay:  outputUpdateDelay,
+					RecordFilter:       recordFilter,
+					DataTypeFilter:     dataTypeFilter,
+				},
+			)
+
+		},
+	}
+	simCmd.PersistentFlags().StringVar(
+		&logLevel, "logLevel", "INFO",
+		"[Debugging] Enable or not a level of logging",
+	)
+	return simCmd
+}
 
 func main() {
 	rootCmd := &cobra.Command{}
-	rootCmd.AddCommand(commandServe())
-	rootCmd.AddCommand(commandSimulate())
-	rootCmd.AddCommand(testAI())
-	rootCmd.AddCommand(testDataset())
+	rootCmd.AddCommand(simCommand())
+
+	//rootCmd.AddCommand(commandSimulate())
+	//rootCmd.AddCommand(commandSimulateAI())
+	//rootCmd.AddCommand(testDataset())
 
 	rootCmd.AddCommand(&cobra.Command{
 		Use:   "version",
@@ -72,551 +640,9 @@ func main() {
 			fmt.Printf("Build time:\t%s\nGit hash:\t%s\n", buildstamp, githash)
 		},
 	})
-	rootCmd.PersistentFlags().StringVar(
-		&cpuprofile, "cpuprofile", "",
-		"[Profiling] Profile the CPU during the simulation. If a file is specified the CPU will be profiled on that file",
-	)
-	rootCmd.PersistentFlags().StringVar(
-		&memprofile, "memprofile", "",
-		"[Profiling] Profile the Memory during the simulation. If a file is specified the Memory will be profiled on that file. Note that memprofile will stop the simulation after 1 iteration.",
-	)
-	rootCmd.PersistentFlags().Float32Var(
-		&cacheSize, "size", 10485760., // 10TB
-		"[Simulation] cache size",
-	)
-	rootCmd.PersistentFlags().StringVar(
-		&serviceHost, "host", "localhost",
-		"[Simulation] Ip to listen to",
-	)
-	rootCmd.PersistentFlags().Int32Var(
-		&servicePort, "port", 5432,
-		"[Simulation] cache sim service port",
-	)
-	rootCmd.PersistentFlags().Float64Var(
-		&outputUpdateDelay, "outputUpdateDelay", 5.,
-		"[Simulation] time delay for cmd output",
-	)
-	rootCmd.PersistentFlags().StringVar(
-		&weightedFunc, "weightFunction", "FuncWeightedRequests",
-		"[WeightedLRU] function to use with weighted cache",
-	)
-	rootCmd.PersistentFlags().Float32Var(
-		&weightExp, "weightExp", 2.0,
-		"[Simulation] Exponential to use with weighted cache function",
-	)
-	rootCmd.PersistentFlags().StringVar(
-		&statUpdatePolicy, "statUpdatePolicy", "request",
-		"[WeightedLRU] when to update the file stats: ['miss', 'request']. Default: request",
-	)
-	rootCmd.PersistentFlags().StringVar(
-		&limitStatsPolicy, "limitStatsPolicy", "Q1IsDoubleQ2LimitStats",
-		"[WeightedLRU] how to maintain the file stats ['noLimit', 'Q1IsDoubleQ2LimitStats']. Default: single",
-	)
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err.Error())
+		os.Exit(-1)
 	}
-}
-
-func commandServe() *cobra.Command {
-	cmd := &cobra.Command{
-		Run: func(cmd *cobra.Command, args []string) {
-			// Get first element and reuse same memory space to allocate args
-			cacheType := args[0]
-			copy(args, args[1:])
-			args = args[:len(args)-1]
-
-			// Create cache
-			curCacheInstance := genCache(cacheType)
-
-			grpcServer := grpc.NewServer()
-			fmt.Printf("[Register '%s' Cache]\n", cacheType)
-			pb.RegisterSimServiceServer(grpcServer, curCacheInstance)
-
-			fmt.Printf("[Try to listen to %s:%d]\n", serviceHost, servicePort)
-			lis, err := net.Listen("tcp", fmt.Sprintf("%s:%d", serviceHost, servicePort))
-			if err != nil {
-				log.Fatalf("ERR: failed to listen on %s:%d -> %v", serviceHost, servicePort, err)
-			}
-			fmt.Printf("[Start server on %s:%d]\n", serviceHost, servicePort)
-
-			if err := grpcServer.Serve(lis); err != nil {
-				log.Fatalf("ERR: grpc serve error '%s'", err)
-			}
-		},
-		Use:   `serve cacheType`,
-		Short: "Simulator service",
-		Long:  "Run a cache simulator service",
-		Args:  cobra.MaximumNArgs(1),
-	}
-	return cmd
-}
-
-func addSimFlags(cmd *cobra.Command) {
-	cmd.PersistentFlags().StringVar(
-		&simRegion, "simRegion", "all",
-		"indicate the filter for record region",
-	)
-	cmd.PersistentFlags().StringVar(
-		&simOutFile, "simOutFile", "",
-		"the output file name",
-	)
-	cmd.PersistentFlags().BoolVar(
-		&simDump, "simDump", false,
-		"indicates if to dump the cache status after the simulation",
-	)
-	cmd.PersistentFlags().StringVar(
-		&simDumpFileName, "simDumpFileName", "",
-		"the dump output file name",
-	)
-	cmd.PersistentFlags().BoolVar(
-		&simLoadDump, "simLoadDump", false,
-		"indicates if the simulator have to search a dump of previous session",
-	)
-	cmd.PersistentFlags().StringVar(
-		&simLoadDumpFileName, "simLoadDumpFileName", "",
-		"the dump input file name",
-	)
-	cmd.PersistentFlags().Uint32Var(
-		&simWindowSize, "simWindowSize", 7,
-		"size of the simulation window",
-	)
-	cmd.PersistentFlags().Uint32Var(
-		&simStartFromWindow, "simStartFromWindow", 0,
-		"number of the window to start with the simulation",
-	)
-	cmd.PersistentFlags().Uint32Var(
-		&simStopWindow, "simStopWindow", 0,
-		"number of the window to stop with the simulation",
-	)
-	cmd.PersistentFlags().BoolVar(
-		&simColdStart, "simColdStart", true,
-		"indicates if the cache have to be empty after a dump load",
-	)
-}
-
-func simulationCmd(typeCmd simDetailCmd) *cobra.Command {
-	var useDesc, shortDesc, longDesc string
-
-	switch typeCmd {
-	case normalSimulationCmd:
-		useDesc = `simulate cacheType fileOrFolderPath`
-		shortDesc = "Simulate a session"
-		longDesc = "Simulate a session from data input"
-	case testAICmd:
-		useDesc = `testAI cacheType fileOrFolderPath`
-		shortDesc = "Simulate a session with AI"
-		longDesc = "Simulate a session from data input using an AI model"
-	case testDatasetCmd:
-		useDesc = `testDataset cacheType fileOrFolderPath`
-		shortDesc = "Simulate a cache with the given dataset"
-		longDesc = "Simulate a cache that accept only the file in the dataset"
-	}
-
-	cmd := &cobra.Command{
-		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 2 {
-				fmt.Println("ERR: You need to specify the cache type and a file or a folder")
-				os.Exit(-1)
-			}
-			cacheType := args[0]
-			pathString := args[1]
-			copy(args, args[2:])
-			args = args[:len(args)-1]
-
-			cacheBaseName := cacheType
-			if aiQLearn {
-				cacheBaseName += "-RL"
-			}
-
-			baseName := strings.Join([]string{
-				cacheBaseName,
-				fmt.Sprintf("%0.0fT", cacheSize/(1024.*1024.)),
-				simRegion,
-			},
-				"_",
-			)
-
-			dumpFileName := baseName + ".json.gz"
-			resultFileName := baseName + "_results.csv"
-
-			// Create cache
-			var grpcConn interface{} = nil
-			curCacheInstance := genCache(cacheType)
-
-			switch typeCmd {
-			case testAICmd:
-				if aiFeatureMap == "" {
-					fmt.Println("ERR: No feature map indicated...")
-					os.Exit(-1)
-				}
-				grpcConn = curCacheInstance.Init(aiHost, aiPort, aiFeatureMap, aiModel, aiQLearn)
-				if grpcConn != nil {
-					defer grpcConn.(*grpc.ClientConn).Close()
-				}
-			case testDatasetCmd:
-				curCacheInstance.Init(dataset2TestPath)
-			}
-
-			if simDumpFileName == "" {
-				simDumpFileName = dumpFileName
-			}
-			if simLoadDumpFileName == "" {
-				simLoadDumpFileName = dumpFileName
-			}
-
-			if simLoadDump {
-				fmt.Println("[Loading cache dump...]")
-				curCacheInstance.Load(simLoadDumpFileName)
-				fmt.Println("[Cache dump loaded!]")
-				if simColdStart {
-					curCacheInstance.ClearFiles()
-					fmt.Println("[Cache Files deleted][COLD START]")
-				} else {
-					fmt.Println("[Cache Files stored][HOT START]")
-				}
-			}
-
-			// Open simulation files
-			fileStats, statErr := os.Stat(pathString)
-			if statErr != nil {
-				fmt.Printf("ERR: Cannot open source %s.\n", pathString)
-				os.Exit(-1)
-			}
-
-			var iterator chan cache.CSVRecord
-
-			switch mode := fileStats.Mode(); {
-			case mode.IsRegular():
-				iterator = cache.OpenSimFile(pathString)
-			case mode.IsDir():
-				curFolder, _ := os.Open(pathString)
-				defer curFolder.Close()
-				iterator = cache.OpenSimFolder(curFolder)
-			}
-
-			if simOutFile == "" {
-				simOutFile = resultFileName
-			}
-
-			outputFile, _ := os.Create(simOutFile)
-			defer outputFile.Close()
-			csvOutput := csv.NewWriter(outputFile)
-			defer csvOutput.Flush()
-
-			csvOutput.Write([]string{"date",
-				"size",
-				"hit rate",
-				"hit over miss",
-				"weighted hit rate",
-				"written data",
-				"read data",
-				"read on hit data",
-				"read on miss data",
-				"deleted data",
-				"CPU efficiency",
-				"CPU hit efficiency",
-				"CPU miss efficiency",
-			})
-			csvOutput.Flush()
-
-			if simDump {
-				defer curCacheInstance.Dump(simDumpFileName)
-			}
-
-			var (
-				numRecords        int
-				totIterations     uint32
-				numIterations     uint32
-				windowStepCounter uint32
-				windowCounter     uint32
-			)
-			selectedRegion := fmt.Sprintf("_%s_", strings.ToLower(simRegion))
-
-			simBeginTime := time.Now()
-			start := time.Now()
-			var latestTime time.Time
-
-			if cpuprofile != "" {
-				profileOut, err := os.Create(cpuprofile)
-				if err != nil {
-					fmt.Printf("ERR: Can not create CPU profile file %s.\n", err)
-					os.Exit(-1)
-				}
-				pprof.StartCPUProfile(profileOut)
-				defer pprof.StopCPUProfile()
-			}
-
-			fmt.Println("[Simulation START]")
-
-			for record := range iterator {
-				if strings.Compare(simRegion, "all") != 0 {
-					if strings.Index(strings.ToLower(record.SiteName), selectedRegion) == -1 {
-						continue
-					}
-				}
-
-				numRecords++
-
-				if latestTime.IsZero() {
-					latestTime = time.Unix(record.Day, 0.)
-				} else {
-					curTime := time.Unix(record.Day, 0.)
-					if curTime.Sub(latestTime).Hours() >= 24. {
-						if windowCounter >= simStartFromWindow {
-							csvOutput.Write([]string{
-								fmt.Sprintf("%s", latestTime),
-								fmt.Sprintf("%f", curCacheInstance.Size()),
-								fmt.Sprintf("%0.2f", curCacheInstance.HitRate()),
-								fmt.Sprintf("%0.2f", curCacheInstance.HitOverMiss()),
-								fmt.Sprintf("%0.2f", curCacheInstance.WeightedHitRate()),
-								fmt.Sprintf("%f", curCacheInstance.DataWritten()),
-								fmt.Sprintf("%f", curCacheInstance.DataRead()),
-								fmt.Sprintf("%f", curCacheInstance.DataReadOnHit()),
-								fmt.Sprintf("%f", curCacheInstance.DataReadOnMiss()),
-								fmt.Sprintf("%f", curCacheInstance.DataDeleted()),
-								fmt.Sprintf("%f", curCacheInstance.CPUEff()),
-								fmt.Sprintf("%f", curCacheInstance.CPUHitEff()),
-								fmt.Sprintf("%f", curCacheInstance.CPUMissEff()),
-							})
-							csvOutput.Flush()
-							curCacheInstance.ClearHitMissStats()
-						}
-						latestTime = time.Unix(record.Day, 0.)
-						windowStepCounter++
-					}
-				}
-
-				if windowCounter == simStopWindow {
-					break
-				} else if windowCounter >= simStartFromWindow {
-					// TODO: make size measure a parameter: [K, M, G, P]
-					sizeInMbytes := record.Size / (1024 * 1024)
-
-					switch typeCmd {
-					case testAICmd:
-						cache.GetFile(
-							curCacheInstance,
-							record.Filename,
-							sizeInMbytes,
-							record.CPUTime+record.IOTime, // WTime
-							record.CPUTime,
-							record.Day,
-							record.SiteName,
-							record.UserID,
-						)
-					default:
-						cache.GetFile(
-							curCacheInstance,
-							record.Filename,
-							sizeInMbytes,
-							record.CPUTime+record.IOTime, // WTime
-							record.CPUTime,
-							record.Day,
-						)
-					}
-
-					numIterations++
-
-					if time.Now().Sub(start).Seconds() >= outputUpdateDelay {
-						elapsedTime := time.Now().Sub(simBeginTime)
-						outString := strings.Join(
-							[]string{
-								fmt.Sprintf("[%s_%0.0f_%s]", cacheType, cacheSize, simRegion),
-								fmt.Sprintf("[Elapsed Time: %02d:%02d:%02d]",
-									int(elapsedTime.Hours()),
-									int(elapsedTime.Minutes())%60,
-									int(elapsedTime.Seconds())%60,
-								),
-								fmt.Sprintf("[Window %d]", windowCounter),
-								fmt.Sprintf("[Step %d/%d]", windowStepCounter+1, simWindowSize),
-								fmt.Sprintf("[Num.Records %d]", numRecords),
-								fmt.Sprintf("[HitRate %.2f%%]", curCacheInstance.HitRate()),
-								fmt.Sprintf("[Capacity %.2f%%]", curCacheInstance.Capacity()),
-								// TODO: add as parameter
-								// fmt.Sprintf("[Extra-> %s]", curCacheInstance.ExtraStats()),
-								fmt.Sprintf("[%0.0f it/s]", float64(numIterations)/time.Now().Sub(start).Seconds()),
-								"\r",
-							},
-							"",
-						)
-						fmt.Print(outString)
-						totIterations += numIterations
-						numIterations = 0
-						start = time.Now()
-					}
-
-					if windowStepCounter == simWindowSize {
-						windowCounter++
-						windowStepCounter = 0
-					}
-				} else if windowStepCounter == simWindowSize {
-					fmt.Printf("[Jump %d records of window %d]\n",
-						numRecords,
-						windowCounter,
-					)
-					windowCounter++
-					windowStepCounter = 0
-					numRecords = 0
-				} else {
-					if time.Now().Sub(start).Seconds() >= outputUpdateDelay {
-						fmt.Printf("[Jump %d records of window %d]\r",
-							numRecords,
-							windowCounter,
-						)
-						start = time.Now()
-					}
-				}
-
-				if memprofile != "" {
-					profileOut, err := os.Create(memprofile)
-					if err != nil {
-						fmt.Printf("ERR: Can not create Memory profile file %s.\n", err)
-						os.Exit(-1)
-					}
-					pprof.WriteHeapProfile(profileOut)
-					profileOut.Close()
-					return
-				}
-
-			}
-			elapsedTime := time.Now().Sub(simBeginTime)
-			fmt.Printf("\n[Simulation END][elapsed Time: %02d:%02d:%02d][Num. Records: %d][Mean Records/s: %0.0f]\n",
-				int(elapsedTime.Hours()),
-				int(elapsedTime.Minutes())%60,
-				int(elapsedTime.Seconds())%60,
-				numRecords,
-				float64(totIterations)/elapsedTime.Seconds(),
-			)
-		},
-		Use:   useDesc,
-		Short: shortDesc,
-		Long:  longDesc,
-		Args:  cobra.MaximumNArgs(2),
-	}
-	addSimFlags(cmd)
-	switch typeCmd {
-	case testAICmd:
-		cmd.PersistentFlags().StringVar(
-			&aiHost, "aiHost", "localhost",
-			"indicate the filter for record region",
-		)
-		cmd.PersistentFlags().StringVar(
-			&aiPort, "aiPort", "4242",
-			"indicate the filter for record region",
-		)
-		cmd.PersistentFlags().StringVar(
-			&aiFeatureMap, "aiFeatureMap", "",
-			"the feature map file for data conversions",
-		)
-		cmd.PersistentFlags().StringVar(
-			&aiModel, "aiModel", "",
-			"the model to load into the simulator",
-		)
-		cmd.PersistentFlags().BoolVar(
-			&aiQLearn, "aiQLearn", false,
-			"Use Q-Learning",
-		)
-	case testDatasetCmd:
-		cmd.PersistentFlags().StringVar(
-			&dataset2TestPath, "dataset2TestPath", "",
-			"the dataset to use as reference for the lru choices",
-		)
-	}
-	return cmd
-}
-
-func commandSimulate() *cobra.Command {
-	return simulationCmd(normalSimulationCmd)
-}
-
-func testAI() *cobra.Command {
-	return simulationCmd(testAICmd)
-}
-
-func testDataset() *cobra.Command {
-	return simulationCmd(testDatasetCmd)
-}
-
-func genCache(cacheType string) cache.Cache {
-	var cacheInstance cache.Cache
-	switch cacheType {
-	case "lru":
-		fmt.Printf("[Create LRU Cache][Size: %f]\n", cacheSize)
-		cacheInstance = &cache.LRUCache{
-			MaxSize: cacheSize,
-		}
-		cacheInstance.Init()
-	case "lruDatasetVerifier":
-		fmt.Printf("[Create lruDatasetVerifier Cache][Size: %f]\n", cacheSize)
-		cacheInstance = &cache.LRUDatasetVerifier{
-			LRUCache: cache.LRUCache{
-				MaxSize: cacheSize,
-			},
-		}
-	case "aiLRU":
-		fmt.Printf("[Create aiLRU Cache][Size: %f]\n", cacheSize)
-		cacheInstance = &cache.AILRU{
-			LRUCache: cache.LRUCache{
-				MaxSize: cacheSize,
-			},
-		}
-	case "weightedLRU":
-		fmt.Printf("[Create Weighted Cache][Size: %f]\n", cacheSize)
-
-		var (
-			selFunctionType         cache.FunctionType
-			selUpdateStatPolicyType cache.UpdateStatsPolicyType
-			selLimitStatsPolicyType cache.LimitStatsPolicyType
-		)
-
-		switch weightedFunc {
-		case "FuncFileWeight":
-			selFunctionType = cache.FuncFileWeight
-		case "FuncFileWeightAndTime":
-			selFunctionType = cache.FuncFileWeightAndTime
-		case "FuncFileWeightOnlyTime":
-			selFunctionType = cache.FuncFileWeightOnlyTime
-		case "FuncWeightedRequests":
-			selFunctionType = cache.FuncWeightedRequests
-		default:
-			fmt.Println("ERR: You need to specify a weight function.")
-			os.Exit(-1)
-		}
-
-		switch statUpdatePolicy {
-		case "miss":
-			selUpdateStatPolicyType = cache.UpdateStatsOnMiss
-		case "request":
-			selUpdateStatPolicyType = cache.UpdateStatsOnRequest
-		default:
-			fmt.Println("ERR: You need to specify a weight function.")
-			os.Exit(-1)
-		}
-
-		switch limitStatsPolicy {
-		case "noLimit":
-			selLimitStatsPolicyType = cache.NoLimitStats
-		case "Q1IsDoubleQ2LimitStats":
-			selLimitStatsPolicyType = cache.Q1IsDoubleQ2LimitStats
-		default:
-			fmt.Println("ERR: You need to specify a weight function.")
-			os.Exit(-1)
-		}
-
-		cacheInstance = &cache.WeightedLRU{
-			LRUCache: cache.LRUCache{
-				MaxSize: cacheSize,
-			},
-			Exp:                     weightExp,
-			SelFunctionType:         selFunctionType,
-			SelUpdateStatPolicyType: selUpdateStatPolicyType,
-			SelLimitStatsPolicyType: selLimitStatsPolicyType,
-		}
-		cacheInstance.Init()
-	default:
-		fmt.Printf("ERR: '%s' is not a valid cache type...\n", cacheType)
-		os.Exit(-2)
-	}
-	return cacheInstance
 }

@@ -2,33 +2,35 @@ package cache
 
 import (
 	"compress/gzip"
-	"container/list"
 	"encoding/json"
 	"log"
 	"os"
+
+	"simulator/v2/cache/files"
+	"simulator/v2/cache/queue"
 )
 
 // DatasetFiles represents the dataset file composition
 type DatasetFiles struct {
-	SelectedFiles []string `json:"selected_files"`
+	SelectedFiles []int64 `json:"selected_files"`
 }
 
 // LRUDatasetVerifier cache
 type LRUDatasetVerifier struct {
-	LRUCache
-	datasetFileMap map[string]bool
+	SimpleCache
+	datasetFileMap map[int64]bool
 }
 
 // Init the LRU struct
-func (cache *LRUDatasetVerifier) Init(args ...interface{}) interface{} {
-	cache.LRUCache.Init()
+func (cache *LRUDatasetVerifier) Init(param InitParameters) interface{} {
+	param.QueueType = queue.LRUQueue
+	cache.SimpleCache.Init(param)
 
-	cache.files = make(map[string]float32)
-	cache.stats = make(map[string]*LRUFileStats)
-	cache.queue = list.New()
+	cache.files = &queue.LRU{}
+	cache.stats.Data = make(map[int64]*files.Stats)
 
-	cache.datasetFileMap = make(map[string]bool)
-	datasetFilePath := args[0].(string)
+	cache.datasetFileMap = make(map[int64]bool)
+	datasetFilePath := param.Dataset2TestPath
 
 	datasetFile, errOpenFile := os.Open(datasetFilePath)
 	if errOpenFile != nil {
@@ -54,55 +56,30 @@ func (cache *LRUDatasetVerifier) Init(args ...interface{}) interface{} {
 }
 
 // UpdatePolicy of LRUDatasetVerifier cache
-func (cache *LRUDatasetVerifier) UpdatePolicy(filename string, size float32, hit bool, _ ...interface{}) bool {
-	var added = false
-	_, inDataset := cache.datasetFileMap[filename]
-	if inDataset {
-		if !hit {
-			if cache.Size()+size > cache.MaxSize {
-				var totalDeleted float32
-				tmpVal := cache.queue.Front()
-				for {
-					if tmpVal == nil {
-						break
-					}
-					fileSize := cache.files[tmpVal.Value.(string)]
-					cache.size -= fileSize
-					cache.dataDeleted += size
+func (cache *LRUDatasetVerifier) UpdatePolicy(request *Request, fileStats *files.Stats, hit bool) bool {
+	var (
+		added = false
 
-					totalDeleted += fileSize
-					delete(cache.files, tmpVal.Value.(string))
+		requestedFileSize = request.Size
+		requestedFilename = request.Filename
+	)
+	_, inDataset := cache.datasetFileMap[requestedFilename]
 
-					tmpVal = tmpVal.Next()
-					// Check if all files are deleted
-					if tmpVal == nil {
-						break
-					}
-					cache.queue.Remove(tmpVal.Prev())
-
-					if totalDeleted >= size {
-						break
-					}
-				}
+	if !hit {
+		if inDataset {
+			if cache.Size()+requestedFileSize > cache.MaxSize {
+				cache.Free(requestedFileSize, false)
 			}
-			if cache.Size()+size <= cache.MaxSize {
-				cache.files[filename] = size
-				cache.queue.PushBack(filename)
-				cache.size += size
+			if cache.Size()+requestedFileSize <= cache.MaxSize {
+				queue.Insert(cache.files, fileStats)
+
+				cache.size += requestedFileSize
 				added = true
 			}
-		} else {
-			var elm2move *list.Element
-			for tmpVal := cache.queue.Front(); tmpVal != nil; tmpVal = tmpVal.Next() {
-				if tmpVal.Value.(string) == filename {
-					elm2move = tmpVal
-					break
-				}
-			}
-			if elm2move != nil {
-				cache.queue.MoveToBack(elm2move)
-			}
 		}
+	} else {
+		queue.Update(cache.files, fileStats)
 	}
+
 	return added
 }
