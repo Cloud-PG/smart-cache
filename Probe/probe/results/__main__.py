@@ -1,7 +1,6 @@
-import argparse
 from enum import Enum
 from os import path
-from typing import List, Optional
+from typing import List
 
 import typer
 from colorama import init
