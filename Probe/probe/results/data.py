@@ -180,12 +180,13 @@ class Results(object):
 
 def aggregate_results(folders: list) -> "Results":
     results = Results()
+
     for folder in folders:
-        abs_target_folder = pathlib.Path(folder).resolve()
+        abs_target_folder = pathlib.Path(folder).parent.resolve()
         all_columns = set(COLUMNS)
         for result_path in tqdm(
-            list(abs_target_folder.glob(f"**/{SIM_RESULT_FILENAME}")),
-            desc="Opening results",
+            list(pathlib.Path(folder).glob(f"**/{SIM_RESULT_FILENAME}")),
+            desc=f"Opening results",
         ):
             df = pd.read_csv(result_path)
             cur_columns = set(df.columns)
@@ -195,7 +196,7 @@ def aggregate_results(folders: list) -> "Results":
             df["date"] = pd.to_datetime(
                 df["date"].apply(lambda elm: elm.split()[0]), format="%Y-%m-%d"
             )
-            relative_path = result_path.relative_to(abs_target_folder)
+            relative_path = result_path.resolve().relative_to(abs_target_folder)
             *components, filename = relative_path.parts
             # Check choices
             choice_file = result_path.parent.joinpath(SIM_CHOICE_LOG_FILE)
