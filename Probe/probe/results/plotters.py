@@ -8,11 +8,23 @@ from .data import get_all_metric_values
 from .utils import LogDeleteEvaluator
 
 
+from biokit.viz import corrplot
+
+
+import matplotlib.pyplot as plt
+
+
 def metric_corr(results: list):
     df = get_all_metric_values(results)
 
-    fig = px.imshow(df.corr(method="spearman"))
-    fig.show()
+    # ref: https://nbviewer.jupyter.org/github/biokit/biokit/blob/master/notebooks/viz/corrplot.ipynb
+    c = corrplot.Corrplot(df)
+    c.plot(method="square", colorbar=True, shrink=0.9, rotation=45)
+    plt.show()
+
+    # Using plotly
+    # fig = px.imshow(df.corr(method="spearman"))
+    # fig.show()
 
 
 def plot_num_miss_after_del(results: list, output_filename: str = ""):
