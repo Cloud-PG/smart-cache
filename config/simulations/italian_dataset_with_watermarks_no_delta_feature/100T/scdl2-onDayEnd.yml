@@ -1,7 +1,7 @@
 --- # Simulation parameters
 sim:
   data: ../../../../datasets/source2018_numeric_it_with_avro_order/
-  outputFolder: ../../../../results/sim_italian_dataset_with_watermarks_no_size_feature/1000T
+  outputFolder: ../../../../results/sim_italian_dataset_with_watermarks_no_delta_feature/100T
   type: normal
   window:
     start: 0
@@ -12,7 +12,7 @@ sim:
     type: aiRL
     watermarks: true
     size:
-      value: 1000
+      value: 100
       unit: T
     bandwidth:
       value: 10
@@ -22,8 +22,7 @@ sim:
       epsilon:
         decay: 0.00001
       addition:
-        featuremap: ../../../../featureMaps/no_size/rlAdditionFeatureMap.json
+        featuremap: ../../../../featureMaps/no_delta/rlAdditionFeatureMap.json
       eviction:
-        type: onK
-        k: 8192
-        featuremap: ../../../../featureMaps/no_size/rlEvictionFeatureMap.json
+        type: onDayEnd
+        featuremap: ../../../../featureMaps/no_delta/rlEvictionFeatureMap.json
