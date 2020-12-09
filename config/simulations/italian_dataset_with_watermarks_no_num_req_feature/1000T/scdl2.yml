@@ -1,0 +1,27 @@
+--- # Simulation parameters
+sim:
+  data: ../../../../datasets/source2018_numeric_it_with_avro_order/
+  outputFolder: ../../../../results/sim_italian_dataset_with_watermarks_no_num_req_feature/1000T
+  type: normal
+  window:
+    start: 0
+    stop: 52
+  region: it
+  overwrite: true
+  cache:
+    type: aiRL
+    watermarks: true
+    size:
+      value: 1000
+      unit: T
+    bandwidth:
+      value: 10
+      redirect: true
+  ai:
+    rl:
+      epsilon:
+        decay: 0.0001
+      addition:
+        featuremap: ../../../../featureMaps/no_num_req/rlAdditionFeatureMap.json
+      eviction:
+        type: NoEviction
