@@ -136,7 +136,7 @@ def get_prefix(files2plot: list) -> str:
     return path.commonprefix([file_ for file_, *_ in files2plot])
 
 
-def dashboard(results: "Results", server_ip: str = "localhost"):
+def create(results: "Results", server_ip: str = "localhost"):
 
     _CACHE = {"columns": {}, "measures": {}, "agents": {}, "tables": {}, "compare": {}}
 
