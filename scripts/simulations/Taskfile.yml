@@ -350,6 +350,73 @@ tasks:
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/1000T/scdl2-onK.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/1000T/scdl2.yml"
 
+  italian-dataset-with-watermarks-no-size-feature:
+    desc: Run only italian dataset with watermarks simulations and no size feature
+    deps:
+      - release
+    cmds:
+      - echo "Italian dataset with watermarks simulations and no size feature"
+      # 10T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/10T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/10T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/10T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/10T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/10T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/10T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/10T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/10T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/10T/scdl2.yml"
+      # 50T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/50T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/50T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/50T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/50T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/50T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/50T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/50T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/50T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/50T/scdl2.yml"
+      # 100T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/100T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/100T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/100T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/100T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/100T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/100T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/100T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/100T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/100T/scdl2.yml"
+      # 200T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/200T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/200T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/200T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/200T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/200T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/200T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/200T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/200T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/200T/scdl2.yml"
+      # 500T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/500T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/500T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/500T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/500T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/500T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/500T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/500T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/500T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/500T/scdl2.yml"
+      # 1000T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/1000T/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/1000T/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/1000T/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/1000T/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/1000T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/1000T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/1000T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/1000T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/1000T/scdl2.yml"
+
   italian-dataset-with-watermarks-only-addition:
     desc: Run only italian dataset with watermarks simulations and only addition agent
     deps:
