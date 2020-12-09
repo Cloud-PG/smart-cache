@@ -1,4 +1,12 @@
 # smart-cache
+
+## :gear: Develop
+
+It is recommended to install the develop packages used for the project:
+
+```bash
+pipenv install --dev
+```
 ## Use the simulator utilities
 
 ### Installation
