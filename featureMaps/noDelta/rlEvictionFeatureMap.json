@@ -1,0 +1,57 @@
+{
+  "catSize": {
+    "buckets": [
+      2301.0,
+      2716.0,
+      3256.0,
+      3665.0,
+      3942.0,
+      5371.0
+    ],
+    "openRight": true,
+    "type": "float",
+    "fileFeature": true
+  },
+  "catNumReq": {
+    "buckets": [
+      1,
+      2,
+      6
+    ],
+    "openRight": true,
+    "type": "int",
+    "fileFeature": true
+  },
+  "catPercOcc": {
+    "buckets": [
+      5.0,
+      10.0,
+      25.0,
+      50.0,
+      75.0
+    ],
+    "openRight": true,
+    "type": "float"
+  },
+  "percOcc": {
+    "buckets": [
+      50.0,
+      75.0,
+      90.0,
+      95.0
+    ],
+    "openRight": true,
+    "type": "float"
+  },
+  "hitRate": {
+    "buckets": [
+      5.0,
+      10.0,
+      25.0,
+      50.0,
+      75.0
+    ],
+    "openRight": true,
+    "type": "float"
+  }
+}
