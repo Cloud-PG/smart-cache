@@ -136,6 +136,10 @@ class Results(object):
         for file_, df in self._elemets.items():
             yield file_, df, self.get_log(file_, [], [])
 
+    def get_all_df(self):
+        for file_, df in self._elemets.items():
+            yield file_, df
+
     def get_df(
         self, file_: str, filters_all: list, filters_any: list
     ) -> "pd.DataFrame":
@@ -182,7 +186,7 @@ def aggregate_results(folders: list) -> "Results":
     results = Results()
 
     for folder in folders:
-        abs_target_folder = pathlib.Path(folder).parent.resolve()
+        abs_target_folder = pathlib.Path(folder).resolve().parent
         all_columns = set(COLUMNS)
         for result_path in tqdm(
             list(pathlib.Path(folder).glob(f"**/{SIM_RESULT_FILENAME}")),
@@ -220,14 +224,12 @@ def missing_column(func):
 
 @missing_column
 def measure_throughput_ratio(df: "pd.DataFrame") -> "pd.Series":
-    cache_size = df["cache size"][0]
-    return (df["read on hit data"] - df["written data"]) / cache_size
+    return (df["read on hit data"] - df["written data"]) / df["cache size"]
 
 
 @missing_column
 def measure_cost_ratio(df: "pd.DataFrame") -> "pd.Series":
-    cache_size = df["cache size"][0]
-    return (df["written data"] + df["deleted data"]) / cache_size
+    return (df["written data"] + df["deleted data"]) / df["cache size"]
 
 
 @missing_column
@@ -436,3 +438,33 @@ def get_measures(
     measures.append(measure_cpu_eff(df).mean())
 
     return measures
+
+
+def get_all_metric_values(results: list) -> "pd.DataFrame":
+    throughput = []
+    cost = []
+    read_on_hit_ratio = []
+    bandwidth = []
+    num_miss_after_del = []
+    cpu_eff = []
+
+    for file_, elm in results:
+        throughput += measure_throughput_ratio(elm.df).to_list()
+        cost += measure_cost_ratio(elm.df).to_list()
+        read_on_hit_ratio += measure_read_on_hit_ratio(elm.df).to_list()
+        bandwidth += measure_bandwidth(elm.df).to_list()
+        num_miss_after_del += measure_num_miss_after_delete(elm.df).to_list()
+        cpu_eff += measure_cpu_eff(elm.df).to_list()
+
+    df = pd.DataFrame(
+        {
+            "Throughput": throughput,
+            "Cost": cost,
+            "Read on hit ratio": read_on_hit_ratio,
+            "Bandwidth": bandwidth,
+            "Num. miss after del.": num_miss_after_del,
+            "CPU efficiency": cpu_eff,
+        }
+    )
+
+    return df

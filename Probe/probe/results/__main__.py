@@ -5,10 +5,10 @@ from typing import List
 import typer
 from colorama import init
 
-from ..utils import STATUS_ARROW, str2bool
+from ..utils import STATUS_ARROW
 from .dashboard import create
 from .data import aggregate_results, parse_simulation_report
-from .plotters import plot_miss_freq, plot_num_miss_after_del
+from .plotters import metric_corr, plot_miss_freq, plot_num_miss_after_del
 
 
 class PlotType(str, Enum):
@@ -61,6 +61,17 @@ def plot(
             ),
             output_filename=output_filename,
         )
+
+
+@app.command()
+def plot_corr(
+    folders: List[str],
+):
+    print(f"{STATUS_ARROW}Aggregate results...")
+    results = aggregate_results(folders)
+
+    print(f"{STATUS_ARROW}Calculate and plot correlation matrix...")
+    metric_corr(results.get_all_df())
 
 
 if __name__ == "__main__":

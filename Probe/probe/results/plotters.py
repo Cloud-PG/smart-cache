@@ -4,7 +4,15 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 from .dashboard import LAYOUT
+from .data import get_all_metric_values
 from .utils import LogDeleteEvaluator
+
+
+def metric_corr(results: list):
+    df = get_all_metric_values(results)
+
+    fig = px.imshow(df.corr(method="spearman"))
+    fig.show()
 
 
 def plot_num_miss_after_del(results: list, output_filename: str = ""):
