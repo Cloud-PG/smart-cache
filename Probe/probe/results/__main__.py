@@ -1,5 +1,7 @@
 import argparse
+from enum import Enum
 from os import path
+from typing import List, Optional
 
 import typer
 from colorama import init
@@ -8,9 +10,6 @@ from ..utils import STATUS_ARROW, str2bool
 from .dashboard import create
 from .data import aggregate_results, parse_simulation_report
 from .plotters import plot_miss_freq, plot_num_miss_after_del
-
-from enum import Enum
-from typing import List, Optional
 
 
 class PlotType(str, Enum):
