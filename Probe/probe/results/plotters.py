@@ -19,6 +19,7 @@ def metric_corr(results: list):
 
     # ref: https://nbviewer.jupyter.org/github/biokit/biokit/blob/master/notebooks/viz/corrplot.ipynb
     c = corrplot.Corrplot(df)
+    # c.plot(method="text", colorbar=False, fontsize=12, rotation=45)
     c.plot(method="square", colorbar=True, shrink=0.9, rotation=45)
     plt.show()
 
