@@ -346,7 +346,7 @@ def make_table(
                 # f"{search_size.group().replace('/', '')} - "
             )
 
-        search_no_feature = re.search("[\_]no\_[a-zA-Z]*\_feature", values[0])
+        search_no_feature = re.search("[\_]no\_[a-zA-Z\_]*\_feature", values[0])
         if search_no_feature != None:
             values[0] = values[0].replace(
                 search_no_feature.group(),
