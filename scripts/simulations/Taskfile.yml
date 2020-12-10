@@ -356,72 +356,94 @@ tasks:
       - release
     cmds:
       - echo "Italian dataset with watermarks simulations epsilon tests"
+      - task: italian-dataset-with-watermarks-epsilon-test-fast
+      - task: italian-dataset-with-watermarks-epsilon-test-slow
+
+  italian-dataset-with-watermarks-epsilon-test-fast:
+    desc: Run only italian dataset with watermarks simulations epsilon fast tests
+    deps:
+      - release
+    cmds:
+      - echo "Italian dataset with watermarks simulations epsilon fast tests"
       # 10T
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/10T/scdl.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/10T/scdl.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/10T/scdl2-onDayEnd.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/10T/scdl2-onDayEnd.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/10T/scdl2-onFree.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/10T/scdl2-onFree.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/10T/scdl2-onK.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/10T/scdl2-onK.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/10T/scdl2.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/10T/scdl2.yml"
       # 50T
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/50T/scdl.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/50T/scdl.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/50T/scdl2-onDayEnd.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/50T/scdl2-onDayEnd.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/50T/scdl2-onFree.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/50T/scdl2-onFree.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/50T/scdl2-onK.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/50T/scdl2-onK.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/50T/scdl2.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/50T/scdl2.yml"
       # 100T
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/100T/scdl.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/100T/scdl.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/100T/scdl2-onDayEnd.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/100T/scdl2-onDayEnd.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/100T/scdl2-onFree.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/100T/scdl2-onFree.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/100T/scdl2-onK.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/100T/scdl2-onK.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/100T/scdl2.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/100T/scdl2.yml"
       # 200T
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/200T/scdl.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/200T/scdl.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/200T/scdl2-onDayEnd.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/200T/scdl2-onDayEnd.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/200T/scdl2-onFree.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/200T/scdl2-onFree.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/200T/scdl2-onK.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/200T/scdl2-onK.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/200T/scdl2.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/200T/scdl2.yml"
       # 500T
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/500T/scdl.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/500T/scdl.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/500T/scdl2-onDayEnd.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/500T/scdl2-onDayEnd.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/500T/scdl2-onFree.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/500T/scdl2-onFree.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/500T/scdl2-onK.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/500T/scdl2-onK.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/500T/scdl2.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/500T/scdl2.yml"
       # 1000T
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/1000T/scdl.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/1000T/scdl.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/1000T/scdl2-onDayEnd.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/1000T/scdl2-onDayEnd.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/1000T/scdl2-onFree.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/1000T/scdl2-onFree.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/1000T/scdl2-onK.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/1000T/scdl2-onK.yml"
-      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/1000T/scdl2.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/1000T/scdl2.yml"
+
+  italian-dataset-with-watermarks-epsilon-test-slow:
+    desc: Run only italian dataset with watermarks simulations epsilon slow tests
+    deps:
+      - release
+    cmds:
+      - echo "Italian dataset with watermarks simulations epsilon slow tests"
+      # 10T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/10T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/10T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/10T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/10T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/10T/scdl2.yml"
+      # 50T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/50T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/50T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/50T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/50T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/50T/scdl2.yml"
+      # 100T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/100T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/100T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/100T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/100T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/100T/scdl2.yml"
+      # 200T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/200T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/200T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/200T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/200T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/200T/scdl2.yml"
+      # 500T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/500T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/500T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/500T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/500T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/500T/scdl2.yml"
+      # 1000T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/1000T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/1000T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/1000T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/1000T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/1000T/scdl2.yml"
 
   italian-dataset-with-watermarks-random-cache:
     desc: Run only italian dataset with watermarks simulations with a random cache
