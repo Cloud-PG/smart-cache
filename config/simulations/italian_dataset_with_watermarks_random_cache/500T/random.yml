@@ -1,7 +1,7 @@
 --- # Simulation parameters
 sim:
   data: ../../../../datasets/source2018_numeric_it_with_avro_order/
-  outputFolder: ../../../../results/sim_italian_dataset_with_watermarks/500T
+  outputFolder: ../../../../results/sim_italian_dataset_with_watermarks_random_cache/500T
   type: normal
   window:
     start: 0
