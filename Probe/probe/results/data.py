@@ -336,23 +336,27 @@ def make_table(
     for file_, df in files2plot:
         values = get_measures(file_, df, extended=extended)
         values[0] = values[0].replace(prefix, "").replace(f"/{SIM_RESULT_FILENAME}", "")
-        values[0] = values[0].replace("run_full_normal/", "")
 
-        search_size = re.search("[\/]?[0-9]*T\/", values[0])
-        if search_size != None:
-            values[0] = values[0].replace(
-                search_size.group(),
-                "",
-                # f"{search_size.group().replace('/', '')} - "
-            )
+        row_name = []
 
-        search_no_feature = re.search("[\_]no\_[a-zA-Z\_]*\_feature", values[0])
-        if search_no_feature != None:
-            values[0] = values[0].replace(
-                search_no_feature.group(),
-                get_name_no_feature(values[0]),
-                # f"{search_size.group().replace('/', '')} - "
-            )
+        for part in values[0].split("/"):
+            if part.find("run_full_normal") != -1:
+                continue
+            elif part.find("T") == len(part) - 1:
+                continue
+            elif part.find("no_") != -1 and part.find("_feature") != -1:
+                feature = part.replace("no_", "").replace("_feature", "").strip()
+                row_name.append(f"[NO {feature} feature]")
+            elif part.find("epsilon_test") != -1:
+                continue
+            elif part.find("random_cache") != -1:
+                continue
+            elif part in ["slow", "fast"]:
+                row_name.append(f"[epsilon {part}]")
+            else:
+                row_name.append(part)
+
+        values[0] = " ".join(row_name)
 
         values.insert(0, file_)
         table.append(values)
