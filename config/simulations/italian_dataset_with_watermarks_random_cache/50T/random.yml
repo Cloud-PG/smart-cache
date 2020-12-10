@@ -4,7 +4,7 @@ sim:
   outputFolder: ../../../../results/sim_italian_dataset_with_watermarks_random_cache/50T
   type: normal
   overwrite: true
-  seed: 73
+  seed: 146
   window:
     start: 0
     stop: 52
