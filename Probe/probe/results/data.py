@@ -268,7 +268,7 @@ def measure_std_dev_free_space(df: "pd.DataFrame") -> "pd.Series":
 
 @missing_column
 def measure_bandwidth(df: "pd.DataFrame") -> "pd.Series":
-    return (df["read on miss data"] / df["bandwidth"]) * 100.0
+    return df["bandwidth usage"]
 
 
 @missing_column
@@ -370,7 +370,9 @@ def make_table(
             "Throughput (TB)",
             "Cost (TB)",
             "Read on hit ratio",
+            "Read on hit (TB)",
             "Bandwidth",
+            "Bandwidth (TB)",
             "Redirect Vol.",
             "Avg. Free Space",
             "Std. Dev. Free Space",
@@ -432,8 +434,16 @@ def get_measures(
     # Read on hit ratio
     measures.append(measure_read_on_hit_ratio(df).mean())
 
-    # Bandwidth
+    # Read on hit
+    if extended:
+        measures.append(df["read on hit data"].mean() / (1024.0 ** 2.0))
+
+    # Bandwidth percentage
     measures.append(measure_bandwidth(df).mean())
+
+    # Bandwidth
+    if extended:
+        measures.append(df["read on miss data"].mean() / (1024.0 ** 2.0))
 
     if extended:
         # Redirect Vol.
