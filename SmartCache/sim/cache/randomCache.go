@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"fmt"
 	"math/rand"
 	"simulator/v2/cache/files"
 	"simulator/v2/cache/queue"
@@ -26,31 +27,42 @@ func (cache *RandomCache) Init(params InitParameters) interface{} {
 	return cache
 }
 
-// BeforeRequest of LRU cache
-func (cache *RandomCache) BeforeRequest(request *Request, hit bool) (*files.Stats, bool) {
-	// cache.prevTime = cache.curTime
-	// cache.curTime = request.DayTime
-	// if !cache.curTime.Equal(cache.prevTime) {}
-	cache.numReq++
+// UpdatePolicy of LRU cache
+func (cache *RandomCache) UpdatePolicy(request *Request, fileStats *files.Stats, hit bool) bool {
+	var (
+		added             = false
+		requestedFileSize = request.Size
+	)
 
-	curStats, _ := cache.stats.GetOrCreate(request.Filename, request.Size, request.DayTime, cache.tick)
-
-	return curStats, hit
-}
-
-// UpdatePolicy of RandomCache cache
-func (cache *RandomCache) UpdatePolicy(request *Request, fileStats *files.Stats, hit bool) (added bool) {
-	requestedFileSize := request.Size
-
-	if !hit {
+	if !hit { //nolint:ignore,nestif
 		if cache.randomGenerator.Float32() >= randThreshold {
-			queue.Insert(cache.files, fileStats)
+			if cache.Size()+requestedFileSize > cache.MaxSize {
+				cache.Free(requestedFileSize, false)
+			}
 
-			added = true
+			if cache.Size()+requestedFileSize <= cache.MaxSize {
+				cache.size += requestedFileSize
 
-			cache.size += requestedFileSize
-			cache.MaxSize += requestedFileSize
+				queue.Insert(cache.files, fileStats)
+
+				if cache.logFile != nil {
+					cache.toLogBuffer([]string{
+						fmt.Sprintf("%d", cache.tick),
+						ChoiceAdd,
+						fmt.Sprintf("%0.2f", cache.size),
+						fmt.Sprintf("%0.2f", cache.Capacity()),
+						fmt.Sprintf("%d", fileStats.Filename),
+						fmt.Sprintf("%0.2f", fileStats.Size),
+						fmt.Sprintf("%d", fileStats.Frequency),
+						fmt.Sprintf("%d", fileStats.DeltaLastRequest),
+					})
+				}
+
+				added = true
+			}
 		}
+	} else {
+		queue.Update(cache.files, fileStats)
 	}
 
 	return added

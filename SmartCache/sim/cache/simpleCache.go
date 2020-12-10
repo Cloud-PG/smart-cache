@@ -421,6 +421,7 @@ func (cache *SimpleCache) UpdatePolicy(request *Request, fileStats *files.Stats,
 	} else {
 		queue.Update(cache.files, fileStats)
 	}
+
 	return added
 }
 
