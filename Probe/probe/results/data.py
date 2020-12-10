@@ -314,6 +314,12 @@ def parse_simulation_report(
     return del_evaluators
 
 
+def get_name_no_feature(name: str):
+    if name.find("no_") != -1 and name.find("_feature") != -1:
+        feature = name.split("no_")[1].split("_feature")[0].replace("_", "")
+        return f"[No {feature} feature] "
+
+
 def make_table(
     files2plot: list, prefix: str, top_n: int = 0, extended: bool = False
 ) -> Tuple["pd.DataFrame", list]:
@@ -330,16 +336,27 @@ def make_table(
     for file_, df in files2plot:
         values = get_measures(file_, df, extended=extended)
         values[0] = values[0].replace(prefix, "").replace(f"/{SIM_RESULT_FILENAME}", "")
-        search_size = re.search("[\/]?[0-9]*T\/", values[0])
         values[0] = values[0].replace("run_full_normal/", "")
+
+        search_size = re.search("[\/]?[0-9]*T\/", values[0])
         if search_size != None:
             values[0] = values[0].replace(
                 search_size.group(),
                 "",
                 # f"{search_size.group().replace('/', '')} - "
             )
+
+        search_no_feature = re.search("[\_]no\_[a-zA-Z]*\_feature", values[0])
+        if search_no_feature != None:
+            values[0] = values[0].replace(
+                search_no_feature.group(),
+                get_name_no_feature(values[0]),
+                # f"{search_size.group().replace('/', '')} - "
+            )
+
         values.insert(0, file_)
         table.append(values)
+
     if extended:
         columns = [
             "source",
