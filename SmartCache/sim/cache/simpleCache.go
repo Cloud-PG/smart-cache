@@ -81,8 +81,8 @@ type SimpleCache struct {
 	dataReadOnHit, dataReadOnMiss      float64
 	dailyfreeSpace                     []float64
 	sumDailyFreeSpace                  float64
-	HighWatermark                      float64
-	LowWatermark                       float64
+	highWatermark                      float64
+	lowWatermark                       float64
 	numDailyHit                        int64
 	numDailyMiss                       int64
 	prevTime                           time.Time
@@ -105,8 +105,8 @@ func (cache *SimpleCache) Init(param InitParameters) interface{} {
 	cache.logSimulation = param.Log
 	cache.canRedirect = param.RedirectReq
 	cache.useWatermarks = param.Watermarks
-	cache.HighWatermark = param.HighWatermark
-	cache.LowWatermark = param.LowWatermark
+	cache.highWatermark = param.HighWatermark
+	cache.lowWatermark = param.LowWatermark
 	cache.maxNumDayDiff = param.MaxNumDayDiff
 	cache.deltaDaysStep = param.DeltaDaysStep
 	cache.calcWeight = param.CalcWeight
@@ -134,8 +134,8 @@ func (cache *SimpleCache) Init(param InitParameters) interface{} {
 
 	cache.dailyfreeSpace = make([]float64, 0)
 
-	if cache.HighWatermark < cache.LowWatermark {
-		panic(fmt.Sprintf("High watermark is lower then Low waterrmark -> %f < %f", cache.HighWatermark, cache.LowWatermark))
+	if cache.highWatermark < cache.lowWatermark {
+		panic(fmt.Sprintf("High watermark is lower then Low waterrmark -> %f < %f", cache.highWatermark, cache.lowWatermark))
 	}
 
 	if cache.logSimulation {
@@ -589,11 +589,11 @@ func (cache *SimpleCache) CheckWatermark() bool {
 
 	if cache.useWatermarks {
 		// fmt.Println("CHECK WATERMARKS")
-		if cache.Capacity() >= cache.HighWatermark {
+		if cache.Capacity() >= cache.highWatermark {
 			ok = false
 
 			cache.Free(
-				cache.Capacity()-cache.LowWatermark,
+				cache.Capacity()-cache.lowWatermark,
 				true,
 			)
 		}
