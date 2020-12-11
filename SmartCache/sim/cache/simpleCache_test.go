@@ -16,11 +16,9 @@ const (
 
 func TestSimpleCacheBaseMultipleInsert(t *testing.T) {
 	testCache := &SimpleCache{
-		MaxSize:       3.0,
-		HighWatermark: 100.,
-		LowWatermark:  100.,
+		MaxSize: 3.0,
 	}
-	testCache.Init(InitParameters{QueueType: queue.LRUQueue})
+	testCache.Init(InitParameters{QueueType: queue.LRUQueue, HighWatermark: 100., LowWatermark: 100.})
 
 	res, _ := GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
 
@@ -43,11 +41,9 @@ func TestSimpleCacheBaseMultipleInsert(t *testing.T) {
 
 func TestSimpleCacheClear(t *testing.T) {
 	testCache := &SimpleCache{
-		MaxSize:       3.0,
-		HighWatermark: 100.,
-		LowWatermark:  100.,
+		MaxSize: 3.0,
 	}
-	testCache.Init(InitParameters{QueueType: queue.LRUQueue})
+	testCache.Init(InitParameters{QueueType: queue.LRUQueue, HighWatermark: 100., LowWatermark: 100.})
 
 	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
 	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
@@ -73,11 +69,10 @@ func TestSimpleCacheClear(t *testing.T) {
 
 func TestSimpleCacheInsert(t *testing.T) {
 	testCache := &SimpleCache{
-		MaxSize:       5.0,
-		HighWatermark: 100.,
-		LowWatermark:  100.,
+		MaxSize: 5.0,
 	}
 	testCache.Init(InitParameters{QueueType: queue.LRUQueue})
+	testCache.Init(InitParameters{QueueType: queue.LRUQueue, HighWatermark: 100., LowWatermark: 100.})
 
 	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
 	GetFile(testCache, int64(1), size2, floatZero, floatZero, time.Now().Unix())
