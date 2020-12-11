@@ -20,7 +20,7 @@ sim:
   ai:
     rl:
       epsilon:
-        decay: 0.000001
+        decay: 0.0000001
       addition:
         featuremap: ../../../../../featureMaps/rlAdditionFeatureMap.json
       eviction:
