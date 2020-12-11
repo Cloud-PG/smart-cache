@@ -71,7 +71,6 @@ func TestSimpleCacheInsert(t *testing.T) {
 	testCache := &SimpleCache{
 		MaxSize: 5.0,
 	}
-	testCache.Init(InitParameters{QueueType: queue.LRUQueue})
 	testCache.Init(InitParameters{QueueType: queue.LRUQueue, HighWatermark: 100., LowWatermark: 100.})
 
 	GetFile(testCache, int64(0), size1, floatZero, floatZero, time.Now().Unix())
