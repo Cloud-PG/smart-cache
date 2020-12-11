@@ -453,16 +453,47 @@ tasks:
       - echo "Italian dataset with watermarks simulations with a random cache"
       # 10T
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_random_cache/10T/random.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_random_cache/10T/random_lru.yml"
       # 50T
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_random_cache/50T/random.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_random_cache/50T/random_lru.yml"
       # 100T
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_random_cache/100T/random.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_random_cache/100T/random_lru.yml"
       # 200T
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_random_cache/200T/random.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_random_cache/200T/random_lru.yml"
       # 500T
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_random_cache/500T/random.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_random_cache/500T/random_lru.yml"
       # 1000T
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_random_cache/1000T/random.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_random_cache/1000T/random_lru.yml"
+
+  us-dataset-with-watermarks-random-cache:
+    desc: Run only us dataset with watermarks simulations with a random cache
+    deps:
+      - release
+    cmds:
+      - echo "us dataset with watermarks simulations with a random cache"
+      # 10T
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_random_cache/10T/random.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_random_cache/10T/random_lru.yml"
+      # 50T
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_random_cache/50T/random.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_random_cache/50T/random_lru.yml"
+      # 100T
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_random_cache/100T/random.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_random_cache/100T/random_lru.yml"
+      # 200T
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_random_cache/200T/random.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_random_cache/200T/random_lru.yml"
+      # 500T
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_random_cache/500T/random.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_random_cache/500T/random_lru.yml"
+      # 1000T
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_random_cache/1000T/random.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_random_cache/1000T/random_lru.yml"
 
   italian-dataset-with-watermarks-no-size-feature:
     desc: Run only italian dataset with watermarks simulations and no size feature

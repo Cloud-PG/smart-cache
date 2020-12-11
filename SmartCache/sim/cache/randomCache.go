@@ -19,7 +19,6 @@ type RandomCache struct {
 
 // Init the RandomCache struct
 func (cache *RandomCache) Init(params InitParameters) interface{} {
-	params.QueueType = queue.LRUQueue
 	cache.SimpleCache.Init(params)
 
 	cache.randomGenerator = rand.New(rand.NewSource(params.RandSeed))

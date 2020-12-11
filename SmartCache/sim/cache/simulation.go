@@ -555,6 +555,11 @@ func InitInstance(cacheType string, cacheInstance Cache, params InitParameters) 
 		InitCache(cacheInstance, params)
 	case "random":
 		logger.Info("Init random Cache")
+		params.QueueType = queue.NoQueue
+		InitCache(cacheInstance, params)
+	case "random_lru":
+		logger.Info("Init random lru Cache")
+		params.QueueType = queue.LRUQueue
 		InitCache(cacheInstance, params)
 	case "lru":
 		logger.Info("Init LRU Cache")
