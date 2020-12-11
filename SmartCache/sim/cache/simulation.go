@@ -446,6 +446,15 @@ func Create(cacheType string, cacheSize float64, cacheSizeUnit string, weightFun
 				MaxSize: cacheSizeMegabytes,
 			},
 		}
+	case "random_lru":
+		logger.Info("Create random lru Cache",
+			zap.Float64("cacheSize", cacheSizeMegabytes),
+		)
+		cacheInstance = &RandomCache{
+			SimpleCache: SimpleCache{
+				MaxSize: cacheSizeMegabytes,
+			},
+		}
 	case "lru":
 		logger.Info("Create LRU Cache",
 			zap.Float64("cacheSize", cacheSizeMegabytes),
