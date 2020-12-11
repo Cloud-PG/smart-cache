@@ -24,5 +24,5 @@ sim:
       addition:
         featuremap: ../../../../featureMaps/rlAdditionFeatureMap.json
       eviction:
-        k: 8192
+        type: onFree
         featuremap: ../../../../featureMaps/rlEvictionFeatureMap.json
