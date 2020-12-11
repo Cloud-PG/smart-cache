@@ -1,7 +1,7 @@
 --- # Simulation parameters
 sim:
-  data: ../../../../datasets/SizeFocusedDataset/
-  outputFolder: ../../../../results/sim_synthetic_dataset_with_watermarks/SizeFocusedDataset
+  data: ../../../../datasets/ExtremeBigSizeFocusedDataset/
+  outputFolder: ../../../../results/sim_synthetic_dataset_with_watermarks/ExtremeBigSizeFocusedDataset
   type: normal
   window:
     start: 0
@@ -12,10 +12,10 @@ sim:
     type: aiRL
     watermarks: true
     size:
-      value: 10
+      value: 100
       unit: G
-    bandwidth: 
-      value: 1
+    bandwidth:
+      value: 10
       redirect: true
   ai:
     rl:

@@ -50,6 +50,7 @@ tasks:
     cmds:
       - task: synthetic-dataset-with-watermarks
       - task: synthetic-dataset
+      - task: synthetic-dataset-with-watermarks-extreme
 
   only-it-simulations:
     desc: Run only IT simulations
@@ -119,6 +120,27 @@ tasks:
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/size_focused_dataset/sizeSmall.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/size_focused_dataset/scdl.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/size_focused_dataset/scdl2.yml"
+
+  synthetic-dataset-with-watermarks-extreme:
+    desc: Run only extreme synthetic dataset with watermarks simulations
+    deps:
+      - release
+    cmds:
+      - echo "Extreme synthetic dataset with watermarks simulations"
+      # Extreme small size
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/extreme_small_size_focused_dataset/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/extreme_small_size_focused_dataset/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/extreme_small_size_focused_dataset/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/extreme_small_size_focused_dataset/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/extreme_small_size_focused_dataset/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/extreme_small_size_focused_dataset/scdl2.yml"
+      # Extreme big size
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/extreme_big_size_focused_dataset/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/extreme_big_size_focused_dataset/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/extreme_big_size_focused_dataset/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/extreme_big_size_focused_dataset/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/extreme_big_size_focused_dataset/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/extreme_big_size_focused_dataset/scdl2.yml"
 
   us-dataset:
     desc: Run only us dataset simulations

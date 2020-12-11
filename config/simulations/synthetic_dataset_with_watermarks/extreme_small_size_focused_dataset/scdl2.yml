@@ -1,7 +1,7 @@
 --- # Simulation parameters
 sim:
-  data: ../../../../datasets/ExtremeBigSizeFocusedDataset/
-  outputFolder: ../../../../results/sim_synthetic_dataset_with_watermarks/ExtremeBigSizeFocusedDataset
+  data: ../../../../datasets/ExtremeSmallSizeFocusedDataset/
+  outputFolder: ../../../../results/sim_synthetic_dataset_with_watermarks/ExtremeSmallSizeFocusedDataset
   type: normal
   window:
     start: 0
