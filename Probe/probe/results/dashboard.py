@@ -307,6 +307,37 @@ def create(results: "Results", server_ip: str = "localhost"):
                                         value=False,
                                     )
                                 ),
+                                dbc.CardBody(
+                                    dbc.ListGroup(
+                                        [
+                                            dbc.ListGroupItem(
+                                                dcc.Link(
+                                                    "Download as CSV",
+                                                    refresh=True,
+                                                    href="/table/csv",
+                                                    target="_blank",
+                                                )
+                                            ),
+                                            dbc.ListGroupItem(
+                                                dcc.Link(
+                                                    "Download as Latex table",
+                                                    refresh=True,
+                                                    href="/table/tex",
+                                                    target="_blank",
+                                                )
+                                            ),
+                                            dbc.ListGroupItem(
+                                                dcc.Link(
+                                                    "Download as html",
+                                                    refresh=True,
+                                                    href="/table/html",
+                                                    target="_blank",
+                                                )
+                                            ),
+                                        ],
+                                        horizontal=True,
+                                    ),
+                                ),
                             ],
                             horizontal=True,
                         ),
@@ -316,37 +347,6 @@ def create(results: "Results", server_ip: str = "localhost"):
             ),
             dbc.Spinner(
                 [
-                    dbc.CardBody(
-                        dbc.ListGroup(
-                            [
-                                dbc.ListGroupItem(
-                                    dcc.Link(
-                                        "Download as CSV",
-                                        refresh=True,
-                                        href="/table/csv",
-                                        target="_blank",
-                                    )
-                                ),
-                                dbc.ListGroupItem(
-                                    dcc.Link(
-                                        "Download as Latex table",
-                                        refresh=True,
-                                        href="/table/tex",
-                                        target="_blank",
-                                    )
-                                ),
-                                dbc.ListGroupItem(
-                                    dcc.Link(
-                                        "Download as html",
-                                        refresh=True,
-                                        href="/table/html",
-                                        target="_blank",
-                                    )
-                                ),
-                            ],
-                            horizontal=True,
-                        ),
-                    ),
                     dbc.CardBody(
                         id="table",
                     ),
