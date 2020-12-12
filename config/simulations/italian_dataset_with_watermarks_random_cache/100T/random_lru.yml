@@ -10,7 +10,7 @@ sim:
     stop: 52
   region: it
   cache:
-    type: random
+    type: random_lru
     watermarks: true
     size:
       value: 100
