@@ -1,7 +1,7 @@
 --- # Simulation parameters
 sim:
-  data: ../../../../datasets/RecencyFocusedDataset/
-  outputFolder: ../../../../results/sim_synthetic_dataset/RecencyFocusedDataset
+  data: ../../../../datasets/ExtremeSmallSizeFocusedDataset/
+  outputFolder: ../../../../results/sim_synthetic_dataset/ExtremeSmallSizeFocusedDataset
   type: normal
   window:
     start: 0
@@ -11,8 +11,8 @@ sim:
     type: lfu
     watermarks: false
     size:
-      value: 10
+      value: 100
       unit: G
     bandwidth:
-      value: 1
+      value: 10
       redirect: true

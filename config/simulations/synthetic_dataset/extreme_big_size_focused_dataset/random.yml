@@ -1,0 +1,19 @@
+--- # Simulation parameters
+sim:
+  data: ../../../../datasets/ExtremeBigSizeFocusedDataset/
+  outputFolder: ../../../../results/sim_synthetic_dataset/ExtremeBigSizeFocusedDataset
+  type: normal
+  overwrite: true
+  window:
+    start: 0
+    stop: 52
+  region: it
+  cache:
+    type: random
+    watermarks: false
+    size:
+      value: 100
+      unit: G
+    bandwidth:
+      value: 10
+      redirect: true

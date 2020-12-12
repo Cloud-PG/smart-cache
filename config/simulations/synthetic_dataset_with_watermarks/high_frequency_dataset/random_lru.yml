@@ -1,18 +1,19 @@
 --- # Simulation parameters
 sim:
   data: ../../../../datasets/HighFrequencyDataset/
-  outputFolder: ../../../../results/sim_synthetic_dataset/HighFrequencyDataset
+  outputFolder: ../../../../results/sim_synthetic_dataset_with_watermarks/HighFrequencyDataset
   type: normal
+  overwrite: true
   window:
     start: 0
     stop: 52
   region: it
   cache:
-    type: sizeBig
-    watermarks: false
+    type: random_lru
+    watermarks: true
     size:
-      value: 10
+      value: 100
       unit: G
     bandwidth:
-      value: 1
+      value: 10
       redirect: true

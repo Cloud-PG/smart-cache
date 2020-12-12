@@ -14,7 +14,7 @@ sim:
     size:
       value: 10
       unit: G
-    bandwidth: 
+    bandwidth:
       value: 1
       redirect: true
   ai:

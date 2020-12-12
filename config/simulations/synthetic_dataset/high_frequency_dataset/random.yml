@@ -3,24 +3,17 @@ sim:
   data: ../../../../datasets/HighFrequencyDataset/
   outputFolder: ../../../../results/sim_synthetic_dataset/HighFrequencyDataset
   type: normal
+  overwrite: true
   window:
     start: 0
     stop: 52
   region: it
-  overwrite: true
   cache:
-    type: aiRL
+    type: random
     watermarks: false
     size:
-      value: 10
+      value: 100
       unit: G
     bandwidth:
-      value: 1
+      value: 10
       redirect: true
-  ai:
-    rl:
-      type: SCDL
-      epsilon:
-        decay: 0.001
-      addition:
-        featuremap: ../../../../featureMaps/rlAdditionFeatureMap.json
