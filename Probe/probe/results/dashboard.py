@@ -763,9 +763,19 @@ def create(results: "Results", server_ip: str = "localhost"):
                         if file_ in new_file2plot
                     ]
                     prefix = get_prefix(files2plot)
-                    table, _ = make_table(files2plot, prefix, extended=extended)
+                    table, _ = make_table(
+                        files2plot,
+                        prefix,
+                        extended=extended,
+                        sort_by_roh_first=sort_by_roh_first,
+                    )
                 else:
-                    table, _ = make_table(files2plot, prefix, extended=extended)
+                    table, _ = make_table(
+                        files2plot,
+                        prefix,
+                        extended=extended,
+                        sort_by_roh_first=sort_by_roh_first,
+                    )
 
                 _CSV_TEMP_FILE.seek(0)
                 table.to_csv(_CSV_TEMP_FILE)

@@ -406,7 +406,7 @@ def make_table(
                 "Cost",
                 "Num. miss after del.",
             ],
-            ascending=[False, True, False, False],
+            ascending=[False, False, True, False],
         )
     else:
         df = df.sort_values(
