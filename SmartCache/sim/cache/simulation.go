@@ -820,7 +820,7 @@ func Simulate(cacheType string, cacheInstance Cache, param SimulationParams) { /
 
 		curTime := time.Unix(record.Day, 0.)
 
-		if curTime.Sub(latestTime).Hours() >= 24. {
+		if curTime.Sub(latestTime).Hours() >= 23. {
 			if windowCounter >= param.WindowStart {
 				csvRow := []string{
 					latestTime.String(),
