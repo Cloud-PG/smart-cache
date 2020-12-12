@@ -50,8 +50,6 @@ tasks:
     cmds:
       - task: synthetic-dataset-with-watermarks
       - task: synthetic-dataset
-      - task: synthetic-dataset-with-watermarks-extreme
-      - task: synthetic-dataset-extreme
 
   only-it-simulations:
     desc: Run only IT simulations
