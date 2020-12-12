@@ -272,19 +272,43 @@ def create(results: "Results", server_ip: str = "localhost"):
             dbc.CardBody(
                 dbc.ListGroup(
                     [
-                        dbc.ListGroupItem(
-                            dbc.Button(
-                                "",
-                                color="info",
-                                disabled=True,
-                                id="toggle-extended-table-output",
-                            ),
+                        dbc.ListGroup(
+                            [
+                                dbc.ListGroupItem(
+                                    dbc.Button(
+                                        "",
+                                        color="info",
+                                        disabled=True,
+                                        id="toggle-extended-table-output",
+                                    ),
+                                ),
+                                dbc.ListGroupItem(
+                                    daq.ToggleSwitch(
+                                        id="toggle-extended-table",
+                                        value=False,
+                                    )
+                                ),
+                            ],
+                            horizontal=True,
                         ),
-                        dbc.ListGroupItem(
-                            daq.ToggleSwitch(
-                                id="toggle-extended-table",
-                                value=False,
-                            )
+                        dbc.ListGroup(
+                            [
+                                dbc.ListGroupItem(
+                                    dbc.Button(
+                                        "",
+                                        color="info",
+                                        disabled=True,
+                                        id="toggle-sort-by-roh-first-output",
+                                    ),
+                                ),
+                                dbc.ListGroupItem(
+                                    daq.ToggleSwitch(
+                                        id="toggle-sort-by-roh-first",
+                                        value=False,
+                                    )
+                                ),
+                            ],
+                            horizontal=True,
                         ),
                     ],
                     horizontal=True,
@@ -408,6 +432,7 @@ def create(results: "Results", server_ip: str = "localhost"):
         filters_any: list,
         num_of_results: int,
         extended: bool = False,
+        sort_by_roh_first: bool = False,
     ) -> str:
         return str(
             hash(
@@ -415,7 +440,7 @@ def create(results: "Results", server_ip: str = "localhost"):
                     files
                     + filters_all
                     + filters_any
-                    + [str(num_of_results), str(extended)]
+                    + [str(num_of_results), str(extended), str(sort_by_roh_first)]
                 )
             )
         )
@@ -425,7 +450,14 @@ def create(results: "Results", server_ip: str = "localhost"):
         [dash.dependencies.Input("toggle-extended-table", "value")],
     )
     def extended_table(value):
-        return "Extended table: {}.".format(value)
+        return "Extended table: {}".format(value)
+
+    @app.callback(
+        dash.dependencies.Output("toggle-sort-by-roh-first-output", "children"),
+        [dash.dependencies.Input("toggle-sort-by-roh-first", "value")],
+    )
+    def sort_by_read_on_hit(value):
+        return "Sort by read on hit: {}".format(value)
 
     @app.callback(
         [
@@ -568,6 +600,7 @@ def create(results: "Results", server_ip: str = "localhost"):
         [
             Input("tabs", "active_tab"),
             Input("toggle-extended-table", "value"),
+            Input("toggle-sort-by-roh-first", "value"),
         ],
         [
             State("selected-files", "value"),
@@ -576,9 +609,16 @@ def create(results: "Results", server_ip: str = "localhost"):
             State("num-of-results", "value"),
         ],
     )
-    def switch_tab(at, extended, files, filters_all, filters_any, num_of_results):
+    def switch_tab(
+        at, extended, sort_by_roh_first, files, filters_all, filters_any, num_of_results
+    ):
         cur_hash = selection2hash(
-            files, filters_all, filters_any, num_of_results, extended
+            files,
+            filters_all,
+            filters_any,
+            num_of_results,
+            extended,
+            sort_by_roh_first,
         )
 
         if at == "tab-files":
@@ -711,7 +751,11 @@ def create(results: "Results", server_ip: str = "localhost"):
 
                 if num_of_results != 0 and num_of_results is not None:
                     table, new_file2plot = make_table(
-                        files2plot, prefix, num_of_results, extended=extended
+                        files2plot,
+                        prefix,
+                        num_of_results,
+                        extended=extended,
+                        sort_by_roh_first=sort_by_roh_first,
                     )
                     files2plot = [
                         (file_, df)

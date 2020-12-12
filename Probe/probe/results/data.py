@@ -321,7 +321,11 @@ def get_name_no_feature(name: str):
 
 
 def make_table(
-    files2plot: list, prefix: str, top_n: int = 0, extended: bool = False
+    files2plot: list,
+    prefix: str,
+    top_n: int = 0,
+    extended: bool = False,
+    sort_by_roh_first: bool = False,
 ) -> Tuple["pd.DataFrame", list]:
     """Make html table from files to plot
 
@@ -393,15 +397,28 @@ def make_table(
             "CPU Eff.",
         ]
     df = pd.DataFrame(table, columns=columns)
-    df = df.sort_values(
-        by=[
-            "Throughput",
-            "Cost",
-            "Read on hit ratio",
-            "Num. miss after del.",
-        ],
-        ascending=[False, True, False, False],
-    )
+
+    if sort_by_roh_first:
+        df = df.sort_values(
+            by=[
+                "Read on hit ratio",
+                "Throughput",
+                "Cost",
+                "Num. miss after del.",
+            ],
+            ascending=[False, True, False, False],
+        )
+    else:
+        df = df.sort_values(
+            by=[
+                "Throughput",
+                "Cost",
+                "Read on hit ratio",
+                "Num. miss after del.",
+            ],
+            ascending=[False, True, False, False],
+        )
+
     df = df.round(6)
     if top_n != 0:
         df = df.iloc[:10]
