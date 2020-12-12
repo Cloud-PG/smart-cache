@@ -51,6 +51,7 @@ tasks:
       - task: synthetic-dataset-with-watermarks
       - task: synthetic-dataset
       - task: synthetic-dataset-with-watermarks-extreme
+      - task: synthetic-dataset-extreme
 
   only-it-simulations:
     desc: Run only IT simulations
@@ -78,6 +79,8 @@ tasks:
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/high_frequency_dataset/sizeSmall.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/high_frequency_dataset/scdl.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/high_frequency_dataset/scdl2.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/high_frequency_dataset/random.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/high_frequency_dataset/random_lru.yml"
       # Recency Focused Dataset
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/recency_focused_dataset/lru.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/recency_focused_dataset/lfu.yml"
@@ -85,6 +88,8 @@ tasks:
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/recency_focused_dataset/sizeSmall.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/recency_focused_dataset/scdl.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/recency_focused_dataset/scdl2.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/recency_focused_dataset/random.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/recency_focused_dataset/random_lru.yml"
       # Size Focused Dataset
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/size_focused_dataset/lru.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/size_focused_dataset/lfu.yml"
@@ -92,6 +97,8 @@ tasks:
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/size_focused_dataset/sizeSmall.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/size_focused_dataset/scdl.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/size_focused_dataset/scdl2."
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/size_focused_dataset/random.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/size_focused_dataset/random_lru.yml"
 
   synthetic-dataset-with-watermarks:
     desc: Run only synthetic dataset with watermarks simulations
@@ -106,6 +113,8 @@ tasks:
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/high_frequency_dataset/sizeSmall.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/high_frequency_dataset/scdl.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/high_frequency_dataset/scdl2.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/high_frequency_dataset/random.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/high_frequency_dataset/random_lru.yml"
       # Recency Focused Datset
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/recency_focused_dataset/lru.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/recency_focused_dataset/lfu.yml"
@@ -113,6 +122,8 @@ tasks:
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/recency_focused_dataset/sizeSmall.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/recency_focused_dataset/scdl.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/recency_focused_dataset/scdl2.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/recency_focused_dataset/random.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/recency_focused_dataset/random_lru.yml"
       # Size Focused Datset
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/size_focused_dataset/lru.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/size_focused_dataset/lfu.yml"
@@ -120,6 +131,33 @@ tasks:
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/size_focused_dataset/sizeSmall.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/size_focused_dataset/scdl.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/size_focused_dataset/scdl2.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/size_focused_dataset/random.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/size_focused_dataset/random_lru.yml"
+
+  synthetic-dataset-extreme:
+    desc: Run only extreme synthetic dataset simulations
+    deps:
+      - release
+    cmds:
+      - echo "Extreme synthetic dataset simulations"
+      # Extreme small size
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/extreme_small_size_focused_dataset/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/extreme_small_size_focused_dataset/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/extreme_small_size_focused_dataset/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/extreme_small_size_focused_dataset/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/extreme_small_size_focused_dataset/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/extreme_small_size_focused_dataset/scdl2.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/extreme_small_size_focused_dataset/random.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/extreme_small_size_focused_dataset/random_lru.yml"
+      # Extreme big size
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/extreme_big_size_focused_dataset/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/extreme_big_size_focused_dataset/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/extreme_big_size_focused_dataset/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/extreme_big_size_focused_dataset/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/extreme_big_size_focused_dataset/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/extreme_big_size_focused_dataset/scdl2.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/extreme_big_size_focused_dataset/random.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/extreme_big_size_focused_dataset/random_lru.yml"
 
   synthetic-dataset-with-watermarks-extreme:
     desc: Run only extreme synthetic dataset with watermarks simulations
@@ -134,6 +172,8 @@ tasks:
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/extreme_small_size_focused_dataset/sizeSmall.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/extreme_small_size_focused_dataset/scdl.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/extreme_small_size_focused_dataset/scdl2.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/extreme_small_size_focused_dataset/random.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/extreme_small_size_focused_dataset/random_lru.yml"
       # Extreme big size
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/extreme_big_size_focused_dataset/lru.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/extreme_big_size_focused_dataset/lfu.yml"
@@ -141,6 +181,8 @@ tasks:
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/extreme_big_size_focused_dataset/sizeSmall.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/extreme_big_size_focused_dataset/scdl.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/extreme_big_size_focused_dataset/scdl2.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/extreme_big_size_focused_dataset/random.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/extreme_big_size_focused_dataset/random_lru.yml"
 
   us-dataset:
     desc: Run only us dataset simulations
