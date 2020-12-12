@@ -1,7 +1,7 @@
 --- # Simulation parameters
 sim:
   data: ../../../../datasets/ExtremeSmallSizeFocusedDataset/
-  outputFolder: ../../../../results/sim_synthetic_dataset_with_watermarks/ExtremeSmallSizeFocusedDataset
+  outputFolder: ../../../../results/sim_synthetic_dataset_random_cache/ExtremeSmallSizeFocusedDataset
   type: normal
   overwrite: true
   window:
@@ -9,8 +9,8 @@ sim:
     stop: 52
   region: it
   cache:
-    type: random_lru
-    watermarks: true
+    type: random
+    watermarks: false
     size:
       value: 100
       unit: G

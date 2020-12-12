@@ -1,7 +1,7 @@
 --- # Simulation parameters
 sim:
   data: ../../../../datasets/ExtremeBigSizeFocusedDataset/
-  outputFolder: ../../../../results/sim_synthetic_dataset/ExtremeBigSizeFocusedDataset
+  outputFolder: ../../../../results/sim_synthetic_dataset_random_cache/ExtremeBigSizeFocusedDataset
   type: normal
   overwrite: true
   window:
@@ -9,7 +9,7 @@ sim:
     stop: 52
   region: it
   cache:
-    type: random_lru
+    type: random
     watermarks: false
     size:
       value: 100

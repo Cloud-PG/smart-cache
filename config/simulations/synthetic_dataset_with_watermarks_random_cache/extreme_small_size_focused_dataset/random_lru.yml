@@ -1,7 +1,7 @@
 --- # Simulation parameters
 sim:
-  data: ../../../../datasets/RecencyFocusedDataset/
-  outputFolder: ../../../../results/sim_synthetic_dataset/RecencyFocusedDataset
+  data: ../../../../datasets/ExtremeSmallSizeFocusedDataset/
+  outputFolder: ../../../../results/sim_synthetic_dataset_random_cache_with_watermarks/ExtremeSmallSizeFocusedDataset
   type: normal
   overwrite: true
   window:
@@ -10,9 +10,9 @@ sim:
   region: it
   cache:
     type: random_lru
-    watermarks: false
+    watermarks: true
     size:
-      value: 10
+      value: 100
       unit: G
     bandwidth:
       value: 10
