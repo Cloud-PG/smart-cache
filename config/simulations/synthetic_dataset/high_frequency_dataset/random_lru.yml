@@ -12,7 +12,7 @@ sim:
     type: random_lru
     watermarks: false
     size:
-      value: 100
+      value: 10
       unit: G
     bandwidth:
       value: 10

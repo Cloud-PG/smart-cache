@@ -12,7 +12,7 @@ sim:
     type: random
     watermarks: true
     size:
-      value: 100
+      value: 10
       unit: G
     bandwidth:
       value: 10
