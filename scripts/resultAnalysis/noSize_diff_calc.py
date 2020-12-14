@@ -23,7 +23,7 @@ for row in df.itertuples():
     name = name.replace("aiRL_", "")
     method, size, *_ = name.split("_")
 
-    # print(name, size, epsilon)
+    print(name, size, epsilon)
 
     if (
         True
