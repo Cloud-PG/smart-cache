@@ -188,7 +188,6 @@ func (cache *AIRL) Init(params InitParameters) interface{} { //nolint:ignore,fun
 	} else {
 		cache.additionAgentOK = false
 	}
-	os.Exit(0)
 
 	cache.logger.Info("Table creation done")
 
