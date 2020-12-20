@@ -5,7 +5,7 @@
     "tasks": [{
         "label": "build simulator",
         "type": "shell",
-        "command": "pipenv run python -m utils compile --fast 'true'",
+        "command": "pipenv run python -m utils compile --fast",
         "problemMatcher": [],
         "group": {
             "kind": "build",

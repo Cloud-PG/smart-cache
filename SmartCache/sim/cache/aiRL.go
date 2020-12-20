@@ -129,6 +129,8 @@ func (cache *AIRL) Init(params InitParameters) interface{} { //nolint:ignore,fun
 			cache.evictionFeatureManager = featuremap.Parse(evictionFeatureMap)
 
 			cache.logger.Info("Create eviction agent")
+			cache.logger.Info(fmt.Sprintf("epsilon -> start: %0.2f | decay: %0.8f", params.AIRLEvictionEpsilonStart,
+				params.AIRLEvictionEpsilonDecay))
 			cache.evictionAgent.Init(
 				&cache.evictionFeatureManager,
 				qlearn.EvictionAgent,
@@ -169,6 +171,8 @@ func (cache *AIRL) Init(params InitParameters) interface{} { //nolint:ignore,fun
 		cache.additionFeatureManager = featuremap.Parse(additionFeatureMap)
 
 		cache.logger.Info("Create addition agent")
+		cache.logger.Info(fmt.Sprintf("epsilon -> start: %0.2f | decay: %0.8f", params.AIRLAdditionEpsilonStart,
+			params.AIRLAdditionEpsilonDecay))
 		cache.additionAgent.Init(
 			&cache.additionFeatureManager,
 			qlearn.AdditionAgent,
@@ -184,6 +188,7 @@ func (cache *AIRL) Init(params InitParameters) interface{} { //nolint:ignore,fun
 	} else {
 		cache.additionAgentOK = false
 	}
+	os.Exit(0)
 
 	cache.logger.Info("Table creation done")
 
