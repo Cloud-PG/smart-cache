@@ -50,6 +50,7 @@ sim:
       type: SCDL
       epsilon:
         decay: {conf.epsilonDecay}
+        unleash: false
       addition:
         featuremap: {conf.featureMap}
 """
@@ -76,12 +77,14 @@ sim:
   ai:
     rl:
       type: SCDL2
+      epsilon:
+        unleash: false
       addition:
         featuremap: {conf.additionFeatureMap}
         epsilon:
             decay: {conf.additionEpsilonDecay}
       eviction:
-        type: onK
+        type: {conf.evictionType}
         k: {conf.k}
         featuremap: {conf.evictionFeatureMap}
         epsilon:
@@ -101,6 +104,7 @@ class ConfigParameters:
     cache_watermark: bool = True
     cache_size: int = 100
     ai_type: str = ""
+    evictionType: str = ""
     epsilonDecay: float = 0.1
     featureMap: str = ""
     additionFeatureMap: str = ""
@@ -120,6 +124,14 @@ class ConfigParameters:
     @property
     def is_SCDL2(self):
         return self.is_AI and self.ai_type == "SCDL2"
+
+    @property
+    def is_onK(self):
+        return self.is_AI and self.evictionType.lower() == "onk"
+
+    @property
+    def is_noEviction(self):
+        return self.is_AI and self.evictionType.lower() == "noeviction"
 
     @property
     def out_folder(self):
@@ -191,7 +203,10 @@ def generator(data_path: "pathlib.Path", args):
         )
     ]
 
-    regions = ["it", "us"]
+    regions = [
+        "it",
+        # "us",
+    ]
     windows = [
         (0, 4),
         (4, 8),
@@ -206,23 +221,50 @@ def generator(data_path: "pathlib.Path", args):
         (40, 44),
         (44, 48),
         (48, 52),
+        # Trimester
+        (0, 12),
+        (12, 24),
+        (24, 36),
+        (36, 48),
+        (48, 52),
+        # Quadrimester
+        (0, 16),
+        (16, 32),
+        (32, 48),
+        (48, 52),
     ]
     cache_types = [
-        ("aiRL", "SCDL"),
-        ("aiRL", "SCDL2"),
-        ("lru", ""),
-        ("lfu", ""),
-        ("sizeBig", ""),
-        ("sizeSmall", ""),
+        ("aiRL", "SCDL", ""),
+        ("aiRL", "SCDL2", "onK"),
+        ("aiRL", "SCDL2", "onFree"),
+        ("aiRL", "SCDL2", "NoEviction"),
+        ("lru", "", ""),
+        ("lfu", "", ""),
+        ("sizeBig", "", ""),
+        ("sizeSmall", "", ""),
     ]
-    cache_watermarks = [True, False]
-    cache_sizes = [100, 200]
-    epsilon = [0.1, 0.001, 0.0001]
-    k = [1024, 2048, 4096]
+    cache_watermarks = [
+        True,
+        False,
+    ]
+    cache_sizes = [
+        100,
+        200,
+    ]
+    epsilon = [
+        0.1,
+        0.001,
+        0.0001,
+    ]
+    k = [
+        1024,
+        2048,
+        4096,
+    ]
 
     print("Compose parameters...")
     configs = compose(base, "region", regions)
-    configs = compose(configs, ["cache_type", "ai_type"], cache_types)
+    configs = compose(configs, ["cache_type", "ai_type", "evictionType"], cache_types)
     configs = compose(configs, "cache_watermark", cache_watermarks)
     configs = compose(configs, "cache_size", cache_sizes)
     configs = compose(configs, ["w_start", "w_stop"], windows)
@@ -231,9 +273,12 @@ def generator(data_path: "pathlib.Path", args):
         configs, "additionEpsilonDecay", epsilon, lambda elm: elm.is_SCDL2
     )
     configs = compose(
-        configs, "evictionEpsilonDecay", epsilon, lambda elm: elm.is_SCDL2
+        configs,
+        "evictionEpsilonDecay",
+        epsilon,
+        lambda elm: elm.is_SCDL2 and not elm.is_noEviction,
     )
-    configs = compose(configs, "k", k, lambda elm: elm.is_SCDL2)
+    configs = compose(configs, "k", k, lambda elm: elm.is_SCDL2 and elm.is_onK)
 
     print("Remove previous configurations")
     config_out_folder = pathlib.Path(_CONFIG_FOLDER)
