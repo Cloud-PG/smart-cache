@@ -205,7 +205,7 @@ def generator(data_path: "pathlib.Path", args):
 
     regions = [
         "it",
-        # "us",
+        "us",
     ]
     windows = [
         (0, 4),
