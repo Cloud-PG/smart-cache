@@ -288,8 +288,8 @@ def generator(data_path: "pathlib.Path", args):
     makedirs(config_out_folder)
 
     print("Make configs...")
-    for idx, conf in enumerate(configs):
-        file_ = config_out_folder.joinpath(f"{idx}.yml")
+    for idx, conf in enumerate(sorted(configs, key=lambda elm: elm.region)):
+        file_ = config_out_folder.joinpath(f"{conf.region}_{idx}.yml")
         with open(file_, "w") as out_file:
             if conf.ai_type == "SCDL":
                 out_file.write(_TEMPLATE_SCDL.format(conf=conf))
