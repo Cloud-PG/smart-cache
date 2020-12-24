@@ -136,6 +136,7 @@ func (cache *AIRL) Init(params InitParameters) interface{} { //nolint:ignore,fun
 				qlearn.EvictionAgent,
 				params.AIRLEvictionEpsilonStart,
 				params.AIRLEvictionEpsilonDecay,
+				params.AIRLEvictionEpsilonUnleash,
 				params.RandSeed,
 			)
 			cache.evictionCategoryManager = CategoryManager{}
@@ -178,6 +179,7 @@ func (cache *AIRL) Init(params InitParameters) interface{} { //nolint:ignore,fun
 			qlearn.AdditionAgent,
 			params.AIRLAdditionEpsilonStart,
 			params.AIRLAdditionEpsilonDecay,
+			params.AIRLAdditionEpsilonUnleash,
 			params.RandSeed,
 		)
 

@@ -191,25 +191,26 @@ type Choice struct {
 
 // Agent used in Qlearning
 type Agent struct {
-	Memory           map[interface{}][]Choice `json:"memory"`
-	QTable           QTable                   `json:"qtable"`
-	NumStates        int                      `json:"numStates"`
-	NumVars          int                      `json:"numVars"`
-	LearningRate     float64                  `json:"learningRate"`
-	DiscountFactor   float64                  `json:"discountFactor"`
-	DecayRateEpsilon float64                  `json:"decayRateEpsilon"`
-	Epsilon          float64                  `json:"epsilon"`
-	MaxEpsilon       float64                  `json:"maxEpsilon"`
-	MinEpsilon       float64                  `json:"minEpsilon"`
-	StepNum          int64                    `json:"episodeCounter"`
-	RGenerator       *rand.Rand               `json:"rGenerator"`
-	UpdateAlgorithm  RLUpdateAlg              `json:"updateAlgorithm"`
-	QValue           float64                  `json:"qValue"`
-	logger           *zap.Logger
+	Memory              map[interface{}][]Choice `json:"memory"`
+	QTable              QTable                   `json:"qtable"`
+	NumStates           int                      `json:"numStates"`
+	NumVars             int                      `json:"numVars"`
+	LearningRate        float64                  `json:"learningRate"`
+	DiscountFactor      float64                  `json:"discountFactor"`
+	DecayRateEpsilon    float64                  `json:"decayRateEpsilon"`
+	Epsilon             float64                  `json:"epsilon"`
+	MaxEpsilon          float64                  `json:"maxEpsilon"`
+	MinEpsilon          float64                  `json:"minEpsilon"`
+	StepNum             int64                    `json:"episodeCounter"`
+	RGenerator          *rand.Rand               `json:"rGenerator"`
+	UpdateAlgorithm     RLUpdateAlg              `json:"updateAlgorithm"`
+	QValue              float64                  `json:"qValue"`
+	allowEpsilonUnleash bool                     `json:"allowEpsilonUnleash"`
+	logger              *zap.Logger
 }
 
 // Init initilizes the Agent struct
-func (agent *Agent) Init(featureManager *featuremap.FeatureManager, role AgentRole, initEpsilon float64, decayRateEpsilon float64, randSeed int64) {
+func (agent *Agent) Init(featureManager *featuremap.FeatureManager, role AgentRole, initEpsilon float64, decayRateEpsilon float64, allowEpsilonUnleash bool, randSeed int64) {
 	agent.logger = zap.L()
 
 	agent.LearningRate = 0.9 // also named Alpha
@@ -219,6 +220,7 @@ func (agent *Agent) Init(featureManager *featuremap.FeatureManager, role AgentRo
 	agent.MaxEpsilon = 1.0
 	agent.MinEpsilon = 0.1
 	agent.Memory = make(map[interface{}][]Choice)
+	agent.allowEpsilonUnleash = allowEpsilonUnleash
 
 	switch role {
 	case AdditionAgent:
@@ -286,13 +288,15 @@ func (agent *Agent) ResetTableAction() {
 
 // UnleashEpsilon set Epsilon to 1.0
 func (agent *Agent) UnleashEpsilon(newEpsilon interface{}) {
-	agent.Epsilon = 1.0
-	agent.StepNum = 0
+	if agent.allowEpsilonUnleash {
+		agent.Epsilon = 1.0
+		agent.StepNum = 0
 
-	if newEpsilon != nil {
-		targetEpsilon := newEpsilon.(float64)
-		for agent.Epsilon > targetEpsilon {
-			agent.UpdateEpsilon()
+		if newEpsilon != nil {
+			targetEpsilon := newEpsilon.(float64)
+			for agent.Epsilon > targetEpsilon {
+				agent.UpdateEpsilon()
+			}
 		}
 	}
 }
