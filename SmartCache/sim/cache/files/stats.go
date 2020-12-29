@@ -5,7 +5,7 @@ import (
 	"simulator/v2/cache/functions"
 	"time"
 
-	"go.uber.org/zap"
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -24,7 +24,6 @@ type Manager struct {
 	lastUpdateTime            time.Time
 	maxNumDayDiff             float64 // MaxNumDayDiff limit to stay in the stats
 	deltaDaysStep             float64 // DeltaDaysStep limit the clean action of the stats
-	logger                    *zap.Logger
 }
 
 // Init initialize Stats
@@ -34,7 +33,6 @@ func (s *Manager) Init(maxNumDayDiff float64, deltaDaysStep float64, calcWeight 
 	s.calcWeight = calcWeight
 	s.maxNumDayDiff = maxNumDayDiff
 	s.deltaDaysStep = deltaDaysStep
-	s.logger = zap.L()
 }
 
 func (s *Manager) AddDeletedFileMiss(filename int64) {
@@ -81,10 +79,10 @@ func (s Manager) Dirty() bool {
 	numDays := s.lastUpdateTime.Sub(s.firstUpdateTime).Hours() / numHoursInADay
 
 	if numDays >= s.deltaDaysStep {
-		s.logger.Debug("Dirty Stats", zap.Float64("numDays", numDays),
-			zap.String("lastTime", s.lastUpdateTime.Format(time.UnixDate)),
-			zap.String("firstTime", s.firstUpdateTime.Format(time.UnixDate)),
-		)
+		log.Debug().Float64("numDays",
+			numDays).Str("lastTime",
+			s.lastUpdateTime.Format(time.UnixDate)).Str("firstTime",
+			s.firstUpdateTime.Format(time.UnixDate)).Msg("Dirty Stats")
 
 		return true
 	}
@@ -100,7 +98,7 @@ func (s *Manager) Purge(has func(int64) bool) {
 		curFilename := filename
 
 		if inCache := has(curFilename); !inCache && stats.DiffLastUpdate(s.lastUpdateTime) >= s.maxNumDayDiff {
-			s.logger.Debug("Purge", zap.Bool("in cache", inCache))
+			log.Debug().Bool("in cache", inCache).Msg("Purge")
 
 			if s.calcWeight {
 				s.weightSum -= stats.Weight
@@ -111,7 +109,8 @@ func (s *Manager) Purge(has func(int64) bool) {
 		}
 	}
 
-	s.logger.Debug("Stats purged", zap.Int("NumDeletedFiles", numDeletedFiles))
+	log.Debug().Int("NumDeletedFiles", numDeletedFiles).Msg("Stats purged")
+
 	s.firstUpdateTime = s.lastUpdateTime
 }
 
@@ -119,7 +118,7 @@ func (s *Manager) Purge(has func(int64) bool) {
 func (s Manager) Get(filename int64) *Stats {
 	curStats, inStats := s.Data[filename]
 	if !inStats {
-		s.logger.Error("Get: no file found", zap.Int64("filename", filename))
+		log.Err(nil).Int64("filename", filename).Msg("Get: no file found")
 	}
 
 	return curStats
@@ -129,7 +128,7 @@ func (s Manager) Get(filename int64) *Stats {
 func (s *Manager) GetOrCreate(filename int64, size float64, reqTime time.Time, curTick int64) (stats *Stats, newFile bool) {
 	// Stats age update
 	if s.firstUpdateTime.IsZero() {
-		s.logger.Info("Updated first time")
+		log.Info().Msg("Updated first time")
 		s.firstUpdateTime = reqTime
 	}
 

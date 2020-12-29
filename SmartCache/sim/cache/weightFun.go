@@ -8,6 +8,8 @@ import (
 	"simulator/v2/cache/files"
 	"simulator/v2/cache/functions"
 	"simulator/v2/cache/queue"
+
+	"github.com/rs/zerolog/log"
 )
 
 // WeightFunctionParameters are the input parameters of the weighted function
@@ -51,13 +53,13 @@ func (cache *WeightFun) Init(params InitParameters) interface{} {
 
 // Dumps the WeightFun cache
 func (cache *WeightFun) Dumps(fileAndStats bool) [][]byte {
-	cache.logger.Info("Dump cache into byte string")
+	log.Info().Msg("Dump cache into byte string")
 	outData := make([][]byte, 0)
 	var newLine = []byte("\n")
 
 	if fileAndStats {
 		// ----- Files -----
-		cache.logger.Info("Dump cache files")
+		log.Info().Msg("Dump cache files")
 		for _, file := range queue.GetFromWorst(cache.files) {
 			dumpInfo, _ := json.Marshal(DumpInfo{Type: "FILES"})
 			dumpFile, _ := json.Marshal(file)
@@ -69,7 +71,7 @@ func (cache *WeightFun) Dumps(fileAndStats bool) [][]byte {
 			outData = append(outData, record)
 		}
 		// ----- Stats -----
-		cache.logger.Info("Dump cache stats")
+		log.Info().Msg("Dump cache stats")
 		for _, stats := range cache.stats.Data {
 			dumpInfo, _ := json.Marshal(DumpInfo{Type: "STATS"})
 			dumpStats, _ := json.Marshal(stats)
@@ -86,7 +88,7 @@ func (cache *WeightFun) Dumps(fileAndStats bool) [][]byte {
 
 // Loads the WeightFun cache
 func (cache *WeightFun) Loads(inputString [][]byte, _ ...interface{}) {
-	cache.logger.Info("Load cache dump string")
+	log.Info().Msg("Load cache dump string")
 	var (
 		curRecord     DumpRecord
 		curRecordInfo DumpInfo

@@ -8,7 +8,7 @@ import (
 	"simulator/v2/cache/ai/featuremap"
 	"strings"
 
-	"go.uber.org/zap"
+	"github.com/rs/zerolog/log"
 )
 
 // ActionType are cache possible actions.
@@ -63,14 +63,11 @@ type QTable struct {
 	ActionTypeIdxs  map[ActionType]int         `json:"actionTypeIdxs"`
 	ActionTypes     []ActionType               `json:"actionTypes"`
 	IndexWeights    []int                      `json:"indexWeights"`
-	logger          *zap.Logger
 	RandomGenerator *rand.Rand
 }
 
 // Init prepare the QTable States and Actions
 func (table *QTable) Init(featureManager *featuremap.FeatureManager, actions []ActionType, randSeed int64) { //nolint:ignore,funlen
-	table.logger = zap.L()
-
 	table.States = make([][]int, 0)
 	table.Actions = make([][]float64, 0)
 	table.FeatureManager = featureManager
@@ -206,13 +203,10 @@ type Agent struct {
 	UpdateAlgorithm     RLUpdateAlg              `json:"updateAlgorithm"`
 	QValue              float64                  `json:"qValue"`
 	allowEpsilonUnleash bool                     `json:"allowEpsilonUnleash"`
-	logger              *zap.Logger
 }
 
 // Init initilizes the Agent struct
 func (agent *Agent) Init(featureManager *featuremap.FeatureManager, role AgentRole, initEpsilon float64, decayRateEpsilon float64, allowEpsilonUnleash bool, randSeed int64) {
-	agent.logger = zap.L()
-
 	agent.LearningRate = 0.9 // also named Alpha
 	agent.DiscountFactor = 0.5
 	agent.DecayRateEpsilon = decayRateEpsilon
@@ -254,16 +248,11 @@ func (agent *Agent) Init(featureManager *featuremap.FeatureManager, role AgentRo
 	agent.NumStates = len(agent.QTable.States)
 	agent.NumVars = agent.NumStates * len(agent.QTable.Actions[0])
 
-	agent.logger.Info("Agent",
-		zap.Int("numStates", agent.NumStates),
-		zap.Int("numVars", agent.NumVars),
-	)
+	log.Info().Int("numStates", agent.NumStates).Int("numVars", agent.NumVars).Msg("Agent")
 }
 
 // ResetParams resets the learning parameters
 func (agent *Agent) ResetParams(initEpsilon float64, decayRateEpsilon float64) {
-	agent.logger = zap.L()
-
 	agent.LearningRate = 0.9 // also named Alpha
 	agent.DiscountFactor = 0.5
 	agent.DecayRateEpsilon = decayRateEpsilon
@@ -273,7 +262,7 @@ func (agent *Agent) ResetParams(initEpsilon float64, decayRateEpsilon float64) {
 	agent.StepNum = 0
 	agent.QValue = 0.
 
-	agent.logger.Info("Parameters restored as default...")
+	log.Info().Msg("Parameters restored as default...")
 }
 
 // ResetQValue clean the value function
@@ -393,10 +382,7 @@ func (agent Agent) GetActionValue(stateIdx int, action ActionType) float64 {
 func (agent Agent) GetBestActionValue(stateIdx int) float64 {
 	values := agent.QTable.Actions[stateIdx]
 	maxValueIdx, maxValue := agent.getArgMax(values)
-	agent.logger.Debug("Get best action",
-		zap.Float64s("values", values),
-		zap.Int("idx max value", maxValueIdx),
-	)
+	log.Debug().Floats64("values", values).Int("idx max value", maxValueIdx).Msg("Get best action")
 
 	return maxValue
 }
@@ -406,11 +392,7 @@ func (agent Agent) GetBestAction(stateIdx int) ActionType {
 	values := agent.QTable.Actions[stateIdx]
 	maxValueIdx, _ := agent.getArgMax(values)
 	bestAction := agent.QTable.ActionTypes[maxValueIdx]
-	agent.logger.Debug("Get best action",
-		zap.Float64s("values", values),
-		zap.Int("idx max value", maxValueIdx),
-		zap.Int("type best action", int(bestAction)),
-	)
+	log.Debug().Floats64("values", values).Int("idx max value", maxValueIdx).Int("type best action", int(bestAction)).Msg("Get best action")
 
 	return bestAction
 }

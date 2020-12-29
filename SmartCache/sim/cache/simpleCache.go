@@ -9,7 +9,7 @@ import (
 	"os"
 	"time"
 
-	"go.uber.org/zap"
+	"github.com/rs/zerolog/log"
 
 	"simulator/v2/cache/files"
 	"simulator/v2/cache/queue"
@@ -96,7 +96,6 @@ type SimpleCache struct {
 	logClose                           chan bool
 	maxNumDayDiff                      float64
 	deltaDaysStep                      float64
-	logger                             *zap.Logger
 }
 
 // Init the LRU struct
@@ -162,8 +161,6 @@ func (cache *SimpleCache) Init(param InitParameters) interface{} {
 		}(cache.logFile, cache.logBuffer, cache.logClose)
 	}
 
-	cache.logger = zap.L()
-
 	return cache
 }
 
@@ -220,13 +217,13 @@ func (cache *SimpleCache) ClearStats() {
 
 // Dumps the SimpleCache cache
 func (cache *SimpleCache) Dumps(fileAndStats bool) [][]byte {
-	cache.logger.Info("Dump cache into byte string")
+	log.Info().Msg("Dump cache into byte string")
 	outData := make([][]byte, 0)
 	var newLine = []byte("\n")
 
 	if fileAndStats {
 		// ----- Files -----
-		cache.logger.Info("Dump cache files")
+		log.Info().Msg("Dump cache files")
 		for _, file := range queue.GetFromWorst(cache.files) {
 			dumpInfo, _ := json.Marshal(DumpInfo{Type: "FILES"})
 			dumpFile, _ := json.Marshal(file)
@@ -238,7 +235,7 @@ func (cache *SimpleCache) Dumps(fileAndStats bool) [][]byte {
 			outData = append(outData, record)
 		}
 		// ----- Stats -----
-		cache.logger.Info("Dump cache stats")
+		log.Info().Msg("Dump cache stats")
 		for filename, stats := range cache.stats.Data {
 			dumpInfo, _ := json.Marshal(DumpInfo{Type: "STATS"})
 			dumpStats, _ := json.Marshal(stats)
@@ -256,7 +253,7 @@ func (cache *SimpleCache) Dumps(fileAndStats bool) [][]byte {
 
 // Dump the SimpleCache cache
 func (cache *SimpleCache) Dump(filename string, fileAndStats bool) {
-	cache.logger.Info("Dump cache", zap.String("filename", filename))
+	log.Info().Str("filename", filename).Msg("Dump cache")
 	outFile, osErr := os.Create(filename)
 	if osErr != nil {
 		panic(fmt.Sprintf("Error dump file creation: %s", osErr))
@@ -278,7 +275,7 @@ func (cache *SimpleCache) Dump(filename string, fileAndStats bool) {
 
 // Loads the SimpleCache cache
 func (cache *SimpleCache) Loads(inputString [][]byte, _ ...interface{}) {
-	cache.logger.Info("Load cache dump string")
+	log.Info().Msg("Load cache dump string")
 
 	var (
 		curRecord     DumpRecord
@@ -321,7 +318,7 @@ func (cache *SimpleCache) Loads(inputString [][]byte, _ ...interface{}) {
 
 // Load the SimpleCache cache
 func (cache *SimpleCache) Load(filename string) [][]byte {
-	cache.logger.Info("Load cache Dump", zap.String("filename", filename))
+	log.Info().Str("filename", filename).Msg("Load cache Dump")
 
 	inFile, err := os.Open(filename)
 	if err != nil {
@@ -478,7 +475,7 @@ func (cache *SimpleCache) AfterRequest(request *Request, fileStats *files.Stats,
 
 // Free removes files from the cache
 func (cache *SimpleCache) Free(amount float64, percentage bool) float64 { // nolint:ignore,funlen
-	// cache.logger.Debug(
+	// log.Debug(
 	// 	"Cache free",
 	// 	zap.Float64("mean size", cache.MeanSize()),
 	// 	zap.Float64("mean frequency", cache.MeanFrequency()),
@@ -512,13 +509,12 @@ func (cache *SimpleCache) Free(amount float64, percentage bool) float64 { // nol
 
 		deletedFiles := make([]int64, 0)
 		for _, curFile := range queue.GetWorstFilesUp2Size(cache.files, sizeToDelete) {
-			cache.logger.Debug("delete",
-				zap.Int64("filename", curFile.Filename),
-				zap.Float64("fileSize", curFile.Size),
-				zap.Int64("frequency", curFile.Frequency),
-				zap.Int64("recency", curFile.Recency),
-				zap.Float64("cacheSize", cache.Size()),
-			)
+			log.Debug().Int64("filename",
+				curFile.Filename).Float64("fileSize",
+				curFile.Size).Int64("frequency",
+				curFile.Frequency).Int64("recency",
+				curFile.Recency).Float64("cacheSize",
+				cache.Size()).Msg("delete")
 
 			curFileStats := cache.stats.Get(curFile.Filename)
 			if curFileStats != curFile {

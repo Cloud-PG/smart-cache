@@ -9,19 +9,17 @@ import (
 
 	"simulator/v2/cache"
 
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
-func initZapLog(level zapcore.Level) *zap.Logger {
-	config := zap.NewDevelopmentConfig()
-	config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
-	config.Level = zap.NewAtomicLevelAt(level)
-	logger, _ := config.Build()
-	return logger
+func initLog(level zerolog.Level) {
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+
+	zerolog.SetGlobalLevel(level)
 }
 
 var (
@@ -175,37 +173,15 @@ func simCommand() *cobra.Command { //nolint:ignore,funlen
 			// Get arguments
 			configFile := args[0]
 
-			// Get logger
-			logger := zap.L()
 			// CHECK DEBUG MODE
 			switch logLevel {
 			case "INFO", "info":
-				logger.Info("ENABLE INFO LOG")
-				loggerMgr := initZapLog(zap.InfoLevel)
-				zap.ReplaceGlobals(loggerMgr)
-
-				defer func() {
-					// TODO: fix error
-					// -> https://github.com/uber-go/zap/issues/772
-					// -> https://github.com/uber-go/zap/issues/328
-					_ = loggerMgr.Sync() // flushes buffer, if any
-				}()
+				initLog(zerolog.InfoLevel)
 			case "DEBUG", "debug":
-				logger.Info("ENABLE DEBUG LOG")
-				loggerMgr := initZapLog(zap.DebugLevel)
-				zap.ReplaceGlobals(loggerMgr)
-
-				defer func() {
-					// TODO: fix error
-					// -> https://github.com/uber-go/zap/issues/772
-					// -> https://github.com/uber-go/zap/issues/328
-					_ = loggerMgr.Sync() // flushes buffer, if any
-				}()
+				initLog(zerolog.DebugLevel)
 			}
-			// Update logger
-			logger = zap.L()
 
-			logger.Info("Get simulation config file", zap.String("config file", configFile))
+			log.Info().Str("config file", configFile).Msg("Get simulation config file")
 
 			configAbsPath, errAbs := filepath.Abs(configFile)
 			if errAbs != nil {
@@ -215,20 +191,20 @@ func simCommand() *cobra.Command { //nolint:ignore,funlen
 			configFilename := filepath.Base(configAbsPath)
 			configFilenameWithNoExt := strings.TrimSuffix(configFilename, filepath.Ext(configFilename))
 
-			logger.Info("Config file ABS path", zap.String("path", configAbsPath))
-			logger.Info("Config file Directory", zap.String("path", configDir))
-			logger.Info("Config filename", zap.String("file", configFilename))
-			logger.Info("Config filename without extension", zap.String("file", configFilenameWithNoExt))
+			log.Info().Str("path", configAbsPath).Msg("Config file ABS path")
+			log.Info().Str("path", configDir).Msg("Config file Directory")
+			log.Info().Str("file", configFilename).Msg("Config filename")
+			log.Info().Str("file", configFilenameWithNoExt).Msg("Config filename without extension")
 
-			logger.Info("Change dir moving on config parent folder", zap.String("path", configDir))
+			log.Info().Str("path", configDir).Msg("Change dir moving on config parent folder")
 			errChdir := os.Chdir(configDir)
 			if errChdir != nil {
 				panic(errChdir)
 			}
 			curWd, _ := os.Getwd()
-			logger.Info("Current Working Dir", zap.String("path", curWd))
+			log.Info().Str("path", curWd).Msg("Current Working Dir")
 
-			logger.Info("Load config file")
+			log.Info().Msg("Load config file")
 			configureViper(configFilenameWithNoExt)
 
 			if err := viper.ReadInConfig(); err != nil {
@@ -242,114 +218,114 @@ func simCommand() *cobra.Command { //nolint:ignore,funlen
 			}
 
 			randSeed = viper.GetInt64("sim.seed")
-			logger.Info("CONF_VAR", zap.Int64("randSeed", randSeed))
+			log.Info().Int64("randSeed", randSeed).Msg("CONF_VAR")
 
 			cacheSize = viper.GetFloat64("sim.cache.size.value")
-			logger.Info("CONF_VAR", zap.Float64("cacheSize", cacheSize))
+			log.Info().Float64("cacheSize", cacheSize).Msg("CONF_VAR")
 
 			cacheSizeUnit = viper.GetString("sim.cache.size.unit")
-			logger.Info("CONF_VAR", zap.String("cacheSizeUnit", cacheSizeUnit))
+			log.Info().Str("cacheSizeUnit", cacheSizeUnit).Msg("CONF_VAR")
 
 			simOverwrite = viper.GetBool("sim.overwrite")
-			logger.Info("CONF_VAR", zap.Bool("simOverwrite", simOverwrite))
+			log.Info().Bool("simOverwrite", simOverwrite).Msg("CONF_VAR")
 
 			simBandwidth = viper.GetFloat64("sim.cache.bandwidth.value")
-			logger.Info("CONF_VAR", zap.Float64("simBandwidth", simBandwidth))
+			log.Info().Float64("simBandwidth", simBandwidth).Msg("CONF_VAR")
 
 			simRedirectReq = viper.GetBool("sim.cache.bandwidth.redirect")
-			logger.Info("CONF_VAR", zap.Bool("simRedirectReq", simRedirectReq))
+			log.Info().Bool("simRedirectReq", simRedirectReq).Msg("CONF_VAR")
 
 			simCacheWatermarks = viper.GetBool("sim.cache.watermarks")
-			logger.Info("CONF_VAR", zap.Bool("simCacheWatermarks", simCacheWatermarks))
+			log.Info().Bool("simCacheWatermarks", simCacheWatermarks).Msg("CONF_VAR")
 
 			simCacheHighWatermark = viper.GetFloat64("sim.cache.watermark.high")
-			logger.Info("CONF_VAR", zap.Float64("simCacheHighWatermark", simCacheHighWatermark))
+			log.Info().Float64("simCacheHighWatermark", simCacheHighWatermark).Msg("CONF_VAR")
 
 			simCacheLowWatermark = viper.GetFloat64("sim.cache.watermark.low")
-			logger.Info("CONF_VAR", zap.Float64("simCacheLowWatermark", simCacheLowWatermark))
+			log.Info().Float64("simCacheLowWatermark", simCacheLowWatermark).Msg("CONF_VAR")
 
 			maxNumDayDiff = viper.GetFloat64("sim.cache.stats.maxNumDayDiff")
-			logger.Info("CONF_VAR", zap.Float64("maxNumDayDiff", maxNumDayDiff))
+			log.Info().Float64("maxNumDayDiff", maxNumDayDiff).Msg("CONF_VAR")
 
 			deltaDaysStep = viper.GetFloat64("sim.cache.stats.deltaDaysStep")
-			logger.Info("CONF_VAR", zap.Float64("deltaDaysStep", deltaDaysStep))
+			log.Info().Float64("deltaDaysStep", deltaDaysStep).Msg("CONF_VAR")
 
 			simColdStart = viper.GetBool("sim.coldstart")
-			logger.Info("CONF_VAR", zap.Bool("simColdStart", simColdStart))
+			log.Info().Bool("simColdStart", simColdStart).Msg("CONF_VAR")
 
 			simColdStartNoStats = viper.GetBool("sim.coldstartnostats")
-			logger.Info("CONF_VAR", zap.Bool("simColdStartNoStats", simColdStartNoStats))
+			log.Info().Bool("simColdStartNoStats", simColdStartNoStats).Msg("CONF_VAR")
 
 			simDataPath = viper.GetString("sim.data")
 			simDataPath, errAbs = filepath.Abs(simDataPath)
 			if errAbs != nil {
 				panic(errAbs)
 			}
-			logger.Info("CONF_VAR", zap.String("simDataPath", simDataPath))
+			log.Info().Str("simDataPath", simDataPath).Msg("CONF_VAR")
 
 			simDump = viper.GetBool("sim.dump")
-			logger.Info("CONF_VAR", zap.Bool("simDump", simDump))
+			log.Info().Bool("simDump", simDump).Msg("CONF_VAR")
 
 			simDumpFileName = viper.GetString("sim.dumpfilename")
-			logger.Info("CONF_VAR", zap.String("simDumpFileName", simDumpFileName))
+			log.Info().Str("simDumpFileName", simDumpFileName).Msg("CONF_VAR")
 
 			simDumpFilesAndStats = viper.GetBool("sim.dumpfilesandstats")
-			logger.Info("CONF_VAR", zap.Bool("simDumpFilesAndStats", simDumpFilesAndStats))
+			log.Info().Bool("simDumpFilesAndStats", simDumpFilesAndStats).Msg("CONF_VAR")
 
 			simFileType = viper.GetString("sim.filetype")
-			logger.Info("CONF_VAR", zap.String("simFileType", simFileType))
+			log.Info().Str("simFileType", simFileType).Msg("CONF_VAR")
 
 			simLoadDump = viper.GetBool("sim.loaddump")
-			logger.Info("CONF_VAR", zap.Bool("simLoadDump", simLoadDump))
+			log.Info().Bool("simLoadDump", simLoadDump).Msg("CONF_VAR")
 
 			simLoadDumpFileName = viper.GetString("sim.loaddumpfilename")
-			logger.Info("CONF_VAR", zap.String("simLoadDumpFileName", simLoadDumpFileName))
+			log.Info().Str("simLoadDumpFileName", simLoadDumpFileName).Msg("CONF_VAR")
 
 			simLog = viper.GetBool("sim.log")
-			logger.Info("CONF_VAR", zap.Bool("simLog", simLog))
+			log.Info().Bool("simLog", simLog).Msg("CONF_VAR")
 
 			simOutputFolder = viper.GetString("sim.outputFolder")
 			simOutputFolder, errAbs = filepath.Abs(simOutputFolder)
 			if errAbs != nil {
 				panic(errAbs)
 			}
-			logger.Info("CONF_VAR", zap.String("simOutputFolder", simOutputFolder))
+			log.Info().Str("simOutputFolder", simOutputFolder).Msg("CONF_VAR")
 
 			simRegion = viper.GetString("sim.region")
-			logger.Info("CONF_VAR", zap.String("simRegion", simRegion))
+			log.Info().Str("simRegion", simRegion).Msg("CONF_VAR")
 
 			simType = viper.GetString("sim.type")
-			logger.Info("CONF_VAR", zap.String("simType", simType))
+			log.Info().Str("simType", simType).Msg("CONF_VAR")
 
 			simWindowStart = viper.GetInt("sim.window.start")
-			logger.Info("CONF_VAR", zap.Int("simWindowStart", simWindowStart))
+			log.Info().Int("simWindowStart", simWindowStart).Msg("CONF_VAR")
 
 			simWindowStop = viper.GetInt("sim.window.stop")
-			logger.Info("CONF_VAR", zap.Int("simWindowStop", simWindowStop))
+			log.Info().Int("simWindowStop", simWindowStop).Msg("CONF_VAR")
 
 			simWindowSize = viper.GetInt("sim.window.size")
-			logger.Info("CONF_VAR", zap.Int("simWindowSize", simWindowSize))
+			log.Info().Int("simWindowSize", simWindowSize).Msg("CONF_VAR")
 
 			cpuprofile = viper.GetString("sim.cpuprofile")
-			logger.Info("CONF_VAR", zap.String("cpuprofile", cpuprofile))
+			log.Info().Str("cpuprofile", cpuprofile).Msg("CONF_VAR")
 
 			memprofile = viper.GetString("sim.memprofile")
-			logger.Info("CONF_VAR", zap.String("memprofile", memprofile))
+			log.Info().Str("memprofile", memprofile).Msg("CONF_VAR")
 
 			outputUpdateDelay = viper.GetFloat64("sim.outputupdatedelay")
-			logger.Info("CONF_VAR", zap.Float64("outputUpdateDelay", outputUpdateDelay))
+			log.Info().Float64("outputUpdateDelay", outputUpdateDelay).Msg("CONF_VAR")
 
 			weightFunc = viper.GetString("sim.weightfunc.name")
-			logger.Info("CONF_VAR", zap.String("weightFunc", weightFunc))
+			log.Info().Str("weightFunc", weightFunc).Msg("CONF_VAR")
 
 			weightAlpha = viper.GetFloat64("sim.weightfunc.alpha")
-			logger.Info("CONF_VAR", zap.Float64("weightAlpha", weightAlpha))
+			log.Info().Float64("weightAlpha", weightAlpha).Msg("CONF_VAR")
 
 			weightBeta = viper.GetFloat64("sim.weightfunc.beta")
-			logger.Info("CONF_VAR", zap.Float64("weightBeta", weightBeta))
+			log.Info().Float64("weightBeta", weightBeta).Msg("CONF_VAR")
 
 			weightGamma = viper.GetFloat64("sim.weightfunc.gamma")
-			logger.Info("CONF_VAR", zap.Float64("weightGamma", weightGamma))
+			log.Info().Float64("weightGamma", weightGamma).Msg("CONF_VAR")
 
 			aiFeatureMap = viper.GetString("sim.ai.featuremap")
 			if aiFeatureMap != "" {
@@ -358,16 +334,16 @@ func simCommand() *cobra.Command { //nolint:ignore,funlen
 					panic(errAbs)
 				}
 			}
-			logger.Info("CONF_VAR", zap.String("aiFeatureMap", aiFeatureMap))
+			log.Info().Str("aiFeatureMap", aiFeatureMap).Msg("CONF_VAR")
 
 			dataset2TestPath = viper.GetString("sim.ai.dataset2TestPath")
-			logger.Info("CONF_VAR", zap.String("dataset2TestPath", dataset2TestPath))
+			log.Info().Str("dataset2TestPath", dataset2TestPath).Msg("CONF_VAR")
 
 			aiModel = viper.GetString("sim.ai.model")
-			logger.Info("CONF_VAR", zap.String("aiModel", aiModel))
+			log.Info().Str("aiModel", aiModel).Msg("CONF_VAR")
 
 			aiRLType = viper.GetString("sim.ai.rl.type")
-			logger.Info("CONF_VAR", zap.String("aiRLType", aiRLType))
+			log.Info().Str("aiRLType", aiRLType).Msg("CONF_VAR")
 
 			aiRLAdditionFeatureMap = viper.GetString("sim.ai.rl.addition.featuremap")
 			if aiRLAdditionFeatureMap != "" {
@@ -376,7 +352,7 @@ func simCommand() *cobra.Command { //nolint:ignore,funlen
 					panic(errAbs)
 				}
 			}
-			logger.Info("CONF_VAR", zap.String("aiRLAdditionFeatureMap", aiRLAdditionFeatureMap))
+			log.Info().Str("aiRLAdditionFeatureMap", aiRLAdditionFeatureMap).Msg("CONF_VAR")
 
 			aiRLEvictionFeatureMap = viper.GetString("sim.ai.rl.eviction.featuremap")
 			if aiRLEvictionFeatureMap != "" {
@@ -385,67 +361,67 @@ func simCommand() *cobra.Command { //nolint:ignore,funlen
 					panic(errAbs)
 				}
 			}
-			logger.Info("CONF_VAR", zap.String("aiRLEvictionFeatureMap", aiRLEvictionFeatureMap))
+			log.Info().Str("aiRLEvictionFeatureMap", aiRLEvictionFeatureMap).Msg("CONF_VAR")
 
 			aiRLEvictionK = viper.GetInt64("sim.ai.rl.eviction.k")
-			logger.Info("CONF_VAR", zap.Int64("aiRLEvictionK", aiRLEvictionK))
+			log.Info().Int64("aiRLEvictionK", aiRLEvictionK).Msg("CONF_VAR")
 
 			aiRLEpsilonStart = viper.GetFloat64("sim.ai.rl.epsilon.start")
-			logger.Info("CONF_VAR", zap.Float64("aiRLEpsilonStart", aiRLEpsilonStart))
+			log.Info().Float64("aiRLEpsilonStart", aiRLEpsilonStart).Msg("CONF_VAR")
 
 			aiRLEpsilonDecay = viper.GetFloat64("sim.ai.rl.epsilon.decay")
-			logger.Info("CONF_VAR", zap.Float64("aiRLEpsilonDecay", aiRLEpsilonDecay))
+			log.Info().Float64("aiRLEpsilonDecay", aiRLEpsilonDecay).Msg("CONF_VAR")
 
 			aiRLEpsilonUnleash = viper.GetBool("sim.ai.rl.epsilon.unleash")
-			logger.Info("CONF_VAR", zap.Bool("aiRLEpsilonUnleash", aiRLEpsilonUnleash))
+			log.Info().Bool("aiRLEpsilonUnleash", aiRLEpsilonUnleash).Msg("CONF_VAR")
 
 			aiRLAdditionEpsilonStart = viper.GetFloat64("sim.ai.rl.addition.epsilon.start")
-			logger.Info("CONF_VAR", zap.Float64("aiRLAdditionEpsilonStart", aiRLAdditionEpsilonStart))
+			log.Info().Float64("aiRLAdditionEpsilonStart", aiRLAdditionEpsilonStart).Msg("CONF_VAR")
 			if aiRLAdditionEpsilonStart == -1.0 {
 				aiRLAdditionEpsilonStart = aiRLEpsilonStart
-				logger.Info("CONF_VAR", zap.Float64("aiRLAdditionEpsilonStartOverwrite", aiRLAdditionEpsilonStart))
+				log.Info().Float64("aiRLAdditionEpsilonStartOverwrite", aiRLAdditionEpsilonStart).Msg("CONF_VAR")
 			}
 
 			aiRLAdditionEpsilonDecay = viper.GetFloat64("sim.ai.rl.addition.epsilon.decay")
-			logger.Info("CONF_VAR", zap.Float64("aiRLAdditionEpsilonDecay", aiRLAdditionEpsilonDecay))
+			log.Info().Float64("aiRLAdditionEpsilonDecay", aiRLAdditionEpsilonDecay).Msg("CONF_VAR")
 			if aiRLAdditionEpsilonDecay == -1.0 {
 				aiRLAdditionEpsilonDecay = aiRLEpsilonDecay
-				logger.Info("CONF_VAR", zap.Float64("aiRLAdditionEpsilonDecayOverwrite", aiRLAdditionEpsilonDecay))
+				log.Info().Float64("aiRLAdditionEpsilonDecayOverwrite", aiRLAdditionEpsilonDecay).Msg("CONF_VAR")
 			}
 
 			aiRLAdditionEpsilonUnleash = viper.GetBool("sim.ai.rl.addition.epsilon.unleash")
-			logger.Info("CONF_VAR", zap.Bool("aiRLAdditionEpsilonUnleash", aiRLAdditionEpsilonUnleash))
+			log.Info().Bool("aiRLAdditionEpsilonUnleash", aiRLAdditionEpsilonUnleash).Msg("CONF_VAR")
 			if aiRLEpsilonUnleash {
 				aiRLAdditionEpsilonUnleash = aiRLEpsilonUnleash
-				logger.Info("CONF_VAR", zap.Bool("aiRLAdditionEpsilonUnleashOverwrite", aiRLAdditionEpsilonUnleash))
+				log.Info().Bool("aiRLAdditionEpsilonUnleashOverwrite", aiRLAdditionEpsilonUnleash).Msg("CONF_VAR")
 			}
 
 			aiRLEvictionEpsilonStart = viper.GetFloat64("sim.ai.rl.eviction.epsilon.start")
-			logger.Info("CONF_VAR", zap.Float64("aiRLEvictionEpsilonStart", aiRLEvictionEpsilonStart))
+			log.Info().Float64("aiRLEvictionEpsilonStart", aiRLEvictionEpsilonStart).Msg("CONF_VAR")
 			if aiRLEvictionEpsilonStart == -1.0 {
 				aiRLEvictionEpsilonStart = aiRLEpsilonStart
-				logger.Info("CONF_VAR", zap.Float64("aiRLEvictionEpsilonStartOverwrite", aiRLEvictionEpsilonStart))
+				log.Info().Float64("aiRLEvictionEpsilonStartOverwrite", aiRLEvictionEpsilonStart).Msg("CONF_VAR")
 			}
 
 			aiRLEvictionEpsilonDecay = viper.GetFloat64("sim.ai.rl.eviction.epsilon.decay")
-			logger.Info("CONF_VAR", zap.Float64("aiRLEvictionEpsilonDecay", aiRLEvictionEpsilonDecay))
+			log.Info().Float64("aiRLEvictionEpsilonDecay", aiRLEvictionEpsilonDecay).Msg("CONF_VAR")
 			if aiRLEvictionEpsilonDecay == -1.0 {
 				aiRLEvictionEpsilonDecay = aiRLEpsilonDecay
-				logger.Info("CONF_VAR", zap.Float64("aiRLEvictionEpsilonDecayOverwrite", aiRLEvictionEpsilonDecay))
+				log.Info().Float64("aiRLEvictionEpsilonDecayOverwrite", aiRLEvictionEpsilonDecay).Msg("CONF_VAR")
 			}
 
 			aiRLEvictionEpsilonUnleash = viper.GetBool("sim.ai.rl.eviction.epsilon.unleash")
-			logger.Info("CONF_VAR", zap.Bool("aiRLEvictionEpsilonUnleash", aiRLEvictionEpsilonUnleash))
+			log.Info().Bool("aiRLEvictionEpsilonUnleash", aiRLEvictionEpsilonUnleash).Msg("CONF_VAR")
 			if aiRLEpsilonUnleash {
 				aiRLEvictionEpsilonUnleash = aiRLEpsilonUnleash
-				logger.Info("CONF_VAR", zap.Bool("aiRLEvictionEpsilonUnleashOverwrite", aiRLEvictionEpsilonUnleash))
+				log.Info().Bool("aiRLEvictionEpsilonUnleashOverwrite", aiRLEvictionEpsilonUnleash).Msg("CONF_VAR")
 			}
 
 			simEvictionType = viper.GetString("sim.ai.rl.eviction.type")
-			logger.Info("CONF_VAR", zap.String("simEvictionType", simEvictionType))
+			log.Info().Str("simEvictionType", simEvictionType).Msg("CONF_VAR")
 
 			cacheType = viper.GetString("sim.cache.type")
-			logger.Info("CONF_VAR", zap.String("cacheType", cacheType))
+			log.Info().Str("cacheType", cacheType).Msg("CONF_VAR")
 
 			// Generate simulation file output basename
 			cacheSizeString := fmt.Sprintf("%0.0f%s", cacheSize, strings.ToUpper(cacheSizeUnit))
@@ -509,7 +485,7 @@ func simCommand() *cobra.Command { //nolint:ignore,funlen
 					panic(errChdir)
 				}
 				curWd, _ := os.Getwd()
-				logger.Info("Current Working Dir", zap.String("path", curWd))
+				log.Info().Str("path", curWd).Msg("Current Working Dir")
 			}
 
 			// Check previous simulation results
@@ -522,14 +498,10 @@ func simCommand() *cobra.Command { //nolint:ignore,funlen
 				} else {
 					if fileStat.Size() > 600 {
 						// TODO: check if the configuration is the same
-						logger.Info("Simulation already DONE! NO OVERWRITE...")
-						_ = logger.Sync()
-						// TODO: fix error
-						// -> https://github.com/uber-go/zap/issues/772
-						// -> https://github.com/uber-go/zap/issues/328
+						log.Info().Msg("Simulation already DONE! NO OVERWRITE...")
 						return
 					} else {
-						logger.Info("Simulation results is empty... OVERWRITE...")
+						log.Info().Msg("Simulation results is empty... OVERWRITE...")
 					}
 				}
 			}

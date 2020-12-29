@@ -11,6 +11,7 @@ import (
 	"simulator/v2/cache/files"
 	"simulator/v2/cache/queue"
 
+	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 )
 
@@ -80,7 +81,7 @@ func (cache *AINN) Dumps(fileAndStats bool) [][]byte {
 
 	if fileAndStats {
 		// ----- Files -----
-		cache.logger.Info("Dump cache files")
+		log.Info().Msg("Dump cache files")
 		for file := range queue.Get(cache.files) {
 			dumpInfo, _ := json.Marshal(DumpInfo{Type: "FILES"})
 			dumpFile, _ := json.Marshal(file)
@@ -92,7 +93,7 @@ func (cache *AINN) Dumps(fileAndStats bool) [][]byte {
 			outData = append(outData, record)
 		}
 		// ----- Stats -----
-		cache.logger.Info("Dump cache stats")
+		log.Info().Msg("Dump cache stats")
 		for _, stats := range cache.stats.Data {
 			dumpInfo, _ := json.Marshal(DumpInfo{Type: "STATS"})
 			dumpStats, _ := json.Marshal(stats)

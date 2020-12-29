@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"math"
 	"os"
 	"path"
@@ -19,8 +18,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
-	"go.uber.org/zap"
 )
 
 const (
@@ -116,7 +115,7 @@ func recordGenerator(csvReader *csv.Reader, curFile *os.File, headerMap []int) c
 				break
 			}
 			if err != nil {
-				log.Fatal(err)
+				log.Err(err).Msg("recordGenerator")
 			}
 
 			// fmt.Println(record)
@@ -176,12 +175,11 @@ func recordGenerator(csvReader *csv.Reader, curFile *os.File, headerMap []int) c
 
 // OpenSimFile opens a simulation file
 func OpenSimFile(filePath string) chan CSVRecord {
-	logger := zap.L()
 
 	fileExt := path.Ext(filePath)
 	var iterator chan CSVRecord
 
-	logger.Debug("Open Data File", zap.String("filename", filePath))
+	log.Debug().Str("filename", filePath).Msg("Open Data File")
 	curFile, errOpenFile := os.Open(filePath)
 	if errOpenFile != nil {
 		panic(errOpenFile)
@@ -200,9 +198,11 @@ func OpenSimFile(filePath string) chan CSVRecord {
 		// Discar header
 		header, errCSVRead := csvReader.Read()
 		headerStr := strings.Join(header, ",")
-		logger.Debug("File header", zap.String("CSV header", headerStr), zap.String("file", filePath))
+		log.Debug().Str("CSV header", headerStr).Str("file", filePath).Msg("File header")
 		if headerStr != csvHeader {
-			logger.Info("File header is different from standard", zap.String("CSV header", headerStr), zap.String("file", filePath))
+			log.Info().Str("CSV header",
+				headerStr).Str("file",
+				filePath).Msg("File header is different from standard")
 			headerMap = getHeaderIndexes(header)
 		}
 		if errCSVRead != nil {
@@ -214,7 +214,7 @@ func OpenSimFile(filePath string) chan CSVRecord {
 		// Discar header
 		header, errCSVRead := csvReader.Read()
 		headerStr := strings.Join(header, ",")
-		logger.Debug("FIle header", zap.String("CSV header", headerStr), zap.String("file", filePath))
+		log.Debug().Str("CSV header", headerStr).Str("file", filePath).Msg("FIle header")
 		if headerStr != csvHeader {
 			headerMap = getHeaderIndexes(header)
 		}
@@ -424,96 +424,73 @@ func GetCacheSize(cacheSize float64, cacheSizeUnit string) float64 {
 func Create(cacheType string, cacheSize float64, cacheSizeUnit string, weightFunc string, weightFuncParams WeightFunctionParameters) Cache { //nolint:ignore,funlen
 	var cacheInstance Cache
 
-	logger := zap.L()
 	cacheSizeMegabytes := GetCacheSize(cacheSize, cacheSizeUnit)
 
 	switch cacheType {
 	case "infinite":
-		logger.Info("Create infinite Cache",
-			zap.Float64("cacheSize", cacheSizeMegabytes),
-		)
+		log.Info().Float64("cacheSize", cacheSizeMegabytes).Msg("Create infinite Cache")
 		cacheInstance = &InfiniteCache{
 			SimpleCache: SimpleCache{
 				MaxSize: cacheSizeMegabytes,
 			},
 		}
 	case "random":
-		logger.Info("Create random Cache",
-			zap.Float64("cacheSize", cacheSizeMegabytes),
-		)
+		log.Info().Float64("cacheSize", cacheSizeMegabytes).Msg("Create random Cache")
 		cacheInstance = &RandomCache{
 			SimpleCache: SimpleCache{
 				MaxSize: cacheSizeMegabytes,
 			},
 		}
 	case "random_lru":
-		logger.Info("Create random lru Cache",
-			zap.Float64("cacheSize", cacheSizeMegabytes),
-		)
+		log.Info().Float64("cacheSize", cacheSizeMegabytes).Msg("Create random lru Cache")
 		cacheInstance = &RandomCache{
 			SimpleCache: SimpleCache{
 				MaxSize: cacheSizeMegabytes,
 			},
 		}
 	case "lru":
-		logger.Info("Create LRU Cache",
-			zap.Float64("cacheSize", cacheSizeMegabytes),
-		)
+		log.Info().Float64("cacheSize", cacheSizeMegabytes).Msg("Create LRU Cache")
 		cacheInstance = &SimpleCache{
 			MaxSize: cacheSizeMegabytes,
 		}
 	case "lfu":
-		logger.Info("Create LFU Cache",
-			zap.Float64("cacheSize", cacheSizeMegabytes),
-		)
+		log.Info().Float64("cacheSize", cacheSizeMegabytes).Msg("Create LFU Cache")
 		cacheInstance = &SimpleCache{
 			MaxSize: cacheSizeMegabytes,
 		}
 	case "sizeBig":
-		logger.Info("Create Size Big Cache",
-			zap.Float64("cacheSize", cacheSizeMegabytes),
-		)
+		log.Info().Float64("cacheSize", cacheSizeMegabytes).Msg("Create Size Big Cache")
 		cacheInstance = &SimpleCache{
 			MaxSize: cacheSizeMegabytes,
 		}
 	case "sizeSmall":
-		logger.Info("Create Size Small Cache",
-			zap.Float64("cacheSize", cacheSizeMegabytes),
-		)
+		log.Info().Float64("cacheSize", cacheSizeMegabytes).Msg("Create Size Small Cache")
 		cacheInstance = &SimpleCache{
 			MaxSize: cacheSizeMegabytes,
 		}
 	case "lruDatasetVerifier":
-		logger.Info("Create lruDatasetVerifier Cache",
-			zap.Float64("cacheSize", cacheSizeMegabytes),
-		)
+		log.Info().Float64("cacheSize", cacheSizeMegabytes).Msg("Create lruDatasetVerifier Cache")
 		cacheInstance = &LRUDatasetVerifier{
 			SimpleCache: SimpleCache{
 				MaxSize: cacheSizeMegabytes,
 			},
 		}
 	case "aiNN":
-		logger.Info("Create aiNN Cache",
-			zap.Float64("cacheSize", cacheSizeMegabytes),
-		)
+		log.Info().Float64("cacheSize", cacheSizeMegabytes).Msg("Create aiNN Cache")
 		cacheInstance = &AINN{
 			SimpleCache: SimpleCache{
 				MaxSize: cacheSizeMegabytes,
 			},
 		}
 	case "aiRL":
-		logger.Info("Create aiRL Cache",
-			zap.Float64("cacheSize", cacheSizeMegabytes),
-		)
+		log.Info().Float64("cacheSize", cacheSizeMegabytes).Msg("Create aiRL Cache")
 		cacheInstance = &AIRL{
 			SimpleCache: SimpleCache{
 				MaxSize: cacheSizeMegabytes,
 			},
 		}
 	case "weightFunLRU":
-		logger.Info("Create Weight Function Cache",
-			zap.Float64("cacheSize", cacheSizeMegabytes),
-		)
+		log.Info().Float64("cacheSize", cacheSizeMegabytes).Msg("Create Weight Function Cache")
 
 		cacheInstance = &WeightFun{
 			SimpleCache: SimpleCache{
@@ -558,57 +535,56 @@ type InitParameters struct {
 }
 
 func InitInstance(cacheType string, cacheInstance Cache, params InitParameters) { //nolint:ignore,funlen
-	logger := zap.L()
 
 	switch cacheType {
 	case "infinite":
-		logger.Info("Init infinite Cache")
+		log.Info().Msg("Init infinite Cache")
 		InitCache(cacheInstance, params)
 	case "random":
-		logger.Info("Init random Cache")
+		log.Info().Msg("Init random Cache")
 		params.QueueType = queue.NoQueue
 		InitCache(cacheInstance, params)
 	case "random_lru":
-		logger.Info("Init random lru Cache")
+		log.Info().Msg("Init random lru Cache")
 		params.QueueType = queue.LRUQueue
 		InitCache(cacheInstance, params)
 	case "lru":
-		logger.Info("Init LRU Cache")
+		log.Info().Msg("Init LRU Cache")
 		params.QueueType = queue.LRUQueue
 		InitCache(cacheInstance, params)
 	case "lfu":
-		logger.Info("Init LFU Cache")
+		log.Info().Msg("Init LFU Cache")
 		params.QueueType = queue.LFUQueue
 		InitCache(cacheInstance, params)
 	case "sizeBig":
-		logger.Info("Init Size Big Cache")
+		log.Info().Msg("Init Size Big Cache")
 		params.QueueType = queue.SizeBigQueue
 		InitCache(cacheInstance, params)
 	case "sizeSmall":
 		params.QueueType = queue.SizeSmallQueue
 		InitCache(cacheInstance, params)
 	case "lruDatasetVerifier":
-		logger.Info("Init lruDatasetVerifier Cache")
+		log.Info().Msg("Init lruDatasetVerifier Cache")
 		InitCache(cacheInstance, params)
 	case "aiNN":
-		logger.Info("Init aiNN Cache")
+		log.Info().Msg("Init aiNN Cache")
 		if params.AIFeatureMap == "" {
 			fmt.Println("ERR: No feature map indicated...")
 			os.Exit(-1)
 		}
 		InitCache(cacheInstance, params)
 	case "aiRL":
-		logger.Info("Init aiRL Cache")
+		log.Info().Msg("Init aiRL Cache")
 		if params.AIRLAdditionFeatureMap == "" {
-			logger.Info("No addition feature map indicated...")
+			log.Info().Msg("No addition feature map indicated...")
 		}
 		if params.AIRLEvictionFeatureMap == "" {
-			logger.Info("No eviction feature map indicated...")
+			log.Info().Msg("No eviction feature map indicated...")
 		}
 
 		InitCache(cacheInstance, params)
 	case "weightFunLRU":
-		logger.Info("Init Weight Function Cache")
+		log.Info().Msg("Init Weight Function Cache")
 		params.QueueType = queue.LRUQueue
 		params.CalcWeight = true
 
@@ -672,10 +648,8 @@ func Simulate(cacheType string, cacheInstance Cache, param SimulationParams) { /
 		numRedirected      int64
 	)
 
-	logger := zap.L()
-
 	if param.LoadDump { //nolint:ignore,nestif
-		logger.Info("Loading cache dump", zap.String("filename", param.LoadDumpFileName))
+		log.Info().Str("filename", param.LoadDumpFileName).Msg("Loading cache dump")
 
 		latestCacheRun := GetSimulationRunNum(filepath.Dir(param.LoadDumpFileName))
 
@@ -698,17 +672,17 @@ func Simulate(cacheType string, cacheInstance Cache, param SimulationParams) { /
 			Loads(cacheInstance, loadedDump)
 		}
 
-		logger.Info("Cache dump loaded!")
+		log.Info().Msg("Cache dump loaded!")
 		if param.ColdStart {
 			if param.ColdStartNoStats {
 				Clear(cacheInstance)
-				logger.Info("Cache Files deleted... COLD START with NO STATISTICS")
+				log.Info().Msg("Cache Files deleted... COLD START with NO STATISTICS")
 			} else {
 				ClearFiles(cacheInstance)
-				logger.Info("Cache Files deleted... COLD START")
+				log.Info().Msg("Cache Files deleted... COLD START")
 			}
 		} else {
-			logger.Info("Cache Files stored... HOT START")
+			log.Info().Msg("Cache Files stored... HOT START")
 		}
 	}
 
@@ -800,7 +774,7 @@ func Simulate(cacheType string, cacheInstance Cache, param SimulationParams) { /
 			panic("ERROR: on create cpu profile")
 		}
 
-		logger.Info("Enable CPU profiliing", zap.String("filename", param.CPUprofile))
+		log.Info().Str("filename", param.CPUprofile).Msg("Enable CPU profiliing")
 		startProfileErr := pprof.StartCPUProfile(profileOut)
 
 		if startProfileErr != nil {
@@ -810,7 +784,7 @@ func Simulate(cacheType string, cacheInstance Cache, param SimulationParams) { /
 		defer pprof.StopCPUProfile()
 	}
 
-	logger.Info("Simulation START")
+	log.Info().Msg("Simulation START")
 
 	for record := range iterator {
 		numIterations++
@@ -947,24 +921,22 @@ func Simulate(cacheType string, cacheInstance Cache, param SimulationParams) { /
 
 			if time.Since(start).Seconds() >= param.OutputUpdateDelay {
 				elapsedTime := time.Since(simBeginTime)
-				logger.Info("Simulation",
-					zap.String("cache", param.BaseName),
-					zap.String("elapsedTime", fmt.Sprintf("%02d:%02d:%02d",
+				log.Info().Str("cache",
+					param.BaseName).Str("elapsedTime",
+					fmt.Sprintf("%02d:%02d:%02d",
 						int(elapsedTime.Hours()),
 						int(elapsedTime.Minutes())%60,
-						int(elapsedTime.Seconds())%60,
-					)),
-					zap.Int("window", windowCounter),
-					zap.Int("step", windowStepCounter),
-					zap.Int("windowSize", param.WindowSize),
-					zap.Int64("numDailyRecords", numDailyRecords),
-					zap.Float64("hitRate", HitRate(cacheInstance)),
-					zap.Float64("capacity", Capacity(cacheInstance)),
-					zap.Float64("redirectedData", redirectedData),
-					zap.Int64("numRedirected", numRedirected),
-					zap.String("extra", ExtraStats(cacheInstance)),
-					zap.Float64("it/s", float64(numIterations)/time.Since(start).Seconds()),
-				)
+						int(elapsedTime.Seconds())%60)).Int("window",
+					windowCounter).Int("step",
+					windowStepCounter).Int("windowSize",
+					param.WindowSize).Int64("numDailyRecords",
+					numDailyRecords).Float64("hitRate",
+					HitRate(cacheInstance)).Float64("capacity",
+					Capacity(cacheInstance)).Float64("redirectedData",
+					redirectedData).Int64("numRedirected",
+					numRedirected).Str("extra",
+					ExtraStats(cacheInstance)).Float64("it/s",
+					float64(numIterations)/time.Since(start).Seconds()).Msg("Simulation")
 				totIterations += numIterations
 				numIterations = 0
 				start = time.Now()
@@ -972,13 +944,12 @@ func Simulate(cacheType string, cacheInstance Cache, param SimulationParams) { /
 		} else {
 			numJumpedRecords++
 			if time.Since(start).Seconds() >= param.OutputUpdateDelay {
-				logger.Info("Jump records",
-					zap.Int64("numDailyRecords", numDailyRecords),
-					zap.Int64("numJumpedRecords", numJumpedRecords),
-					zap.Int64("numFilteredRecords", numFilteredRecords),
-					zap.Int64("numInvalidRecords", numInvalidRecords),
-					zap.Int("window", windowCounter),
-				)
+				log.Info().Int64("numDailyRecords",
+					numDailyRecords).Int64("numJumpedRecords",
+					numJumpedRecords).Int64("numFilteredRecords",
+					numFilteredRecords).Int64("numInvalidRecords",
+					numInvalidRecords).Int("window",
+					windowCounter).Msg("Jump records")
 				start = time.Now()
 			}
 		}
@@ -987,13 +958,10 @@ func Simulate(cacheType string, cacheInstance Cache, param SimulationParams) { /
 	if param.MEMprofile != "" {
 		profileOut, err := os.Create(param.MEMprofile)
 		if err != nil {
-			logger.Error("Cannot create Memory profile file",
-				zap.Error(err),
-				zap.String("filename", param.MEMprofile),
-			)
+			log.Err(err).Str("filename", param.MEMprofile)
 			panic("ERROR: on create memory profile")
 		}
-		logger.Info("Write memprofile", zap.String("filename", param.MEMprofile))
+		log.Info().Str("filename", param.MEMprofile).Msg("Write memprofile")
 		profileWriteErr := pprof.WriteHeapProfile(profileOut)
 		if profileWriteErr != nil {
 			panic(profileWriteErr)
@@ -1010,14 +978,12 @@ func Simulate(cacheType string, cacheInstance Cache, param SimulationParams) { /
 	elTM := int(elapsedTime.Minutes()) % 60
 	elTS := int(elapsedTime.Seconds()) % 60
 	avgSpeed := float64(totIterations) / elapsedTime.Seconds()
-	logger.Info("Simulation end...",
-		zap.String("elapsedTime", fmt.Sprintf("%02d:%02d:%02d", elTH, elTM, elTS)),
-		zap.Float64("avg it/s", avgSpeed),
-		zap.Int64("totRecords", totNumRecords),
-		zap.Int64("numJumpedRecords", numJumpedRecords),
-		zap.Int64("numFilteredRecords", numFilteredRecords),
-		zap.Int64("numInvalidRecords", numInvalidRecords),
-	)
+	log.Info().Str("elapsedTime",
+		fmt.Sprintf("%02d:%02d:%02d", elTH, elTM, elTS)).Float64("avg it/s",
+		avgSpeed).Int64("totRecords", totNumRecords).Int64("numJumpedRecords",
+		numJumpedRecords).Int64("numFilteredRecords",
+		numFilteredRecords).Int64("numInvalidRecords",
+		numInvalidRecords).Msg("Simulation end...")
 	// Save run statistics
 	statFile, errCreateStat := os.Create(param.ResultRunStatsName)
 
@@ -1057,9 +1023,9 @@ func Simulate(cacheType string, cacheInstance Cache, param SimulationParams) { /
 
 	if cacheType == "aiRL" {
 		// Save tables
-		logger.Info("Save addition table...")
+		log.Info().Msg("Save addition table...")
 		ExtraOutput(cacheInstance, "additionQTable")
-		logger.Info("Save eviction table...")
+		log.Info().Msg("Save eviction table...")
 		ExtraOutput(cacheInstance, "evictionQTable")
 	}
 
@@ -1070,9 +1036,5 @@ func Simulate(cacheType string, cacheInstance Cache, param SimulationParams) { /
 		panic(errViperWrite)
 	}
 
-	logger.Info("Simulation DONE!")
-	_ = logger.Sync()
-	// TODO: fix error
-	// -> https://github.com/uber-go/zap/issues/772
-	// -> https://github.com/uber-go/zap/issues/328
+	log.Info().Msg("Simulation DONE!")
 }

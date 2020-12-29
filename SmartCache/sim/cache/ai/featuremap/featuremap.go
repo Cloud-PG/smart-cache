@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"reflect"
 
-	"go.uber.org/zap"
+	"github.com/rs/zerolog/log"
 )
 
 // Obj represents a map object.
@@ -40,7 +40,6 @@ type FeatureManager struct {
 	FileFeatureIdxMap     map[string]int `json:"fileFeatureIdxMap"`
 	FeatureIdxWeights     []int          `json:"featureIdxWeights"`
 	FileFeatureIdxWeights []int          `json:"fileFeatureIdxWeights"`
-	logger                *zap.Logger
 }
 
 func (manager *FeatureManager) makeFileFeatureIdxWeights() {
@@ -80,7 +79,7 @@ func (manager *FeatureManager) Populate(featureMapFilePath string) { //nolint:ig
 
 	featureMapFile, errOpenFile := os.Open(featureMapFilePath)
 	if errOpenFile != nil {
-		manager.logger.Error("Cannot open file", zap.Error(errOpenFile))
+		log.Err(errOpenFile).Msg("Cannot open file")
 		os.Exit(-1)
 	}
 
@@ -88,27 +87,23 @@ func (manager *FeatureManager) Populate(featureMapFilePath string) { //nolint:ig
 	case fileExtension == ".gzip" || fileExtension == ".gz":
 		featureMapFileGz, errOpenZipFile := gzip.NewReader(featureMapFile)
 		if errOpenZipFile != nil {
-			manager.logger.Error("Cannot open zip stream from file",
-				zap.String("filename", featureMapFilePath), zap.Error(errOpenZipFile))
+			log.Err(errOpenZipFile).Str("filename", featureMapFilePath).Msg("Cannot open zip stream from file")
 			os.Exit(-1)
 		}
 
 		errJSONUnmarshal := json.NewDecoder(featureMapFileGz).Decode(&tmpMap)
 		if errJSONUnmarshal != nil {
-			manager.logger.Error("Cannot unmarshal gzipped json from file",
-				zap.String("filename", featureMapFilePath), zap.Error(errJSONUnmarshal))
+			log.Err(errJSONUnmarshal).Str("filename", featureMapFilePath).Msg("Cannot unmarshal gzipped json from file")
 			os.Exit(-1)
 		}
 	case fileExtension == ".json":
 		errJSONUnmarshal := json.NewDecoder(featureMapFile).Decode(&tmpMap)
 		if errJSONUnmarshal != nil {
-			manager.logger.Error("Cannot unmarshal plain json from file",
-				zap.String("filename", featureMapFilePath), zap.Error(errJSONUnmarshal))
+			log.Err(errJSONUnmarshal).Str("filename", featureMapFilePath).Msg("Cannot unmarshal plain json from file")
 			os.Exit(-1)
 		}
 	default:
-		manager.logger.Error("Cannot unmarshal",
-			zap.String("filename", featureMapFilePath), zap.String("extension", fileExtension))
+		log.Err(nil).Str("filename", featureMapFilePath).Msg("Cannot unmarshal")
 		os.Exit(-1)
 	}
 
@@ -148,12 +143,11 @@ func (manager *FeatureManager) Populate(featureMapFilePath string) { //nolint:ig
 							itemValues = curFeatureValue.Elem().Interface().([]interface{})
 							curStruct.Buckets = true
 						} else {
-							manager.logger.Error(
+							log.Err(nil).Str(
+								"error",
+								fmt.Sprintf("bucket of %s is not a slice", feature),
+							).Msg(
 								"Feature entries",
-								zap.String(
-									"error",
-									fmt.Sprintf("bucket of %s is not a slice", feature),
-								),
 							)
 
 							panic("Error: deconding features")
@@ -169,12 +163,11 @@ func (manager *FeatureManager) Populate(featureMapFilePath string) { //nolint:ig
 					case "type":
 						curStruct.Type = curFeatureValue.Elem().String()
 					default:
-						manager.logger.Error(
+						log.Err(nil).Str(
+							"error",
+							fmt.Sprintf("entry %s of  %s is not allowed", curFeatureKey, feature),
+						).Msg(
 							"Feature entries",
-							zap.String(
-								"error",
-								fmt.Sprintf("entry %s of  %s is not allowed", curFeatureKey, feature),
-							),
 						)
 
 						panic("Error: deconding features")
@@ -236,18 +229,14 @@ func (manager *FeatureManager) Populate(featureMapFilePath string) { //nolint:ig
 					manager.FileFeatures = append(manager.FileFeatures, curStruct)
 				}
 			} else {
-				manager.logger.Error(
-					"Feature entries",
-					zap.String(
-						"error",
-						fmt.Sprintf("feature %s is not a valid map", feature),
-					),
-				)
+				log.Err(nil).Str("error",
+					fmt.Sprintf("feature %s is not a valid map", feature),
+				).Msg("Feature entries")
 				panic("ERROR: decoding features")
 			}
 		}
 	} else {
-		manager.logger.Error("Feature entries", zap.String("error", "Not a valid feature JSON"))
+		log.Err(nil).Str("error", "Not a valid feature JSON").Msg("Feature entries")
 		panic("ERROR: decoding features")
 	}
 

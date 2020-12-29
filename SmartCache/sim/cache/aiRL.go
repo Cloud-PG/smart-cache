@@ -13,7 +13,7 @@ import (
 	"simulator/v2/cache/queue"
 	"sort"
 
-	"go.uber.org/zap"
+	"github.com/rs/zerolog/log"
 )
 
 type aiRLType int
@@ -79,14 +79,9 @@ func (cache *AIRL) Init(params InitParameters) interface{} { //nolint:ignore,fun
 
 	cache.actionCounters = make(map[qlearn.ActionType]int)
 
-	if cache.logger == nil {
-		cache.logger = zap.L()
-	}
-
-	cache.logger.Info("Feature maps",
-		zap.String("addition map", additionFeatureMap),
-		zap.String("eviction map", evictionFeatureMap),
-	)
+	log.Info().Str("addition map",
+		additionFeatureMap).Str("eviction map",
+		evictionFeatureMap).Msg("Feature maps")
 
 	switch params.AIRLType {
 	case "scdl", "SCDL":
@@ -125,11 +120,12 @@ func (cache *AIRL) Init(params InitParameters) interface{} { //nolint:ignore,fun
 			params.QueueType = queue.NoQueue
 			cache.SimpleCache.Init(params)
 
-			cache.logger.Info("Create eviction feature manager")
+			log.Info().Msg("Create eviction feature manager")
 			cache.evictionFeatureManager = featuremap.Parse(evictionFeatureMap)
 
-			cache.logger.Info("Create eviction agent")
-			cache.logger.Info(fmt.Sprintf("epsilon -> start: %0.2f | decay: %0.8f", params.AIRLEvictionEpsilonStart,
+			log.Info().Msg("Create eviction agent")
+			log.Info().Msg(fmt.Sprintf("epsilon -> start: %0.2f | decay: %0.8f",
+				params.AIRLEvictionEpsilonStart,
 				params.AIRLEvictionEpsilonDecay))
 			cache.evictionAgent.Init(
 				&cache.evictionFeatureManager,
@@ -168,11 +164,12 @@ func (cache *AIRL) Init(params InitParameters) interface{} { //nolint:ignore,fun
 	}
 
 	if additionFeatureMap != "" {
-		cache.logger.Info("Create addition feature manager")
+		log.Info().Msg("Create addition feature manager")
 		cache.additionFeatureManager = featuremap.Parse(additionFeatureMap)
 
-		cache.logger.Info("Create addition agent")
-		cache.logger.Info(fmt.Sprintf("epsilon -> start: %0.2f | decay: %0.8f", params.AIRLAdditionEpsilonStart,
+		log.Info().Msg("Create addition agent")
+		log.Info().Msg(fmt.Sprintf("epsilon -> start: %0.2f | decay: %0.8f",
+			params.AIRLAdditionEpsilonStart,
 			params.AIRLAdditionEpsilonDecay))
 		cache.additionAgent.Init(
 			&cache.additionFeatureManager,
@@ -191,7 +188,7 @@ func (cache *AIRL) Init(params InitParameters) interface{} { //nolint:ignore,fun
 		cache.additionAgentOK = false
 	}
 
-	cache.logger.Info("Table creation done")
+	log.Info().Msg("Table creation done")
 
 	return nil
 }
@@ -234,13 +231,13 @@ func (cache *AIRL) ClearStats() {
 
 // Dumps the AIRL cache
 func (cache *AIRL) Dumps(fileAndStats bool) [][]byte { //nolint:funlen
-	cache.logger.Info("Dump cache into byte string")
+	log.Info().Msg("Dump cache into byte string")
 	outData := make([][]byte, 0)
 	var newLine = []byte("\n")
 
 	if fileAndStats {
 		// ----- Files -----
-		cache.logger.Info("Dump cache files")
+		log.Info().Msg("Dump cache files")
 		for _, file := range queue.GetFromWorst(cache.files) {
 			dumpInfo, _ := json.Marshal(DumpInfo{Type: "FILES"})
 			dumpFile, _ := json.Marshal(file)
@@ -252,7 +249,7 @@ func (cache *AIRL) Dumps(fileAndStats bool) [][]byte { //nolint:funlen
 			outData = append(outData, record)
 		}
 		// ----- Stats -----
-		cache.logger.Info("Dump cache stats")
+		log.Info().Msg("Dump cache stats")
 		for filename, stats := range cache.stats.Data {
 			dumpInfo, _ := json.Marshal(DumpInfo{Type: "STATS"})
 			dumpStats, _ := json.Marshal(stats)
@@ -267,7 +264,7 @@ func (cache *AIRL) Dumps(fileAndStats bool) [][]byte { //nolint:funlen
 	}
 	if cache.additionAgentOK {
 		// ----- addition agent -----
-		cache.logger.Info("Dump cache addition agent")
+		log.Info().Msg("Dump cache addition agent")
 		dumpInfo, _ := json.Marshal(DumpInfo{Type: "ADDAGENT"})
 		dumpStats, _ := json.Marshal(cache.additionAgent)
 		record, _ := json.Marshal(DumpRecord{
@@ -277,7 +274,7 @@ func (cache *AIRL) Dumps(fileAndStats bool) [][]byte { //nolint:funlen
 		record = append(record, newLine...)
 		outData = append(outData, record)
 		// ----- addition feature map manager -----
-		cache.logger.Info("Dump cache addition feature map manager")
+		log.Info().Msg("Dump cache addition feature map manager")
 		dumpInfoFMM, _ := json.Marshal(DumpInfo{Type: "ADDFEATUREMAPMANAGER"})
 		dumpStatsFMM, _ := json.Marshal(cache.additionFeatureManager)
 		recordFMM, _ := json.Marshal(DumpRecord{
@@ -289,7 +286,7 @@ func (cache *AIRL) Dumps(fileAndStats bool) [][]byte { //nolint:funlen
 	}
 	if cache.evictionAgentOK {
 		// ----- eviction agent -----
-		cache.logger.Info("Dump cache eviction agent")
+		log.Info().Msg("Dump cache eviction agent")
 		dumpInfo, _ := json.Marshal(DumpInfo{Type: "EVCAGENT"})
 		dumpStats, _ := json.Marshal(cache.evictionAgent)
 		record, _ := json.Marshal(DumpRecord{
@@ -299,7 +296,7 @@ func (cache *AIRL) Dumps(fileAndStats bool) [][]byte { //nolint:funlen
 		record = append(record, newLine...)
 		outData = append(outData, record)
 		// ----- eviction feature map manager -----
-		cache.logger.Info("Dump cache eviction feature map manager")
+		log.Info().Msg("Dump cache eviction feature map manager")
 		dumpInfoFMM, _ := json.Marshal(DumpInfo{Type: "EVCFEATUREMAPMANAGER"})
 		dumpStatsFMM, _ := json.Marshal(cache.evictionFeatureManager)
 		recordFMM, _ := json.Marshal(DumpRecord{
@@ -315,7 +312,7 @@ func (cache *AIRL) Dumps(fileAndStats bool) [][]byte { //nolint:funlen
 
 // Dump the AIRL cache
 func (cache *AIRL) Dump(filename string, fileAndStats bool) {
-	cache.logger.Info("Dump cache", zap.String("filename", filename))
+	log.Info().Str("filename", filename).Msg("Dump cache")
 	outFile, osErr := os.Create(filename)
 	if osErr != nil {
 		panic(fmt.Sprintf("Error dump file creation: %s", osErr))
@@ -337,7 +334,7 @@ func (cache *AIRL) Dump(filename string, fileAndStats bool) {
 
 // Loads the AIRL cache
 func (cache *AIRL) Loads(inputString [][]byte, vars ...interface{}) {
-	cache.logger.Info("Loads cache dump string")
+	log.Info().Msg("Loads cache dump string")
 	initEpsilon := vars[0].(float64)
 	decayRateEpsilon := vars[1].(float64)
 
@@ -961,11 +958,11 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *files.Stats, hit bo
 
 	if cache.additionAgentOK { //nolint:ignore,nestif
 
-		cache.logger.Debug("ADDITION AGENT OK")
+		log.Debug().Msg("ADDITION AGENT OK")
 
 		curState = cache.getState4AdditionAgent(hit, fileStats)
 
-		cache.logger.Debug("cache", zap.Int("current state", curState))
+		log.Debug().Int("current state", curState).Msg("cache")
 
 		if cache.rlType == SCDL {
 			cache.delayedRewardAdditionAgent(request.Filename, hit)
@@ -1124,7 +1121,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *files.Stats, hit bo
 			// ##### MISS branch  #####
 			// ########################
 
-			cache.logger.Debug("NO ADDITION AGENT - Normal miss branch")
+			log.Debug().Msg("NO ADDITION AGENT - Normal miss branch")
 
 			forced := false
 
@@ -1207,7 +1204,7 @@ func (cache *AIRL) UpdatePolicy(request *Request, fileStats *files.Stats, hit bo
 			// #######################
 			// ##### HIT branch  #####
 			// #######################
-			cache.logger.Debug("NO ADDITION AGENT - Normal hit branch")
+			log.Debug().Msg("NO ADDITION AGENT - Normal hit branch")
 			queue.Update(cache.files, fileStats)
 
 			if cache.evictionAgentOK {
@@ -1336,7 +1333,7 @@ func (cache *AIRL) ExtraOutput(info string) string { //nolint:ignore,funlen
 				cache.stdDevNumCategories(),
 			)
 		} else {
-			// cache.logger.Info("No Category stats...")
+			// log.Info().Msg("No Category stats..."))
 			result = fmt.Sprintf("%d,%0.2f",
 				-1,
 				-1.,
@@ -1347,7 +1344,7 @@ func (cache *AIRL) ExtraOutput(info string) string { //nolint:ignore,funlen
 			result = cache.additionAgent.QTableToString()
 			writeQTable("additionQTable.csv", result)
 		} else {
-			cache.logger.Info("No Addition Table...")
+			log.Info().Msg("No Addition Table...")
 			result = ""
 		}
 	case "evictionQTable":
@@ -1355,7 +1352,7 @@ func (cache *AIRL) ExtraOutput(info string) string { //nolint:ignore,funlen
 			result = cache.evictionAgent.QTableToString()
 			writeQTable("evictionQTable.csv", result)
 		} else {
-			cache.logger.Info("No Eviction Table...")
+			log.Info().Msg("No Eviction Table...")
 			result = ""
 		}
 	case "valueFunctions":
