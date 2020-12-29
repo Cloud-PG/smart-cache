@@ -14,7 +14,7 @@ sim:
     size:
       value: 10
       unit: G
-    bandwidth: 
+    bandwidth:
       value: 1
       redirect: true
   ai:
@@ -24,5 +24,5 @@ sim:
       addition:
         featuremap: ../../../../featureMaps/rlAdditionFeatureMap.json
       eviction:
-        k: 8192
+        type: onFree
         featuremap: ../../../../featureMaps/rlEvictionFeatureMap.json

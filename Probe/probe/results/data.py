@@ -136,6 +136,10 @@ class Results(object):
         for file_, df in self._elemets.items():
             yield file_, df, self.get_log(file_, [], [])
 
+    def get_all_df(self):
+        for file_, df in self._elemets.items():
+            yield file_, df
+
     def get_df(
         self, file_: str, filters_all: list, filters_any: list
     ) -> "pd.DataFrame":
@@ -178,31 +182,33 @@ class Results(object):
             return tmp
 
 
-def aggregate_results(folder: str) -> "Results":
-    abs_target_folder = pathlib.Path(folder).resolve()
+def aggregate_results(folders: list) -> "Results":
     results = Results()
-    all_columns = set(COLUMNS)
-    for result_path in tqdm(
-        list(abs_target_folder.glob(f"**/{SIM_RESULT_FILENAME}")),
-        desc="Opening results",
-    ):
-        df = pd.read_csv(result_path)
-        cur_columns = set(df.columns)
-        if not cur_columns.issubset(all_columns):
-            print("Warning: not all columns are present")
 
-        df["date"] = pd.to_datetime(
-            df["date"].apply(lambda elm: elm.split()[0]), format="%Y-%m-%d"
-        )
-        relative_path = result_path.relative_to(abs_target_folder)
-        *components, filename = relative_path.parts
-        # Check choices
-        choice_file = result_path.parent.joinpath(SIM_CHOICE_LOG_FILE)
-        if choice_file.exists():
-            choices = choice_file
-        else:
-            choices = None
-        results.insert(relative_path, components, filename, df, choices)
+    for folder in folders:
+        abs_target_folder = pathlib.Path(folder).resolve().parent
+        all_columns = set(COLUMNS)
+        for result_path in tqdm(
+            list(pathlib.Path(folder).glob(f"**/{SIM_RESULT_FILENAME}")),
+            desc=f"Opening results",
+        ):
+            df = pd.read_csv(result_path)
+            cur_columns = set(df.columns)
+            if not cur_columns.issubset(all_columns):
+                print("Warning: not all columns are present")
+
+            df["date"] = pd.to_datetime(
+                df["date"].apply(lambda elm: elm.split()[0]), format="%Y-%m-%d"
+            )
+            relative_path = result_path.resolve().relative_to(abs_target_folder)
+            *components, filename = relative_path.parts
+            # Check choices
+            choice_file = result_path.parent.joinpath(SIM_CHOICE_LOG_FILE)
+            if choice_file.exists():
+                choices = choice_file
+            else:
+                choices = None
+            results.insert(relative_path, components, filename, df, choices)
     return results
 
 
@@ -218,14 +224,12 @@ def missing_column(func):
 
 @missing_column
 def measure_throughput_ratio(df: "pd.DataFrame") -> "pd.Series":
-    cache_size = df["cache size"][0]
-    return (df["read on hit data"] - df["written data"]) / cache_size
+    return (df["read on hit data"] - df["written data"]) / df["cache size"]
 
 
 @missing_column
 def measure_cost_ratio(df: "pd.DataFrame") -> "pd.Series":
-    cache_size = df["cache size"][0]
-    return (df["written data"] + df["deleted data"]) / cache_size
+    return (df["written data"] + df["deleted data"]) / df["cache size"]
 
 
 @missing_column
@@ -264,7 +268,7 @@ def measure_std_dev_free_space(df: "pd.DataFrame") -> "pd.Series":
 
 @missing_column
 def measure_bandwidth(df: "pd.DataFrame") -> "pd.Series":
-    return (df["read on miss data"] / df["bandwidth"]) * 100.0
+    return df["bandwidth usage"]
 
 
 @missing_column
@@ -310,8 +314,18 @@ def parse_simulation_report(
     return del_evaluators
 
 
+def get_name_no_feature(name: str):
+    if name.find("no_") != -1 and name.find("_feature") != -1:
+        feature = name.split("no_")[1].split("_feature")[0].replace("_", "")
+        return f"[No {feature} feature] "
+
+
 def make_table(
-    files2plot: list, prefix: str, top_n: int = 0, extended: bool = False
+    files2plot: list,
+    prefix: str,
+    top_n: int = 0,
+    extended: bool = False,
+    sort_by_roh_first: bool = False,
 ) -> Tuple["pd.DataFrame", list]:
     """Make html table from files to plot
 
@@ -326,16 +340,31 @@ def make_table(
     for file_, df in files2plot:
         values = get_measures(file_, df, extended=extended)
         values[0] = values[0].replace(prefix, "").replace(f"/{SIM_RESULT_FILENAME}", "")
-        search_size = re.search("[\/]?[0-9]*T\/", values[0])
-        values[0] = values[0].replace("run_full_normal/", "")
-        if search_size != None:
-            values[0] = values[0].replace(
-                search_size.group(),
-                "",
-                # f"{search_size.group().replace('/', '')} - "
-            )
+
+        row_name = []
+
+        for part in values[0].split("/"):
+            if part.find("run_full_normal") != -1:
+                continue
+            elif part.find("T") == len(part) - 1:
+                continue
+            elif part.find("no_") != -1 and part.find("_feature") != -1:
+                feature = part.replace("no_", "").replace("_feature", "").strip()
+                row_name.append(f"[NO {feature} feature]")
+            elif part.find("epsilon_test") != -1:
+                continue
+            elif part.find("random_cache") != -1:
+                continue
+            elif part in ["slow", "fast"]:
+                row_name.append(f"[epsilon {part}]")
+            else:
+                row_name.append(part)
+
+        values[0] = " ".join(row_name)
+
         values.insert(0, file_)
         table.append(values)
+
     if extended:
         columns = [
             "source",
@@ -345,7 +374,9 @@ def make_table(
             "Throughput (TB)",
             "Cost (TB)",
             "Read on hit ratio",
+            "Read on hit (TB)",
             "Bandwidth",
+            "Bandwidth (TB)",
             "Redirect Vol.",
             "Avg. Free Space",
             "Std. Dev. Free Space",
@@ -366,15 +397,28 @@ def make_table(
             "CPU Eff.",
         ]
     df = pd.DataFrame(table, columns=columns)
-    df = df.sort_values(
-        by=[
-            "Throughput",
-            "Cost",
-            "Read on hit ratio",
-            "Num. miss after del.",
-        ],
-        ascending=[False, True, False, False],
-    )
+
+    if sort_by_roh_first:
+        df = df.sort_values(
+            by=[
+                "Read on hit ratio",
+                "Throughput",
+                "Cost",
+                "Num. miss after del.",
+            ],
+            ascending=[False, False, True, False],
+        )
+    else:
+        df = df.sort_values(
+            by=[
+                "Throughput",
+                "Cost",
+                "Read on hit ratio",
+                "Num. miss after del.",
+            ],
+            ascending=[False, True, False, False],
+        )
+
     df = df.round(6)
     if top_n != 0:
         df = df.iloc[:10]
@@ -407,8 +451,16 @@ def get_measures(
     # Read on hit ratio
     measures.append(measure_read_on_hit_ratio(df).mean())
 
-    # Bandwidth
+    # Read on hit
+    if extended:
+        measures.append(df["read on hit data"].mean() / (1024.0 ** 2.0))
+
+    # Bandwidth percentage
     measures.append(measure_bandwidth(df).mean())
+
+    # Bandwidth
+    if extended:
+        measures.append(df["read on miss data"].mean() / (1024.0 ** 2.0))
 
     if extended:
         # Redirect Vol.
@@ -434,3 +486,33 @@ def get_measures(
     measures.append(measure_cpu_eff(df).mean())
 
     return measures
+
+
+def get_all_metric_values(results: list) -> "pd.DataFrame":
+    throughput = []
+    cost = []
+    read_on_hit_ratio = []
+    bandwidth = []
+    num_miss_after_del = []
+    cpu_eff = []
+
+    for file_, elm in results:
+        throughput += measure_throughput_ratio(elm.df).to_list()
+        cost += measure_cost_ratio(elm.df).to_list()
+        read_on_hit_ratio += measure_read_on_hit_ratio(elm.df).to_list()
+        bandwidth += measure_bandwidth(elm.df).to_list()
+        num_miss_after_del += measure_num_miss_after_delete(elm.df).to_list()
+        cpu_eff += measure_cpu_eff(elm.df).to_list()
+
+    df = pd.DataFrame(
+        {
+            "Throughput": throughput,
+            "Cost": cost,
+            "Read on hit ratio": read_on_hit_ratio,
+            "Bandwidth": bandwidth,
+            "Num. miss after del.": num_miss_after_del,
+            "CPU efficiency": cpu_eff,
+        }
+    )
+
+    return df

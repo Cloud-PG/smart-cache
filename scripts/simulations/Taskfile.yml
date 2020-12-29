@@ -2,7 +2,7 @@ version: "3"
 
 vars:
   EXE_PATH:
-    sh: python -m utils simPath
+    sh: python -m utils sim-path
 
 tasks:
   debug:
@@ -16,7 +16,7 @@ tasks:
   release:
     desc: Build simulator binary in release mode
     cmds:
-      - python -m utils compile --release "true"
+      - python -m utils compile --release
     sources:
       - ../../SmartCache/**/*.go
     generates:
@@ -24,7 +24,7 @@ tasks:
   debug-fast:
     desc: Build simulator binary in debug mode
     cmds:
-      - python -m utils compile --fast "true"
+      - python -m utils compile --fast
     sources:
       - ../../SmartCache/**/*.go
     generates:
@@ -32,7 +32,7 @@ tasks:
   release-fast:
     desc: Build simulator binary in release mode
     cmds:
-      - python -m utils compile --release "true" --fast "true"
+      - python -m utils compile --release --fast
     sources:
       - ../../SmartCache/**/*.go
     generates:
@@ -50,6 +50,8 @@ tasks:
     cmds:
       - task: synthetic-dataset-with-watermarks
       - task: synthetic-dataset
+      - task: synthetic-dataset-with-watermarks-random-cache
+      - task: synthetic-dataset-random-cache
 
   only-it-simulations:
     desc: Run only IT simulations
@@ -91,6 +93,42 @@ tasks:
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/size_focused_dataset/sizeSmall.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/size_focused_dataset/scdl.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/size_focused_dataset/scdl2."
+      # Extreme small size
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/extreme_small_size_focused_dataset/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/extreme_small_size_focused_dataset/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/extreme_small_size_focused_dataset/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/extreme_small_size_focused_dataset/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/extreme_small_size_focused_dataset/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/extreme_small_size_focused_dataset/scdl2.yml"
+      # Extreme big size
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/extreme_big_size_focused_dataset/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/extreme_big_size_focused_dataset/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/extreme_big_size_focused_dataset/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/extreme_big_size_focused_dataset/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/extreme_big_size_focused_dataset/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset/extreme_big_size_focused_dataset/scdl2.yml"
+
+  synthetic-dataset-random-cache:
+    desc: Run only synthetic dataset simulations with random cache
+    deps:
+      - release
+    cmds:
+      - echo "Synthetic dataset simulations with random cache"
+      # High Frequency Dataset
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_random_cache/high_frequency_dataset/random.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_random_cache/high_frequency_dataset/random_lru.yml"
+      # Recency Focused Dataset
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_random_cache/recency_focused_dataset/random.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_random_cache/recency_focused_dataset/random_lru.yml"
+      # Size Focused Dataset
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_random_cache/size_focused_dataset/random.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_random_cache/size_focused_dataset/random_lru.yml"
+      # Extreme small size
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_random_cache/extreme_small_size_focused_dataset/random.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_random_cache/extreme_small_size_focused_dataset/random_lru.yml"
+      # Extreme big size
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_random_cache/extreme_big_size_focused_dataset/random.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_random_cache/extreme_big_size_focused_dataset/random_lru.yml"
 
   synthetic-dataset-with-watermarks:
     desc: Run only synthetic dataset with watermarks simulations
@@ -119,6 +157,42 @@ tasks:
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/size_focused_dataset/sizeSmall.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/size_focused_dataset/scdl.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/size_focused_dataset/scdl2.yml"
+      # Extreme small size
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/extreme_small_size_focused_dataset/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/extreme_small_size_focused_dataset/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/extreme_small_size_focused_dataset/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/extreme_small_size_focused_dataset/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/extreme_small_size_focused_dataset/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/extreme_small_size_focused_dataset/scdl2.yml"
+      # Extreme big size
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/extreme_big_size_focused_dataset/lru.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/extreme_big_size_focused_dataset/lfu.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/extreme_big_size_focused_dataset/sizeBig.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/extreme_big_size_focused_dataset/sizeSmall.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/extreme_big_size_focused_dataset/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks/extreme_big_size_focused_dataset/scdl2.yml"
+
+  synthetic-dataset-with-watermarks-random-cache:
+    desc: Run only synthetic dataset with watermarks simulations with random cache
+    deps:
+      - release
+    cmds:
+      - echo "Synthetic dataset with watermarks simulations with random cache"
+      # High Frequency Datset
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks_random_cache/high_frequency_dataset/random.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks_random_cache/high_frequency_dataset/random_lru.yml"
+      # Recency Focused Datset
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks_random_cache/recency_focused_dataset/random.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks_random_cache/recency_focused_dataset/random_lru.yml"
+      # Size Focused Datset
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks_random_cache/size_focused_dataset/random.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks_random_cache/size_focused_dataset/random_lru.yml"
+      # Extreme small size
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks_random_cache/extreme_small_size_focused_dataset/random.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks_random_cache/extreme_small_size_focused_dataset/random_lru.yml"
+      # Extreme big size
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks_random_cache/extreme_big_size_focused_dataset/random.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/synthetic_dataset_with_watermarks_random_cache/extreme_big_size_focused_dataset/random_lru.yml"
 
   us-dataset:
     desc: Run only us dataset simulations
@@ -349,6 +423,220 @@ tasks:
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/1000T/scdl2-onFree.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/1000T/scdl2-onK.yml"
       - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks/1000T/scdl2.yml"
+
+  italian-dataset-with-watermarks-epsilon-test:
+    desc: Run only italian dataset with watermarks simulations epsilon tests
+    deps:
+      - release
+    cmds:
+      - echo "Italian dataset with watermarks simulations epsilon tests"
+      - task: italian-dataset-with-watermarks-epsilon-test-fast
+      - task: italian-dataset-with-watermarks-epsilon-test-slow
+
+  italian-dataset-with-watermarks-epsilon-test-fast:
+    desc: Run only italian dataset with watermarks simulations epsilon fast tests
+    deps:
+      - release
+    cmds:
+      - echo "Italian dataset with watermarks simulations epsilon fast tests"
+      # 10T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/10T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/10T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/10T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/10T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/10T/scdl2.yml"
+      # 50T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/50T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/50T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/50T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/50T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/50T/scdl2.yml"
+      # 100T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/100T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/100T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/100T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/100T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/100T/scdl2.yml"
+      # 200T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/200T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/200T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/200T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/200T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/200T/scdl2.yml"
+      # 500T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/500T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/500T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/500T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/500T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/500T/scdl2.yml"
+      # 1000T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/1000T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/1000T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/1000T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/1000T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/fast/1000T/scdl2.yml"
+
+  italian-dataset-with-watermarks-epsilon-test-slow:
+    desc: Run only italian dataset with watermarks simulations epsilon slow tests
+    deps:
+      - release
+    cmds:
+      - echo "Italian dataset with watermarks simulations epsilon slow tests"
+      # 10T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/10T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/10T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/10T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/10T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/10T/scdl2.yml"
+      # 50T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/50T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/50T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/50T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/50T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/50T/scdl2.yml"
+      # 100T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/100T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/100T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/100T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/100T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/100T/scdl2.yml"
+      # 200T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/200T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/200T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/200T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/200T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/200T/scdl2.yml"
+      # 500T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/500T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/500T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/500T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/500T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/500T/scdl2.yml"
+      # 1000T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/1000T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/1000T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/1000T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/1000T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_epsilon_test/slow/1000T/scdl2.yml"
+
+  italian-dataset-with-watermarks-random-cache:
+    desc: Run only italian dataset with watermarks simulations with a random cache
+    deps:
+      - release
+    cmds:
+      - echo "Italian dataset with watermarks simulations with a random cache"
+      # 10T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_random_cache/10T/random.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_random_cache/10T/random_lru.yml"
+      # 50T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_random_cache/50T/random.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_random_cache/50T/random_lru.yml"
+      # 100T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_random_cache/100T/random.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_random_cache/100T/random_lru.yml"
+      # 200T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_random_cache/200T/random.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_random_cache/200T/random_lru.yml"
+      # 500T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_random_cache/500T/random.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_random_cache/500T/random_lru.yml"
+      # 1000T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_random_cache/1000T/random.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_random_cache/1000T/random_lru.yml"
+
+  us-dataset-with-watermarks-random-cache:
+    desc: Run only us dataset with watermarks simulations with a random cache
+    deps:
+      - release
+    cmds:
+      - echo "us dataset with watermarks simulations with a random cache"
+      # 100T
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_random_cache/100T/random.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_random_cache/100T/random_lru.yml"
+      # 200T
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_random_cache/200T/random.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_random_cache/200T/random_lru.yml"
+      # 500T
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_random_cache/500T/random.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_random_cache/500T/random_lru.yml"
+      # 1000T
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_random_cache/1000T/random.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/us_dataset_with_watermarks_random_cache/1000T/random_lru.yml"
+
+  italian-dataset-with-watermarks-no-size-feature:
+    desc: Run only italian dataset with watermarks simulations and no size feature
+    deps:
+      - release
+    cmds:
+      - echo "Italian dataset with watermarks simulations and no size feature"
+      # 100T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/100T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/100T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/100T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/100T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/100T/scdl2.yml"
+      # 50T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/50T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/50T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/50T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/50T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/50T/scdl2.yml"
+      # 10T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/10T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/10T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/10T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/10T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_size_feature/10T/scdl2.yml"
+
+  italian-dataset-with-watermarks-no-delta-feature:
+    desc: Run only italian dataset with watermarks simulations and no delta feature
+    deps:
+      - release
+    cmds:
+      - echo "Italian dataset with watermarks simulations and no delta feature"
+      # 100T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_delta_feature/100T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_delta_feature/100T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_delta_feature/100T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_delta_feature/100T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_delta_feature/100T/scdl2.yml"
+      # 50T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_delta_feature/50T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_delta_feature/50T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_delta_feature/50T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_delta_feature/50T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_delta_feature/50T/scdl2.yml"
+      # 10T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_delta_feature/10T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_delta_feature/10T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_delta_feature/10T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_delta_feature/10T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_delta_feature/10T/scdl2.yml"
+
+  italian-dataset-with-watermarks-no-num-req-feature:
+    desc: Run only italian dataset with watermarks simulations and no num req feature
+    deps:
+      - release
+    cmds:
+      - echo "Italian dataset with watermarks simulations and no num req feature"
+      # 100T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_num_req_feature/100T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_num_req_feature/100T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_num_req_feature/100T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_num_req_feature/100T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_num_req_feature/100T/scdl2.yml"
+      # 50T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_num_req_feature/50T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_num_req_feature/50T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_num_req_feature/50T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_num_req_feature/50T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_num_req_feature/50T/scdl2.yml"
+      # 10T
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_num_req_feature/10T/scdl.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_num_req_feature/10T/scdl2-onDayEnd.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_num_req_feature/10T/scdl2-onFree.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_num_req_feature/10T/scdl2-onK.yml"
+      - "{{.EXE_PATH}} sim ../../config/simulations/italian_dataset_with_watermarks_no_num_req_feature/10T/scdl2.yml"
 
   italian-dataset-with-watermarks-only-addition:
     desc: Run only italian dataset with watermarks simulations and only addition agent

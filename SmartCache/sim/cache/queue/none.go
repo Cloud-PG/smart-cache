@@ -51,7 +51,27 @@ func (q *QueueNone) getFromWorst() []*files.Stats {
 
 // getWorstFilesUp2Size values from a queue until size is reached
 func (q *QueueNone) getWorstFilesUp2Size(totSize float64) []*files.Stats {
-	panic("this is not necessary for a non queue algorithm")
+	if totSize <= 0. {
+		panic("ERROR: tot size is negative or equal to 0")
+	}
+
+	var sended float64
+
+	// Filtering trick
+	// https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
+	q.buffer = q.buffer[:0]
+
+	for _, fileStats := range q.files {
+		q.buffer = append(q.buffer, fileStats)
+		sended += fileStats.Size
+		if sended >= totSize {
+			break
+		}
+	}
+
+	// fmt.Println(totSize, sended, len(q.buffer))
+
+	return q.buffer
 }
 
 // check if a file is in cache
@@ -81,7 +101,7 @@ func (q *QueueNone) insert(file *files.Stats) (err error) {
 
 // removeWorst a file from the LRU queue from worsts (head)
 func (q *QueueNone) removeWorst(files []int64) (err error) {
-	panic("this is not necessary in a non queue algorithm")
+	return q.remove(files)
 }
 
 // remove a file from the LRU queue

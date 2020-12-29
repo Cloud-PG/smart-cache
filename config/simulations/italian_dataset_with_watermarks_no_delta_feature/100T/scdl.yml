@@ -1,0 +1,26 @@
+--- # Simulation parameters
+sim:
+  data: ../../../../datasets/source2018_numeric_it_with_avro_order/
+  outputFolder: ../../../../results/sim_italian_dataset_with_watermarks_no_delta_feature/100T
+  type: normal
+  window:
+    start: 0
+    stop: 52
+  region: it
+  overwrite: true
+  cache:
+    type: aiRL
+    watermarks: true
+    size:
+      value: 100
+      unit: T
+    bandwidth:
+      value: 10
+      redirect: true
+  ai:
+    rl:
+      type: SCDL
+      epsilon:
+        decay: 0.00001
+      addition:
+        featuremap: ../../../../featureMaps/no_delta/rlAdditionFeatureMap.json

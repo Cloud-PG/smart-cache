@@ -1,0 +1,20 @@
+--- # Simulation parameters
+sim:
+  data: ../../../../datasets/source2018_numeric_it_with_avro_order/
+  outputFolder: ../../../../results/sim_italian_dataset_with_watermarks_random_cache/10T
+  type: normal
+  overwrite: true
+  seed: 73
+  window:
+    start: 0
+    stop: 52
+  region: it
+  cache:
+    type: random
+    watermarks: true
+    size:
+      value: 10
+      unit: T
+    bandwidth:
+      value: 10
+      redirect: true

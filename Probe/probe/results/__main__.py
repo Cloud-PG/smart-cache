@@ -1,68 +1,78 @@
-import argparse
+from enum import Enum
 from os import path
+from typing import List
 
+import typer
 from colorama import init
 
-from ..utils import STATUS_ARROW, str2bool
-from .dashboard import dashboard
+from ..utils import STATUS_ARROW
+from .dashboard import create
 from .data import aggregate_results, parse_simulation_report
-from .plotters import plot_miss_freq, plot_num_miss_after_del
+from .plotters import metric_corr, plot_miss_freq, plot_num_miss_after_del
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        "results", description="Find and plot all results")
+class PlotType(str, Enum):
+    afterdelete = "AFTERDELETE"
+    missfreq = "MISSFREQ"
 
-    parser.register('type', 'bool', str2bool)  # add type keyword to registries
 
-    parser.add_argument('action', default='dashboard',
-                        choices=['dashboard', 'plot'],
-                        help='Action to make')
+app = typer.Typer(name="probe.results", add_completion=False)
 
-    parser.add_argument('folder', default=None,
-                        help='Folder to inspect for results')
 
-    parser.add_argument('--p-type', default="",
-                        choices=['AFTERDELETE', 'MISSFREQ'],
-                        help='Plot type')
-
-    parser.add_argument('--dash-ip', default="localhost", type=str,
-                        help='IP addr where start the dashboard server')
-
-    parser.add_argument('--output-filename', '-o', type=str,
-                        default="",
-                        help='The output file name [DEFAULT: ""]')
-
-    args, _ = parser.parse_known_args()
-
+@app.command()
+def dashboard(folders: List[str], dash_ip: str = "localhost"):
     init()
 
     print(f"{STATUS_ARROW}Aggregate results...")
-    results = aggregate_results(args.folder)
+    results = aggregate_results(folders)
 
-    if args.action == 'dashboard':
-        print(f"{STATUS_ARROW}Start dashboard...")
-        dashboard(results, args.dash_ip)
-    elif args.action == 'plot':
-        if args.p_type == "AFTERDELETE":
-            plot_num_miss_after_del(
-                parse_simulation_report(
-                    results.get_all(), path.commonprefix(results.files),
-                    generator=True,
-                    target=args.p_type,
-                ),
-                output_filename=args.output_filename,
-            )
-        elif args.p_type == "MISSFREQ":
-            plot_miss_freq(
-                parse_simulation_report(
-                    results.get_all(), path.commonprefix(results.files),
-                    generator=True,
-                    target=args.p_type,
-                ),
-                output_filename=args.output_filename,
-            )
+    print(f"{STATUS_ARROW}Start dashboard...")
+    create(results, dash_ip)
+
+
+@app.command()
+def plot(
+    folders: List[str],
+    p_type: PlotType = PlotType.afterdelete,
+    output_filename: str = "",
+):
+    init()
+
+    print(f"{STATUS_ARROW}Aggregate results...")
+    results = aggregate_results(folders)
+
+    if p_type.value == "AFTERDELETE":
+        plot_num_miss_after_del(
+            parse_simulation_report(
+                results.get_all(),
+                path.commonprefix(results.files),
+                generator=True,
+                target=p_type.value,
+            ),
+            output_filename=output_filename,
+        )
+    elif p_type.value == "MISSFREQ":
+        plot_miss_freq(
+            parse_simulation_report(
+                results.get_all(),
+                path.commonprefix(results.files),
+                generator=True,
+                target=p_type.value,
+            ),
+            output_filename=output_filename,
+        )
+
+
+@app.command()
+def plot_corr(
+    folders: List[str],
+):
+    print(f"{STATUS_ARROW}Aggregate results...")
+    results = aggregate_results(folders)
+
+    print(f"{STATUS_ARROW}Calculate and plot correlation matrix...")
+    metric_corr(results.get_all_df())
 
 
 if __name__ == "__main__":
-    main()
+    app(prog_name="probe.results")

@@ -14,7 +14,7 @@ sim:
     size:
       value: 10
       unit: G
-    bandwidth: 
+    bandwidth:
       value: 1
       redirect: true
   ai:
@@ -23,4 +23,4 @@ sim:
       epsilon:
         decay: 0.001
       addition:
-         featuremap: ../../../../featureMaps/rlAdditionFeatureMap.json
+        featuremap: ../../../../featureMaps/rlAdditionFeatureMap.json

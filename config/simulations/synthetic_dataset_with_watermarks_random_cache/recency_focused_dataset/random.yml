@@ -1,0 +1,19 @@
+--- # Simulation parameters
+sim:
+  data: ../../../../datasets/RecencyFocusedDataset/
+  outputFolder: ../../../../results/sim_synthetic_dataset_random_cache_with_watermarks/RecencyFocusedDataset
+  type: normal
+  overwrite: true
+  window:
+    start: 0
+    stop: 52
+  region: it
+  cache:
+    type: random
+    watermarks: true
+    size:
+      value: 10
+      unit: G
+    bandwidth:
+      value: 10
+      redirect: true

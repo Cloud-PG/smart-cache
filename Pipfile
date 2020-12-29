@@ -6,3 +6,7 @@ verify_ssl = true
 [dev-packages]
 pylama = "*"
 black = "*"
+ipython = "*"
+
+[pipenv]
+allow_prereleases = true

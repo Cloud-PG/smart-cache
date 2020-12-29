@@ -437,6 +437,24 @@ func Create(cacheType string, cacheSize float64, cacheSizeUnit string, weightFun
 				MaxSize: cacheSizeMegabytes,
 			},
 		}
+	case "random":
+		logger.Info("Create random Cache",
+			zap.Float64("cacheSize", cacheSizeMegabytes),
+		)
+		cacheInstance = &RandomCache{
+			SimpleCache: SimpleCache{
+				MaxSize: cacheSizeMegabytes,
+			},
+		}
+	case "random_lru":
+		logger.Info("Create random lru Cache",
+			zap.Float64("cacheSize", cacheSizeMegabytes),
+		)
+		cacheInstance = &RandomCache{
+			SimpleCache: SimpleCache{
+				MaxSize: cacheSizeMegabytes,
+			},
+		}
 	case "lru":
 		logger.Info("Create LRU Cache",
 			zap.Float64("cacheSize", cacheSizeMegabytes),
@@ -510,31 +528,33 @@ func Create(cacheType string, cacheSize float64, cacheSizeUnit string, weightFun
 }
 
 type InitParameters struct {
-	Log                      bool
-	RedirectReq              bool
-	Watermarks               bool
-	CalcWeight               bool
-	QueueType                queue.QueueType
-	HighWatermark            float64
-	LowWatermark             float64
-	Dataset2TestPath         string
-	AIFeatureMap             string
-	AIModel                  string
-	FunctionTypeString       string
-	WfType                   functions.Type
-	WfParams                 WeightFunctionParameters
-	EvictionAgentType        string
-	RandSeed                 int64
-	AIRLEvictionK            int64
-	AIRLType                 string
-	AIRLAdditionFeatureMap   string
-	AIRLEvictionFeatureMap   string
-	AIRLAdditionEpsilonStart float64
-	AIRLAdditionEpsilonDecay float64
-	AIRLEvictionEpsilonStart float64
-	AIRLEvictionEpsilonDecay float64
-	MaxNumDayDiff            float64
-	DeltaDaysStep            float64
+	Log                        bool
+	RedirectReq                bool
+	Watermarks                 bool
+	CalcWeight                 bool
+	QueueType                  queue.QueueType
+	HighWatermark              float64
+	LowWatermark               float64
+	Dataset2TestPath           string
+	AIFeatureMap               string
+	AIModel                    string
+	FunctionTypeString         string
+	WfType                     functions.Type
+	WfParams                   WeightFunctionParameters
+	EvictionAgentType          string
+	RandSeed                   int64
+	AIRLEvictionK              int64
+	AIRLType                   string
+	AIRLAdditionFeatureMap     string
+	AIRLEvictionFeatureMap     string
+	AIRLAdditionEpsilonStart   float64
+	AIRLAdditionEpsilonDecay   float64
+	AIRLAdditionEpsilonUnleash bool
+	AIRLEvictionEpsilonStart   float64
+	AIRLEvictionEpsilonDecay   float64
+	AIRLEvictionEpsilonUnleash bool
+	MaxNumDayDiff              float64
+	DeltaDaysStep              float64
 }
 
 func InitInstance(cacheType string, cacheInstance Cache, params InitParameters) { //nolint:ignore,funlen
@@ -543,6 +563,14 @@ func InitInstance(cacheType string, cacheInstance Cache, params InitParameters) 
 	switch cacheType {
 	case "infinite":
 		logger.Info("Init infinite Cache")
+		InitCache(cacheInstance, params)
+	case "random":
+		logger.Info("Init random Cache")
+		params.QueueType = queue.NoQueue
+		InitCache(cacheInstance, params)
+	case "random_lru":
+		logger.Info("Init random lru Cache")
+		params.QueueType = queue.LRUQueue
 		InitCache(cacheInstance, params)
 	case "lru":
 		logger.Info("Init LRU Cache")
@@ -794,7 +822,7 @@ func Simulate(cacheType string, cacheInstance Cache, param SimulationParams) { /
 
 		curTime := time.Unix(record.Day, 0.)
 
-		if curTime.Sub(latestTime).Hours() >= 24. {
+		if curTime.Sub(latestTime).Hours() >= 23. {
 			if windowCounter >= param.WindowStart {
 				csvRow := []string{
 					latestTime.String(),

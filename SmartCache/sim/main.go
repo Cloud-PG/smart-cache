@@ -72,6 +72,7 @@ func configureViper(configFilenameWithNoExt string) { //nolint:ignore,funlen
 
 	viper.SetDefault("sim.ai.rl.epsilon.start", 1.0)
 	viper.SetDefault("sim.ai.rl.epsilon.decay", 0.0000042)
+	viper.SetDefault("sim.ai.rl.epsilon.unleash", true)
 
 	viper.SetDefault("sim.ai.featuremap", "")
 	viper.SetDefault("sim.ai.rl.type", "SCDL2")
@@ -79,12 +80,14 @@ func configureViper(configFilenameWithNoExt string) { //nolint:ignore,funlen
 	viper.SetDefault("sim.ai.rl.addition.featuremap", "")
 	viper.SetDefault("sim.ai.rl.addition.epsilon.start", -1.0)
 	viper.SetDefault("sim.ai.rl.addition.epsilon.decay", -1.0)
+	viper.SetDefault("sim.ai.rl.addition.epsilon.unleash", false)
 
 	viper.SetDefault("sim.ai.rl.eviction.featuremap", "")
 	viper.SetDefault("sim.ai.rl.eviction.k", 32)
 	viper.SetDefault("sim.ai.rl.eviction.type", "onK")
 	viper.SetDefault("sim.ai.rl.eviction.epsilon.start", -1.0)
 	viper.SetDefault("sim.ai.rl.eviction.epsilon.decay", -1.0)
+	viper.SetDefault("sim.ai.rl.eviction.epsilon.unleash", false)
 
 	viper.SetDefault("sim.ai.model", "")
 
@@ -130,18 +133,21 @@ func simCommand() *cobra.Command { //nolint:ignore,funlen
 		weightBeta  float64
 		weightGamma float64
 		// ai
-		aiFeatureMap             string
-		aiModel                  string
-		aiRLType                 string
-		aiRLAdditionFeatureMap   string
-		aiRLEvictionFeatureMap   string
-		aiRLEpsilonStart         float64
-		aiRLEpsilonDecay         float64
-		aiRLEvictionK            int64
-		aiRLAdditionEpsilonStart float64
-		aiRLAdditionEpsilonDecay float64
-		aiRLEvictionEpsilonStart float64
-		aiRLEvictionEpsilonDecay float64
+		aiFeatureMap               string
+		aiModel                    string
+		aiRLType                   string
+		aiRLAdditionFeatureMap     string
+		aiRLEvictionFeatureMap     string
+		aiRLEpsilonStart           float64
+		aiRLEpsilonDecay           float64
+		aiRLEpsilonUnleash         bool
+		aiRLEvictionK              int64
+		aiRLAdditionEpsilonStart   float64
+		aiRLAdditionEpsilonDecay   float64
+		aiRLAdditionEpsilonUnleash bool
+		aiRLEvictionEpsilonStart   float64
+		aiRLEvictionEpsilonDecay   float64
+		aiRLEvictionEpsilonUnleash bool
 		// cache
 		cacheType     string
 		cacheSize     float64
@@ -390,6 +396,9 @@ func simCommand() *cobra.Command { //nolint:ignore,funlen
 			aiRLEpsilonDecay = viper.GetFloat64("sim.ai.rl.epsilon.decay")
 			logger.Info("CONF_VAR", zap.Float64("aiRLEpsilonDecay", aiRLEpsilonDecay))
 
+			aiRLEpsilonUnleash = viper.GetBool("sim.ai.rl.epsilon.unleash")
+			logger.Info("CONF_VAR", zap.Bool("aiRLEpsilonUnleash", aiRLEpsilonUnleash))
+
 			aiRLAdditionEpsilonStart = viper.GetFloat64("sim.ai.rl.addition.epsilon.start")
 			logger.Info("CONF_VAR", zap.Float64("aiRLAdditionEpsilonStart", aiRLAdditionEpsilonStart))
 			if aiRLAdditionEpsilonStart == -1.0 {
@@ -404,6 +413,13 @@ func simCommand() *cobra.Command { //nolint:ignore,funlen
 				logger.Info("CONF_VAR", zap.Float64("aiRLAdditionEpsilonDecayOverwrite", aiRLAdditionEpsilonDecay))
 			}
 
+			aiRLAdditionEpsilonUnleash = viper.GetBool("sim.ai.rl.addition.epsilon.unleash")
+			logger.Info("CONF_VAR", zap.Bool("aiRLAdditionEpsilonUnleash", aiRLAdditionEpsilonUnleash))
+			if aiRLEpsilonUnleash {
+				aiRLAdditionEpsilonUnleash = aiRLEpsilonUnleash
+				logger.Info("CONF_VAR", zap.Bool("aiRLAdditionEpsilonUnleashOverwrite", aiRLAdditionEpsilonUnleash))
+			}
+
 			aiRLEvictionEpsilonStart = viper.GetFloat64("sim.ai.rl.eviction.epsilon.start")
 			logger.Info("CONF_VAR", zap.Float64("aiRLEvictionEpsilonStart", aiRLEvictionEpsilonStart))
 			if aiRLEvictionEpsilonStart == -1.0 {
@@ -416,6 +432,13 @@ func simCommand() *cobra.Command { //nolint:ignore,funlen
 			if aiRLEvictionEpsilonDecay == -1.0 {
 				aiRLEvictionEpsilonDecay = aiRLEpsilonDecay
 				logger.Info("CONF_VAR", zap.Float64("aiRLEvictionEpsilonDecayOverwrite", aiRLEvictionEpsilonDecay))
+			}
+
+			aiRLEvictionEpsilonUnleash = viper.GetBool("sim.ai.rl.eviction.epsilon.unleash")
+			logger.Info("CONF_VAR", zap.Bool("aiRLEvictionEpsilonUnleash", aiRLEvictionEpsilonUnleash))
+			if aiRLEpsilonUnleash {
+				aiRLEvictionEpsilonUnleash = aiRLEpsilonUnleash
+				logger.Info("CONF_VAR", zap.Bool("aiRLEvictionEpsilonUnleashOverwrite", aiRLEvictionEpsilonUnleash))
 			}
 
 			simEvictionType = viper.GetString("sim.ai.rl.eviction.type")
@@ -543,18 +566,20 @@ func simCommand() *cobra.Command { //nolint:ignore,funlen
 						Beta:  weightBeta,
 						Gamma: weightGamma,
 					},
-					EvictionAgentType:        simEvictionType,
-					AIRLEvictionK:            aiRLEvictionK,
-					AIRLType:                 aiRLType,
-					AIRLAdditionFeatureMap:   aiRLAdditionFeatureMap,
-					AIRLEvictionFeatureMap:   aiRLEvictionFeatureMap,
-					AIRLAdditionEpsilonStart: aiRLAdditionEpsilonStart,
-					AIRLAdditionEpsilonDecay: aiRLAdditionEpsilonDecay,
-					AIRLEvictionEpsilonStart: aiRLEvictionEpsilonStart,
-					AIRLEvictionEpsilonDecay: aiRLEvictionEpsilonDecay,
-					MaxNumDayDiff:            maxNumDayDiff,
-					DeltaDaysStep:            deltaDaysStep,
-					RandSeed:                 randSeed,
+					EvictionAgentType:          simEvictionType,
+					AIRLEvictionK:              aiRLEvictionK,
+					AIRLType:                   aiRLType,
+					AIRLAdditionFeatureMap:     aiRLAdditionFeatureMap,
+					AIRLEvictionFeatureMap:     aiRLEvictionFeatureMap,
+					AIRLAdditionEpsilonStart:   aiRLAdditionEpsilonStart,
+					AIRLAdditionEpsilonDecay:   aiRLAdditionEpsilonDecay,
+					AIRLAdditionEpsilonUnleash: aiRLAdditionEpsilonUnleash,
+					AIRLEvictionEpsilonStart:   aiRLEvictionEpsilonStart,
+					AIRLEvictionEpsilonDecay:   aiRLEvictionEpsilonDecay,
+					AIRLEvictionEpsilonUnleash: aiRLEvictionEpsilonUnleash,
+					MaxNumDayDiff:              maxNumDayDiff,
+					DeltaDaysStep:              deltaDaysStep,
+					RandSeed:                   randSeed,
 				},
 			)
 
