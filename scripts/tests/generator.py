@@ -113,16 +113,27 @@ class ConfigParameters:
     evictionEpsilonDecay: float = 0.1
     k: int = 1
 
+    def _checkAI(self):
+        if self.ai_type == "SCDL" and self.additionFeatureMap == "":
+            raise Exception("No addition feature map")
+        elif self.ai_type == "SCDL2":
+            if self.additionFeatureMap == "":
+                raise Exception("No addition feature map")
+            if self.evictionType != "noEviction" and self.evictionFeatureMap == "":
+                raise Exception("No eviction feature map")
+
     @property
     def is_AI(self):
         return self.cache_type.lower() == "airl"
 
     @property
     def is_SCDL(self):
+        self._checkAI()
         return self.is_AI and self.ai_type == "SCDL"
 
     @property
     def is_SCDL2(self):
+        self._checkAI()
         return self.is_AI and self.ai_type == "SCDL2"
 
     @property
@@ -205,43 +216,43 @@ def generator(data_path: "pathlib.Path", args):
 
     regions = [
         "it",
-        "us",
+        # "us",
     ]
     windows = [
         (0, 4),
-        (4, 8),
-        (8, 12),
-        (12, 16),
-        (16, 20),
-        (20, 24),
-        (24, 28),
-        (28, 32),
-        (32, 36),
-        (36, 40),
-        (40, 44),
-        (44, 48),
-        (48, 52),
-        # Trimester
-        (0, 12),
-        (12, 24),
-        (24, 36),
-        (36, 48),
-        (48, 52),
-        # Quadrimester
-        (0, 16),
-        (16, 32),
-        (32, 48),
-        (48, 52),
+        # (4, 8),
+        # (8, 12),
+        # (12, 16),
+        # (16, 20),
+        # (20, 24),
+        # (24, 28),
+        # (28, 32),
+        # (32, 36),
+        # (36, 40),
+        # (40, 44),
+        # (44, 48),
+        # (48, 52),
+        # # Trimester
+        # (0, 12),
+        # (12, 24),
+        # (24, 36),
+        # (36, 48),
+        # (48, 52),
+        # # Quadrimester
+        # (0, 16),
+        # (16, 32),
+        # (32, 48),
+        # (48, 52),
     ]
     cache_types = [
-        ("aiRL", "SCDL", ""),
+        # ("aiRL", "SCDL", ""),
         ("aiRL", "SCDL2", "onK"),
-        ("aiRL", "SCDL2", "onFree"),
-        ("aiRL", "SCDL2", "NoEviction"),
+        # ("aiRL", "SCDL2", "onFree"),
+        # ("aiRL", "SCDL2", "NoEviction"),
         ("lru", "", ""),
-        ("lfu", "", ""),
-        ("sizeBig", "", ""),
-        ("sizeSmall", "", ""),
+        # ("lfu", "", ""),
+        # ("sizeBig", "", ""),
+        # ("sizeSmall", "", ""),
     ]
     cache_watermarks = [
         True,
@@ -249,17 +260,17 @@ def generator(data_path: "pathlib.Path", args):
     ]
     cache_sizes = [
         100,
-        200,
+        # 200,
     ]
     epsilon = [
         0.1,
-        0.001,
-        0.0001,
+        # 0.001,
+        # 0.0001,
     ]
     k = [
         1024,
-        2048,
-        4096,
+        # 2048,
+        # 4096,
     ]
 
     print("Compose parameters...")
