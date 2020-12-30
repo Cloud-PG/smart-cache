@@ -29,11 +29,13 @@ const (
 
 const (
 	// EvictionOnFree agent call eviction decisions on free
-	EvictionOnFree = iota - 3
+	EvictionOnFree = iota - 4
 	// EvictionOnDayEnd agent waits the end of the day to call eviction decisions
 	EvictionOnDayEnd
 	// EvictionOnK agent uses uses k to call eviction decisions
 	EvictionOnK
+	// NoEviction agent eviction absent
+	NoEviction
 )
 
 const (
@@ -107,7 +109,7 @@ func (cache *AIRL) Init(params InitParameters) interface{} { //nolint:ignore,fun
 		case "onFree", "on_free", "ONFREE":
 			cache.evictionType = EvictionOnFree
 		case "None", "NONE", "none", "NoEviction", "NOEVICTION", "noEviction", "noeviction":
-			break
+			cache.evictionType = NoEviction
 		default:
 			panic("ERROR: no valid eviction type...")
 		}
@@ -115,6 +117,10 @@ func (cache *AIRL) Init(params InitParameters) interface{} { //nolint:ignore,fun
 		cache.evictionAgentK = evictionk
 		cache.evictionAgentStep = cache.evictionAgentK
 		cache.evictionRO = 1.0
+
+		if cache.evictionType != NoEviction && evictionFeatureMap == "" {
+			panic("ERROR: No eviction feature map indicated")
+		}
 
 		if evictionFeatureMap != "" {
 			params.QueueType = queue.NoQueue
@@ -156,6 +162,8 @@ func (cache *AIRL) Init(params InitParameters) interface{} { //nolint:ignore,fun
 		} else {
 			cache.evictionAgentOK = false
 
+			log.Warn().Msg("Eviction agent DISABLED!")
+
 			params.QueueType = queue.LRUQueue
 			cache.SimpleCache.Init(params)
 		}
@@ -186,6 +194,8 @@ func (cache *AIRL) Init(params InitParameters) interface{} { //nolint:ignore,fun
 		cache.actionCounters[qlearn.ActionNotStore] = 0
 	} else {
 		cache.additionAgentOK = false
+
+		log.Warn().Msg("Addition agent DISABLED!")
 	}
 
 	log.Info().Msg("Table creation done")
