@@ -1294,21 +1294,17 @@ func (cache *AIRL) ExtraStats() string {
 	)
 }
 
-func writeQTable(outFilename string, data string) {
+func writeQTable(outFilename string, data []byte) {
 	qtableAdditionFile, errCreateQTablecsv := os.Create(outFilename)
-
-	defer func() {
-		closeErr := qtableAdditionFile.Close()
-		if closeErr != nil {
-			panic(closeErr)
-		}
-	}()
-
 	if errCreateQTablecsv != nil {
 		panic(errCreateQTablecsv)
 	}
 
-	_, writeErr := qtableAdditionFile.WriteString(data)
+	writer := gzip.NewWriter(qtableAdditionFile)
+
+	defer writer.Close()
+
+	_, writeErr := writer.Write(data)
 	if writeErr != nil {
 		panic(writeErr)
 	}
@@ -1352,7 +1348,7 @@ func (cache *AIRL) ExtraOutput(info string) string { //nolint:ignore,funlen
 	case "additionQTable":
 		if cache.additionAgentOK {
 			result = cache.additionAgent.QTableToString()
-			writeQTable("additionQTable.csv", result)
+			writeQTable("additionQTable.csv.gz", []byte(result))
 		} else {
 			log.Info().Msg("No Addition Table...")
 			result = ""
@@ -1360,7 +1356,7 @@ func (cache *AIRL) ExtraOutput(info string) string { //nolint:ignore,funlen
 	case "evictionQTable":
 		if cache.evictionAgentOK {
 			result = cache.evictionAgent.QTableToString()
-			writeQTable("evictionQTable.csv", result)
+			writeQTable("evictionQTable.csv.gz", []byte(result))
 		} else {
 			log.Info().Msg("No Eviction Table...")
 			result = ""
