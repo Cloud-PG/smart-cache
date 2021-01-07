@@ -867,11 +867,13 @@ func Simulate(cacheType string, cacheInstance Cache, param SimulationParams) { /
 		totNumRecords++
 
 		if windowCounter >= param.WindowStart { //nolint:ignore,nestif
+			// Filter records with job failure
 			if !succesJobFilter.Check(record) {
 				numFilteredRecords++
 
 				continue
 			}
+			// Filter records with specific data type
 			if param.DataTypeFilter != nil {
 				if !param.DataTypeFilter.Check(record) {
 					numFilteredRecords++
@@ -879,6 +881,7 @@ func Simulate(cacheType string, cacheInstance Cache, param SimulationParams) { /
 					continue
 				}
 			}
+			// Filter records with specific rules
 			if param.RecordFilter != nil {
 				if !param.RecordFilter.Check(record) {
 					numFilteredRecords++
