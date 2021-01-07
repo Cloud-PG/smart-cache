@@ -426,17 +426,20 @@ func (cache *SimpleCache) UpdatePolicy(request *Request, fileStats *files.Stats,
 func (cache *SimpleCache) AfterRequest(request *Request, fileStats *files.Stats, hit bool, added bool) {
 	var currentCPUEff float64
 
-	if request.CPUEff != 0. {
-		if request.Protocol == 1 {
+	if request.CPUEff > 0. {
+		switch request.Protocol {
+		case 1:
 			// Local
 			cache.upperCPUEff += request.CPUEff
 			cache.numLocal++
 			currentCPUEff = request.CPUEff
-		} else if request.Protocol == 0 {
+		case 0:
 			// Remote
 			cache.lowerCPUEff += request.CPUEff
 			cache.numRemote++
 			currentCPUEff = request.CPUEff + cache.CPUEffBoundDiff()
+		default:
+			panic(fmt.Sprintf("%d is not a valid request Protocol", request.Protocol))
 		}
 	}
 
@@ -720,11 +723,15 @@ func (cache *SimpleCache) CPUMissEff() float64 {
 
 // CPUEffUpperBound returns the ideal CPU efficiency upper bound
 func (cache *SimpleCache) CPUEffUpperBound() float64 {
+	log.Info().Float64("upperCPUEff", cache.upperCPUEff).Int64("numLocal", cache.numLocal).Msg("UPPER BOUND FUNCTIONS")
+
 	return cache.upperCPUEff / float64(cache.numLocal)
 }
 
 // CPUEffLowerBound returns the ideal CPU efficiency lower bound
 func (cache *SimpleCache) CPUEffLowerBound() float64 {
+	log.Info().Float64("lowerCPUEff", cache.lowerCPUEff).Int64("numRemote", cache.numRemote).Msg("LOWER BOUND FUNCTIONS")
+
 	return cache.lowerCPUEff / float64(cache.numRemote)
 }
 
