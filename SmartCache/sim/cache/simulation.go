@@ -837,7 +837,19 @@ func Simulate(cacheType string, cacheInstance Cache, param SimulationParams) { /
 
 				csvSimOutput.Write(csvRow)
 			}
-			ClearStats(cacheInstance)
+			// log.Debug().Float64("CPU eff.",
+			// 	CPUEff(cacheInstance),
+			// ).Float64("CPU eff Upper Bound",
+			// 	CPUEffUpperBound(cacheInstance),
+			// ).Float64("CPU eff Lower Bound",
+			// 	CPUEffLowerBound(cacheInstance)).Msg("STATS")
+			// ClearStats(cacheInstance)
+			// log.Debug().Float64("CPU eff.",
+			// 	CPUEff(cacheInstance),
+			// ).Float64("CPU eff Upper Bound",
+			// 	CPUEffUpperBound(cacheInstance),
+			// ).Float64("CPU eff Lower Bound",
+			// 	CPUEffLowerBound(cacheInstance)).Msg("STATS")
 			// Update time window
 			latestTime = curTime
 			windowStepCounter++
