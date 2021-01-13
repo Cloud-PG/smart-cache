@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"simulator/v2/cache"
+	"simulator/v2/cache/service"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -128,6 +129,10 @@ func serve() *cobra.Command {
 					log.Printf("Sent response %s", resp)
 				}
 			})
+
+			fmt.Println(buildstamp, githash)
+
+			http.HandleFunc("/version", service.Version(buildstamp, githash))
 
 			log.Printf("Starting HTTP server on host %s and port %d", host, port)
 			if err := server.ListenAndServe(); err != nil {

@@ -33,7 +33,7 @@ def get_simulator_exe(force_creation: bool = False, release: bool = False, fast:
     cur_dir, sim_path = get_simulator_path()
     logger.info(f"[BUILD]->[Sim Path][{sim_path}]")
     if force_creation or not path.exists(sim_path) or not path.isfile(sim_path):
-        command = """go build -race {}-v -o bin -ldflags "{}-X main.buildstamp=`date -u '+%Y-%m-%d_%I:%M:%S%p'` -X main.githash=`git rev-parse --short HEAD`" ./..."""
+        command = """go build -race {}-v -o bin -ldflags "{}-X simulator/v2/cache/cmd.buildstamp=`date -u '+%Y-%m-%d_%I:%M:%S%p'` -X simulator/v2/cache/cmd.githash=`git rev-parse --short HEAD`" ./..."""
         try:
             comiled_command = command.format(
                 "" if fast else "-a ",
