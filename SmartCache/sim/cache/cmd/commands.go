@@ -37,7 +37,7 @@ var (
 func serve() *cobra.Command { //nolint: funlen
 	var (
 		logLevel string
-		conf     serviceConfig
+		conf     ServiceConfig
 	)
 
 	serveCmd := &cobra.Command{ // nolint: exhaustivestruct
@@ -108,6 +108,17 @@ func serve() *cobra.Command { //nolint: funlen
 			conf.check()
 			fmt.Printf("%+v\n", conf)
 
+			// // Output files
+			// dumpFileName := "cache_dump.json.gz"
+			// resultFileName := "simulation_results.csv"
+			// resultRunStatsName := "simulation_run_stats.json"
+
+			// ------------------------- Create cache --------------------------
+			log.Info().Msg("Creating Cache instance")
+			baseName, curCacheInstance := CreateCache(conf)
+			fmt.Printf("%s\n%+v\n", baseName, curCacheInstance)
+
+			// ------------------------ Create service -------------------------
 			switch conf.Service.Protocol {
 			case "http", "HTTP", "Http":
 				log.Info().Msg("Create HTTP server")
@@ -162,7 +173,7 @@ func sim() *cobra.Command { //nolint:ignore,funlen
 	// Simulation config variables
 	var (
 		logLevel string
-		conf     simConfig
+		conf     SimConfig
 	)
 
 	simCmd := &cobra.Command{ // nolint: exhaustivestruct
@@ -234,121 +245,37 @@ func sim() *cobra.Command { //nolint:ignore,funlen
 			conf.check()
 			// fmt.Printf("%+v\n", conf)
 
-			// Generate simulation file output basename
-			cacheSizeString := fmt.Sprintf("%d%s",
-				conf.Sim.Cache.Size.Value,
-				strings.ToUpper(conf.Sim.Cache.Size.Unit),
-			)
-			cacheBandwidthString := fmt.Sprintf("%dGbit", conf.Sim.Cache.Bandwidth.Value)
-
-			var baseName string
-
-			switch conf.Sim.Cache.Type {
-			case "weightFunLRU":
-				parameters := strings.Join([]string{
-					fmt.Sprintf("%0.2f", conf.Sim.WeightFunction.Alpha),
-					fmt.Sprintf("%0.2f", conf.Sim.WeightFunction.Beta),
-					fmt.Sprintf("%0.2f", conf.Sim.WeightFunction.Gamma),
-				}, "_")
-				baseName = strings.Join([]string{
-					conf.Sim.Cache.Type,
-					conf.Sim.WeightFunction.Name,
-					parameters,
-				}, "_")
-			case "aiRL":
-				subAIType := conf.Sim.AI.RL.Type
-				if conf.Sim.AI.RL.Type == "SCDL2" {
-					subAIType += "-" + conf.Sim.AI.RL.Eviction.Type
-				}
-				baseName = strings.Join([]string{
-					conf.Sim.Cache.Type,
-					subAIType,
-					cacheSizeString,
-					cacheBandwidthString,
-					conf.Sim.Region,
-				}, "_")
-			default:
-				baseName = strings.Join([]string{
-					conf.Sim.Cache.Type,
-					cacheSizeString,
-					cacheBandwidthString,
-					conf.Sim.Region,
-				}, "_")
-			}
-
 			// Output files
 			dumpFileName := "cache_dump.json.gz"
 			resultFileName := "simulation_results.csv"
 			resultRunStatsName := "simulation_run_stats.json"
 
-			// Create output folder and move working dir
-			switch conf.Sim.Type { //nolint:ignore,nestif
-			case "normal":
-				finalOutputFolder := filepath.Join(conf.Sim.OutputFolder, "run_full_normal", baseName)
-				errMkdir := os.MkdirAll(finalOutputFolder, 0755)
-				if errMkdir != nil && !os.IsExist(errMkdir) {
-					panic(errMkdir)
-				}
-				errChdir = os.Chdir(finalOutputFolder)
-				if errChdir != nil {
-					panic(errChdir)
-				}
-				curWd, _ := os.Getwd()
-				log.Info().Str("path", curWd).Msg("Current Working Dir")
-			}
-
-			// Check previous simulation results
-			if !conf.Sim.Overwrite { //nolint:ignore,nestif
-				fileStat, errStat := os.Stat(resultFileName)
-				if errStat != nil {
-					if !os.IsNotExist(errStat) {
-						panic(errStat)
-					}
-				} else {
-					if fileStat.Size() > 600 {
-						// TODO: check if the configuration is the same
-						log.Info().Msg("Simulation already DONE! NO OVERWRITE...")
-
-						return
-					} else {
-						log.Info().Msg("Simulation results is empty... OVERWRITE...")
-					}
-				}
-			}
-
-			wfunctionParams := cache.WeightFunctionParameters{
-				Alpha: conf.Sim.WeightFunction.Alpha,
-				Beta:  conf.Sim.WeightFunction.Beta,
-				Gamma: conf.Sim.WeightFunction.Gamma,
-			}
-
 			// ------------------------- Create cache --------------------------
-			curCacheInstance := cache.Create(
-				conf.Sim.Cache.Type,
-				float64(conf.Sim.Cache.Size.Value),
-				conf.Sim.Cache.Size.Unit,
-				conf.Sim.WeightFunction.Name,
-				wfunctionParams,
-			)
+			log.Info().Msg("Creating Cache instance")
+			baseName, curCacheInstance := CreateCache(conf)
 
 			// ------------------------- Init cache ----------------------------
 			cache.InitInstance(
 				conf.Sim.Cache.Type,
 				curCacheInstance,
 				cache.InitParameters{
-					Log:                        conf.Sim.Log,
-					RedirectReq:                conf.Sim.Cache.Bandwidth.Redirect,
-					Watermarks:                 conf.Sim.Cache.Watermarks,
-					HighWatermark:              conf.Sim.Cache.Watermark.High,
-					LowWatermark:               conf.Sim.Cache.Watermark.Low,
-					Dataset2TestPath:           conf.Sim.AI.Dataset2TestPath,
-					AIFeatureMap:               conf.Sim.AI.Featuremap,
-					AIModel:                    conf.Sim.AI.Model,
-					FunctionTypeString:         conf.Sim.WeightFunction.Name,
-					QueueType:                  queue.Unassigned,
-					WfType:                     functions.Unassigned,
-					CalcWeight:                 false,
-					WfParams:                   wfunctionParams,
+					Log:                conf.Sim.Log,
+					RedirectReq:        conf.Sim.Cache.Bandwidth.Redirect,
+					Watermarks:         conf.Sim.Cache.Watermarks,
+					HighWatermark:      conf.Sim.Cache.Watermark.High,
+					LowWatermark:       conf.Sim.Cache.Watermark.Low,
+					Dataset2TestPath:   conf.Sim.AI.Dataset2TestPath,
+					AIFeatureMap:       conf.Sim.AI.Featuremap,
+					AIModel:            conf.Sim.AI.Model,
+					FunctionTypeString: conf.Sim.WeightFunction.Name,
+					QueueType:          queue.Unassigned,
+					WfType:             functions.Unassigned,
+					CalcWeight:         false,
+					WfParams: cache.WeightFunctionParameters{
+						Alpha: conf.Sim.WeightFunction.Alpha,
+						Beta:  conf.Sim.WeightFunction.Beta,
+						Gamma: conf.Sim.WeightFunction.Gamma,
+					},
 					EvictionAgentType:          conf.Sim.AI.RL.Eviction.Type,
 					AIRLEvictionK:              int64(conf.Sim.AI.RL.Eviction.K),
 					AIRLType:                   conf.Sim.AI.RL.Type,

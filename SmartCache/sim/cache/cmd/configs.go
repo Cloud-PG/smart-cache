@@ -62,7 +62,7 @@ type cacheBaseConf struct {
 	}
 }
 
-type simConfig struct {
+type SimConfig struct {
 	Sim struct {
 		Data              string
 		Type              string
@@ -94,7 +94,7 @@ type simConfig struct {
 	}
 }
 
-func (conf simConfig) configure(configFilenameWithNoExt string) { //nolint:ignore,funlen
+func (conf SimConfig) configure(configFilenameWithNoExt string) { //nolint:ignore,funlen
 	viper.SetConfigName(configFilenameWithNoExt) // name of config file (without extension)
 	viper.SetConfigType("yaml")                  // REQUIRED if the config file does not have the extension in the name
 	viper.AddConfigPath(".")                     // optionally look for config in the working directory
@@ -160,7 +160,7 @@ func (conf simConfig) configure(configFilenameWithNoExt string) { //nolint:ignor
 	viper.SetDefault("sim.dataset2testpath", "")
 }
 
-func (conf *simConfig) check() { //nolint:funlen
+func (conf *SimConfig) check() { //nolint:funlen
 	log.Info().Int("conf.Sim.Seed", conf.Sim.Seed).Msg("CONF_VAR")
 	log.Info().Uint("conf.Sim.Cache.Size.Value", conf.Sim.Cache.Size.Value).Msg("CONF_VAR")
 	log.Info().Str("conf.Sim.Cache.Size.Unit", conf.Sim.Cache.Size.Unit).Msg("CONF_VAR")
@@ -282,11 +282,13 @@ func (conf *simConfig) check() { //nolint:funlen
 	log.Info().Str("conf.Sim.Cache.Type", conf.Sim.Cache.Type).Msg("CONF_VAR")
 }
 
-type serviceConfig struct {
+type ServiceConfig struct {
 	Service struct {
 		Protocol     string
 		Host         string
 		Port         uint
+		Type         string
+		Seed         int
 		OutputFolder string `mapstructure:"outputFolder"` //nolint:govet
 		CPUProfile   string `mapstructure:"cpuprofile"`   //nolint:govet
 		MEMProfile   string `mapstructure:"memprofile"`   //nolint:govet
@@ -297,7 +299,7 @@ type serviceConfig struct {
 	}
 }
 
-func (conf serviceConfig) configure(configFilenameWithNoExt string) { //nolint:ignore,funlen
+func (conf ServiceConfig) configure(configFilenameWithNoExt string) { //nolint:ignore,funlen
 	viper.SetConfigName(configFilenameWithNoExt) // name of config file (without extension)
 	viper.SetConfigType("yaml")                  // REQUIRED if the config file does not have the extension in the name
 	viper.AddConfigPath(".")                     // optionally look for config in the working directory
@@ -305,9 +307,11 @@ func (conf serviceConfig) configure(configFilenameWithNoExt string) { //nolint:i
 	viper.SetDefault("service.protocol", "http")
 	viper.SetDefault("service.host", "localhost")
 	viper.SetDefault("service.port", 46692)
+	viper.SetDefault("service.type", "normal")
 	viper.SetDefault("service.outputFolder", "./")
 	viper.SetDefault("service.cpuprofile", "")
 	viper.SetDefault("service.memprofile", "")
+	viper.SetDefault("service.seed", 42)
 
 	viper.SetDefault("service.cache.watermarks", false)
 	viper.SetDefault("service.cache.watermark.high", 95.0)
@@ -344,7 +348,7 @@ func (conf serviceConfig) configure(configFilenameWithNoExt string) { //nolint:i
 	viper.SetDefault("service.ai.rl.eviction.epsilon.unleash", false)
 }
 
-func (conf *serviceConfig) check() {
+func (conf *ServiceConfig) check() {
 	log.Info().Uint("conf.Service.Cache.Size.Value", conf.Service.Cache.Size.Value).Msg("CONF_VAR")
 	log.Info().Str("conf.Service.Cache.Size.Unit", conf.Service.Cache.Size.Unit).Msg("CONF_VAR")
 	log.Info().Uint("conf.Service.Cache.Bandwidth.Value", conf.Service.Cache.Bandwidth.Value).Msg("CONF_VAR")

@@ -3,9 +3,10 @@ package cache
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"strconv"
 	"strings"
+
+	"github.com/rs/zerolog/log"
 
 	"golang.org/x/crypto/blake2b"
 )
@@ -34,7 +35,7 @@ func HashInt(input string) uint32 {
 func GetSimulationRunNum(folder string) int {
 	files, err := ioutil.ReadDir(folder)
 	if err != nil {
-		log.Fatal(err)
+		log.Err(err).Msg("Utils")
 	}
 
 	run := 0
