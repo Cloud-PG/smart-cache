@@ -21,6 +21,8 @@ const (
 	WeightQueue
 	// NoQueue to return only the files
 	NoQueue
+	// Unassigned
+	Unassigned
 )
 
 const (

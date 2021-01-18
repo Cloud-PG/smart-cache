@@ -616,9 +616,8 @@ type SimulationParams struct {
 	OutFile            string
 	BaseName           string
 	ResultRunStatsName string
-	DumpFilename       string
-	LoadDumpFileName   string
 	DumpFileName       string
+	LoadDumpFileName   string
 	AIRLEpsilonStart   float64
 	AIRLEpsilonDecay   float64
 	CPUprofile         string

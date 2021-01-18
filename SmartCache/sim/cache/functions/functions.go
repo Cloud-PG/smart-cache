@@ -19,6 +19,8 @@ const (
 	Multiplicative
 	// WeightedRequests has a small memory for request time
 	WeightedRequests
+	// Unassigned
+	Unassigned
 )
 
 func FileAdditiveWeight(totRequests int64, size float64, meanTicks float64, alpha float64, beta float64, gamma float64) float64 {
