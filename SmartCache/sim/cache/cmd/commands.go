@@ -27,119 +27,128 @@ func initLog(level zerolog.Level) {
 }
 
 var (
-	githash    string
-	buildstamp string
+	githash         string
+	buildstamp      string
+	errorNoConfFile error = errors.New("requires a configuration file")
 )
 
-func configureViper(configFilenameWithNoExt string) { //nolint:ignore,funlen
-	viper.SetConfigName(configFilenameWithNoExt) // name of config file (without extension)
-	viper.SetConfigType("yaml")                  // REQUIRED if the config file does not have the extension in the name
-	viper.AddConfigPath(".")                     // optionally look for config in the working directory
-
-	viper.SetDefault("sim.region", "all")
-	viper.SetDefault("sim.outputFolder", ".")
-	viper.SetDefault("sim.overwrite", false)
-	viper.SetDefault("sim.dump", false)
-	viper.SetDefault("sim.dumpfilesandstats", true)
-	viper.SetDefault("sim.dumpfilename", "")
-	viper.SetDefault("sim.loaddump", false)
-	viper.SetDefault("sim.loaddumpfilename", "")
-	viper.SetDefault("sim.window.size", 7)
-	viper.SetDefault("sim.window.start", 0)
-	viper.SetDefault("sim.window.stop", 0)
-	viper.SetDefault("sim.cache.watermarks", false)
-	viper.SetDefault("sim.cache.watermark.high", 95.0)
-	viper.SetDefault("sim.cache.watermark.low", 75.0)
-	viper.SetDefault("sim.coldstart", false)
-	viper.SetDefault("sim.coldstartnostats", false)
-	viper.SetDefault("sim.log", false)
-	viper.SetDefault("sim.seed", 42)
-
-	viper.SetDefault("sim.cpuprofile", "")
-	viper.SetDefault("sim.memprofile", "")
-	viper.SetDefault("sim.outputupdatedelay", 2.4)
-
-	viper.SetDefault("sim.cache.size.value", 100.)
-	viper.SetDefault("sim.cache.size.unit", "T")
-	viper.SetDefault("sim.cache.bandwidth.value", 10.0)
-	viper.SetDefault("sim.cache.bandwidth.redirect", false)
-	viper.SetDefault("sim.cache.stats.maxNumDayDiff", 6.0)
-	viper.SetDefault("sim.cache.stats.deltaDaysStep", 7.0)
-
-	viper.SetDefault("sim.weightfunc.name", "FuncAdditiveExp")
-	viper.SetDefault("sim.weightfunc.alpha", 1.0)
-	viper.SetDefault("sim.weightfunc.beta", 1.0)
-	viper.SetDefault("sim.weightfunc.gamma", 1.0)
-	viper.SetDefault("sim.loglevel", "INFO")
-
-	viper.SetDefault("sim.ai.rl.epsilon.start", 1.0)
-	viper.SetDefault("sim.ai.rl.epsilon.decay", 0.0000042)
-	viper.SetDefault("sim.ai.rl.epsilon.unleash", true)
-
-	viper.SetDefault("sim.ai.featuremap", "")
-	viper.SetDefault("sim.ai.rl.type", "SCDL2")
-
-	viper.SetDefault("sim.ai.rl.addition.featuremap", "")
-	viper.SetDefault("sim.ai.rl.addition.epsilon.start", -1.0)
-	viper.SetDefault("sim.ai.rl.addition.epsilon.decay", -1.0)
-	viper.SetDefault("sim.ai.rl.addition.epsilon.unleash", false)
-
-	viper.SetDefault("sim.ai.rl.eviction.featuremap", "")
-	viper.SetDefault("sim.ai.rl.eviction.k", 32)
-	viper.SetDefault("sim.ai.rl.eviction.type", "onK")
-	viper.SetDefault("sim.ai.rl.eviction.epsilon.start", -1.0)
-	viper.SetDefault("sim.ai.rl.eviction.epsilon.decay", -1.0)
-	viper.SetDefault("sim.ai.rl.eviction.epsilon.unleash", false)
-
-	viper.SetDefault("sim.ai.model", "")
-
-	viper.SetDefault("sim.dataset2testpath", "")
-}
-
-func serve() *cobra.Command {
+func serve() *cobra.Command { //nolint: funlen
 	var (
-		host string = "localhost"
-		port uint   = 46692
+		logLevel string
+		conf     serviceConfig
+		host     string = "localhost"
+		port     uint   = 46692
 	)
 
-	serveCmd := &cobra.Command{
-		Use:   "serve",
+	serveCmd := &cobra.Command{ // nolint: exhaustivestruct
+		Use:   "serve config",
 		Short: "start the smart cache service",
 		Long:  `the service to enhance caching data management in a Data Lake`,
-		Run: func(cmd *cobra.Command, args []string) {
-			server := &http.Server{
-				Addr:         fmt.Sprintf("%s:%d", host, port),
-				ReadTimeout:  5 * time.Minute, // 5 min to allow for delays when 'curl' on OSx prompts for username/password
-				WriteTimeout: 10 * time.Second,
-				// TLSConfig:    &tls.Config{ServerName: *host},
+		Args: func(cmd *cobra.Command, args []string) error {
+			if len(args) < 1 {
+				return errorNoConfFile
 			}
 
-			http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-				log.Printf("Received %s request for host %s from IP address %s and X-FORWARDED-FOR %s",
-					r.Method, r.Host, r.RemoteAddr, r.Header.Get("X-FORWARDED-FOR"))
-				body, err := ioutil.ReadAll(r.Body)
-				if err != nil {
-					body = []byte(fmt.Sprintf("error reading request body: %s", err))
-				}
-				resp := fmt.Sprintf("Hello, %s from Smart Cache Service!", body)
-				_, errWrite := w.Write([]byte(resp))
-				if errWrite != nil {
-					log.Err(errWrite).Str("resp", resp).Msg("Cannot write a response")
+			return nil
+		},
+		Run: func(cmd *cobra.Command, args []string) {
+			// Get arguments
+			configFile := args[0]
+
+			// CHECK DEBUG MODE
+			switch logLevel {
+			case "INFO", "info":
+				initLog(zerolog.InfoLevel)
+			case "DEBUG", "debug":
+				initLog(zerolog.DebugLevel)
+			}
+
+			log.Info().Str("config file", configFile).Msg("Get service config file")
+
+			configAbsPath, errAbs := filepath.Abs(configFile)
+			if errAbs != nil {
+				panic(errAbs)
+			}
+			configDir := filepath.Dir(configAbsPath)
+			configFilename := filepath.Base(configAbsPath)
+			configFilenameWithNoExt := strings.TrimSuffix(configFilename, filepath.Ext(configFilename))
+
+			log.Info().Str("path", configAbsPath).Msg("Config file ABS path")
+			log.Info().Str("path", configDir).Msg("Config file Directory")
+			log.Info().Str("file", configFilename).Msg("Config filename")
+			log.Info().Str("file", configFilenameWithNoExt).Msg("Config filename without extension")
+
+			log.Info().Str("path", configDir).Msg("Change dir moving on config parent folder")
+			errChdir := os.Chdir(configDir)
+			if errChdir != nil {
+				panic(errChdir)
+			}
+			curWd, _ := os.Getwd()
+			log.Info().Str("path", curWd).Msg("Current Working Dir")
+
+			log.Info().Msg("Set config defaults")
+			configureServiceViperVars(configFilenameWithNoExt)
+
+			log.Info().Msg("Read conf file")
+			if err := viper.ReadInConfig(); err != nil {
+				if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+					// Config file not found; ignore error if desired
+					panic(err)
 				} else {
-					log.Printf("Sent response %s", resp)
+					// Config file was found but another error was produced
+					panic(err)
 				}
-			})
+			}
 
-			fmt.Println(buildstamp, githash)
+			err := viper.Unmarshal(&conf)
+			if err != nil {
+				panic(fmt.Errorf("unable to decode into struct, %w", err))
+			}
 
-			http.HandleFunc("/version", service.Version(buildstamp, githash))
+			// fmt.Printf("%+v\n", conf)
 
-			log.Printf("Starting HTTP server on host %s and port %d", host, port)
-			if err := server.ListenAndServe(); err != nil {
-				log.Err(err).Msg("Cannot start Smart Cache Service")
+			switch conf.Service.Protocol {
+			case "http", "HTTP", "Http":
+				log.Info().Msg("Create HTTP server")
+				server := &http.Server{
+					Addr:         fmt.Sprintf("%s:%d", host, port),
+					ReadTimeout:  5 * time.Minute, // 5 min to allow for delays when 'curl' on OSx prompts for username/password
+					WriteTimeout: 10 * time.Second,
+					// TLSConfig:    &tls.Config{ServerName: *host},
+				}
+
+				http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+					log.Printf("Received %s request for host %s from IP address %s and X-FORWARDED-FOR %s",
+						r.Method, r.Host, r.RemoteAddr, r.Header.Get("X-FORWARDED-FOR"))
+					body, err := ioutil.ReadAll(r.Body)
+					if err != nil {
+						body = []byte(fmt.Sprintf("error reading request body: %s", err))
+					}
+					resp := fmt.Sprintf("Hello, %s from Smart Cache Service!", body)
+					_, errWrite := w.Write([]byte(resp))
+					if errWrite != nil {
+						log.Err(errWrite).Str("resp", resp).Msg("Cannot write a response")
+					} else {
+						log.Printf("Sent response %s", resp)
+					}
+				})
+
+				http.HandleFunc("/version", service.Version(buildstamp, githash))
+
+				log.Info().Str("host", host).Uint("port", port).Msg("Starting HTTP server")
+				if err := server.ListenAndServe(); err != nil {
+					log.Err(err).Msg("Cannot start Smart Cache Service")
+				}
+				log.Info().Str("host", host).Uint("port", port).Msg("Server HTTP started!")
+			default:
+				panic(fmt.Errorf("protocol '%s' is not supported", conf.Service.Protocol))
 			}
 		},
 	}
+	serveCmd.PersistentFlags().StringVar(
+		&logLevel, "logLevel", "INFO",
+		"[Debugging] Enable or not a level of logging",
+	)
 
 	return serveCmd
 }
@@ -209,14 +218,14 @@ func sim() *cobra.Command { //nolint:ignore,funlen
 		deltaDaysStep float64
 	)
 
-	simCmd := &cobra.Command{
+	simCmd := &cobra.Command{ // nolint: exhaustivestruct
 		Use:   "sim config",
 		Short: "a simulation environment for Smart Cache in a Data Lake",
 		Long: `a simulation environment for Smart Cache in a Data Lake,
 		used as comparison measure for the new approaches`,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) < 1 {
-				return errors.New("requires a configuration file")
+				return errorNoConfFile
 			}
 
 			return nil
@@ -256,9 +265,10 @@ func sim() *cobra.Command { //nolint:ignore,funlen
 			curWd, _ := os.Getwd()
 			log.Info().Str("path", curWd).Msg("Current Working Dir")
 
-			log.Info().Msg("Load config file")
-			configureViper(configFilenameWithNoExt)
+			log.Info().Msg("Set config defaults")
+			configureSimViperVars(configFilenameWithNoExt)
 
+			log.Info().Msg("Read conf file")
 			if err := viper.ReadInConfig(); err != nil {
 				if _, ok := err.(viper.ConfigFileNotFoundError); ok {
 					// Config file not found; ignore error if desired
@@ -670,6 +680,7 @@ func sim() *cobra.Command { //nolint:ignore,funlen
 		&logLevel, "logLevel", "INFO",
 		"[Debugging] Enable or not a level of logging",
 	)
+
 	return simCmd
 }
 
@@ -682,7 +693,7 @@ func Execute() error {
 	//rootCmd.AddCommand(commandSimulateAI())
 	//rootCmd.AddCommand(testDataset())
 
-	rootCmd.AddCommand(&cobra.Command{
+	rootCmd.AddCommand(&cobra.Command{ // nolint: exhaustivestruct
 		Use:   "version",
 		Short: "Print the version number",
 		Long:  "Print the version number of the executable",
