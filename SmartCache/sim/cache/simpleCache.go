@@ -723,14 +723,14 @@ func (cache *SimpleCache) CPUMissEff() float64 {
 
 // CPUEffUpperBound returns the ideal CPU efficiency upper bound
 func (cache *SimpleCache) CPUEffUpperBound() float64 {
-	log.Info().Float64("upperCPUEff", cache.upperCPUEff).Int64("numLocal", cache.numLocal).Msg("UPPER BOUND FUNCTIONS")
+	log.Debug().Float64("upperCPUEff", cache.upperCPUEff).Int64("numLocal", cache.numLocal).Msg("UPPER BOUND FUNCTIONS")
 
 	return cache.upperCPUEff / float64(cache.numLocal)
 }
 
 // CPUEffLowerBound returns the ideal CPU efficiency lower bound
 func (cache *SimpleCache) CPUEffLowerBound() float64 {
-	log.Info().Float64("lowerCPUEff", cache.lowerCPUEff).Int64("numRemote", cache.numRemote).Msg("LOWER BOUND FUNCTIONS")
+	log.Debug().Float64("lowerCPUEff", cache.lowerCPUEff).Int64("numRemote", cache.numRemote).Msg("LOWER BOUND FUNCTIONS")
 
 	return cache.lowerCPUEff / float64(cache.numRemote)
 }
