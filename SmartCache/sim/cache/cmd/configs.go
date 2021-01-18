@@ -69,6 +69,8 @@ func configureSimViperVars(configFilenameWithNoExt string) { //nolint:ignore,fun
 type serviceConfig struct {
 	Service struct {
 		Protocol string
+		Host     string
+		Port     uint
 	}
 }
 
@@ -78,4 +80,6 @@ func configureServiceViperVars(configFilenameWithNoExt string) { //nolint:ignore
 	viper.AddConfigPath(".")                     // optionally look for config in the working directory
 
 	viper.SetDefault("service.protocol", "http")
+	viper.SetDefault("service.host", "localhost")
+	viper.SetDefault("service.port", 46692)
 }

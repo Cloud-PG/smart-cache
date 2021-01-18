@@ -36,8 +36,6 @@ func serve() *cobra.Command { //nolint: funlen
 	var (
 		logLevel string
 		conf     serviceConfig
-		host     string = "localhost"
-		port     uint   = 46692
 	)
 
 	serveCmd := &cobra.Command{ // nolint: exhaustivestruct
@@ -110,6 +108,10 @@ func serve() *cobra.Command { //nolint: funlen
 			switch conf.Service.Protocol {
 			case "http", "HTTP", "Http":
 				log.Info().Msg("Create HTTP server")
+
+				host := conf.Service.Host
+				port := conf.Service.Port
+
 				server := &http.Server{
 					Addr:         fmt.Sprintf("%s:%d", host, port),
 					ReadTimeout:  5 * time.Minute, // 5 min to allow for delays when 'curl' on OSx prompts for username/password
