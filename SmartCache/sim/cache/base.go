@@ -2,6 +2,8 @@ package cache
 
 import (
 	"simulator/v2/cache/files"
+	"simulator/v2/cache/functions"
+	"simulator/v2/cache/queue"
 	"time"
 )
 
@@ -156,6 +158,36 @@ func GetFile(cache Cache, vars ...interface{}) (bool, bool) {
 	CheckWatermark(cache)
 
 	return added, redirect
+}
+
+type InitParameters struct {
+	Log                        bool
+	RedirectReq                bool
+	Watermarks                 bool
+	CalcWeight                 bool
+	QueueType                  queue.QueueType
+	HighWatermark              float64
+	LowWatermark               float64
+	Dataset2TestPath           string
+	AIFeatureMap               string
+	AIModel                    string
+	FunctionTypeString         string
+	WfType                     functions.Type
+	WfParams                   WeightFunctionParameters
+	EvictionAgentType          string
+	RandSeed                   int64
+	AIRLEvictionK              int64
+	AIRLType                   string
+	AIRLAdditionFeatureMap     string
+	AIRLEvictionFeatureMap     string
+	AIRLAdditionEpsilonStart   float64
+	AIRLAdditionEpsilonDecay   float64
+	AIRLAdditionEpsilonUnleash bool
+	AIRLEvictionEpsilonStart   float64
+	AIRLEvictionEpsilonDecay   float64
+	AIRLEvictionEpsilonUnleash bool
+	MaxNumDayDiff              float64
+	DeltaDaysStep              float64
 }
 
 // InitCache initializes the cache instance

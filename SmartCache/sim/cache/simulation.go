@@ -11,8 +11,6 @@ import (
 	"path"
 	"path/filepath"
 	"runtime/pprof"
-	"simulator/v2/cache/functions"
-	"simulator/v2/cache/queue"
 	"sort"
 	"strconv"
 	"strings"
@@ -418,108 +416,6 @@ func GetCacheSize(cacheSize float64, cacheSizeUnit string) float64 {
 		panic("ERROR: unit size not recognized...")
 	}
 	return res
-}
-
-type InitParameters struct {
-	Log                        bool
-	RedirectReq                bool
-	Watermarks                 bool
-	CalcWeight                 bool
-	QueueType                  queue.QueueType
-	HighWatermark              float64
-	LowWatermark               float64
-	Dataset2TestPath           string
-	AIFeatureMap               string
-	AIModel                    string
-	FunctionTypeString         string
-	WfType                     functions.Type
-	WfParams                   WeightFunctionParameters
-	EvictionAgentType          string
-	RandSeed                   int64
-	AIRLEvictionK              int64
-	AIRLType                   string
-	AIRLAdditionFeatureMap     string
-	AIRLEvictionFeatureMap     string
-	AIRLAdditionEpsilonStart   float64
-	AIRLAdditionEpsilonDecay   float64
-	AIRLAdditionEpsilonUnleash bool
-	AIRLEvictionEpsilonStart   float64
-	AIRLEvictionEpsilonDecay   float64
-	AIRLEvictionEpsilonUnleash bool
-	MaxNumDayDiff              float64
-	DeltaDaysStep              float64
-}
-
-func InitInstance(cacheType string, cacheInstance Cache, params InitParameters) { //nolint:ignore,funlen
-
-	switch cacheType {
-	case "infinite":
-		log.Info().Msg("Init infinite Cache")
-		InitCache(cacheInstance, params)
-	case "random":
-		log.Info().Msg("Init random Cache")
-		params.QueueType = queue.NoQueue
-		InitCache(cacheInstance, params)
-	case "random_lru":
-		log.Info().Msg("Init random lru Cache")
-		params.QueueType = queue.LRUQueue
-		InitCache(cacheInstance, params)
-	case "lru":
-		log.Info().Msg("Init LRU Cache")
-		params.QueueType = queue.LRUQueue
-		InitCache(cacheInstance, params)
-	case "lfu":
-		log.Info().Msg("Init LFU Cache")
-		params.QueueType = queue.LFUQueue
-		InitCache(cacheInstance, params)
-	case "sizeBig":
-		log.Info().Msg("Init Size Big Cache")
-		params.QueueType = queue.SizeBigQueue
-		InitCache(cacheInstance, params)
-	case "sizeSmall":
-		params.QueueType = queue.SizeSmallQueue
-		InitCache(cacheInstance, params)
-	case "lruDatasetVerifier":
-		log.Info().Msg("Init lruDatasetVerifier Cache")
-		InitCache(cacheInstance, params)
-	case "aiNN":
-		log.Info().Msg("Init aiNN Cache")
-		if params.AIFeatureMap == "" {
-			fmt.Println("ERR: No feature map indicated...")
-			os.Exit(-1)
-		}
-		InitCache(cacheInstance, params)
-	case "aiRL":
-		log.Info().Msg("Init aiRL Cache")
-		if params.AIRLAdditionFeatureMap == "" {
-			log.Info().Msg("No addition feature map indicated...")
-		}
-		if params.AIRLEvictionFeatureMap == "" {
-			log.Info().Msg("No eviction feature map indicated...")
-		}
-
-		InitCache(cacheInstance, params)
-	case "weightFunLRU":
-		log.Info().Msg("Init Weight Function Cache")
-		params.QueueType = queue.LRUQueue
-		params.CalcWeight = true
-
-		switch params.FunctionTypeString {
-		case "FuncAdditive":
-			params.WfType = functions.Additive
-		case "FuncAdditiveExp":
-			params.WfType = functions.AdditiveExp
-		case "FuncMultiplicative":
-			params.WfType = functions.Multiplicative
-		default:
-			fmt.Println("ERR: No weight function indicated or not correct...")
-			os.Exit(-1)
-		}
-		InitCache(cacheInstance, params)
-	default:
-		fmt.Printf("ERR: '%s' is not a valid cache type to init...\n", cacheType)
-		os.Exit(-2)
-	}
 }
 
 type SimulationParams struct {

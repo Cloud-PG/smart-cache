@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"simulator/v2/cache"
+	"simulator/v2/cache/functions"
+	"simulator/v2/cache/queue"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -222,4 +224,79 @@ func CreateCache(conf interface{}) (baseName string, cacheInstance cache.Cache) 
 	}
 
 	return baseName, cacheInstance
+}
+
+func InitializeCache(cacheType string, cacheInstance cache.Cache, params cache.InitParameters) { //nolint:ignore,funlen
+
+	switch cacheType {
+	case "infinite":
+		log.Info().Msg("Init infinite Cache")
+		cache.InitCache(cacheInstance, params)
+	case "random":
+		log.Info().Msg("Init random Cache")
+		params.QueueType = queue.NoQueue
+		cache.InitCache(cacheInstance, params)
+	case "random_lru":
+		log.Info().Msg("Init random lru Cache")
+		params.QueueType = queue.LRUQueue
+		cache.InitCache(cacheInstance, params)
+	case "lru":
+		log.Info().Msg("Init LRU Cache")
+		params.QueueType = queue.LRUQueue
+		cache.InitCache(cacheInstance, params)
+	case "lfu":
+		log.Info().Msg("Init LFU Cache")
+		params.QueueType = queue.LFUQueue
+		cache.InitCache(cacheInstance, params)
+	case "sizeBig":
+		log.Info().Msg("Init Size Big Cache")
+		params.QueueType = queue.SizeBigQueue
+		cache.InitCache(cacheInstance, params)
+	case "sizeSmall":
+		params.QueueType = queue.SizeSmallQueue
+		cache.InitCache(cacheInstance, params)
+	case "lruDatasetVerifier":
+		log.Info().Msg("Init lruDatasetVerifier Cache")
+		cache.InitCache(cacheInstance, params)
+	case "aiNN":
+		log.Info().Msg("Init aiNN Cache")
+
+		if params.AIFeatureMap == "" {
+			fmt.Println("ERR: No feature map indicated...")
+			os.Exit(-1)
+		}
+		cache.InitCache(cacheInstance, params)
+	case "aiRL":
+		log.Info().Msg("Init aiRL Cache")
+
+		if params.AIRLAdditionFeatureMap == "" {
+			log.Info().Msg("No addition feature map indicated...")
+		}
+
+		if params.AIRLEvictionFeatureMap == "" {
+			log.Info().Msg("No eviction feature map indicated...")
+		}
+
+		cache.InitCache(cacheInstance, params)
+	case "weightFunLRU":
+		log.Info().Msg("Init Weight Function Cache")
+		params.QueueType = queue.LRUQueue
+		params.CalcWeight = true
+
+		switch params.FunctionTypeString {
+		case "FuncAdditive":
+			params.WfType = functions.Additive
+		case "FuncAdditiveExp":
+			params.WfType = functions.AdditiveExp
+		case "FuncMultiplicative":
+			params.WfType = functions.Multiplicative
+		default:
+			fmt.Println("ERR: No weight function indicated or not correct...")
+			os.Exit(-1)
+		}
+		cache.InitCache(cacheInstance, params)
+	default:
+		fmt.Printf("ERR: '%s' is not a valid cache type to init...\n", cacheType)
+		os.Exit(-2)
+	}
 }

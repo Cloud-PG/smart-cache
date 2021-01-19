@@ -106,7 +106,7 @@ func serve() *cobra.Command { //nolint: funlen
 			}
 
 			conf.check()
-			fmt.Printf("%+v\n", conf)
+			log.Debug().Str("conf", fmt.Sprintf("%+v", conf)).Msg("service")
 
 			// // Output files
 			// dumpFileName := "cache_dump.json.gz"
@@ -116,7 +116,48 @@ func serve() *cobra.Command { //nolint: funlen
 			// ------------------------- Create cache --------------------------
 			log.Info().Msg("Creating Cache instance")
 			baseName, curCacheInstance := CreateCache(conf)
-			fmt.Printf("%s\n%+v\n", baseName, curCacheInstance)
+			log.Debug().Str("baseName",
+				baseName).Str("instance",
+				fmt.Sprintf("%+v", curCacheInstance)).Msg("service")
+
+			// ------------------------- Init cache ----------------------------
+			initParameters := cache.InitParameters{
+				Log:                false,
+				RedirectReq:        conf.Service.Cache.Bandwidth.Redirect,
+				Watermarks:         conf.Service.Cache.Watermarks,
+				HighWatermark:      conf.Service.Cache.Watermark.High,
+				LowWatermark:       conf.Service.Cache.Watermark.Low,
+				Dataset2TestPath:   conf.Service.AI.Dataset2TestPath,
+				AIFeatureMap:       conf.Service.AI.Featuremap,
+				AIModel:            conf.Service.AI.Model,
+				FunctionTypeString: conf.Service.WeightFunction.Name,
+				QueueType:          queue.Unassigned,
+				WfType:             functions.Unassigned,
+				CalcWeight:         false,
+				WfParams: cache.WeightFunctionParameters{
+					Alpha: conf.Service.WeightFunction.Alpha,
+					Beta:  conf.Service.WeightFunction.Beta,
+					Gamma: conf.Service.WeightFunction.Gamma,
+				},
+				EvictionAgentType:          conf.Service.AI.RL.Eviction.Type,
+				AIRLEvictionK:              int64(conf.Service.AI.RL.Eviction.K),
+				AIRLType:                   conf.Service.AI.RL.Type,
+				AIRLAdditionFeatureMap:     conf.Service.AI.RL.Addition.Featuremap,
+				AIRLEvictionFeatureMap:     conf.Service.AI.RL.Eviction.Featuremap,
+				AIRLAdditionEpsilonStart:   conf.Service.AI.RL.Addition.Epsilon.Start,
+				AIRLAdditionEpsilonDecay:   conf.Service.AI.RL.Addition.Epsilon.Decay,
+				AIRLAdditionEpsilonUnleash: conf.Service.AI.RL.Addition.Epsilon.Unleash,
+				AIRLEvictionEpsilonStart:   conf.Service.AI.RL.Eviction.Epsilon.Start,
+				AIRLEvictionEpsilonDecay:   conf.Service.AI.RL.Eviction.Epsilon.Decay,
+				AIRLEvictionEpsilonUnleash: conf.Service.AI.RL.Eviction.Epsilon.Unleash,
+				MaxNumDayDiff:              conf.Service.Cache.Stats.MaxNumDayDiff,
+				DeltaDaysStep:              conf.Service.Cache.Stats.DeltaDaysStep,
+				RandSeed:                   int64(conf.Service.Seed),
+			}
+			InitializeCache(conf.Service.Cache.Type, curCacheInstance, initParameters)
+
+			// --------------------- Set cache Bandwidth -----------------------
+			cache.SetBandwidth(curCacheInstance, float64(conf.Service.Cache.Bandwidth.Value))
 
 			// ------------------------ Create service -------------------------
 			switch conf.Service.Protocol {
@@ -150,6 +191,7 @@ func serve() *cobra.Command { //nolint: funlen
 				})
 
 				http.HandleFunc("/version", service.Version(buildstamp, githash))
+				http.HandleFunc("/stats", service.Stats(curCacheInstance))
 
 				log.Info().Str("host", host).Uint("port", port).Msg("Starting HTTP server")
 				if err := server.ListenAndServe(); err != nil {
@@ -255,43 +297,40 @@ func sim() *cobra.Command { //nolint:ignore,funlen
 			baseName, curCacheInstance := CreateCache(conf)
 
 			// ------------------------- Init cache ----------------------------
-			cache.InitInstance(
-				conf.Sim.Cache.Type,
-				curCacheInstance,
-				cache.InitParameters{
-					Log:                conf.Sim.Log,
-					RedirectReq:        conf.Sim.Cache.Bandwidth.Redirect,
-					Watermarks:         conf.Sim.Cache.Watermarks,
-					HighWatermark:      conf.Sim.Cache.Watermark.High,
-					LowWatermark:       conf.Sim.Cache.Watermark.Low,
-					Dataset2TestPath:   conf.Sim.AI.Dataset2TestPath,
-					AIFeatureMap:       conf.Sim.AI.Featuremap,
-					AIModel:            conf.Sim.AI.Model,
-					FunctionTypeString: conf.Sim.WeightFunction.Name,
-					QueueType:          queue.Unassigned,
-					WfType:             functions.Unassigned,
-					CalcWeight:         false,
-					WfParams: cache.WeightFunctionParameters{
-						Alpha: conf.Sim.WeightFunction.Alpha,
-						Beta:  conf.Sim.WeightFunction.Beta,
-						Gamma: conf.Sim.WeightFunction.Gamma,
-					},
-					EvictionAgentType:          conf.Sim.AI.RL.Eviction.Type,
-					AIRLEvictionK:              int64(conf.Sim.AI.RL.Eviction.K),
-					AIRLType:                   conf.Sim.AI.RL.Type,
-					AIRLAdditionFeatureMap:     conf.Sim.AI.RL.Addition.Featuremap,
-					AIRLEvictionFeatureMap:     conf.Sim.AI.RL.Eviction.Featuremap,
-					AIRLAdditionEpsilonStart:   conf.Sim.AI.RL.Addition.Epsilon.Start,
-					AIRLAdditionEpsilonDecay:   conf.Sim.AI.RL.Addition.Epsilon.Decay,
-					AIRLAdditionEpsilonUnleash: conf.Sim.AI.RL.Addition.Epsilon.Unleash,
-					AIRLEvictionEpsilonStart:   conf.Sim.AI.RL.Eviction.Epsilon.Start,
-					AIRLEvictionEpsilonDecay:   conf.Sim.AI.RL.Eviction.Epsilon.Decay,
-					AIRLEvictionEpsilonUnleash: conf.Sim.AI.RL.Eviction.Epsilon.Unleash,
-					MaxNumDayDiff:              conf.Sim.Cache.Stats.MaxNumDayDiff,
-					DeltaDaysStep:              conf.Sim.Cache.Stats.DeltaDaysStep,
-					RandSeed:                   int64(conf.Sim.Seed),
+			initParameters := cache.InitParameters{
+				Log:                conf.Sim.Log,
+				RedirectReq:        conf.Sim.Cache.Bandwidth.Redirect,
+				Watermarks:         conf.Sim.Cache.Watermarks,
+				HighWatermark:      conf.Sim.Cache.Watermark.High,
+				LowWatermark:       conf.Sim.Cache.Watermark.Low,
+				Dataset2TestPath:   conf.Sim.AI.Dataset2TestPath,
+				AIFeatureMap:       conf.Sim.AI.Featuremap,
+				AIModel:            conf.Sim.AI.Model,
+				FunctionTypeString: conf.Sim.WeightFunction.Name,
+				QueueType:          queue.Unassigned,
+				WfType:             functions.Unassigned,
+				CalcWeight:         false,
+				WfParams: cache.WeightFunctionParameters{
+					Alpha: conf.Sim.WeightFunction.Alpha,
+					Beta:  conf.Sim.WeightFunction.Beta,
+					Gamma: conf.Sim.WeightFunction.Gamma,
 				},
-			)
+				EvictionAgentType:          conf.Sim.AI.RL.Eviction.Type,
+				AIRLEvictionK:              int64(conf.Sim.AI.RL.Eviction.K),
+				AIRLType:                   conf.Sim.AI.RL.Type,
+				AIRLAdditionFeatureMap:     conf.Sim.AI.RL.Addition.Featuremap,
+				AIRLEvictionFeatureMap:     conf.Sim.AI.RL.Eviction.Featuremap,
+				AIRLAdditionEpsilonStart:   conf.Sim.AI.RL.Addition.Epsilon.Start,
+				AIRLAdditionEpsilonDecay:   conf.Sim.AI.RL.Addition.Epsilon.Decay,
+				AIRLAdditionEpsilonUnleash: conf.Sim.AI.RL.Addition.Epsilon.Unleash,
+				AIRLEvictionEpsilonStart:   conf.Sim.AI.RL.Eviction.Epsilon.Start,
+				AIRLEvictionEpsilonDecay:   conf.Sim.AI.RL.Eviction.Epsilon.Decay,
+				AIRLEvictionEpsilonUnleash: conf.Sim.AI.RL.Eviction.Epsilon.Unleash,
+				MaxNumDayDiff:              conf.Sim.Cache.Stats.MaxNumDayDiff,
+				DeltaDaysStep:              conf.Sim.Cache.Stats.DeltaDaysStep,
+				RandSeed:                   int64(conf.Sim.Seed),
+			}
+			InitializeCache(conf.Sim.Cache.Type, curCacheInstance, initParameters)
 
 			// --------------------- Set cache Bandwidth -----------------------
 			cache.SetBandwidth(curCacheInstance, float64(conf.Sim.Cache.Bandwidth.Value))
