@@ -95,7 +95,7 @@ type Cache interface {
 }
 
 // GetFile requests a file to the cache
-func GetFile(cache Cache, vars ...interface{}) (bool, bool) {
+func GetFile(cache Cache, vars ...interface{}) (added bool, redirect bool) {
 	/* vars:
 	[0] -> filename int64
 	[1] -> size     float64
@@ -142,7 +142,6 @@ func GetFile(cache Cache, vars ...interface{}) (bool, bool) {
 	hit := Check(cache, cacheRequest.Filename)
 
 	// Check Redirect
-	redirect := false
 	if !hit {
 		redirect = CheckRedirect(cache, cacheRequest.Filename, cacheRequest.Size)
 	}
@@ -151,7 +150,7 @@ func GetFile(cache Cache, vars ...interface{}) (bool, bool) {
 	}
 	// Manage request
 	fileStats, hit := BeforeRequest(cache, &cacheRequest, hit)
-	added := UpdatePolicy(cache, &cacheRequest, fileStats, hit)
+	added = UpdatePolicy(cache, &cacheRequest, fileStats, hit)
 	AfterRequest(cache, &cacheRequest, fileStats, hit, added)
 
 	// Check watermarks

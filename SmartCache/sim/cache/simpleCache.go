@@ -707,32 +707,62 @@ func (cache *SimpleCache) ExtraOutput(info string) string {
 }
 
 // CPUEff returns the CPU efficiency
-func (cache *SimpleCache) CPUEff() float64 {
-	return (cache.hitCPUEff + cache.missCPUEff) / float64(cache.numDailyHit+cache.numDailyMiss)
+func (cache *SimpleCache) CPUEff() (result float64) {
+	val := (cache.hitCPUEff + cache.missCPUEff) / float64(cache.numDailyHit+cache.numDailyMiss)
+
+	if !math.IsNaN(val) {
+		result = val
+	}
+
+	return result
 }
 
 // CPUHitEff returns the CPU efficiency for hit data
-func (cache *SimpleCache) CPUHitEff() float64 {
-	return cache.hitCPUEff / float64(cache.numDailyHit)
+func (cache *SimpleCache) CPUHitEff() (result float64) {
+	val := cache.hitCPUEff / float64(cache.numDailyHit)
+
+	if !math.IsNaN(val) {
+		result = val
+	}
+
+	return result
 }
 
 // CPUMissEff returns the CPU efficiency for miss data
-func (cache *SimpleCache) CPUMissEff() float64 {
-	return cache.missCPUEff / float64(cache.numDailyMiss)
+func (cache *SimpleCache) CPUMissEff() (result float64) {
+	val := cache.missCPUEff / float64(cache.numDailyMiss)
+
+	if !math.IsNaN(val) {
+		result = val
+	}
+
+	return result
 }
 
 // CPUEffUpperBound returns the ideal CPU efficiency upper bound
-func (cache *SimpleCache) CPUEffUpperBound() float64 {
+func (cache *SimpleCache) CPUEffUpperBound() (result float64) {
 	log.Debug().Float64("upperCPUEff", cache.upperCPUEff).Int64("numLocal", cache.numLocal).Msg("UPPER BOUND FUNCTIONS")
 
-	return cache.upperCPUEff / float64(cache.numLocal)
+	val := cache.upperCPUEff / float64(cache.numLocal)
+
+	if !math.IsNaN(val) {
+		result = val
+	}
+
+	return result
 }
 
 // CPUEffLowerBound returns the ideal CPU efficiency lower bound
-func (cache *SimpleCache) CPUEffLowerBound() float64 {
+func (cache *SimpleCache) CPUEffLowerBound() (result float64) {
 	log.Debug().Float64("lowerCPUEff", cache.lowerCPUEff).Int64("numRemote", cache.numRemote).Msg("LOWER BOUND FUNCTIONS")
 
-	return cache.lowerCPUEff / float64(cache.numRemote)
+	val := cache.lowerCPUEff / float64(cache.numRemote)
+
+	if !math.IsNaN(val) {
+		result = val
+	}
+
+	return result
 }
 
 // CPUEffBoundDiff returns the ideal CPU efficiency bound difference
@@ -763,8 +793,13 @@ func (cache *SimpleCache) NumFiles() int {
 }
 
 // AvgFreeSpace returns the average free space of the cache
-func (cache *SimpleCache) AvgFreeSpace() float64 {
-	return cache.sumDailyFreeSpace / float64(len(cache.dailyfreeSpace))
+func (cache *SimpleCache) AvgFreeSpace() (result float64) {
+	val := cache.sumDailyFreeSpace / float64(len(cache.dailyfreeSpace))
+	if !math.IsNaN(val) {
+		result = val
+	}
+
+	return result
 }
 
 // StdDevFreeSpace returns the standard deviation of the free space of the cache

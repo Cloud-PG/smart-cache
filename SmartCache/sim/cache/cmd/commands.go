@@ -192,6 +192,7 @@ func serve() *cobra.Command { //nolint: funlen
 
 				http.HandleFunc("/version", service.Version(buildstamp, githash))
 				http.HandleFunc("/stats", service.Stats(curCacheInstance))
+				http.HandleFunc("/get", service.Get(curCacheInstance))
 
 				log.Info().Str("host", host).Uint("port", port).Msg("Starting HTTP server")
 				if err := server.ListenAndServe(); err != nil {
