@@ -28,11 +28,11 @@ func Version(buildstamp string, githash string) func(http.ResponseWriter, *http.
 
 type statsJSON struct {
 	Date                    string  `json:"date"`
-	NumReq                  int     `json:"num_req"`
-	NumHit                  int     `json:"num_hit"`
-	NumAdded                int     `json:"num_added"`
-	NumDeleted              int     `json:"num_deleted"`
-	NumRedirected           int     `json:"num_redirected"`
+	NumReq                  int64   `json:"num_req"`
+	NumHit                  int64   `json:"num_hit"`
+	NumAdded                int64   `json:"num_added"`
+	NumDeleted              int64   `json:"num_deleted"`
+	NumRedirected           int64   `json:"num_redirected"`
 	NumMissAfterDelete      int     `json:"num_miss_after_delete"`
 	SizeRedirected          float64 `json:"size_redirected"`
 	CacheSize               float64 `json:"cache_size"`
@@ -49,11 +49,11 @@ type statsJSON struct {
 	DeletedData             float64 `json:"deleted_data"`
 	AvgFreeSpace            float64 `json:"avg_free_space"`
 	StdDevFreeSpace         float64 `json:"std_dev_free_space"`
-	CpuEfficiency           float64 `json:"cpu_efficiency"`
-	CpuHitEfficiency        float64 `json:"cpu_hit_efficiency"`
-	CpuMissEfficiency       float64 `json:"cpu_miss_efficiency"`
-	CpuEfficiencyUpperBound float64 `json:"cpu_efficiency_upper_bound"`
-	CpuEfficiencyLowerBound float64 `json:"cpu_efficiency_lower_bound"`
+	CPUEfficiency           float64 `json:"cpu_efficiency"`
+	CPUHitEfficiency        float64 `json:"cpu_hit_efficiency"`
+	CPUMissEfficiency       float64 `json:"cpu_miss_efficiency"`
+	CPUEfficiencyUpperBound float64 `json:"cpu_efficiency_upper_bound"`
+	CPUEfficiencyLowerBound float64 `json:"cpu_efficiency_lower_bound"`
 }
 
 func Stats(cacheInstance cache.Cache) func(http.ResponseWriter, *http.Request) {
@@ -62,35 +62,34 @@ func Stats(cacheInstance cache.Cache) func(http.ResponseWriter, *http.Request) {
 			r.Method, r.Host, r.RemoteAddr, r.Header.Get("X-FORWARDED-FOR"))
 
 		curStats := statsJSON{
-			Date: time.Now().String(),
+			Date:                    time.Now().String(),
+			NumReq:                  cache.NumRequests(cacheInstance),
+			NumHit:                  cache.NumHits(cacheInstance),
+			NumAdded:                cache.NumAdded(cacheInstance),
+			NumDeleted:              cache.NumDeleted(cacheInstance),
+			NumRedirected:           cache.NumRedirected(cacheInstance),
+			NumMissAfterDelete:      cache.GetTotDeletedFileMiss(cacheInstance),
+			SizeRedirected:          cache.RedirectedSize(cacheInstance),
+			CacheSize:               cache.GetMaxSize(cacheInstance),
+			Size:                    cache.Size(cacheInstance),
+			Capacity:                cache.Capacity(cacheInstance),
+			Bandwidth:               cache.Bandwidth(cacheInstance),
+			BandwidthUsage:          cache.BandwidthUsage(cacheInstance),
+			HitRate:                 cache.HitRate(cacheInstance),
+			WeightedHitRate:         cache.WeightedHitRate(cacheInstance),
+			WrittenData:             cache.DataWritten(cacheInstance),
+			ReadData:                cache.DataRead(cacheInstance),
+			ReadOnHitData:           cache.DataReadOnHit(cacheInstance),
+			ReadOnMissData:          cache.DataReadOnMiss(cacheInstance),
+			DeletedData:             cache.DataDeleted(cacheInstance),
+			AvgFreeSpace:            cache.AvgFreeSpace(cacheInstance),
+			StdDevFreeSpace:         cache.StdDevFreeSpace(cacheInstance),
+			CPUEfficiency:           cache.CPUEff(cacheInstance),
+			CPUHitEfficiency:        cache.CPUHitEff(cacheInstance),
+			CPUMissEfficiency:       cache.CPUMissEff(cacheInstance),
+			CPUEfficiencyUpperBound: cache.CPUEffUpperBound(cacheInstance),
+			CPUEfficiencyLowerBound: cache.CPUEffLowerBound(cacheInstance),
 		}
-
-		// cache.NumRequests(cacheInstance)
-		// cache.NumHits(cacheInstance)
-		// cache.NumAdded(cacheInstance)
-		// cache.NumDeleted(cacheInstance)
-		// cache.NumRedirected(cacheInstance)
-		// cache.GetTotDeletedFileMiss(cacheInstance)
-		// cache.RedirectedSize(cacheInstance)
-		// cache.GetMaxSize(cacheInstance)
-		// cache.Size(cacheInstance)
-		// cache.Capacity(cacheInstance)
-		// cache.Bandwidth(cacheInstance)
-		// cache.BandwidthUsage(cacheInstance)
-		// cache.HitRate(cacheInstance)
-		// cache.WeightedHitRate(cacheInstance)
-		// cache.DataWritten(cacheInstance)
-		// cache.DataRead(cacheInstance)
-		// cache.DataReadOnHit(cacheInstance)
-		// cache.DataReadOnMiss(cacheInstance)
-		// cache.DataDeleted(cacheInstance)
-		// cache.AvgFreeSpace(cacheInstance)
-		// cache.StdDevFreeSpace(cacheInstance)
-		// cache.CPUEff(cacheInstance)
-		// cache.CPUHitEff(cacheInstance)
-		// cache.CPUMissEff(cacheInstance)
-		// cache.CPUEffUpperBound(cacheInstance)
-		// cache.CPUEffLowerBound(cacheInstance)
 
 		jsonOutput, errMarshal := json.Marshal(curStats)
 		if errMarshal != nil {
