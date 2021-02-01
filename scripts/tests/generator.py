@@ -186,7 +186,7 @@ class ConfigParameters:
 
 def compose(
     base: "list[ConfigParameters]", param, list_: list, condition=None
-) -> list["ConfigParameters"]:
+) -> "list[ConfigParameters]":
     new_list = []
     if condition is not None:
         new_list = [elm for elm in base if not condition(elm)]
