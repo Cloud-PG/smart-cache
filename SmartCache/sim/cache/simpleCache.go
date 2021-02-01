@@ -85,6 +85,8 @@ type SimpleCache struct {
 	lowWatermark                       float64
 	numDailyHit                        int64
 	numDailyMiss                       int64
+	numFreeCalls                       int64
+	numOverHighWatermark               int64
 	prevTime                           time.Time
 	curTime                            time.Time
 	region                             string
@@ -426,6 +428,10 @@ func (cache *SimpleCache) UpdatePolicy(request *Request, fileStats *files.Stats,
 func (cache *SimpleCache) AfterRequest(request *Request, fileStats *files.Stats, hit bool, added bool) {
 	var currentCPUEff float64
 
+	if cache.Capacity() >= cache.highWatermark {
+		cache.numOverHighWatermark++
+	}
+
 	if request.CPUEff > 0. {
 		switch request.Protocol {
 		case 1:
@@ -485,6 +491,8 @@ func (cache *SimpleCache) Free(amount float64, percentage bool) float64 { // nol
 	// 	zap.Float64("mean recency", cache.MeanRecency()),
 	// 	zap.Int("num. files", cache.NumFiles()),
 	// )
+	cache.numFreeCalls++
+
 	cache.stats.ClearDeletedFileMiss()
 
 	var (
@@ -867,4 +875,11 @@ func (cache *SimpleCache) Terminate() error {
 
 func (cache *SimpleCache) GetTotDeletedFileMiss() int {
 	return cache.stats.GetTotDeletedFileMiss()
+}
+
+func (cache *SimpleCache) NumFreeCalls() int64 {
+	return cache.numFreeCalls
+}
+func (cache *SimpleCache) NumOverHighWatermark() int64 {
+	return cache.numOverHighWatermark
 }

@@ -82,6 +82,8 @@ type Cache interface {
 	NumAdded() int64
 	NumDeleted() int64
 	NumRedirected() int64
+	NumFreeCalls() int64
+	NumOverHighWatermark() int64
 	RedirectedSize() float64
 	GetTotDeletedFileMiss() int
 
@@ -406,4 +408,11 @@ func Terminate(cache Cache) error {
 
 func GetTotDeletedFileMiss(cache Cache) int {
 	return cache.GetTotDeletedFileMiss()
+}
+
+func NumFreeCalls(cache Cache) int64 {
+	return cache.NumFreeCalls()
+}
+func NumOverHighWatermark(cache Cache) int64 {
+	return cache.NumOverHighWatermark()
 }
