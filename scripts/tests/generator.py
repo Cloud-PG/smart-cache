@@ -178,14 +178,14 @@ class ConfigParameters:
                     "watermarks" if self.cache_watermark else "noWatermarks",
                     f"{self.cache_size}",
                     f"A{self.additionEpsilonDecay:0.6f}",
-                    f"E{self.additionEpsilonDecay:0.6f}",
+                    f"E{self.evictionEpsilonDecay:0.6f}",
                 )
                 .as_posix()
             )
 
 
 def compose(
-    base: list["ConfigParameters"], param, list_: list, condition=None
+    base: "list[ConfigParameters]", param, list_: list, condition=None
 ) -> list["ConfigParameters"]:
     new_list = []
     if condition is not None:
@@ -220,43 +220,43 @@ def generator(data_path: "pathlib.Path", args):
 
     regions = [
         "it",
-        "us",
+        # "us",
     ]
     windows = [
         (0, 4),
-        (4, 8),
-        (8, 12),
-        (12, 16),
-        (16, 20),
-        (20, 24),
-        (24, 28),
-        (28, 32),
-        (32, 36),
-        (36, 40),
-        (40, 44),
-        (44, 48),
-        (48, 52),
-        # Trimester
-        (0, 12),
-        (12, 24),
-        (24, 36),
-        (36, 48),
-        (48, 52),
-        # Quadrimester
-        (0, 16),
-        (16, 32),
-        (32, 48),
-        (48, 52),
+        # (4, 8),
+        # (8, 12),
+        # (12, 16),
+        # (16, 20),
+        # (20, 24),
+        # (24, 28),
+        # (28, 32),
+        # (32, 36),
+        # (36, 40),
+        # (40, 44),
+        # (44, 48),
+        # (48, 52),
+        # # Trimester
+        # (0, 12),
+        # (12, 24),
+        # (24, 36),
+        # (36, 48),
+        # (48, 52),
+        # # Quadrimester
+        # (0, 16),
+        # (16, 32),
+        # (32, 48),
+        # (48, 52),
     ]
     cache_types = [
-        ("aiRL", "SCDL", ""),
-        ("aiRL", "SCDL2", "onK"),
+        # ("aiRL", "SCDL", ""),
+        # ("aiRL", "SCDL2", "onK"),
         ("aiRL", "SCDL2", "onFree"),
-        ("aiRL", "SCDL2", "NoEviction"),
-        ("lru", "", ""),
-        ("lfu", "", ""),
-        ("sizeBig", "", ""),
-        ("sizeSmall", "", ""),
+        # ("aiRL", "SCDL2", "NoEviction"),
+        # ("lru", "", ""),
+        # ("lfu", "", ""),
+        # ("sizeBig", "", ""),
+        # ("sizeSmall", "", ""),
     ]
     cache_watermarks = [
         True,
@@ -268,8 +268,8 @@ def generator(data_path: "pathlib.Path", args):
     ]
     epsilon = [
         0.1,
-        0.001,
-        0.0001,
+        # 0.001,
+        # 0.0001,
     ]
     k = [
         1024,
