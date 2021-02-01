@@ -3,7 +3,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from .dashboard import LAYOUT
+from .dashboard import PLOT_LAYOUT
 from .data import get_all_metric_values
 from .utils import LogDeleteEvaluator
 
@@ -29,8 +29,8 @@ def metric_corr(results: list):
 
 
 def plot_num_miss_after_del(results: list, output_filename: str = ""):
-    fig = go.Figure(layout=LAYOUT)
-    fig_cum = go.Figure(layout=LAYOUT)
+    fig = go.Figure(layout=PLOT_LAYOUT)
+    fig_cum = go.Figure(layout=PLOT_LAYOUT)
 
     res = {}
 

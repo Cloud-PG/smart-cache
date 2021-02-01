@@ -223,7 +223,18 @@ def missing_column(func):
 
 
 @missing_column
+def measure_score(df: "pd.DataFrame") -> "pd.Series":
+    score = measure_throughput_ratio(df) - measure_cost_ratio(df)
+    return score
+
+
+@missing_column
 def measure_throughput_ratio(df: "pd.DataFrame") -> "pd.Series":
+    return (df["read on hit data"]) / df["cache size"]
+
+
+@missing_column
+def measure_throughput_ratio_old(df: "pd.DataFrame") -> "pd.Series":
     return (df["read on hit data"] - df["written data"]) / df["cache size"]
 
 
@@ -234,6 +245,12 @@ def measure_cost_ratio(df: "pd.DataFrame") -> "pd.Series":
 
 @missing_column
 def measure_throughput(df: "pd.DataFrame") -> "pd.Series":
+    # to Terabytes
+    return df["read on hit data"] / (1024.0 ** 2.0)
+
+
+@missing_column
+def measure_throughput_old(df: "pd.DataFrame") -> "pd.Series":
     # to Terabytes
     return (df["read on hit data"] - df["written data"]) / (1024.0 ** 2.0)
 
@@ -326,6 +343,7 @@ def make_table(
     top_n: int = 0,
     extended: bool = False,
     sort_by_roh_first: bool = False,
+    new_metrics: bool = True,
 ) -> Tuple["pd.DataFrame", list]:
     """Make html table from files to plot
 
@@ -338,7 +356,7 @@ def make_table(
     """
     table = []
     for file_, df in files2plot:
-        values = get_measures(file_, df, extended=extended)
+        values = get_measures(file_, df, extended=extended, new_metrics=new_metrics)
         values[0] = values[0].replace(prefix, "").replace(f"/{SIM_RESULT_FILENAME}", "")
 
         row_name = []
@@ -396,27 +414,37 @@ def make_table(
             "Num. miss after del.",
             "CPU Eff.",
         ]
+
+    if new_metrics:
+        columns.insert(2, "Score")
+
     df = pd.DataFrame(table, columns=columns)
 
     if sort_by_roh_first:
+        sort_list = [
+            "Read on hit ratio",
+            "Throughput",
+            "Cost",
+            "Num. miss after del.",
+        ]
+        if new_metrics:
+            sort_list.insert(0, "Score")
         df = df.sort_values(
-            by=[
-                "Read on hit ratio",
-                "Throughput",
-                "Cost",
-                "Num. miss after del.",
-            ],
-            ascending=[False, False, True, False],
+            by=sort_list,
+            ascending=[False if elm != "Cost" else True for elm in sort_list],
         )
     else:
+        sort_list = [
+            "Throughput",
+            "Cost",
+            "Read on hit ratio",
+            "Num. miss after del.",
+        ]
+        if new_metrics:
+            sort_list.insert(0, "Score")
         df = df.sort_values(
-            by=[
-                "Throughput",
-                "Cost",
-                "Read on hit ratio",
-                "Num. miss after del.",
-            ],
-            ascending=[False, True, False, False],
+            by=sort_list,
+            ascending=[False if elm != "Cost" else True for elm in sort_list],
         )
 
     df = df.round(6)
@@ -430,20 +458,30 @@ def make_table(
 
 
 def get_measures(
-    cache_filename: str, df: "pd.DataFrame", extended: bool = False
+    cache_filename: str,
+    df: "pd.DataFrame",
+    extended: bool = False,
+    new_metrics: bool = True,
 ) -> list:
     measures = [cache_filename]
     # print(cache_filename)
 
     # Throughput ratio
-    measures.append(measure_throughput_ratio(df).mean())
+    if new_metrics:
+        measures.append(measure_score(df).mean())
+        measures.append(measure_throughput_ratio(df).mean())
+    else:
+        measures.append(measure_throughput_ratio_old(df).mean())
 
     # Cost ratio
     measures.append(measure_cost_ratio(df).mean())
 
     if extended:
         # Throughput (TB)
-        measures.append(measure_throughput(df).mean())
+        if new_metrics:
+            measures.append(measure_throughput(df).mean())
+        else:
+            measures.append(measure_throughput_old(df).mean())
 
         # Cost (TB)
         measures.append(measure_cost(df).mean())
