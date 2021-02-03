@@ -658,7 +658,10 @@ func Simulate(cacheType string, cacheInstance Cache, param SimulationParams) { /
 			// 	CPUEffUpperBound(cacheInstance),
 			// ).Float64("CPU eff Lower Bound",
 			// 	CPUEffLowerBound(cacheInstance)).Msg("STATS")
-			// ClearStats(cacheInstance)
+
+			// Clear daily stats
+			ClearStats(cacheInstance)
+
 			// log.Debug().Float64("CPU eff.",
 			// 	CPUEff(cacheInstance),
 			// ).Float64("CPU eff Upper Bound",
@@ -666,6 +669,7 @@ func Simulate(cacheType string, cacheInstance Cache, param SimulationParams) { /
 			// ).Float64("CPU eff Lower Bound",
 			// 	CPUEffLowerBound(cacheInstance)).Msg("STATS")
 			// Update time window
+
 			latestTime = curTime
 			windowStepCounter++
 		}
