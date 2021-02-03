@@ -215,6 +215,8 @@ func (cache *SimpleCache) ClearStats() {
 	cache.numLocal = 0
 	cache.numRemote = 0
 	cache.redirectSize = 0.
+	cache.numFreeCalls = 0
+	cache.numOverHighWatermark = 0
 }
 
 // Dumps the SimpleCache cache
