@@ -14,6 +14,8 @@ pipenv install --dev
 ```bash
 cd SmartCache/sim/Utilities
 python3 setup.py install
+# OR
+python3 -m pip install -e SmartCache/sim/Utilities
 ```
 
 ### Use the simulator utilities
@@ -33,6 +35,8 @@ python3 -m utils simPath
 ```bash
 cd Probe
 python3 setup.py install
+# OR
+python3 -m pip install -e Probe
 ```
 
 ### Open the dashboard
