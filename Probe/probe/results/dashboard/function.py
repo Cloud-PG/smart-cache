@@ -45,8 +45,10 @@ def create(results: "Results", server_ip: str = "localhost"):
     cache_manager = DashCacheManager(DASH_CACHE_DIRS)
     cache_manager.init().set("results", hash_="data", data=results)
 
+    # Assets ref: https://dash.plotly.com/external-resources
     app = dash.Dash(
-        "Result Dashboard",
+        name=__name__,
+        title="Result Dashboard",
         external_stylesheets=[_EXTERNAL_STYLESHEETS, dbc.themes.BOOTSTRAP],
         suppress_callback_exceptions=True,  # For dynamic callback attachment
     )

@@ -22,9 +22,11 @@ COLUMNS = [
     "num added",
     "num deleted",
     "num redirected",
+    "num miss after delete",
+    "num free calls",
+    "num over high watermark",
     "size redirected",
     "cache size",
-    "num miss after delete",
     "size",
     "capacity",
     "bandwidth",
@@ -410,8 +412,10 @@ def make_table(
             "Throughput",
             "Cost",
             "Read on hit ratio",
+            "Read on hit (TB)",
             "Bandwidth",
-            "Num. miss after del.",
+            "Avg. Free Space",
+            "Std. Dev. Free Space",
             "CPU Eff.",
         ]
 
@@ -425,7 +429,6 @@ def make_table(
             "Read on hit ratio",
             "Throughput",
             "Cost",
-            "Num. miss after del.",
         ]
         if new_metrics:
             sort_list.insert(0, "Score")
@@ -438,7 +441,6 @@ def make_table(
             "Throughput",
             "Cost",
             "Read on hit ratio",
-            "Num. miss after del.",
         ]
         if new_metrics:
             sort_list.insert(0, "Score")
@@ -447,7 +449,7 @@ def make_table(
             ascending=[False if elm != "Cost" else True for elm in sort_list],
         )
 
-    df = df.round(6)
+    df = df.round(2)
     if top_n != 0:
         df = df.iloc[:10]
 
@@ -490,13 +492,12 @@ def get_measures(
     measures.append(measure_read_on_hit_ratio(df).mean())
 
     # Read on hit
-    if extended:
-        measures.append(df["read on hit data"].mean() / (1024.0 ** 2.0))
+    measures.append(df["read on hit data"].mean() / (1024.0 ** 2.0))
 
     # Bandwidth percentage
     measures.append(measure_bandwidth(df).mean())
 
-    # Bandwidth
+    # Bandwidth (TB)
     if extended:
         measures.append(df["read on miss data"].mean() / (1024.0 ** 2.0))
 
@@ -504,17 +505,19 @@ def get_measures(
         # Redirect Vol.
         measures.append(measure_redirect_volume(df).mean())
 
-        # Avg. Free Space
-        measures.append(measure_avg_free_space(df).mean())
+    # Avg. Free Space
+    measures.append(measure_avg_free_space(df).mean())
 
-        # Std. Dev. Free Space
-        measures.append(measure_std_dev_free_space(df).mean())
+    # Std. Dev. Free Space
+    measures.append(measure_std_dev_free_space(df).mean())
 
-        # Hit over Miss
+    # Hit over Miss
+    if extended:
         measures.append(measure_hit_over_miss(df).mean())
 
     # Num. miss after delete
-    measures.append(measure_num_miss_after_delete(df).mean())
+    if extended:
+        measures.append(measure_num_miss_after_delete(df).mean())
 
     if extended:
         # Hit rate
