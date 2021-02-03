@@ -122,7 +122,7 @@ func (cache *AIRL) Init(params InitParameters) interface{} { //nolint:ignore,fun
 			panic("ERROR: No eviction feature map indicated")
 		}
 
-		if evictionFeatureMap != "" {
+		if cache.evictionType != NoEviction && evictionFeatureMap != "" {
 			params.QueueType = queue.NoQueue
 			cache.SimpleCache.Init(params)
 
