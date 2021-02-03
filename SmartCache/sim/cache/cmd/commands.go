@@ -36,7 +36,7 @@ var (
 
 func serve() *cobra.Command { //nolint: funlen
 	var (
-		logLevel string
+		debugLog bool
 		conf     ServiceConfig
 	)
 
@@ -55,11 +55,10 @@ func serve() *cobra.Command { //nolint: funlen
 			// Get arguments
 			configFile := args[0]
 
+			initLog(zerolog.InfoLevel)
+
 			// CHECK DEBUG MODE
-			switch logLevel {
-			case "INFO", "info":
-				initLog(zerolog.InfoLevel)
-			case "DEBUG", "debug":
+			if debugLog {
 				initLog(zerolog.DebugLevel)
 			}
 
@@ -204,9 +203,9 @@ func serve() *cobra.Command { //nolint: funlen
 			}
 		},
 	}
-	serveCmd.PersistentFlags().StringVar(
-		&logLevel, "logLevel", "INFO",
-		"[Debugging] Enable or not a level of logging",
+	serveCmd.PersistentFlags().BoolVar(
+		&debugLog, "debug", false,
+		"[Debugging] Enable debug logging",
 	)
 
 	return serveCmd
@@ -215,7 +214,7 @@ func serve() *cobra.Command { //nolint: funlen
 func sim() *cobra.Command { //nolint:ignore,funlen
 	// Simulation config variables
 	var (
-		logLevel string
+		debugLog bool
 		conf     SimConfig
 	)
 
@@ -235,11 +234,10 @@ func sim() *cobra.Command { //nolint:ignore,funlen
 			// Get arguments
 			configFile := args[0]
 
+			initLog(zerolog.InfoLevel)
+
 			// CHECK DEBUG MODE
-			switch logLevel {
-			case "INFO", "info":
-				initLog(zerolog.InfoLevel)
-			case "DEBUG", "debug":
+			if debugLog {
 				initLog(zerolog.DebugLevel)
 			}
 
@@ -391,9 +389,9 @@ func sim() *cobra.Command { //nolint:ignore,funlen
 			)
 		},
 	}
-	simCmd.PersistentFlags().StringVar(
-		&logLevel, "logLevel", "INFO",
-		"[Debugging] Enable or not a level of logging",
+	simCmd.PersistentFlags().BoolVar(
+		&debugLog, "debug", false,
+		"[Debugging] Enable debug logging",
 	)
 
 	return simCmd
