@@ -25,7 +25,7 @@ python3 -m utils --help
 # Example to fast compile
 python3 -m utils compile --fast 'true'
 # Example to get the simulator executable path
-python3 -m utils simPath
+python3 -m utils sim-path
 ```
 
 ## Use the Probe module
