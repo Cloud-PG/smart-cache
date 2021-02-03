@@ -17,6 +17,7 @@ import plotly.express as px
 
 # import plotly.express as px
 import plotly.graph_objects as go
+import numpy as np
 
 from ..data import SIM_RESULT_FILENAME
 from .vars import PLOT_LAYOUT
@@ -211,6 +212,23 @@ def get_prefix(files2plot: list) -> str:
     return path.commonprefix([file_ for file_, *_ in files2plot])
 
 
+def _reduce(vector: "np.array", size_cluster: int, method: str = "avg") -> "list":
+    res = []
+    partials = [vector[0]]
+
+    for idx in range(len(vector)):
+        if idx % size_cluster == 0:
+            if method == "avg":
+                res.append(sum(partials) / len(partials))
+                partials = []
+            else:
+                res.append(partials.pop())
+        else:
+            partials.append(vector[idx])
+
+    return res
+
+
 def make_line_figures(
     files2plot: list,
     prefix: str,
@@ -218,6 +236,7 @@ def make_line_figures(
     function: callable = None,
     column: str = "",
     additional_traces: list = [],
+    group_by: int = 1,
 ) -> "go.Figure":
     """Make measure plots
 
@@ -246,9 +265,15 @@ def make_line_figures(
             y_ax = function(df)
         elif column != "":
             y_ax = df[column]
+        x_ax = df["date"]
+
+        if group_by > 1:
+            x_ax = _reduce(x_ax.to_list(), group_by, None)
+            y_ax = _reduce(y_ax.to_list(), group_by)
+
         fig.add_trace(
             go.Scatter(
-                x=df["date"],
+                x=x_ax,
                 y=y_ax,
                 mode="lines",
                 name=name,
@@ -329,6 +354,8 @@ def selection2hash(
     extended: bool = False,
     sort_by_roh_first: bool = False,
     new_metrics: bool = True,
+    columns_group_size: int = 1,
+    measures_group_size: int = 1,
 ) -> str:
     return str(
         hash(
@@ -341,6 +368,8 @@ def selection2hash(
                     str(extended),
                     str(sort_by_roh_first),
                     str(new_metrics),
+                    str(columns_group_size),
+                    str(measures_group_size),
                 ]
             )
         )

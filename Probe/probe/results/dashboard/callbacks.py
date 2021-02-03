@@ -60,6 +60,10 @@ _MEASURES = {
 }
 
 
+def group_size(value: int) -> str:
+    return f"group size = {value}"
+
+
 def _tab_columns(
     cache_manager: "DashCacheManager",
     hash_args: tuple,
@@ -67,6 +71,7 @@ def _tab_columns(
     filters_all,
     filters_any,
     num_of_results,
+    columns_group_size,
 ) -> tuple:
     if cache_manager.check("columns", hash_args):
         data = cache_manager.get("columns", hash_args)
@@ -85,7 +90,7 @@ def _tab_columns(
             prefix = get_prefix(files2plot)
 
             if num_of_results != 0 and num_of_results is not None:
-                table, new_file2plot = make_table(files2plot, prefix, num_of_results)
+                _, new_file2plot = make_table(files2plot, prefix, num_of_results)
                 files2plot = [
                     (file_, df) for file_, df in files2plot if file_ in new_file2plot
                 ]
@@ -94,7 +99,11 @@ def _tab_columns(
             figures.append(
                 dcc.Graph(
                     figure=make_line_figures(
-                        files2plot, prefix, title=column, column=column
+                        files2plot,
+                        prefix,
+                        title=column,
+                        column=column,
+                        group_by=columns_group_size,
                     )
                 )
             )
@@ -111,6 +120,7 @@ def _tab_measures(
     filters_all,
     filters_any,
     num_of_results,
+    measures_group_size,
 ) -> tuple:
     if cache_manager.check("measures", hash_args):
         data = cache_manager.get("measures", hash_args)
@@ -141,6 +151,7 @@ def _tab_measures(
                         prefix,
                         title=measure,
                         function=function,
+                        group_by=measures_group_size,
                     )
                 )
             )
@@ -289,6 +300,8 @@ def switch_tab(
     extended,
     sort_by_roh_first,
     new_metrics,
+    columns_group_size,
+    measures_group_size,
     files,
     filters_all,
     filters_any,
@@ -303,6 +316,8 @@ def switch_tab(
         extended,
         sort_by_roh_first,
         new_metrics,
+        columns_group_size,
+        measures_group_size,
     )
 
     if at == "tab-files":
@@ -311,11 +326,23 @@ def switch_tab(
         return _EMPTY_TUPLE
     elif at == "tab-columns":
         return _tab_columns(
-            cache_manager, hash_args, files, filters_all, filters_any, num_of_results
+            cache_manager,
+            hash_args,
+            files,
+            filters_all,
+            filters_any,
+            num_of_results,
+            columns_group_size,
         )
     elif at == "tab-measures":
         return _tab_measures(
-            cache_manager, hash_args, files, filters_all, filters_any, num_of_results
+            cache_manager,
+            hash_args,
+            files,
+            filters_all,
+            filters_any,
+            num_of_results,
+            measures_group_size,
         )
     elif at == "tab-agents":
         return _tab_agents(

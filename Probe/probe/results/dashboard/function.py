@@ -1,4 +1,5 @@
 from typing import List
+
 import dash
 import dash_bootstrap_components as dbc
 
@@ -18,6 +19,7 @@ from flask import send_file
 from ..data import Results, aggregate_results
 from . import view
 from .callbacks import (
+    group_size,
     compare_results,
     show_value,
     switch_tab,
@@ -110,6 +112,16 @@ def create(results: "Results", server_ip: str = "localhost"):
     )
 
     app.callback(
+        dash.dependencies.Output("columns-group-size-text", "children"),
+        dash.dependencies.Input("columns-group-size", "value"),
+    )(group_size)
+
+    app.callback(
+        dash.dependencies.Output("measures-group-size-text", "children"),
+        dash.dependencies.Input("measures-group-size", "value"),
+    )(group_size)
+
+    app.callback(
         dash.dependencies.Output("toggle-extended-table-output", "children"),
         [dash.dependencies.Input("toggle-extended-table", "value")],
     )(show_value("Extended table:"))
@@ -169,6 +181,8 @@ def create(results: "Results", server_ip: str = "localhost"):
             Input("toggle-extended-table", "value"),
             Input("toggle-sort-by-roh-first", "value"),
             Input("toggle-new-metrics", "value"),
+            Input("columns-group-size", "value"),
+            Input("measures-group-size", "value"),
         ],
         [
             State("selected-files", "value"),

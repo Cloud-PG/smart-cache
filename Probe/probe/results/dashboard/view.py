@@ -158,23 +158,51 @@ def table() -> "Any":
 
 def columns() -> "Any":
     return dbc.Card(
-        dbc.Spinner(
+        [
             dbc.CardBody(
-                id="graphs-columns",
+                [
+                    html.Span("group size = 1", id="columns-group-size-text"),
+                    dcc.Slider(
+                        id="columns-group-size",
+                        min=1,
+                        max=30,
+                        step=1,
+                        value=1,
+                    ),
+                ]
             ),
-            color="primary",
-        ),
+            dbc.Spinner(
+                dbc.CardBody(
+                    id="graphs-columns",
+                ),
+                color="primary",
+            ),
+        ]
     )
 
 
 def measures() -> "Any":
     return dbc.Card(
-        dbc.Spinner(
+        [
             dbc.CardBody(
-                id="graphs-measures",
+                [
+                    html.Span("group size = 1", id="measures-group-size-text"),
+                    dcc.Slider(
+                        id="measures-group-size",
+                        min=1,
+                        max=30,
+                        step=1,
+                        value=1,
+                    ),
+                ]
             ),
-            color="primary",
-        ),
+            dbc.Spinner(
+                dbc.CardBody(
+                    id="graphs-measures",
+                ),
+                color="primary",
+            ),
+        ]
     )
 
 
