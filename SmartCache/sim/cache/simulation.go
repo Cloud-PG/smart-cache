@@ -267,54 +267,6 @@ func OpenSimFolder(dirPath *os.File) chan CSVRecord {
 	return channel
 }
 
-// OutputCSV is an utility to output CSV
-type OutputCSV struct {
-	filename         string
-	file             *os.File
-	compressedWriter *gzip.Writer
-	csvWriter        *csv.Writer
-}
-
-// Create an output file in CSV format
-func (output *OutputCSV) Create(filename string, compressed bool) {
-	if compressed {
-		output.filename = filename + ".gz"
-	} else {
-		output.filename = filename
-	}
-
-	outputFile, errCreateFile := os.Create(output.filename)
-	if errCreateFile != nil {
-		panic(errCreateFile)
-	}
-	output.file = outputFile
-
-	if compressed {
-		output.compressedWriter = gzip.NewWriter(output.file)
-		output.csvWriter = csv.NewWriter(output.compressedWriter)
-	} else {
-		output.csvWriter = csv.NewWriter(output.file)
-	}
-
-}
-
-// Close the output file after flush the buffer
-func (output OutputCSV) Write(record []string) {
-	if errWriter := output.csvWriter.Write(record); errWriter != nil {
-		panic(errWriter)
-	}
-	output.csvWriter.Flush()
-}
-
-// Close the output file after flush the buffer
-func (output OutputCSV) Close() {
-	output.csvWriter.Flush()
-	if output.compressedWriter != nil {
-		output.compressedWriter.Close()
-	}
-	output.file.Close()
-}
-
 // Filter interface
 type Filter interface {
 	Check(CSVRecord) bool
