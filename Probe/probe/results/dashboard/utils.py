@@ -354,8 +354,8 @@ def selection2hash(
     extended: bool = False,
     sort_by_roh_first: bool = False,
     new_metrics: bool = True,
-    columns_group_size: int = 1,
-    measures_group_size: int = 1,
+    columns_binning_size: int = 1,
+    measures_binning_size: int = 1,
 ) -> str:
     return str(
         hash(
@@ -368,8 +368,8 @@ def selection2hash(
                     str(extended),
                     str(sort_by_roh_first),
                     str(new_metrics),
-                    str(columns_group_size),
-                    str(measures_group_size),
+                    str(columns_binning_size),
+                    str(measures_binning_size),
                 ]
             )
         )

@@ -60,8 +60,8 @@ _MEASURES = {
 }
 
 
-def group_size(value: int) -> str:
-    return f"group size = {value}"
+def binning_size(value: int) -> str:
+    return f"binning size = {value}"
 
 
 def _tab_columns(
@@ -71,7 +71,7 @@ def _tab_columns(
     filters_all,
     filters_any,
     num_of_results,
-    columns_group_size,
+    columns_binning_size,
 ) -> tuple:
     if cache_manager.check("columns", hash_args):
         data = cache_manager.get("columns", hash_args)
@@ -103,7 +103,7 @@ def _tab_columns(
                         prefix,
                         title=column,
                         column=column,
-                        group_by=columns_group_size,
+                        binning_size=columns_binning_size,
                     )
                 )
             )
@@ -120,7 +120,7 @@ def _tab_measures(
     filters_all,
     filters_any,
     num_of_results,
-    measures_group_size,
+    measures_binning_size,
 ) -> tuple:
     if cache_manager.check("measures", hash_args):
         data = cache_manager.get("measures", hash_args)
@@ -151,7 +151,7 @@ def _tab_measures(
                         prefix,
                         title=measure,
                         function=function,
-                        group_by=measures_group_size,
+                        binning_size=measures_binning_size,
                     )
                 )
             )
@@ -300,8 +300,8 @@ def switch_tab(
     extended,
     sort_by_roh_first,
     new_metrics,
-    columns_group_size,
-    measures_group_size,
+    columns_binning_size,
+    measures_binning_size,
     files,
     filters_all,
     filters_any,
@@ -316,8 +316,8 @@ def switch_tab(
         extended,
         sort_by_roh_first,
         new_metrics,
-        columns_group_size,
-        measures_group_size,
+        columns_binning_size,
+        measures_binning_size,
     )
 
     if at == "tab-files":
@@ -332,7 +332,7 @@ def switch_tab(
             filters_all,
             filters_any,
             num_of_results,
-            columns_group_size,
+            columns_binning_size,
         )
     elif at == "tab-measures":
         return _tab_measures(
@@ -342,7 +342,7 @@ def switch_tab(
             filters_all,
             filters_any,
             num_of_results,
-            measures_group_size,
+            measures_binning_size,
         )
     elif at == "tab-agents":
         return _tab_agents(

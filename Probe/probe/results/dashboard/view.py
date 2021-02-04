@@ -161,9 +161,9 @@ def columns() -> "Any":
         [
             dbc.CardBody(
                 [
-                    html.Span("group size = 1", id="columns-group-size-text"),
+                    html.Span("group size = 1", id="columns-binning-size-text"),
                     dcc.Slider(
-                        id="columns-group-size",
+                        id="columns-binning-size",
                         min=1,
                         max=30,
                         step=1,
@@ -194,9 +194,9 @@ def measures() -> "Any":
         [
             dbc.CardBody(
                 [
-                    html.Span("group size = 1", id="measures-group-size-text"),
+                    html.Span("group size = 1", id="measures-binning-size-text"),
                     dcc.Slider(
-                        id="measures-group-size",
+                        id="measures-binning-size",
                         min=1,
                         max=30,
                         step=1,
