@@ -236,7 +236,7 @@ def make_line_figures(
     function: callable = None,
     column: str = "",
     additional_traces: list = [],
-    group_by: int = 1,
+    binning_size: int = 1,
 ) -> "go.Figure":
     """Make measure plots
 
@@ -267,9 +267,9 @@ def make_line_figures(
             y_ax = df[column]
         x_ax = df["date"]
 
-        if group_by > 1:
-            x_ax = _reduce(x_ax.to_list(), group_by, None)
-            y_ax = _reduce(y_ax.to_list(), group_by)
+        if binning_size > 1:
+            x_ax = _reduce(x_ax.to_list(), binning_size, None)
+            y_ax = _reduce(y_ax.to_list(), binning_size)
 
         fig.add_trace(
             go.Scatter(
