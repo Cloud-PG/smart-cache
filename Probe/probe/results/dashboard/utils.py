@@ -1,6 +1,7 @@
 import os
 import pathlib
 import pickle
+import tempfile
 from os import path
 from shutil import rmtree
 from typing import Any, Tuple
@@ -10,6 +11,7 @@ import dash_bootstrap_components as dbc
 import dash_core_components as dcc
 import dash_daq as daq
 import dash_html_components as html
+import numpy as np
 
 # Create random data with numpy
 import pandas as pd
@@ -17,7 +19,6 @@ import plotly.express as px
 
 # import plotly.express as px
 import plotly.graph_objects as go
-import numpy as np
 
 from ..data import SIM_RESULT_FILENAME
 from .vars import PLOT_LAYOUT
@@ -25,7 +26,9 @@ from .vars import PLOT_LAYOUT
 
 class DashCacheManager:
     def __init__(self, dirs: list):
-        self._main_dir = pathlib.Path(".").resolve().joinpath(".cache")
+        self._main_dir = (
+            pathlib.Path(tempfile.gettempdir()).resolve().joinpath("dashboard", "cache")
+        )
         self._dirs = dirs
 
     def init(self):
