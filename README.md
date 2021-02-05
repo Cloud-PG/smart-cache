@@ -7,7 +7,7 @@ It is recommended to install the develop packages used for the project:
 ```bash
 pipenv install --dev
 ```
-## Use the simulator utilities
+## :hammer: Use the simulator utilities
 
 ### Installation
 
@@ -18,7 +18,7 @@ python3 setup.py install
 python3 -m pip install -e SmartCache/sim/Utilities
 ```
 
-### Use the simulator utilities
+### Example
 
 ```bash
 python3 -m utils --help
@@ -28,7 +28,7 @@ python3 -m utils compile --fast 'true'
 python3 -m utils sim-path
 ```
 
-## Use the Probe module
+## :space_invader: Use the Probe module
 
 ### Installation
 
@@ -39,7 +39,7 @@ python3 setup.py install
 python3 -m pip install -e Probe
 ```
 
-### Open the dashboard
+### :bar_chart: Open the dashboard
 
 Open the result folder with the following command:
 
