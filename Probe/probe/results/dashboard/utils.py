@@ -32,7 +32,7 @@ class DashCacheManager:
         rmtree(self._main_dir.as_posix(), True)
         for dir_ in self._dirs:
             dir_path = self._main_dir.joinpath(dir_)
-            os.makedirs(dir_path, True)
+            os.makedirs(dir_path, exist_ok=True)
         return self
 
     def _filename(self, folder: str, hash_args: tuple = (), hash_: str = ""):
