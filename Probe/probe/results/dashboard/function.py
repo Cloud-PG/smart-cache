@@ -1,3 +1,4 @@
+from time import sleep
 from typing import List
 
 import dash
@@ -54,33 +55,6 @@ def create(results: "Results", server_ip: str = "localhost"):
         external_stylesheets=[_EXTERNAL_STYLESHEETS, dbc.themes.BOOTSTRAP],
         suppress_callback_exceptions=True,  # For dynamic callback attachment
     )
-
-    @app.server.route("/table/csv")
-    def download_csv():
-        return send_file(
-            cache_manager.path("results", hash_="table.csv"),
-            mimetype="text/csv",
-            attachment_filename="table.csv",
-            as_attachment=True,
-        )
-
-    @app.server.route("/table/tex")
-    def download_tex():
-        return send_file(
-            cache_manager.path("results", hash_="table.tex"),
-            mimetype="text/plain",
-            attachment_filename="table.tex",
-            as_attachment=True,
-        )
-
-    @app.server.route("/table/html")
-    def download_html():
-        return send_file(
-            cache_manager.path("results", hash_="table.html"),
-            mimetype="text/plain",
-            attachment_filename="table.html",
-            as_attachment=True,
-        )
 
     _TAB_FILES = view.files(results)
     _TAB_FILTERS = view.filters(results)
@@ -191,6 +165,36 @@ def create(results: "Results", server_ip: str = "localhost"):
             State("num-of-results", "value"),
         ],
     )(switch_tab)
+
+    @app.server.route("/table/csv")
+    def download_csv():
+        sleep(1.2)
+        return send_file(
+            cache_manager.path("results", hash_="table.csv"),
+            mimetype="text/csv",
+            attachment_filename="table.csv",
+            as_attachment=True,
+        )
+
+    @app.server.route("/table/tex")
+    def download_tex():
+        sleep(1.2)
+        return send_file(
+            cache_manager.path("results", hash_="table.tex"),
+            mimetype="text/plain",
+            attachment_filename="table.tex",
+            as_attachment=True,
+        )
+
+    @app.server.route("/table/html")
+    def download_html():
+        sleep(1.2)
+        return send_file(
+            cache_manager.path("results", hash_="table.html"),
+            mimetype="text/plain",
+            attachment_filename="table.html",
+            as_attachment=True,
+        )
 
     app.run_server(
         debug=True,
