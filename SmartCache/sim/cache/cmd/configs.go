@@ -261,7 +261,7 @@ func (conf *SimConfig) check() { //nolint:funlen
 	}
 	log.Info().Float64("conf.Sim.AI.RL.Addition.Epsilon.Decay", conf.Sim.AI.RL.Addition.Epsilon.Decay).Msg("CONF_VAR")
 
-	if conf.Sim.AI.RL.Epsilon.Unleash == epsilonUnleashDefault {
+	if conf.Sim.AI.RL.Addition.Epsilon.Unleash == epsilonUnleashDefault {
 		conf.Sim.AI.RL.Addition.Epsilon.Unleash = conf.Sim.AI.RL.Epsilon.Unleash
 	}
 	log.Info().Str("conf.Sim.AI.RL.Addition.Epsilon.Unleash", conf.Sim.AI.RL.Addition.Epsilon.Unleash).Msg("CONF_VAR")
