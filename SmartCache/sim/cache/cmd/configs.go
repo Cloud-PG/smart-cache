@@ -7,6 +7,10 @@ import (
 	"github.com/spf13/viper"
 )
 
+const (
+	epsilonUnleashDefault = "default"
+)
+
 type epsilon struct {
 	Start   float64
 	Decay   float64
@@ -146,14 +150,14 @@ func (conf SimConfig) configure(configFilenameWithNoExt string) { //nolint:ignor
 	viper.SetDefault("sim.ai.rl.addition.featuremap", "")
 	viper.SetDefault("sim.ai.rl.addition.epsilon.start", -1.0)
 	viper.SetDefault("sim.ai.rl.addition.epsilon.decay", -1.0)
-	viper.SetDefault("sim.ai.rl.addition.epsilon.unleash", "default")
+	viper.SetDefault("sim.ai.rl.addition.epsilon.unleash", epsilonUnleashDefault)
 
 	viper.SetDefault("sim.ai.rl.eviction.featuremap", "")
 	viper.SetDefault("sim.ai.rl.eviction.k", 32)
 	viper.SetDefault("sim.ai.rl.eviction.type", "onK")
 	viper.SetDefault("sim.ai.rl.eviction.epsilon.start", -1.0)
 	viper.SetDefault("sim.ai.rl.eviction.epsilon.decay", -1.0)
-	viper.SetDefault("sim.ai.rl.eviction.epsilon.unleash", "default")
+	viper.SetDefault("sim.ai.rl.eviction.epsilon.unleash", epsilonUnleashDefault)
 
 	viper.SetDefault("sim.ai.model", "")
 
@@ -257,8 +261,8 @@ func (conf *SimConfig) check() { //nolint:funlen
 	}
 	log.Info().Float64("conf.Sim.AI.RL.Addition.Epsilon.Decay", conf.Sim.AI.RL.Addition.Epsilon.Decay).Msg("CONF_VAR")
 
-	if conf.Sim.AI.RL.Epsilon.Unleash == "default" {
-		conf.Sim.AI.RL.Addition.Epsilon.Unleash = string(conf.Sim.AI.RL.Epsilon.Unleash)
+	if conf.Sim.AI.RL.Epsilon.Unleash == epsilonUnleashDefault {
+		conf.Sim.AI.RL.Addition.Epsilon.Unleash = conf.Sim.AI.RL.Epsilon.Unleash
 	}
 	log.Info().Str("conf.Sim.AI.RL.Addition.Epsilon.Unleash", conf.Sim.AI.RL.Addition.Epsilon.Unleash).Msg("CONF_VAR")
 
@@ -272,7 +276,7 @@ func (conf *SimConfig) check() { //nolint:funlen
 	}
 	log.Info().Float64("conf.Sim.AI.RL.Eviction.Epsilon.Decay", conf.Sim.AI.RL.Eviction.Epsilon.Decay).Msg("CONF_VAR")
 
-	if conf.Sim.AI.RL.Eviction.Epsilon.Unleash == "default" {
+	if conf.Sim.AI.RL.Eviction.Epsilon.Unleash == epsilonUnleashDefault {
 		conf.Sim.AI.RL.Eviction.Epsilon.Unleash = conf.Sim.AI.RL.Epsilon.Unleash
 	}
 	log.Info().Str("conf.Sim.AI.RL.Eviction.Epsilon.Unleash", conf.Sim.AI.RL.Eviction.Epsilon.Unleash).Msg("CONF_VAR")
