@@ -7,6 +7,7 @@ from colorama import init
 
 from ..utils import STATUS_ARROW
 from .dashboard.function import service
+from .dashboard.utils import MinCacheServer
 from .data import aggregate_results, parse_simulation_report
 from .plotters import metric_corr, plot_miss_freq, plot_num_miss_after_del
 
@@ -21,6 +22,7 @@ app = typer.Typer(name="probe.results", add_completion=False)
 
 @app.command()
 def dashboard(folders: "List[str]", dash_ip: str = "localhost"):
+    MinCacheServer().start()
     service(folders, dash_ip)
 
 

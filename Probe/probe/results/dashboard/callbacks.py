@@ -251,14 +251,19 @@ def _tab_table(
                 new_metrics=new_metrics,
             )
 
-        with open(cache_manager.path("results", hash_="table.csv"), "w") as csv_table:
-            table.to_csv(csv_table)
-
-        with open(cache_manager.path("results", hash_="table.tex"), "w") as tex_table:
-            table.to_latex(tex_table)
-
-        with open(cache_manager.path("results", hash_="table.html"), "w") as html_table:
-            table.to_html(html_table)
+        cache_manager.set(
+            "results", hash_="table.csv", data=table.to_csv(index=False).encode("utf-8")
+        )
+        cache_manager.set(
+            "results",
+            hash_="table.tex",
+            data=table.to_latex(index=False).encode("utf-8"),
+        )
+        cache_manager.set(
+            "results",
+            hash_="table.html",
+            data=table.to_html(index=False).encode("utf-8"),
+        )
 
         table = dbc.Table.from_dataframe(table, striped=True, bordered=True, hover=True)
 

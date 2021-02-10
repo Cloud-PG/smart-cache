@@ -1,9 +1,11 @@
+import gzip
 import os
 import pathlib
 import pickle
 import tempfile
 from os import path
 from shutil import rmtree
+from threading import Thread
 from typing import Any, Tuple
 
 import dash
@@ -19,9 +21,59 @@ import plotly.express as px
 
 # import plotly.express as px
 import plotly.graph_objects as go
+import zmq
 
 from ..data import SIM_RESULT_FILENAME
 from .vars import PLOT_LAYOUT
+
+
+class MinCacheServer(Thread):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs, daemon=True)
+        self._context = zmq.Context()
+        self._socket = self._context.socket(zmq.REP)
+        self._dict = {}
+
+        try:
+            self._socket.bind("tcp://*:5555")
+        except zmq.error.ZMQError as err:
+            if err.strerror.find("Address already in use") == -1:
+                raise (err)
+
+    def __del__(self):
+        print("CLOSE")
+        self._socket.close()
+
+    def run(self):
+        run = True
+        while run:
+            #  Wait for next request from client
+            message = self._socket.recv()
+            print("running", id(self))
+            self._socket.send(b"ok")
+            print(f"server[command] {message}")
+
+            if message == b"exit":
+                run = False
+                print("EXIT")
+            elif message == b"check":
+                key = self._socket.recv()
+                if key in self._dict:
+                    self._socket.send(b"y")
+                else:
+                    self._socket.send(b"n")
+            elif message == b"set":
+                key = self._socket.recv()
+                self._socket.send(b"ok")
+                print(f"server[key] {key}")
+                data = self._socket.recv()
+                self._socket.send(b"ok")
+                print(f"server[data]: {len(data)}")
+                self._dict[key] = data
+            elif message == b"get":
+                key = self._socket.recv()
+                print(f"server[key] {key}")
+                self._socket.send(self._dict[key])
 
 
 class DashCacheManager:
@@ -29,14 +81,16 @@ class DashCacheManager:
         self._main_dir = (
             pathlib.Path(tempfile.gettempdir()).resolve().joinpath("dashboard", "cache")
         )
+
+        self._context = zmq.Context()
+        print("Connecting to dash cache server...")
+        self._socket = self._context.socket(zmq.REQ)
+        self._socket.connect("tcp://localhost:5555")
+
         self._dirs = dirs
 
-    def init(self):
-        rmtree(self._main_dir.as_posix(), ignore_errors=True)
-        for dir_ in self._dirs:
-            dir_path = self._main_dir.joinpath(dir_)
-            os.makedirs(dir_path, exist_ok=True)
-        return self
+    def __del__(self):
+        self._socket.disconnect("tcp://localhost:5555")
 
     def _filename(self, folder: str, hash_args: tuple = (), hash_: str = ""):
         if hash_ == "":
@@ -45,23 +99,41 @@ class DashCacheManager:
         return self._main_dir.joinpath(folder, hash_)
 
     def check(self, folder: str, hash_args: tuple = (), hash_: str = "") -> bool:
-        return self._filename(folder, hash_args, hash_).exists()
+        self._socket.send(b"check")
+        print("resp[check]->", self._socket.recv())
+        filename = self._filename(folder, hash_args, hash_)
+        self._socket.send(filename.as_posix().encode("utf-8"))
+        exists = self._socket.recv()
+        print("resp[exists]->", exists)
+        return exists == b"y"
 
-    def path(self, folder: str, hash_args: tuple = (), hash_: str = "") -> str:
-        return self._filename(folder, hash_args, hash_).as_posix()
+    def stop(self):
+        print("stop[exit]!")
+        self._socket.send(b"exit")
 
     def set(
         self, folder: str, hash_args: tuple = (), hash_: str = "", data: "Any" = None
     ):
         filename = self._filename(folder, hash_args, hash_)
-        with open(filename, "wb") as target_file:
-            target_file.write(pickle.dumps(data, pickle.HIGHEST_PROTOCOL))
+        self._socket.send(b"set")
+        print("resp[set]->", self._socket.recv())
+        self._socket.send(filename.as_posix().encode("utf-8"))
+        print("resp[key]->", self._socket.recv())
+        pickle_data = pickle.dumps(data, pickle.HIGHEST_PROTOCOL)
+        self._socket.send(gzip.compress(pickle_data))
+        print("resp[data]->", self._socket.recv())
+        # with open(filename, "wb") as target_file:
+        #     target_file.write()
         return self
 
     def get(self, folder: str, hash_args: tuple = (), hash_: str = "") -> "Any":
         filename = self._filename(folder, hash_args, hash_)
-        with open(filename, "rb") as target_file:
-            return pickle.loads(target_file.read())
+        self._socket.send(b"get")
+        print("resp[get]->", self._socket.recv())
+        self._socket.send(filename.as_posix().encode("utf-8"))
+        data = self._socket.recv()
+        print("resp[set]->", len(data))
+        return pickle.loads(gzip.decompress((data)))
 
 
 def parse_simulation_report_stuff(

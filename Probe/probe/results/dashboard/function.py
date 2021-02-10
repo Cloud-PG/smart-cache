@@ -1,3 +1,4 @@
+import io
 from time import sleep
 from typing import List
 
@@ -46,7 +47,7 @@ def service(folders: "List[str]", dash_ip: str = "localhost"):
 def create(results: "Results", server_ip: str = "localhost"):
 
     cache_manager = DashCacheManager(DASH_CACHE_DIRS)
-    cache_manager.init().set("results", hash_="data", data=results)
+    cache_manager.set("results", hash_="data", data=results)
 
     # Assets ref: https://dash.plotly.com/external-resources
     app = dash.Dash(
@@ -168,19 +169,17 @@ def create(results: "Results", server_ip: str = "localhost"):
 
     @app.server.route("/table/csv")
     def download_csv():
-        sleep(1.2)
         return send_file(
-            cache_manager.path("results", hash_="table.csv"),
-            mimetype="text/csv",
+            io.BytesIO(cache_manager.get("results", hash_="table.csv")),
+            mimetype="text/plain",
             attachment_filename="table.csv",
             as_attachment=True,
         )
 
     @app.server.route("/table/tex")
     def download_tex():
-        sleep(1.2)
         return send_file(
-            cache_manager.path("results", hash_="table.tex"),
+            io.BytesIO(cache_manager.get("results", hash_="table.tex")),
             mimetype="text/plain",
             attachment_filename="table.tex",
             as_attachment=True,
@@ -188,13 +187,22 @@ def create(results: "Results", server_ip: str = "localhost"):
 
     @app.server.route("/table/html")
     def download_html():
-        sleep(1.2)
         return send_file(
-            cache_manager.path("results", hash_="table.html"),
+            io.BytesIO(cache_manager.get("results", hash_="table.html")),
             mimetype="text/plain",
             attachment_filename="table.html",
             as_attachment=True,
         )
+
+    from signal import SIGINT, signal
+
+    def handler(signal_received, frame):
+        # Handle any cleanup here
+        print("SIGINT or CTRL-C detected. Exiting gracefully")
+        cache_manager.stop()
+        exit(0)
+
+    signal(SIGINT, handler)
 
     app.run_server(
         debug=True,
