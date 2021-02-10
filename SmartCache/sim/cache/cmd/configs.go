@@ -10,7 +10,7 @@ import (
 type epsilon struct {
 	Start   float64
 	Decay   float64
-	Unleash bool
+	Unleash string
 }
 
 type ai struct {
@@ -138,7 +138,7 @@ func (conf SimConfig) configure(configFilenameWithNoExt string) { //nolint:ignor
 
 	viper.SetDefault("sim.ai.rl.epsilon.start", 1.0)
 	viper.SetDefault("sim.ai.rl.epsilon.decay", 0.0000042)
-	viper.SetDefault("sim.ai.rl.epsilon.unleash", true)
+	viper.SetDefault("sim.ai.rl.epsilon.unleash", "yes")
 
 	viper.SetDefault("sim.ai.featuremap", "")
 	viper.SetDefault("sim.ai.rl.type", "SCDL2")
@@ -146,14 +146,14 @@ func (conf SimConfig) configure(configFilenameWithNoExt string) { //nolint:ignor
 	viper.SetDefault("sim.ai.rl.addition.featuremap", "")
 	viper.SetDefault("sim.ai.rl.addition.epsilon.start", -1.0)
 	viper.SetDefault("sim.ai.rl.addition.epsilon.decay", -1.0)
-	viper.SetDefault("sim.ai.rl.addition.epsilon.unleash", false)
+	viper.SetDefault("sim.ai.rl.addition.epsilon.unleash", "default")
 
 	viper.SetDefault("sim.ai.rl.eviction.featuremap", "")
 	viper.SetDefault("sim.ai.rl.eviction.k", 32)
 	viper.SetDefault("sim.ai.rl.eviction.type", "onK")
 	viper.SetDefault("sim.ai.rl.eviction.epsilon.start", -1.0)
 	viper.SetDefault("sim.ai.rl.eviction.epsilon.decay", -1.0)
-	viper.SetDefault("sim.ai.rl.eviction.epsilon.unleash", false)
+	viper.SetDefault("sim.ai.rl.eviction.epsilon.unleash", "default")
 
 	viper.SetDefault("sim.ai.model", "")
 
@@ -245,7 +245,7 @@ func (conf *SimConfig) check() { //nolint:funlen
 
 	log.Info().Float64("conf.Sim.AI.RL.Epsilon.Start", conf.Sim.AI.RL.Epsilon.Start).Msg("CONF_VAR")
 	log.Info().Float64("conf.Sim.AI.RL.Epsilon.Decay", conf.Sim.AI.RL.Epsilon.Decay).Msg("CONF_VAR")
-	log.Info().Bool("conf.Sim.AI.RL.Epsilon.Unleash", conf.Sim.AI.RL.Epsilon.Unleash).Msg("CONF_VAR")
+	log.Info().Str("conf.Sim.AI.RL.Epsilon.Unleash", conf.Sim.AI.RL.Epsilon.Unleash).Msg("CONF_VAR")
 
 	if conf.Sim.AI.RL.Addition.Epsilon.Start == -1.0 {
 		conf.Sim.AI.RL.Addition.Epsilon.Start = conf.Sim.AI.RL.Epsilon.Start
@@ -257,10 +257,10 @@ func (conf *SimConfig) check() { //nolint:funlen
 	}
 	log.Info().Float64("conf.Sim.AI.RL.Addition.Epsilon.Decay", conf.Sim.AI.RL.Addition.Epsilon.Decay).Msg("CONF_VAR")
 
-	if conf.Sim.AI.RL.Addition.Epsilon.Unleash {
-		conf.Sim.AI.RL.Addition.Epsilon.Unleash = conf.Sim.AI.RL.Epsilon.Unleash
+	if conf.Sim.AI.RL.Epsilon.Unleash == "default" {
+		conf.Sim.AI.RL.Addition.Epsilon.Unleash = string(conf.Sim.AI.RL.Epsilon.Unleash)
 	}
-	log.Info().Bool("conf.Sim.AI.RL.Addition.Epsilon.Unleash", conf.Sim.AI.RL.Addition.Epsilon.Unleash).Msg("CONF_VAR")
+	log.Info().Str("conf.Sim.AI.RL.Addition.Epsilon.Unleash", conf.Sim.AI.RL.Addition.Epsilon.Unleash).Msg("CONF_VAR")
 
 	if conf.Sim.AI.RL.Eviction.Epsilon.Start == -1.0 {
 		conf.Sim.AI.RL.Eviction.Epsilon.Start = conf.Sim.AI.RL.Epsilon.Start
@@ -272,10 +272,10 @@ func (conf *SimConfig) check() { //nolint:funlen
 	}
 	log.Info().Float64("conf.Sim.AI.RL.Eviction.Epsilon.Decay", conf.Sim.AI.RL.Eviction.Epsilon.Decay).Msg("CONF_VAR")
 
-	if conf.Sim.AI.RL.Eviction.Epsilon.Unleash {
+	if conf.Sim.AI.RL.Eviction.Epsilon.Unleash == "default" {
 		conf.Sim.AI.RL.Eviction.Epsilon.Unleash = conf.Sim.AI.RL.Epsilon.Unleash
 	}
-	log.Info().Bool("conf.Sim.AI.RL.Eviction.Epsilon.Unleash", conf.Sim.AI.RL.Eviction.Epsilon.Unleash).Msg("CONF_VAR")
+	log.Info().Str("conf.Sim.AI.RL.Eviction.Epsilon.Unleash", conf.Sim.AI.RL.Eviction.Epsilon.Unleash).Msg("CONF_VAR")
 
 	log.Info().Str("conf.Sim.AI.RL.Eviction.Type", conf.Sim.AI.RL.Eviction.Type).Msg("CONF_VAR")
 
@@ -409,7 +409,7 @@ func (conf *ServiceConfig) check() {
 
 	log.Info().Float64("conf.Service.AI.RL.Epsilon.Start", conf.Service.AI.RL.Epsilon.Start).Msg("CONF_VAR")
 	log.Info().Float64("conf.Service.AI.RL.Epsilon.Decay", conf.Service.AI.RL.Epsilon.Decay).Msg("CONF_VAR")
-	log.Info().Bool("conf.Service.AI.RL.Epsilon.Unleash", conf.Service.AI.RL.Epsilon.Unleash).Msg("CONF_VAR")
+	log.Info().Str("conf.Service.AI.RL.Epsilon.Unleash", conf.Service.AI.RL.Epsilon.Unleash).Msg("CONF_VAR")
 
 	if conf.Service.AI.RL.Addition.Epsilon.Start == -1.0 {
 		conf.Service.AI.RL.Addition.Epsilon.Start = conf.Service.AI.RL.Epsilon.Start
@@ -421,10 +421,10 @@ func (conf *ServiceConfig) check() {
 	}
 	log.Info().Float64("conf.Service.AI.RL.Addition.Epsilon.Decay", conf.Service.AI.RL.Addition.Epsilon.Decay).Msg("CONF_VAR")
 
-	if conf.Service.AI.RL.Addition.Epsilon.Unleash {
+	if conf.Service.AI.RL.Addition.Epsilon.Unleash == "default" {
 		conf.Service.AI.RL.Addition.Epsilon.Unleash = conf.Service.AI.RL.Epsilon.Unleash
 	}
-	log.Info().Bool("conf.Service.AI.RL.Addition.Epsilon.Unleash", conf.Service.AI.RL.Addition.Epsilon.Unleash).Msg("CONF_VAR")
+	log.Info().Str("conf.Service.AI.RL.Addition.Epsilon.Unleash", conf.Service.AI.RL.Addition.Epsilon.Unleash).Msg("CONF_VAR")
 
 	if conf.Service.AI.RL.Eviction.Epsilon.Start == -1.0 {
 		conf.Service.AI.RL.Eviction.Epsilon.Start = conf.Service.AI.RL.Epsilon.Start
@@ -436,10 +436,10 @@ func (conf *ServiceConfig) check() {
 	}
 	log.Info().Float64("conf.Service.AI.RL.Eviction.Epsilon.Decay", conf.Service.AI.RL.Eviction.Epsilon.Decay).Msg("CONF_VAR")
 
-	if conf.Service.AI.RL.Eviction.Epsilon.Unleash {
+	if conf.Service.AI.RL.Eviction.Epsilon.Unleash == "default" {
 		conf.Service.AI.RL.Eviction.Epsilon.Unleash = conf.Service.AI.RL.Epsilon.Unleash
 	}
-	log.Info().Bool("conf.Service.AI.RL.Eviction.Epsilon.Unleash", conf.Service.AI.RL.Eviction.Epsilon.Unleash).Msg("CONF_VAR")
+	log.Info().Str("conf.Service.AI.RL.Eviction.Epsilon.Unleash", conf.Service.AI.RL.Eviction.Epsilon.Unleash).Msg("CONF_VAR")
 
 	log.Info().Str("conf.Service.AI.RL.Eviction.Type", conf.Service.AI.RL.Eviction.Type).Msg("CONF_VAR")
 

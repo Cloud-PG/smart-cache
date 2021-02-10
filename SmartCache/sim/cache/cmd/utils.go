@@ -300,3 +300,16 @@ func InitializeCache(cacheType string, cacheInstance cache.Cache, params cache.I
 		os.Exit(-2)
 	}
 }
+
+func boolCheck(text string) (res bool) {
+	switch strings.ToLower(text) {
+	case "yes", "y", "true", "t":
+		res = true
+	case "no", "n", "false", "f":
+		res = false
+	default:
+		panic("Not a valid bool")
+	}
+
+	return res
+}
