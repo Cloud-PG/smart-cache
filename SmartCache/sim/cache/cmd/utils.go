@@ -308,7 +308,7 @@ func boolCheck(text string) (res bool) {
 	case "no", "n", "false", "f", "0":
 		res = false
 	default:
-		panic("Not a valid bool")
+		panic("Not a valid bool string")
 	}
 
 	return res
