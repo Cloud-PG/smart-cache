@@ -119,15 +119,24 @@ class cache {
         vector<int> _cached_files_keys;
         vector<float> _daily_rewards_add;
         vector<float> _daily_rewards_evict;
+        vector<float> _occupancies;
+        vector<float> _daily_sizes;
         float _cumulative_reward_add, _cumulative_reward_evict;
         Stats _stats;
-        float _size, _max_size;
-        int _hit, _miss, _daily_anomalous_CPUeff_counter;
-        float _written_data,_deleted_data,_read_data, _dailyReadOnHit, _dailyReadOnMiss, _daily_reward, _CPUeff, _h_watermark, _l_watermark;
+        float _size, _max_size, _size_redirected;
+        int _hit,  _req, _added, _deleted, _redirected, _miss_after_delete, _miss, _daily_anomalous_CPUeff_counter, _store_actions, _not_store_actions, _delete_actions, _not_delete_actions, _local_files, _remote_files, _local_files_hit, _local_files_miss, _remote_files_hit, _remote_files_miss, _eviction_calls, _eviction_forced_calls;
+        float _written_data,_deleted_data,_read_data, _dailyReadOnHit, _dailyReadOnMiss, _daily_reward, _CPUeff, _CPUhiteff, _CPUmisseff, _lowerCPUeff, _upperCPUeff, _h_watermark, _l_watermark;
         cache(){
             _size = 0.0;
             _max_size = 0.;
             _hit = 0;
+            _req = 0;
+            _miss = 0;
+            _added = 0;
+            _deleted = 0;
+            _redirected = 0;
+            _miss_after_delete = 0;
+            _size_redirected = 0.0;
             _miss = 0;
             _written_data = 0.0;
             _deleted_data = 0.0;
@@ -137,10 +146,27 @@ class cache {
             _daily_reward = 0.0;
             _daily_anomalous_CPUeff_counter = 0;
             _CPUeff = 0.0;
+            _CPUhiteff = 0.0;
+            _CPUmisseff = 0.0;
+            _lowerCPUeff = 0.0;
+            _upperCPUeff = 0.0;
             _h_watermark = 95.;
             _l_watermark = 0.;
             _cumulative_reward_add = 0.; 
             _cumulative_reward_evict = 0.;
+            _store_actions = 0;
+            _not_store_actions = 0;
+            _delete_actions = 0;
+            _not_delete_actions = 0;
+            _local_files = 0;
+            _remote_files =0;
+            _local_files_hit = 0;
+            _local_files_miss = 0;
+            _remote_files_hit = 0;
+            _remote_files_miss = 0;
+            _eviction_calls = 0;
+            _eviction_forced_calls = 0;
+
             cout<<'CREATED CACHE WITH SIZE ' << endl;
         };
         inline float capacity() { return (_size / _max_size) * 100.; };
@@ -157,7 +183,7 @@ class cache {
                 _stats._files[filename]._hit += 1;
             else
                 //stats._miss += 1;
-                _stats._files[filename]._miss    += 1;     
+                _stats._files[filename]._miss += 1;     
             return stats;  
         };               
         inline bool update_policy(int filename, FileStats file_stats, bool hit, int action){   
@@ -222,6 +248,18 @@ class cache {
                 }
                 return mean/float(counter);
             }
+        };
+        inline void _clear_occupancies(){
+            _occupancies.clear();
+        };
+        inline void _clear_daily_sizes(){
+            _daily_sizes.clear();
+        };
+        inline void _add_to_occupancies(float occupancy){
+            _occupancies.push_back(occupancy);
+        };
+        inline void _add_to_daily_sizes(float size){
+            _daily_sizes.push_back(size);
         };
 };
 class env{
@@ -648,16 +686,29 @@ PYBIND11_MODULE(cache_env_cpp, m) {
         .def("_get_mean_recency", &cache::_get_mean_recency)
         .def("_get_mean_frequency", &cache::_get_mean_frequency)
         .def("_get_mean_size", &cache::_get_mean_size)
+        .def("_clear_occupancies", &cache::_clear_occupancies)
+        .def("_clear_daily_sizes", &cache::_clear_daily_sizes)
+        .def("_add_to_occupancies", &cache::_add_to_occupancies)
+        .def("_add_to_daily_sizes", &cache::_add_to_daily_sizes)
         .def_readwrite("_cached_files", &cache::_cached_files)
         .def_readwrite("_cached_files_keys", &cache::_cached_files_keys)
         .def_readwrite("_daily_rewards_add", &cache::_daily_rewards_add)
         .def_readwrite("_daily_rewards_evict", &cache::_daily_rewards_evict)
+        .def_readwrite("_occupancies", &cache::_occupancies)
+        .def_readwrite("_daily_sizes", &cache::_daily_sizes)
         .def_readwrite("_cumulative_reward_add", &cache::_cumulative_reward_add)
         .def_readwrite("_cumulative_reward_evict", &cache::_cumulative_reward_evict)
         .def_readwrite("_stats", &cache::_stats)
+        .def_readwrite("_req", &cache::_req)
         .def_readwrite("_size", &cache::_size)
         .def_readwrite("_max_size", &cache::_max_size)
         .def_readwrite("_hit", &cache::_hit)
+        .def_readwrite("_miss", &cache::_miss)
+        .def_readwrite("_added", &cache::_added)
+        .def_readwrite("_deleted", &cache::_deleted)
+        .def_readwrite("_redirected", &cache::_redirected)
+        .def_readwrite("_miss_after_delete", &cache::_miss_after_delete)
+        .def_readwrite("_size_redirected", &cache::_size_redirected)
         .def_readwrite("_miss", &cache::_miss)
         .def_readwrite("_daily_anomalous_CPUeff_counter", &cache::_daily_anomalous_CPUeff_counter)
         .def_readwrite("_written_data", &cache::_written_data)
@@ -667,8 +718,24 @@ PYBIND11_MODULE(cache_env_cpp, m) {
         .def_readwrite("_dailyReadOnMiss", &cache::_dailyReadOnMiss)
         .def_readwrite("_daily_reward", &cache::_daily_reward)
         .def_readwrite("_CPUeff", &cache::_CPUeff)
+        .def_readwrite("_CPUhiteff", &cache::_CPUhiteff)
+        .def_readwrite("_CPUmisseff", &cache::_CPUmisseff)
+        .def_readwrite("_lowerCPUeff", &cache::_lowerCPUeff)
+        .def_readwrite("_upperCPUeff", &cache::_upperCPUeff)
         .def_readwrite("_h_watermark", &cache::_h_watermark)
-        .def_readwrite("_l_watermark", &cache::_l_watermark);
+        .def_readwrite("_l_watermark", &cache::_l_watermark)
+        .def_readwrite("_store_actions", &cache::_store_actions)
+        .def_readwrite("_not_store_actions", &cache::_not_store_actions)
+        .def_readwrite("_delete_actions", &cache::_delete_actions)
+        .def_readwrite("_not_delete_actions", &cache::_not_delete_actions)
+        .def_readwrite("_local_files", &cache::_local_files)
+        .def_readwrite("_remote_files", &cache::_remote_files)
+        .def_readwrite("_local_files_hit", &cache::_local_files_hit)
+        .def_readwrite("_remote_files_hit", &cache::_remote_files_hit)
+        .def_readwrite("_local_files_miss", &cache::_local_files_miss)
+        .def_readwrite("_remote_files_miss", &cache::_remote_files_miss)
+        .def_readwrite("_eviction_calls", &cache::_eviction_calls)
+        .def_readwrite("_eviction_forced_calls", &cache::_eviction_forced_calls);
 
     py::class_<env>(m, "env")
         //.def(py::init<const std::string &, int>())

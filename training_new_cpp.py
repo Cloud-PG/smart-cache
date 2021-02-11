@@ -14,7 +14,8 @@ import time
 import sys
 import gzip
 from datetime import datetime, timedelta
-from statistics import mean 
+from statistics import mean, stdev
+import numpy as np
 #import cacheenvnewcython as cache_env_new
 np.set_printoptions(threshold=sys.maxsize)
 
@@ -146,7 +147,6 @@ check_next_size = args.check_next_size
 
 out_name = out_directory.split("/")[1] + '_results.csv'
 
-
 if not os.path.isdir(out_directory):
     os.makedirs(out_directory)
 
@@ -188,52 +188,112 @@ def write_stats():
         with open(environment._out_directory + '/' + environment._out_name, 'w', newline='') as file:
             writer = csv.writer(file)
             writer.writerow(
-                ['date',
+                [   'date',
+                    'num req',
+                    'num hit',
+                    'num added',
+                    'num deleted',
+                    'num redirected',
+                    'num miss after delete',
+                    'size redirected',
+                    'cache size',
                     'size',
+                    'capacity',
+                    'bandwidth',
+                    'bandwidth usage',
                     'hit rate',
-                    'hit over miss',
                     'weighted hit rate',
                     'written data',
                     'read data',
                     'read on hit data',
                     'read on miss data',
                     'deleted data',
+                    'avg free space',
+                    'std dev free space',
                     'CPU efficiency',
-                    'mean occupancy',
                     'CPU hit efficiency',
                     'CPU miss efficiency',
                     'CPU efficiency upper bound',
                     'CPU efficiency lower bound',
+                    'Addition epsilon',
+                    'Eviction epsilon',
+                    'Addition qvalue function',
+                    'Eviction qvalue function',
+                    'Eviction calls',
+                    'Eviction forced calls',
+                    'Eviction mean num categories',
+                    'Eviction std dev num categories',
+                    'Action store',
+                    'Action not store',
+                    'Action delete all',
+                    'Action delete half',
+                    'Action delete quarter',
+                    'Action delete one',
+                    'Action not delete'
                     ])
 
     with open(environment._out_directory + '/' + environment._out_name, 'a', newline='') as file:
         writer = csv.writer(file)
         writer.writerow(
-            [str(datetime.fromtimestamp(dataframe_.df.reqDay[0])) + ' +0000 UTC',
-                Average(daily_sizes), #environment._cache._size,
+            [   str(datetime.fromtimestamp(dataframe_.df.reqDay[0])) + ' +0000 UTC',
+                environment._cache._req,
+                environment._cache._hit,
+                environment._cache._added,
+                environment._cache._deleted,
+                environment._cache._redirected,
+                environment._cache._miss_after_delete,
+                environment._cache._size_redirected,
+                environment._cache._max_size,
+                environment._cache._size,
+                environment._cache.capacity(),
+                DailyBandwidth1Gbit, #environment._cache._bandwidth,
+                environment._cache._dailyReadOnMiss / DailyBandwidth1Gbit * 100, #environment._cache.bandwidth_usage(),
+                #Average(daily_sizes), #environment._cache._size,
                 environment._cache.hit_rate() * 100.0,
-                environment._cache._hit/environment._cache._miss * 100.0,
-                0,
+                #environment._cache._hit/environment._cache._miss * 100.0,
+                environment._cache.hit_rate() * 100.0 * environment._cache._dailyReadOnHit,
                 environment._cache._written_data,
                 environment._cache._read_data,
                 environment._cache._dailyReadOnHit,
                 environment._cache._dailyReadOnMiss,
                 environment._cache._deleted_data,
-                environment._cache._CPUeff /
-                (environment._df_length-environment._cache._daily_anomalous_CPUeff_counter),
-                Average(occupancies),
+                environment._cache._max_size - Average(environment._cache._daily_sizes),
+                stdev(environment._cache._max_size - np.asarray(environment._cache._daily_sizes)),
+                environment._cache._CPUeff / (environment._cache._remote_files + environment._cache._local_files), #environment._cache._CPUeff / (environment._df_length-environment._cache._daily_anomalous_CPUeff_counter),
+                environment._cache._CPUhiteff / (environment._cache._local_files_hit + environment._cache._remote_files_hit),
+                environment._cache._CPUmisseff / (environment._cache._local_files_miss + environment._cache._remote_files_miss),
+                get_CPUeff_upperbound(),
+                get_CPUeff_lowerbound(),
+                eps_add,
+                eps_evict,
+                environment._cache._cumulative_reward_add,
+                environment._cache._cumulative_reward_evict,
+                environment._cache._eviction_calls,
+                environment._cache._eviction_forced_calls,
+                0,
+                0,
+                environment._cache._store_actions,
+                environment._cache._not_store_actions,
                 0,
                 0,
                 0,
-                0,                    
+                environment._cache._delete_actions,
+                environment._cache._not_delete_actions
                 ])
 
     return
 
 def reset_stats():
     ''' set all daily stats to zero ''' 
+    
+    environment._cache._req = 0
     environment._cache._hit = 0
     environment._cache._miss = 0
+    environment._cache._added = 0
+    environment._cache._deleted = 0
+    environment._cache._redirected = 0
+    environment._cache._miss_after_delete = 0
+    environment._cache._size_redirected = 0.0
     environment._cache._written_data = 0.0
     environment._cache._deleted_data = 0.0
     environment._cache._read_data = 0.0
@@ -242,12 +302,45 @@ def reset_stats():
     environment._cache._dailyReadOnMiss = 0.0
     environment._cache._daily_rewards_add = []
     environment._cache._daily_rewards_evict = []
+    
     environment._cache._CPUeff = 0.0
-
+    environment._cache._CPUhiteff = 0.0
+    environment._cache._CPUmisseff = 0.0
     environment._cache._daily_anomalous_CPUeff_counter = 0
+    
+    #print(environment._cache._upperCPUeff)
+    #print(environment._cache._lowerCPUeff)
+    #print(environment._cache._local_files)
+    #print(environment._cache._remote_files)
 
-    occupancies = []
-    daily_sizes = []
+    environment._cache._upperCPUeff = 0.0
+    environment._cache._lowerCPUeff = 0.0
+    environment._cache._local_files = 0
+    environment._cache._remote_files = 0
+    environment._cache._local_files_hit = 0
+    environment._cache._local_files_miss = 0
+    environment._cache._remote_files_hit = 0
+    environment._cache._remote_files_miss = 0
+
+    environment._cache._store_actions = 0
+    environment._cache._not_store_actions = 0
+    environment._cache._delete_actions = 0
+    environment._cache._not_delete_actions = 0
+
+    print(len(environment._cache._occupancies))
+    print(len(environment._cache._daily_sizes))
+
+    #occupancies = []
+    #daily_sizes = []
+    environment._cache._clear_occupancies()
+    environment._cache._clear_daily_sizes()
+
+    print(len(environment._cache._occupancies))
+    print(len(environment._cache._daily_sizes))
+
+    environment._cache._eviction_calls = 0
+    environment._cache._eviction_forced_calls = 0
+    
 
     return
 
@@ -281,13 +374,15 @@ class dataframe(object):
 
 def get_next_request_values():    
     ''' 
-    gets the values of next request to be feeded to AI (from global stats), and sets them as curvalues (and returns them):
+    gets the values of next request to be fed to AI (from global stats), and sets them as curvalues (and returns them):
     (SIZE - TOT REQUESTS - LAST REQUEST - DATATYPE - MEAN RECENCY - MEAN FREQUENCY - MEAN SIZE)
     '''
     environment._curRequest += 1
     environment._curRequest_from_start += 1
     if (environment._curRequest + 1) > environment._df_length:
         write_stats()
+        #print(len(occupancies))
+        #print(len(daily_sizes))
         reset_stats()
         environment._curDay += 1
         environment._curRequest = 0
@@ -299,6 +394,7 @@ def get_next_request_values():
     datatype = dataframe_.df.DataType[environment._curRequest]
     filestats = environment._cache.before_request(
         filename, hit, size, datatype, environment._curRequest_from_start)
+        #filename, hit, size, datatype, environment._curRequest_from_start + 30000) #in order to have recency very high for brand new files
     
     environment.set_curValues(filestats._size/1000,filestats._hit + filestats._miss, environment._curRequest_from_start - filestats._last_request,0. if filestats._datatype == 0 else 1., environment._cache.capacity()/100.,environment._cache.hit_rate())
 
@@ -356,6 +452,26 @@ def get_filename_and_size_of_current_cache_file():
     filestats = environment.get_stats(filename)
     return filename, filestats._size
 
+def get_CPUeff_upperbound():
+    if environment._cache._local_files != 0:
+        return environment._cache._upperCPUeff / environment._cache._local_files
+    else:
+        return 0
+
+def get_CPUeff_lowerbound():
+    if environment._cache._remote_files != 0:
+        return environment._cache._lowerCPUeff / environment._cache._remote_files
+    else:
+        return 0
+
+def get_CPUeff_diff():
+    upper = get_CPUeff_upperbound()
+    lower = get_CPUeff_lowerbound()
+    if lower == 0 or upper == 0:
+        return 0
+    else:
+        return upper - lower
+
 def add_request(action):
     ''' update filestats in stats, add to cache if necesary.  update daily stats'''
 
@@ -374,17 +490,37 @@ def add_request(action):
     walltime = dataframe_.df.WrapWC[environment._curRequest]
     protocol = dataframe_.df.Protocol[environment._curRequest]
     
-    if walltime != 0:
+    if walltime > 0. and cputime > 0. and cputime < walltime:
         if hit == False:
             if protocol == 1:               # LOCAL
-                environment._cache._CPUeff += cputime/walltime * 100 - it_cpueff_diff
+                environment._cache._upperCPUeff += cputime/walltime * 100
+                environment._cache._local_files += 1
+                environment._cache._local_files_miss += 1
+                #environment._cache._CPUeff += cputime/walltime * 100 - it_cpueff_diff
+                #environment._cache._CPUmisseff += cputime/walltime * 100 - it_cpueff_diff
+                environment._cache._CPUeff += cputime/walltime * 100 - get_CPUeff_diff()
+                environment._cache._CPUmisseff += cputime/walltime * 100 - get_CPUeff_diff()
             if protocol == 0:               # REMOTE
                 environment._cache._CPUeff += cputime/walltime * 100 
+                environment._cache._CPUmisseff += cputime/walltime * 100
+                environment._cache._remote_files += 1
+                environment._cache._remote_files_miss += 1
+                environment._cache._lowerCPUeff += cputime/walltime * 100
         if hit == True:
             if protocol == 1:               # LOCAL
                 environment._cache._CPUeff += cputime/walltime * 100 
+                environment._cache._CPUhiteff += cputime/walltime * 100
+                environment._cache._upperCPUeff += cputime/walltime * 100
+                environment._cache._local_files += 1 
+                environment._cache._local_files_hit += 1 
             if protocol == 0:               # REMOTE
-                environment._cache._CPUeff += cputime/walltime * 100 + it_cpueff_diff
+                environment._cache._lowerCPUeff += cputime/walltime * 100
+                environment._cache._remote_files += 1
+                environment._cache._remote_files_hit += 1
+                #environment._cache._CPUeff += cputime/walltime * 100 + it_cpueff_diff
+                #environment._cache._CPUhiteff += cputime/walltime * 100 + it_cpueff_diff
+                environment._cache._CPUeff += cputime/walltime * 100 + get_CPUeff_diff()
+                environment._cache._CPUhiteff += cputime/walltime * 100 + get_CPUeff_diff()
 
 def current_cpueff_is_anomalous():
     '''checks if current request has non valid values'''
@@ -490,7 +626,9 @@ if timing == True:
             'evict_pending_length'])
 
 occupancies = []
-
+#eviction_calls = 0
+#eviction_forced_calls = 0
+latest_deleted_files=set()
 end_of_cache = False
 while end == False and test == False:
     #print(len(environment._cache._cached_files))
@@ -556,12 +694,27 @@ while end == False and test == False:
         hit = environment.check_in_cache(dataframe_.df.Filename[environment._curRequest])
         anomalous = current_cpueff_is_anomalous()
 
+
         # GET THIS REQUEST
         if anomalous == False:
+            curFilename, curSize = get_filename_and_size_of_current_request()
+            if hit == False and (curFilename in latest_deleted_files):
+                environment._cache._miss_after_delete += 1
             if environment._cache._dailyReadOnMiss / DailyBandwidth1Gbit * 100 < 95. or hit == True:
+                environment._cache._req += 1
+                if hit == False and action == 0:
+                    environment._cache._store_actions += 1
+                    environment._cache._added += 1
+                elif hit == False and action == 1:
+                    environment._cache._not_store_actions += 1
                 add_request(action)
-                curFilename, curSize = get_filename_and_size_of_current_request()
-                daily_sizes.append(environment._cache._size)
+                #curFilename, curSize = get_filename_and_size_of_current_request()
+                #daily_sizes.append(environment._cache._size)
+                environment._cache._add_to_daily_sizes(environment._cache._size)
+            else:
+                environment._cache._redirected += 1
+                environment._cache._size_redirected += curSize
+
 
         if report_choices == True:
             daily_add_actions.append(action) 
@@ -645,10 +798,13 @@ while end == False and test == False:
         #PURGE UNUSED STATS
         if (environment._curDay+1) % purge_frequency == 0 and environment._curRequest == 0:
             environment.purge()
+        
         if anomalous == False:
             if environment._cache._dailyReadOnMiss / DailyBandwidth1Gbit * 100 < 95. or hit == True:
                 #print('oooooooooooooo')
                 environment.update_windows_getting_eventual_rewards_accumulate(curFilename, action)
+            
+
         
         # IF ADDING IS NOT OVER, GET NEXT VALUES AND PREPARE ACTION TO BE REWARDED, GIVING EVENTUAL REWARD
         if check_next_size == True:
@@ -657,7 +813,8 @@ while end == False and test == False:
             next_size = 0
         next_occupancy = (environment._cache._size + next_size) / environment._cache._max_size * 100
         current_occupancy = environment._cache.capacity()
-        occupancies.append(current_occupancy)
+        #occupancies.append(current_occupancy)
+        environment._cache._add_to_occupancies(current_occupancy)
         if current_occupancy <= environment._cache._h_watermark and next_occupancy < 100.:
             get_next_request_values()
         
@@ -743,9 +900,14 @@ while end == False and test == False:
         curFilename, curSize = get_filename_and_size_of_current_cache_file()
         if action == 1:
             #environment._cache._cached_files.remove(curFilename)
+            latest_deleted_files.add(curFilename)
             environment.remove_from_cache(curFilename)
             environment._cache._size -= curSize
             environment._cache._deleted_data += curSize
+            environment._cache._delete_actions += 1
+            environment._cache._deleted += 1
+        else:
+            environment._cache._not_delete_actions += 1 
         
         if report_choices == True:
             daily_evict_actions.append(action)
@@ -813,6 +975,9 @@ while end == False and test == False:
     current_occupancy = environment._cache.capacity()
     if environment._adding_or_evicting == 0 and (current_occupancy > environment._cache._h_watermark or next_occupancy > 100. or (step_add % eviction_frequency == 0 and step_add != 0)):
         #print('START EVICTION')
+        environment._cache._eviction_calls += 1
+        if next_occupancy > 100.:
+            environment._cache._eviction_forced_calls += 1
         environment._adding_or_evicting = 1 
         addition_counter += 1
         environment.create_cached_files_keys_list()
@@ -821,6 +986,7 @@ while end == False and test == False:
         #to_print = np.asarray(environment._cache._cached_files_keys)
         environment._cached_files_index = -1
         get_next_file_in_cache_values()
+        latest_deleted_files = set()
         
     ### STOP EVICTING ##########################################################################################
     if environment._adding_or_evicting == 1 and (end_of_cache == True or environment._cache.capacity() < low_watermark):
