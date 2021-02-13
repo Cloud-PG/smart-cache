@@ -49,7 +49,7 @@ class MinCacheServer(Thread):
         while run:
             #  Wait for next request from client
             message = self._socket.recv()
-            print("running", id(self))
+            print("cache running ->", id(self))
             self._socket.send(b"ok")
             print(f"server[command] {message}")
 
@@ -68,7 +68,7 @@ class MinCacheServer(Thread):
                 print(f"server[key] {key}")
                 data = self._socket.recv()
                 self._socket.send(b"ok")
-                print(f"server[data]: {len(data)}")
+                print(f"server[data]: {len(data) / 1024**2} MB")
                 self._dict[key] = data
             elif message == b"get":
                 key = self._socket.recv()
@@ -132,7 +132,7 @@ class DashCacheManager:
         print("resp[get]->", self._socket.recv())
         self._socket.send(filename.as_posix().encode("utf-8"))
         data = self._socket.recv()
-        print("resp[set]->", len(data))
+        print(f"resp[set]-> {len(data)/ 1024**2} MB")
         return pickle.loads(gzip.decompress((data)))
 
 

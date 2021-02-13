@@ -21,9 +21,9 @@ app = typer.Typer(name="probe.results", add_completion=False)
 
 
 @app.command()
-def dashboard(folders: "List[str]", dash_ip: str = "localhost"):
+def dashboard(folders: "List[str]", dash_ip: str = "localhost", lazy: bool = False):
     MinCacheServer().start()
-    service(folders, dash_ip)
+    service(folders, dash_ip, lazy)
 
 
 @app.command()

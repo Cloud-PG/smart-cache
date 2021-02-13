@@ -64,10 +64,24 @@ COLUMNS = [
 
 
 class Element(object):
-    def __init__(self, components: list, filename: str, df: "pd.DataFrame"):
-        self._df = df
+    def __init__(
+        self,
+        components: list,
+        filename: str,
+        full_path: str,
+        df: "pd.DataFrame",
+        idx: int = -1,
+        lazy: bool = True,
+    ):
+        self._df = None
+        self._lazy = lazy
+        self._idx = idx
         self._filename = filename
+        self._full_path = full_path
         self._components = set([elm for elm in self.__parse_components(components)])
+
+        if not self._lazy:
+            self._df = df
 
     @staticmethod
     def __parse_components(components: list) -> list:
@@ -91,7 +105,26 @@ class Element(object):
         return self._filename
 
     @property
+    def full_path(self):
+        return self._full_path
+
+    @property
+    def path(self):
+        return pathlib.Path(self._full_path)
+
+    @property
     def df(self):
+        if self._df is None and self._lazy:
+            print(f"[LAZY LOAD {self._idx}]->[{self.full_path}]", end="\r")
+            df = pd.read_csv(self.full_path)
+
+            if check_columns(df):
+                print("Warning: not all columns are present")
+
+            df = fix_date_column(df)
+
+            self._df = df
+
         return self._df
 
     @property
@@ -103,9 +136,11 @@ class Element(object):
 
 
 class Results(object):
-    def __init__(self):
+    def __init__(self, lazy: bool = True):
         self._elemets = {}
         self._choices = {}
+        self._lazy = lazy
+        self._counter = 0
 
     def __len__(self) -> int:
         return len(self._elemets)
@@ -115,12 +150,16 @@ class Results(object):
         path: "pathlib.Path",
         components: list,
         filename: str,
+        full_path: str,
         df: "pd.DataFrame",
         choices: "pd.DataFrame" = None,
     ) -> "Results":
-        elm = Element(components, filename, df)
+        elm = Element(
+            components, filename, full_path, df, idx=self._counter, lazy=self._lazy
+        )
         self._elemets[path.as_posix()] = elm
         self._choices[path.as_posix()] = choices
+        self._counter += 1
         return self
 
     @property
@@ -184,8 +223,20 @@ class Results(object):
             return tmp
 
 
-def aggregate_results(folders: list) -> "Results":
-    results = Results()
+def check_columns(df: "pd.DataFrame") -> bool:
+    cur_columns = set(df.columns)
+    return not cur_columns.issubset(set(COLUMNS))
+
+
+def fix_date_column(df: "pd.DataFrame") -> "pd.DataFrame":
+    df["date"] = pd.to_datetime(
+        df["date"].apply(lambda elm: elm.split()[0]), format="%Y-%m-%d"
+    )
+    return df
+
+
+def aggregate_results(folders: list, lazy: bool = False) -> "Results":
+    results = Results(lazy=lazy)
 
     for folder in folders:
         abs_target_folder = pathlib.Path(folder).resolve().parent
@@ -194,15 +245,18 @@ def aggregate_results(folders: list) -> "Results":
             list(pathlib.Path(folder).glob(f"**/{SIM_RESULT_FILENAME}")),
             desc=f"Opening results",
         ):
-            df = pd.read_csv(result_path)
-            cur_columns = set(df.columns)
-            if not cur_columns.issubset(all_columns):
-                print("Warning: not all columns are present")
+            if not lazy:
+                df = pd.read_csv(result_path)
 
-            df["date"] = pd.to_datetime(
-                df["date"].apply(lambda elm: elm.split()[0]), format="%Y-%m-%d"
-            )
+                if check_columns(df):
+                    print("Warning: not all columns are present")
+
+                df = fix_date_column(df)
+            else:
+                df = None
+
             relative_path = result_path.resolve().relative_to(abs_target_folder)
+
             *components, filename = relative_path.parts
             # Check choices
             choice_file = result_path.parent.joinpath(SIM_CHOICE_LOG_FILE)
@@ -210,7 +264,16 @@ def aggregate_results(folders: list) -> "Results":
                 choices = choice_file
             else:
                 choices = None
-            results.insert(relative_path, components, filename, df, choices)
+
+            results.insert(
+                relative_path,
+                components,
+                filename,
+                result_path.resolve().as_posix(),
+                df,
+                choices,
+            )
+
     return results
 
 

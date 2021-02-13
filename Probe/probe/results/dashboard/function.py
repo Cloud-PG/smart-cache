@@ -34,11 +34,11 @@ from .vars import DASH_CACHE_DIRS, STATUS_ARROW
 _EXTERNAL_STYLESHEETS = ["https://codepen.io/chriddyp/pen/bWLwgP.css"]
 
 
-def service(folders: "List[str]", dash_ip: str = "localhost"):
+def service(folders: "List[str]", dash_ip: str = "localhost", lazy: bool = False):
     init()
 
     print(f"{STATUS_ARROW}Aggregate results...")
-    results = aggregate_results(folders)
+    results = aggregate_results(folders, lazy)
 
     print(f"{STATUS_ARROW}Start dashboard...")
     create(results, dash_ip)
