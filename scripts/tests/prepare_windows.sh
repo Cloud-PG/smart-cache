@@ -6,6 +6,11 @@ echo $BASE_DIR
 
 pushd $BASE_DIR
 
+echo "Remove previous folders"
+rm -r {jan,feb,mar,apr,may,jun,jul,aug,sep,oct,nov,dec}
+rm -r {jan-mar,apr-jun,jul-sep,oct-dec}
+rm -r {jan-apr,may-aug,sep-dec}
+
 mkdir -p {jan,feb,mar,apr,may,jun,jul,aug,sep,oct,nov,dec}
 
 echo "Prepare period window jan"
