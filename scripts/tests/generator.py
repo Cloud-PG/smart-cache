@@ -262,7 +262,7 @@ def generator(data_path: "pathlib.Path", args):
         True,
         False,
     ]
-    cache_sizes = [10, 50, 100, 200, 400, 500, 1000]
+    cache_sizes = [10, 50, 100, 200, 400]
     epsilon = [
         0.1,
         0.001,
@@ -279,9 +279,6 @@ def generator(data_path: "pathlib.Path", args):
     print("Compose parameters...")
     configs = compose(base, "region", regions)
     configs = compose(configs, ["cache_type", "ai_type", "evictionType"], cache_types)
-    configs = compose(configs, "cache_watermark", cache_watermarks)
-    configs = compose(configs, "cache_size", cache_sizes)
-    configs = compose(configs, ["w_start", "w_stop"], windows)
     configs = compose(configs, "epsilonDecay", epsilon, lambda elm: elm.is_SCDL)
     configs = compose(
         configs, "additionEpsilonDecay", epsilon, lambda elm: elm.is_SCDL2
@@ -293,6 +290,9 @@ def generator(data_path: "pathlib.Path", args):
         lambda elm: elm.is_SCDL2 and not elm.is_noEviction,
     )
     configs = compose(configs, "k", k, lambda elm: elm.is_SCDL2 and elm.is_onK)
+    configs = compose(configs, "cache_watermark", cache_watermarks)
+    configs = compose(configs, ["w_start", "w_stop"], windows)
+    configs = compose(configs, "cache_size", cache_sizes)
 
     print("Remove previous configurations")
     config_out_folder = pathlib.Path(_CONFIG_FOLDER)
@@ -302,8 +302,15 @@ def generator(data_path: "pathlib.Path", args):
     makedirs(config_out_folder)
 
     print("Make configs...")
+    counter = 0
+    cur_region = configs[0].region
     for idx, conf in enumerate(sorted(configs, key=lambda elm: elm.region)):
-        file_ = config_out_folder.joinpath(f"{conf.region}_{idx}.yml")
+        if conf.region != cur_region:
+            counter = 0
+            cur_region = conf.region
+
+        file_ = config_out_folder.joinpath(f"{conf.region}_{counter:09d}.yml")
+
         with open(file_, "w") as out_file:
             if conf.ai_type == "SCDL":
                 out_file.write(_TEMPLATE_SCDL.format(conf=conf))
@@ -311,6 +318,8 @@ def generator(data_path: "pathlib.Path", args):
                 out_file.write(_TEMPLATE_SCDL2.format(conf=conf))
             else:
                 out_file.write(_TEMPLATE.format(conf=conf))
+
+        counter += 1
         print(f"[{idx+1}/{len(configs)}] written", end="\r")
     else:
         print("All configuration files are created...")
