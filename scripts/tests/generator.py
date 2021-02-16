@@ -114,8 +114,11 @@ class ConfigParameters:
     k: int = 1
 
     def _checkAI(self):
-        if self.ai_type == "SCDL" and self.additionFeatureMap == "":
-            raise Exception("No addition feature map")
+        if self.ai_type == "SCDL" and self.featureMap == "":
+            if self.additionFeatureMap != "":
+                self.featureMap = self.additionFeatureMap
+            else:
+                raise Exception("No feature map for SCDL")
         elif self.ai_type == "SCDL2":
             if self.additionFeatureMap == "":
                 raise Exception("No addition feature map")
@@ -220,33 +223,33 @@ def generator(data_path: "pathlib.Path", args):
 
     regions = [
         "it",
-        "us",
+        # "us",
     ]
     windows = [
         (0, 4),
-        (4, 8),
-        (8, 12),
-        (12, 16),
-        (16, 20),
-        (20, 24),
-        (24, 28),
-        (28, 32),
-        (32, 36),
-        (36, 40),
-        (40, 44),
-        (44, 48),
-        (48, 52),
-        # Trimester
-        (0, 12),
-        (12, 24),
-        (24, 36),
-        (36, 48),
-        (48, 52),
-        # Quadrimester
-        (0, 16),
-        (16, 32),
-        (32, 48),
-        (48, 52),
+        # (4, 8),
+        # (8, 12),
+        # (12, 16),
+        # (16, 20),
+        # (20, 24),
+        # (24, 28),
+        # (28, 32),
+        # (32, 36),
+        # (36, 40),
+        # (40, 44),
+        # (44, 48),
+        # (48, 52),
+        # # Trimester
+        # (0, 12),
+        # (12, 24),
+        # (24, 36),
+        # (36, 48),
+        # (48, 52),
+        # # Quadrimester
+        # (0, 16),
+        # (16, 32),
+        # (32, 48),
+        # (48, 52),
     ]
     cache_types = [
         ("aiRL", "SCDL", ""),
@@ -262,18 +265,21 @@ def generator(data_path: "pathlib.Path", args):
         True,
         False,
     ]
-    cache_sizes = [10, 50, 100, 200, 400]
+    cache_sizes = [
+        10,
+        #    50, 100, 200, 400
+    ]
     epsilon = [
         0.1,
-        0.001,
-        0.0001,
+        # 0.001,
+        # 0.0001,
     ]
     k = [
         1024,
-        2048,
-        4096,
-        8192,
-        16384,
+        # 2048,
+        # 4096,
+        # 8192,
+        # 16384,
     ]
 
     print("Compose parameters...")
