@@ -114,7 +114,7 @@ func (conf SimConfig) configure(configFilenameWithNoExt string) { //nolint:ignor
 	viper.SetDefault("sim.loaddumpfilename", "")
 	viper.SetDefault("sim.window.size", 7)
 	viper.SetDefault("sim.window.start", 0)
-	viper.SetDefault("sim.window.stop", 0)
+	viper.SetDefault("sim.window.stop", -1)
 	viper.SetDefault("sim.coldstart", false)
 	viper.SetDefault("sim.coldstartnostats", false)
 	viper.SetDefault("sim.log", false)
