@@ -240,7 +240,7 @@ def aggregate_results(folders: list, lazy: bool = False) -> "Results":
 
     for folder in folders:
         abs_target_folder = pathlib.Path(folder).resolve().parent
-        all_columns = set(COLUMNS)
+
         for result_path in tqdm(
             list(pathlib.Path(folder).glob(f"**/{SIM_RESULT_FILENAME}")),
             desc=f"Opening results",
