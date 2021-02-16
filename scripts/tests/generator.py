@@ -7,13 +7,10 @@ from os import makedirs
 
 _TEMPLATE = """--- # Simulation parameters
 sim:
-  data: {conf.data_path}/source2018_numeric_{conf.region}_with_avro_order
+  data: {conf.data_path}/source2018_numeric_{conf.region}_with_avro_order/{conf.window}
   outputFolder: ./results/{conf.out_folder}
   type: normal
   overwrite: true
-  window:
-    start: {conf.w_start}
-    stop: {conf.w_stop}
   region: {conf.region}
   cache:
     type: {conf.cache_type}
@@ -28,13 +25,10 @@ sim:
 
 _TEMPLATE_SCDL = """--- # Simulation parameters
 sim:
-  data: {conf.data_path}/source2018_numeric_{conf.region}_with_avro_order
+  data: {conf.data_path}/source2018_numeric_{conf.region}_with_avro_order/{conf.window}
   outputFolder: ./results/{conf.out_folder}
   type: normal
   overwrite: true
-  window:
-    start: {conf.w_start}
-    stop: {conf.w_stop}
   region: {conf.region}
   cache:
     type: aiRL
@@ -57,13 +51,10 @@ sim:
 
 _TEMPLATE_SCDL2 = """--- # Simulation parameters
 sim:
-  data: {conf.data_path}/source2018_numeric_{conf.region}_with_avro_order
+  data: {conf.data_path}/source2018_numeric_{conf.region}_with_avro_order/{conf.window}
   outputFolder: ./results/{conf.out_folder}
   type: normal
   overwrite: true
-  window:
-    start: {conf.w_start}
-    stop: {conf.w_stop}
   region: {conf.region}
   cache:
     type: aiRL
@@ -98,8 +89,7 @@ _CONFIG_FOLDER = "./configs"
 class ConfigParameters:
     data_path: str
     region: str = "it"
-    w_start: int = 0
-    w_stop: int = 52
+    window: str = "jan"
     cache_type: str = "lru"
     cache_watermark: bool = True
     cache_size: int = 100
@@ -154,7 +144,7 @@ class ConfigParameters:
                 pathlib.Path(".")
                 .joinpath(
                     self.region,
-                    f"{self.w_start}_{self.w_stop}",
+                    f"{self.window}",
                     "watermarks" if self.cache_watermark else "noWatermarks",
                     f"{self.cache_size}",
                 )
@@ -165,7 +155,7 @@ class ConfigParameters:
                 pathlib.Path(".")
                 .joinpath(
                     self.region,
-                    f"{self.w_start}_{self.w_stop}",
+                    f"{self.window}",
                     "watermarks" if self.cache_watermark else "noWatermarks",
                     f"{self.cache_size}",
                     f"{self.epsilonDecay:0.6f}",
@@ -177,7 +167,7 @@ class ConfigParameters:
                 pathlib.Path(".")
                 .joinpath(
                     self.region,
-                    f"{self.w_start}_{self.w_stop}",
+                    f"{self.window}",
                     "watermarks" if self.cache_watermark else "noWatermarks",
                     f"{self.cache_size}",
                     f"A{self.additionEpsilonDecay:0.6f}",
@@ -226,30 +216,53 @@ def generator(data_path: "pathlib.Path", args):
         "us",
     ]
     windows = [
-        (0, 4),
-        (4, 8),
-        (8, 12),
-        (12, 16),
-        (16, 20),
-        (20, 24),
-        (24, 28),
-        (28, 32),
-        (32, 36),
-        (36, 40),
-        (40, 44),
-        (44, 48),
-        (48, 52),
+        # month
+        "jan",
+        "feb",
+        "mar",
+        "apr",
+        "may",
+        "jun",
+        "jul",
+        "aug",
+        "sep",
+        "oct",
+        "nov",
+        "dec",
         # Trimester
-        (0, 12),
-        (12, 24),
-        (24, 36),
-        (36, 48),
-        (48, 52),
+        "jan-mar",
+        "apr-jun",
+        "jul-set",
+        "oct-dec",
         # Quadrimester
-        (0, 16),
-        (16, 32),
-        (32, 48),
-        (48, 52),
+        "jan-apr",
+        "may-aug",
+        "sep-dec",
+        # # month
+        # (0, 4),
+        # (4, 8),
+        # (8, 12),
+        # (12, 16),
+        # (16, 20),
+        # (20, 24),
+        # (24, 28),
+        # (28, 32),
+        # (32, 36),
+        # (36, 40),
+        # (40, 44),
+        # (44, 48),
+        # (48, 52),
+        # # Trimester
+        # (0, 12),
+        # (12, 24),
+        # (24, 36),
+        # (36, 48),
+        # (48, 52),
+        # # Quadrimester
+        # (0, 16),
+        # (16, 32),
+        # (32, 48),
+        # (48, 52),
     ]
     cache_types = [
         ("aiRL", "SCDL", ""),
@@ -294,7 +307,7 @@ def generator(data_path: "pathlib.Path", args):
     )
     configs = compose(configs, "k", k, lambda elm: elm.is_SCDL2 and elm.is_onK)
     configs = compose(configs, "cache_watermark", cache_watermarks)
-    configs = compose(configs, ["w_start", "w_stop"], windows)
+    configs = compose(configs, "window", windows)
     configs = compose(configs, "cache_size", cache_sizes)
 
     print("Remove previous configurations")
