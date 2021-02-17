@@ -33,20 +33,24 @@ class MinCacheServer(Thread):
         self._context = zmq.Context()
         self._socket = self._context.socket(zmq.REP)
         self._dict = {}
+        self._run = False
 
         try:
             self._socket.bind("tcp://*:5555")
         except zmq.error.ZMQError as err:
             if err.strerror.find("Address already in use") == -1:
                 raise (err)
+        else:
+            self._run = True
 
     def __del__(self):
-        print("CLOSE")
-        self._socket.close()
+        print("SERVER CLOSE CONNECTION")
+        if not self._context.closed:
+            self._socket.close()
+        print("SERVER EXIT")
 
     def run(self):
-        run = True
-        while run:
+        while self._run:
             #  Wait for next request from client
             message = self._socket.recv()
             print("cache running ->", id(self))
@@ -54,10 +58,11 @@ class MinCacheServer(Thread):
             print(f"server[command] {message}")
 
             if message == b"exit":
-                run = False
-                print("EXIT")
+                self._run = False
+                print("SERVER START TO EXIT")
             elif message == b"check":
                 key = self._socket.recv()
+                print(f"server[key] {key}")
                 if key in self._dict:
                     self._socket.send(b"y")
                 else:
@@ -83,14 +88,17 @@ class DashCacheManager:
         )
 
         self._context = zmq.Context()
-        print("Connecting to dash cache server...")
+        print("CLIENT CONNECTING TO DASH CACHE SERVER")
         self._socket = self._context.socket(zmq.REQ)
         self._socket.connect("tcp://localhost:5555")
 
         self._dirs = dirs
 
     def __del__(self):
-        self._socket.disconnect("tcp://localhost:5555")
+        print("CLIENT DISCONNECT")
+        if not self._context.closed:
+            self._socket.disconnect("tcp://localhost:5555")
+        print("CLIENT EXIT")
 
     def _filename(self, folder: str, hash_args: tuple = (), hash_: str = ""):
         if hash_ == "":
@@ -108,8 +116,10 @@ class DashCacheManager:
         return exists == b"y"
 
     def stop(self):
-        print("stop[exit]!")
-        self._socket.send(b"exit")
+        if not self._context.closed:
+            print("stop[exit]!")
+            self._socket.send(b"exit")
+            print("resp[exit]->", self._socket.recv())
 
     def set(
         self, folder: str, hash_args: tuple = (), hash_: str = "", data: "Any" = None
@@ -431,6 +441,7 @@ def selection2hash(
     new_metrics: bool = True,
     columns_binning_size: int = 1,
     measures_binning_size: int = 1,
+    columns: list = [],
 ) -> str:
     return str(
         hash(
@@ -446,6 +457,7 @@ def selection2hash(
                     str(columns_binning_size),
                     str(measures_binning_size),
                 ]
+                + columns
             )
         )
     )

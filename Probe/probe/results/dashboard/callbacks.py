@@ -72,6 +72,7 @@ def _tab_columns(
     filters_any,
     num_of_results,
     columns_binning_size,
+    columns,
 ) -> tuple:
     if cache_manager.check("columns", hash_args):
         data = cache_manager.get("columns", hash_args)
@@ -79,7 +80,7 @@ def _tab_columns(
     else:
         figures = []
         results = cache_manager.get("results", hash_="data")
-        for column in COLUMNS[1:]:
+        for column in columns:
             files2plot = get_files2plot(
                 results,
                 files,
@@ -307,6 +308,7 @@ def switch_tab(
     new_metrics,
     columns_binning_size,
     measures_binning_size,
+    columns,
     files,
     filters_all,
     filters_any,
@@ -323,6 +325,7 @@ def switch_tab(
         new_metrics,
         columns_binning_size,
         measures_binning_size,
+        columns,
     )
 
     if at == "tab-files":
@@ -330,6 +333,8 @@ def switch_tab(
     elif at == "tab-filters":
         return _EMPTY_TUPLE
     elif at == "tab-columns":
+        data = cache_manager.get("results", hash_="data")
+        files = [filename for filename in data.files]
         return _tab_columns(
             cache_manager,
             hash_args,
@@ -338,8 +343,11 @@ def switch_tab(
             filters_any,
             num_of_results,
             columns_binning_size,
+            columns,
         )
     elif at == "tab-measures":
+        data = cache_manager.get("results", hash_="data")
+        files = [filename for filename in data.files]
         return _tab_measures(
             cache_manager,
             hash_args,
@@ -350,11 +358,15 @@ def switch_tab(
             measures_binning_size,
         )
     elif at == "tab-agents":
+        data = cache_manager.get("results", hash_="data")
+        files = [filename for filename in data.files]
         return _tab_agents(
             cache_manager, hash_args, files, filters_all, filters_any, num_of_results
         )
 
     elif at == "tab-table":
+        data = cache_manager.get("results", hash_="data")
+        files = [filename for filename in data.files]
         return _tab_table(
             cache_manager,
             hash_args,
@@ -368,6 +380,8 @@ def switch_tab(
         )
 
     elif at == "tab-compare":
+        data = cache_manager.get("results", hash_="data")
+        files = [filename for filename in data.files]
         return _tab_compare(
             cache_manager,
             hash_args,

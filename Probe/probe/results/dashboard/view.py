@@ -6,6 +6,7 @@ import dash_daq as daq
 import dash_html_components as html
 
 from ..data import Results
+from ..data import COLUMNS
 
 
 def compare() -> "Any":
@@ -178,6 +179,16 @@ def columns() -> "Any":
                         },
                     ),
                 ]
+            ),
+            dbc.CardBody(
+                dcc.Dropdown(
+                    id="selected-columns",
+                    options=[
+                        {"label": column, "value": column} for column in COLUMNS[1:]
+                    ],
+                    value=["hit rate", "read on hit data"],
+                    multi=True,
+                )
             ),
             dbc.Spinner(
                 dbc.CardBody(

@@ -1,4 +1,5 @@
 import io
+from signal import SIGINT, signal
 from time import sleep
 from typing import List
 
@@ -34,20 +35,30 @@ from .vars import DASH_CACHE_DIRS, STATUS_ARROW
 _EXTERNAL_STYLESHEETS = ["https://codepen.io/chriddyp/pen/bWLwgP.css"]
 
 
-def service(folders: "List[str]", dash_ip: str = "localhost", lazy: bool = False):
+def service(
+    folders: "List[str]",
+    dash_ip: str = "localhost",
+    dash_port: int = 8050,
+    lazy: bool = False,
+):
     init()
 
     print(f"{STATUS_ARROW}Aggregate results...")
     results = aggregate_results(folders, lazy)
 
-    print(f"{STATUS_ARROW}Start dashboard...")
-    create(results, dash_ip)
-
-
-def create(results: "Results", server_ip: str = "localhost"):
-
     cache_manager = DashCacheManager(DASH_CACHE_DIRS)
     cache_manager.set("results", hash_="data", data=results)
+    del cache_manager
+
+    print(f"{STATUS_ARROW}Start dashboard...")
+    create(results, dash_ip, dash_port)
+
+
+def create(
+    results: "Results",
+    server_ip: str = "localhost",
+    server_port: int = 8050,
+):
 
     # Assets ref: https://dash.plotly.com/external-resources
     app = dash.Dash(
@@ -158,6 +169,7 @@ def create(results: "Results", server_ip: str = "localhost"):
             Input("toggle-new-metrics", "value"),
             Input("columns-binning-size", "value"),
             Input("measures-binning-size", "value"),
+            Input("selected-columns", "value"),
         ],
         [
             State("selected-files", "value"),
@@ -169,6 +181,7 @@ def create(results: "Results", server_ip: str = "localhost"):
 
     @app.server.route("/table/csv")
     def download_csv():
+        cache_manager = DashCacheManager(DASH_CACHE_DIRS)
         return send_file(
             io.BytesIO(cache_manager.get("results", hash_="table.csv")),
             mimetype="text/plain",
@@ -178,6 +191,7 @@ def create(results: "Results", server_ip: str = "localhost"):
 
     @app.server.route("/table/tex")
     def download_tex():
+        cache_manager = DashCacheManager(DASH_CACHE_DIRS)
         return send_file(
             io.BytesIO(cache_manager.get("results", hash_="table.tex")),
             mimetype="text/plain",
@@ -187,6 +201,7 @@ def create(results: "Results", server_ip: str = "localhost"):
 
     @app.server.route("/table/html")
     def download_html():
+        cache_manager = DashCacheManager(DASH_CACHE_DIRS)
         return send_file(
             io.BytesIO(cache_manager.get("results", hash_="table.html")),
             mimetype="text/plain",
@@ -194,12 +209,15 @@ def create(results: "Results", server_ip: str = "localhost"):
             as_attachment=True,
         )
 
-    from signal import SIGINT, signal
-
     def handler(signal_received, frame):
+        cache_manager = DashCacheManager(DASH_CACHE_DIRS)
         # Handle any cleanup here
         print("SIGINT or CTRL-C detected. Exiting gracefully")
         cache_manager.stop()
+        del cache_manager
+
+        sleep(2)
+        print("MAIN EXIT")
         exit(0)
 
     signal(SIGINT, handler)
@@ -207,4 +225,5 @@ def create(results: "Results", server_ip: str = "localhost"):
     app.run_server(
         debug=True,
         host=server_ip,
+        port=server_port,
     )
