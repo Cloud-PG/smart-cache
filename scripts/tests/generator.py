@@ -101,7 +101,7 @@ class ConfigParameters:
     evictionFeatureMap: str = ""
     additionEpsilonDecay: float = 0.1
     evictionEpsilonDecay: float = 0.1
-    k: int = 1
+    k: int = 0
 
     def _checkAI(self):
         if self.ai_type == "SCDL" and self.featureMap == "":
@@ -172,7 +172,7 @@ class ConfigParameters:
                     f"{self.cache_size}",
                     f"A{self.additionEpsilonDecay:0.6f}",
                     f"E{self.evictionEpsilonDecay:0.6f}",
-                    f"k{self.k}",
+                    f"k{self.k}" if self.k != 0 else "NoK",
                 )
                 .as_posix()
             )
