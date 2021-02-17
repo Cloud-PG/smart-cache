@@ -172,6 +172,7 @@ class ConfigParameters:
                     f"{self.cache_size}",
                     f"A{self.additionEpsilonDecay:0.6f}",
                     f"E{self.evictionEpsilonDecay:0.6f}",
+                    f"k{self.k}",
                 )
                 .as_posix()
             )
