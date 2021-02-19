@@ -1,11 +1,9 @@
 import io
-import pathlib
 import sys
 
 # from signal import SIGINT, SIGKILL, signal
 # from time import sleep
 from typing import List
-import tempfile
 
 import dash
 import dash_bootstrap_components as dbc
@@ -192,11 +190,8 @@ def create(
     @app.server.route("/table/csv")
     def download_csv():
         cache_manager = DashCacheManager()
-        filename = pathlib.Path(tempfile.gettempdir()).joinpath("table.csv")
-        with open(filename, "wb") as table:
-            table.write(cache_manager.get("results", hash_="table.csv"))
         return send_file(
-            filename.resolve(),
+            io.BytesIO(cache_manager.get("results", hash_="table.csv")),
             mimetype="text/plain",
             attachment_filename="table.csv",
             as_attachment=True,
@@ -206,11 +201,8 @@ def create(
     @app.server.route("/table/tex")
     def download_tex():
         cache_manager = DashCacheManager()
-        filename = pathlib.Path(tempfile.gettempdir()).joinpath("table.tex")
-        with open(filename, "wb") as table:
-            table.write(cache_manager.get("results", hash_="table.tex"))
         return send_file(
-            filename.resolve(),
+            io.BytesIO(cache_manager.get("results", hash_="table.tex")),
             mimetype="text/plain",
             attachment_filename="table.tex",
             as_attachment=True,
@@ -220,11 +212,8 @@ def create(
     @app.server.route("/table/html")
     def download_html():
         cache_manager = DashCacheManager()
-        filename = pathlib.Path(tempfile.gettempdir()).joinpath("table.html")
-        with open(filename, "wb") as table:
-            table.write(cache_manager.get("results", hash_="table.html"))
         return send_file(
-            filename.resolve(),
+            io.BytesIO(cache_manager.get("results", hash_="table.html")),
             mimetype="text/plain",
             attachment_filename="table.html",
             as_attachment=True,
