@@ -1,6 +1,8 @@
 import io
-from signal import SIGINT, signal
-from time import sleep
+import sys
+
+# from signal import SIGINT, SIGKILL, signal
+# from time import sleep
 from typing import List
 
 import dash
@@ -9,15 +11,13 @@ import dash_bootstrap_components as dbc
 # import dash_core_components as dcc
 # import dash_daq as daq
 import dash_html_components as html
-
-# Create random data with numpy
-import pandas as pd
 from colorama import init
 
 # import plotly.express as px
 # import plotly.graph_objects as go
 from dash.dependencies import Input, Output, State
 from flask import send_file
+from loguru import logger
 
 from ..data import Results, aggregate_results
 from . import view
@@ -30,9 +30,17 @@ from .callbacks import (
     unselect_all_files,
 )
 from .utils import DashCacheManager
-from .vars import DASH_CACHE_DIRS, STATUS_ARROW
+from .vars import STATUS_ARROW
 
 _EXTERNAL_STYLESHEETS = ["https://codepen.io/chriddyp/pen/bWLwgP.css"]
+
+logger.remove()
+logger.add(
+    sys.stderr,
+    format="<green>{time}</green>\t<level>{level}</level>\t<magenta>{file}</magenta>@<yellow>{line}</yellow>\t{message}",
+    level="DEBUG",
+    colorize=True,
+)
 
 
 def service(
@@ -46,7 +54,7 @@ def service(
     print(f"{STATUS_ARROW}Aggregate results...")
     results = aggregate_results(folders, lazy)
 
-    cache_manager = DashCacheManager(DASH_CACHE_DIRS)
+    cache_manager = DashCacheManager()
     cache_manager.set("results", hash_="data", data=results)
     del cache_manager
 
@@ -181,7 +189,7 @@ def create(
 
     @app.server.route("/table/csv")
     def download_csv():
-        cache_manager = DashCacheManager(DASH_CACHE_DIRS)
+        cache_manager = DashCacheManager()
         return send_file(
             io.BytesIO(cache_manager.get("results", hash_="table.csv")),
             mimetype="text/plain",
@@ -191,7 +199,7 @@ def create(
 
     @app.server.route("/table/tex")
     def download_tex():
-        cache_manager = DashCacheManager(DASH_CACHE_DIRS)
+        cache_manager = DashCacheManager()
         return send_file(
             io.BytesIO(cache_manager.get("results", hash_="table.tex")),
             mimetype="text/plain",
@@ -201,7 +209,7 @@ def create(
 
     @app.server.route("/table/html")
     def download_html():
-        cache_manager = DashCacheManager(DASH_CACHE_DIRS)
+        cache_manager = DashCacheManager()
         return send_file(
             io.BytesIO(cache_manager.get("results", hash_="table.html")),
             mimetype="text/plain",
@@ -209,18 +217,29 @@ def create(
             as_attachment=True,
         )
 
-    def handler(signal_received, frame):
-        cache_manager = DashCacheManager(DASH_CACHE_DIRS)
-        # Handle any cleanup here
-        print("SIGINT or CTRL-C detected. Exiting gracefully")
-        cache_manager.stop()
-        del cache_manager
+    # def handler(signal_received, frame):
+    #     import threading, os
 
-        sleep(2)
-        print("MAIN EXIT")
-        exit(0)
+    #     cache_manager = DashCacheManager()
+    #     # Handle any cleanup here
+    #     print("SIGINT or CTRL-C detected. Exiting gracefully")
+    #     print(f"NUM THREADS: {threading.active_count()}")
+    #     for thread in threading.enumerate():
+    #         print(thread)
 
-    signal(SIGINT, handler)
+    #     cache_manager.stop()
+    #     del cache_manager
+
+    #     sleep(2)
+    #     print("MAIN EXIT")
+
+    #     print(f"NUM THREADS: {threading.active_count()}")
+    #     for thread in threading.enumerate():
+    #         print(thread)
+
+    #     exit(0)
+
+    # signal(SIGINT, handler)
 
     app.run_server(
         debug=True,

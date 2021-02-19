@@ -35,7 +35,7 @@ from .utils import (
     make_line_figures,
     parse_simulation_report_stuff,
 )
-from .vars import DASH_CACHE_DIRS, PLOT_LAYOUT
+from .vars import PLOT_LAYOUT
 
 # import plotly.express as px
 # import plotly.graph_objects as go
@@ -74,8 +74,8 @@ def _tab_columns(
     columns_binning_size,
     columns,
 ) -> tuple:
-    if cache_manager.check("columns", hash_args):
-        data = cache_manager.get("columns", hash_args)
+    if cache_manager.check("columns", hash_args=hash_args):
+        data = cache_manager.get("columns", hash_args=hash_args)
         return (data, "", "", "", "", "")
     else:
         figures = []
@@ -123,8 +123,8 @@ def _tab_measures(
     num_of_results,
     measures_binning_size,
 ) -> tuple:
-    if cache_manager.check("measures", hash_args):
-        data = cache_manager.get("measures", hash_args)
+    if cache_manager.check("measures", hash_args=hash_args):
+        data = cache_manager.get("measures", hash_args=hash_args)
         return ("", data, "", "", "", "")
     else:
         results = cache_manager.get("results", hash_="data")
@@ -170,8 +170,8 @@ def _tab_agents(
     filters_any,
     num_of_results,
 ) -> tuple:
-    if cache_manager.check("agents", hash_args):
-        data = cache_manager.get("agents", hash_args)
+    if cache_manager.check("agents", hash_args=hash_args):
+        data = cache_manager.get("agents", hash_args=hash_args)
         return ("", "", data, "", "", "")
     else:
         figures = []
@@ -210,8 +210,8 @@ def _tab_table(
     filters_any,
     num_of_results,
 ) -> tuple:
-    if cache_manager.check("tables", hash_args):
-        data = cache_manager.get("tables", hash_args)
+    if cache_manager.check("tables", hash_args=hash_args):
+        data = cache_manager.get("tables", hash_args=hash_args)
         return ("", "", "", data, "", "")
     else:
         results = cache_manager.get("results", hash_="data")
@@ -280,8 +280,8 @@ def _tab_compare(
     filters_all,
     filters_any,
 ) -> tuple:
-    if cache_manager.check("compare", hash_args):
-        _, figs, tables = cache_manager.get("compare", hash_args)
+    if cache_manager.check("compare", hash_args=hash_args):
+        _, figs, tables = cache_manager.get("compare", hash_args=hash_args)
         return ("", "", "", "", figs, tables)
     else:
         results = cache_manager.get("results", hash_="data")
@@ -314,7 +314,6 @@ def switch_tab(
     filters_any,
     num_of_results,
 ):
-    cache_manager = DashCacheManager(DASH_CACHE_DIRS)
     hash_args = (
         files,
         filters_all,
@@ -333,6 +332,7 @@ def switch_tab(
     elif at == "tab-filters":
         return _EMPTY_TUPLE
     elif at == "tab-columns":
+        cache_manager = DashCacheManager()
         data = cache_manager.get("results", hash_="data")
         files = [filename for filename in data.files]
         return _tab_columns(
@@ -346,6 +346,7 @@ def switch_tab(
             columns,
         )
     elif at == "tab-measures":
+        cache_manager = DashCacheManager()
         data = cache_manager.get("results", hash_="data")
         files = [filename for filename in data.files]
         return _tab_measures(
@@ -358,6 +359,7 @@ def switch_tab(
             measures_binning_size,
         )
     elif at == "tab-agents":
+        cache_manager = DashCacheManager()
         data = cache_manager.get("results", hash_="data")
         files = [filename for filename in data.files]
         return _tab_agents(
@@ -365,6 +367,7 @@ def switch_tab(
         )
 
     elif at == "tab-table":
+        cache_manager = DashCacheManager()
         data = cache_manager.get("results", hash_="data")
         files = [filename for filename in data.files]
         return _tab_table(
@@ -380,6 +383,7 @@ def switch_tab(
         )
 
     elif at == "tab-compare":
+        cache_manager = DashCacheManager()
         data = cache_manager.get("results", hash_="data")
         files = [filename for filename in data.files]
         return _tab_compare(
@@ -401,7 +405,7 @@ def show_value(msg: str = ""):
 
 
 def unselect_all_files(unselect_n_clicks, select_n_clicks):
-    cache_manager = DashCacheManager(DASH_CACHE_DIRS)
+    cache_manager = DashCacheManager()
     results = cache_manager.get("results", hash_="data")
     # Ref: https://dash.plotly.com/advanced-callbacks
     changed_id = [p["prop_id"].split(".")[0] for p in dash.callback_context.triggered][
@@ -415,15 +419,15 @@ def unselect_all_files(unselect_n_clicks, select_n_clicks):
 
 
 def compare_results(num_sim, tick, files, filters_all, filters_any, num_of_results):
-    cache_manager = DashCacheManager(DASH_CACHE_DIRS)
+    cache_manager = DashCacheManager()
     hash_args = [
         files,
         filters_all,
         filters_any,
         num_of_results,
     ]
-    if cache_manager.check("compare", hash_args):
-        data, *_ = cache_manager.get("compare", hash_args)
+    if cache_manager.check("compare", hash_args=hash_args):
+        data, *_ = cache_manager.get("compare", hash_args=hash_args)
         keys = list(data.keys())
         try:
             cur_sim = keys[num_sim]
@@ -490,7 +494,7 @@ def compare_results(num_sim, tick, files, filters_all, filters_any, num_of_resul
 def toggle_collapse_table(*args):
     ctx = dash.callback_context
 
-    cache_manager = DashCacheManager(DASH_CACHE_DIRS)
+    cache_manager = DashCacheManager()
     results = cache_manager.get("results", hash_="data")
 
     if not ctx.triggered:

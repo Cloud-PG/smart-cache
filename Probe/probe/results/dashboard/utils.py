@@ -4,7 +4,6 @@ import pathlib
 import pickle
 import tempfile
 from os import path
-from shutil import rmtree
 from threading import Thread
 from typing import Any, Tuple
 
@@ -22,6 +21,8 @@ import plotly.express as px
 # import plotly.express as px
 import plotly.graph_objects as go
 import zmq
+from loguru import logger
+from zmq.sugar.constants import DRAFT_API
 
 from ..data import SIM_RESULT_FILENAME
 from .vars import PLOT_LAYOUT
@@ -35,70 +36,76 @@ class MinCacheServer(Thread):
         self._dict = {}
         self._run = False
 
+        logger.debug(f"Start MinCacheServer [{id(self)}]")
         try:
             self._socket.bind("tcp://*:5555")
         except zmq.error.ZMQError as err:
             if err.strerror.find("Address already in use") == -1:
                 raise (err)
+            else:
+                logger.debug(f"MinCacheServer already started...")
         else:
             self._run = True
 
     def __del__(self):
-        print("SERVER CLOSE CONNECTION")
+        logger.debug(f"MinCacheServer close connection")
         if not self._context.closed:
             self._socket.close()
-        print("SERVER EXIT")
+        logger.debug(f"MinCacheServer exit")
 
     def run(self):
         while self._run:
             #  Wait for next request from client
+            logger.debug(f"MinCacheServer id{id(self)}")
             message = self._socket.recv()
-            print("cache running ->", id(self))
+            logger.debug(f"MinCacheServer command -> {message}")
+            logger.debug(f"MinCacheServer send -> ok")
             self._socket.send(b"ok")
-            print(f"server[command] {message}")
 
             if message == b"exit":
+                logger.debug(f"MinCacheServer prepare to exit...")
                 self._run = False
-                print("SERVER START TO EXIT")
             elif message == b"check":
                 key = self._socket.recv()
-                print(f"server[key] {key}")
+                logger.debug(f"MinCacheServer key -> {key}")
                 if key in self._dict:
+                    logger.debug(f"MinCacheServer send -> y")
                     self._socket.send(b"y")
                 else:
+                    logger.debug(f"MinCacheServer send -> n")
                     self._socket.send(b"n")
             elif message == b"set":
                 key = self._socket.recv()
+                logger.debug(f"MinCacheServer key -> {key}")
+                logger.debug(f"MinCacheServer send -> ok")
                 self._socket.send(b"ok")
-                print(f"server[key] {key}")
                 data = self._socket.recv()
+                logger.debug(f"MinCacheServer data len -> {len(data) / 1024**2} MB")
+                logger.debug(f"MinCacheServer send -> ok")
                 self._socket.send(b"ok")
-                print(f"server[data]: {len(data) / 1024**2} MB")
                 self._dict[key] = data
             elif message == b"get":
                 key = self._socket.recv()
-                print(f"server[key] {key}")
-                self._socket.send(self._dict[key])
+                logger.debug(f"MinCacheServer key -> {key}")
+                data = self._dict[key]
+                logger.debug(f"MinCacheServer send -> {len(data) / 1024**2} MB")
+                self._socket.send(data)
 
 
 class DashCacheManager:
-    def __init__(self, dirs: list):
-        self._main_dir = (
-            pathlib.Path(tempfile.gettempdir()).resolve().joinpath("dashboard", "cache")
-        )
+    def __init__(self):
+        self._main_dir = pathlib.Path(".").joinpath("dashboard", "cache")
 
         self._context = zmq.Context()
-        print("CLIENT CONNECTING TO DASH CACHE SERVER")
+        logger.debug(f"DashCacheManager connecting to server")
         self._socket = self._context.socket(zmq.REQ)
         self._socket.connect("tcp://localhost:5555")
 
-        self._dirs = dirs
-
     def __del__(self):
-        print("CLIENT DISCONNECT")
+        logger.debug(f"DashCacheManager disconnecting")
         if not self._context.closed:
             self._socket.disconnect("tcp://localhost:5555")
-        print("CLIENT EXIT")
+        logger.debug(f"DashCacheManager exiting")
 
     def _filename(self, folder: str, hash_args: tuple = (), hash_: str = ""):
         if hash_ == "":
@@ -107,12 +114,15 @@ class DashCacheManager:
         return self._main_dir.joinpath(folder, hash_)
 
     def check(self, folder: str, hash_args: tuple = (), hash_: str = "") -> bool:
+        logger.debug(f"DashCacheManager send -> check")
         self._socket.send(b"check")
-        print("resp[check]->", self._socket.recv())
+        logger.debug(f"DashCacheManager check resp -> {self._socket.recv()}")
         filename = self._filename(folder, hash_args, hash_)
-        self._socket.send(filename.as_posix().encode("utf-8"))
+        key = filename.as_posix().encode("utf-8")
+        logger.debug(f"DashCacheManager send key -> {key}")
+        self._socket.send(key)
         exists = self._socket.recv()
-        print("resp[exists]->", exists)
+        logger.debug(f"DashCacheManager exist resp -> {exists}")
         return exists == b"y"
 
     def stop(self):
@@ -125,25 +135,30 @@ class DashCacheManager:
         self, folder: str, hash_args: tuple = (), hash_: str = "", data: "Any" = None
     ):
         filename = self._filename(folder, hash_args, hash_)
+        logger.debug(f"DashCacheManager send -> set")
         self._socket.send(b"set")
-        print("resp[set]->", self._socket.recv())
-        self._socket.send(filename.as_posix().encode("utf-8"))
-        print("resp[key]->", self._socket.recv())
-        pickle_data = pickle.dumps(data, pickle.HIGHEST_PROTOCOL)
-        self._socket.send(gzip.compress(pickle_data))
-        print("resp[data]->", self._socket.recv())
-        # with open(filename, "wb") as target_file:
-        #     target_file.write()
+        logger.debug(f"DashCacheManager set resp -> {self._socket.recv()}")
+        key = filename.as_posix().encode("utf-8")
+        logger.debug(f"DashCacheManager set key -> {key}")
+        self._socket.send(key)
+        logger.debug(f"DashCacheManager set resp -> {self._socket.recv()}")
+        pickle_data = gzip.compress(pickle.dumps(data, pickle.HIGHEST_PROTOCOL))
+        logger.debug(f"DashCacheManager set send data -> {len(data)/ 1024**2} MB")
+        self._socket.send(pickle_data)
+        logger.debug(f"DashCacheManager set resp -> {self._socket.recv()}")
         return self
 
     def get(self, folder: str, hash_args: tuple = (), hash_: str = "") -> "Any":
         filename = self._filename(folder, hash_args, hash_)
+        logger.debug(f"DashCacheManager send -> get")
         self._socket.send(b"get")
-        print("resp[get]->", self._socket.recv())
-        self._socket.send(filename.as_posix().encode("utf-8"))
-        data = self._socket.recv()
-        print(f"resp[set]-> {len(data)/ 1024**2} MB")
-        return pickle.loads(gzip.decompress((data)))
+        logger.debug(f"DashCacheManager get resp -> {self._socket.recv()}")
+        key = filename.as_posix().encode("utf-8")
+        logger.debug(f"DashCacheManager get key -> {key}")
+        self._socket.send(key)
+        data = gzip.decompress(self._socket.recv())
+        logger.debug(f"DashCacheManager get resp -> data -> {len(data)/ 1024**2} MB")
+        return pickle.loads(data)
 
 
 def parse_simulation_report_stuff(
@@ -443,24 +458,21 @@ def selection2hash(
     measures_binning_size: int = 1,
     columns: list = [],
 ) -> str:
-    return str(
-        hash(
-            " ".join(
-                files
-                + filters_all
-                + filters_any
-                + [
-                    str(num_of_results),
-                    str(extended),
-                    str(sort_by_roh_first),
-                    str(new_metrics),
-                    str(columns_binning_size),
-                    str(measures_binning_size),
-                ]
-                + columns
-            )
-        )
+    string = " ".join(
+        files
+        + filters_all
+        + filters_any
+        + [
+            str(num_of_results),
+            str(extended),
+            str(sort_by_roh_first),
+            str(new_metrics),
+            str(columns_binning_size),
+            str(measures_binning_size),
+        ]
+        + columns
     )
+    return str(hash(string))
 
 
 def make_agent_figures(files2plot: list, prefix: str) -> list:

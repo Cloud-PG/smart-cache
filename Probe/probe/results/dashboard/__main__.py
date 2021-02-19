@@ -9,7 +9,12 @@ app = typer.Typer(name="probe.results.dashboard", add_completion=False)
 
 
 @app.command()
-def dashboard(folders: "List[str]", dash_ip: str = "localhost", dash_port: int = 8050, lazy: bool = False):
+def dashboard(
+    folders: "List[str]",
+    dash_ip: str = "localhost",
+    dash_port: int = 8050,
+    lazy: bool = False,
+):
     MinCacheServer().start()
     service(folders, dash_ip, dash_port, lazy)
 
