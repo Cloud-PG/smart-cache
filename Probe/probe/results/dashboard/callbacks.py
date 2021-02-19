@@ -210,89 +210,67 @@ def _tab_table(
     filters_any,
     num_of_results,
 ) -> tuple:
-    if cache_manager.check("tables", hash_args=hash_args):
-        table_obj = cache_manager.get("results", hash_="table_obj")
-        cache_manager.set(
-            "results",
-            hash_="table.csv",
-            data=table_obj.to_csv(index=False).encode("utf-8"),
-        )
-        cache_manager.set(
-            "results",
-            hash_="table.tex",
-            data=table_obj.to_latex(index=False).encode("utf-8"),
-        )
-        cache_manager.set(
-            "results",
-            hash_="table.html",
-            data=table_obj.to_html(index=False).encode("utf-8"),
-        )
 
-        data = cache_manager.get("tables", hash_args=hash_args)
-        return ("", "", "", data, "", "")
-    else:
-        results = cache_manager.get("results", hash_="data")
-        files2plot = get_files2plot(
-            results,
-            files,
-            filters_all,
-            filters_any,
+    results = cache_manager.get("results", hash_="data")
+    files2plot = get_files2plot(
+        results,
+        files,
+        filters_all,
+        filters_any,
+    )
+    prefix = get_prefix(files2plot)
+
+    if num_of_results != 0 and num_of_results is not None:
+        table, new_file2plot = make_table(
+            files2plot,
+            prefix,
+            num_of_results,
+            extended=extended,
+            sort_by_roh_first=sort_by_roh_first,
+            new_metrics=new_metrics,
         )
+        files2plot = [(file_, df) for file_, df in files2plot if file_ in new_file2plot]
         prefix = get_prefix(files2plot)
-
-        if num_of_results != 0 and num_of_results is not None:
-            table, new_file2plot = make_table(
-                files2plot,
-                prefix,
-                num_of_results,
-                extended=extended,
-                sort_by_roh_first=sort_by_roh_first,
-                new_metrics=new_metrics,
-            )
-            files2plot = [
-                (file_, df) for file_, df in files2plot if file_ in new_file2plot
-            ]
-            prefix = get_prefix(files2plot)
-            table, _ = make_table(
-                files2plot,
-                prefix,
-                extended=extended,
-                sort_by_roh_first=sort_by_roh_first,
-                new_metrics=new_metrics,
-            )
-        else:
-            table, _ = make_table(
-                files2plot,
-                prefix,
-                extended=extended,
-                sort_by_roh_first=sort_by_roh_first,
-                new_metrics=new_metrics,
-            )
-
-        cache_manager.set(
-            "results",
-            hash_="table_obj",
-            data=table,
+        table, _ = make_table(
+            files2plot,
+            prefix,
+            extended=extended,
+            sort_by_roh_first=sort_by_roh_first,
+            new_metrics=new_metrics,
         )
-        cache_manager.set(
-            "results", hash_="table.csv", data=table.to_csv(index=False).encode("utf-8")
-        )
-        cache_manager.set(
-            "results",
-            hash_="table.tex",
-            data=table.to_latex(index=False).encode("utf-8"),
-        )
-        cache_manager.set(
-            "results",
-            hash_="table.html",
-            data=table.to_html(index=False).encode("utf-8"),
+    else:
+        table, _ = make_table(
+            files2plot,
+            prefix,
+            extended=extended,
+            sort_by_roh_first=sort_by_roh_first,
+            new_metrics=new_metrics,
         )
 
-        table = dbc.Table.from_dataframe(table, striped=True, bordered=True, hover=True)
+    cache_manager.set(
+        "results",
+        hash_="table_obj",
+        data=table,
+    )
+    cache_manager.set(
+        "results", hash_="table.csv", data=table.to_csv(index=False).encode("utf-8")
+    )
+    cache_manager.set(
+        "results",
+        hash_="table.tex",
+        data=table.to_latex(index=False).encode("utf-8"),
+    )
+    cache_manager.set(
+        "results",
+        hash_="table.html",
+        data=table.to_html(index=False).encode("utf-8"),
+    )
 
-        cache_manager.set("tables", hash_args, data=table)
+    table = dbc.Table.from_dataframe(table, striped=True, bordered=True, hover=True)
 
-        return ("", "", "", table, "", "")
+    cache_manager.set("tables", hash_args, data=table)
+
+    return ("", "", "", table, "", "")
 
 
 def _tab_compare(
