@@ -195,6 +195,7 @@ def create(
             mimetype="text/plain",
             attachment_filename="table.csv",
             as_attachment=True,
+            cache_timeout=1,
         )
 
     @app.server.route("/table/tex")
@@ -205,6 +206,7 @@ def create(
             mimetype="text/plain",
             attachment_filename="table.tex",
             as_attachment=True,
+            cache_timeout=1,
         )
 
     @app.server.route("/table/html")
@@ -215,6 +217,7 @@ def create(
             mimetype="text/plain",
             attachment_filename="table.html",
             as_attachment=True,
+            cache_timeout=1,
         )
 
     # def handler(signal_received, frame):
