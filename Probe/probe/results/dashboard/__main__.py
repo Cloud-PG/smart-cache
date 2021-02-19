@@ -3,7 +3,6 @@ from typing import List
 import typer
 
 from .function import service
-from .utils import MinCacheServer
 
 app = typer.Typer(name="probe.results.dashboard", add_completion=False)
 
@@ -14,9 +13,9 @@ def dashboard(
     dash_ip: str = "localhost",
     dash_port: int = 8050,
     lazy: bool = False,
+    debug: bool = False,
 ):
-    MinCacheServer().start()
-    service(folders, dash_ip, dash_port, lazy)
+    service(folders, dash_ip, dash_port, lazy, debug)
 
 
 if __name__ == "__main__":

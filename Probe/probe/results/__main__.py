@@ -7,7 +7,6 @@ from colorama import init
 
 from ..utils import STATUS_ARROW
 from .dashboard.function import service
-from .dashboard.utils import MinCacheServer
 from .data import aggregate_results, parse_simulation_report
 from .plotters import metric_corr, plot_miss_freq, plot_num_miss_after_del
 
@@ -26,9 +25,9 @@ def dashboard(
     dash_ip: str = "localhost",
     dash_port: int = 8050,
     lazy: bool = False,
+    debug: bool = False,
 ):
-    MinCacheServer().start()
-    service(folders, dash_ip, dash_port, lazy)
+    service(folders, dash_ip, dash_port, lazy, debug)
 
 
 @app.command()

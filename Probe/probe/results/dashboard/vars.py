@@ -9,3 +9,5 @@ PLOT_LAYOUT = Layout(
 )
 
 STATUS_ARROW = f"{Style.BRIGHT + Fore.MAGENTA}==> {Style.RESET_ALL}"
+
+LOG_FORMAT = "<green>{time}</green>\t| <level>{level}</level> | <magenta>{file}</magenta>:<yellow>{function}</yellow>:<yellow>{line}</yellow> -> {message}"

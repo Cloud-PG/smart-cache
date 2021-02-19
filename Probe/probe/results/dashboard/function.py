@@ -29,18 +29,10 @@ from .callbacks import (
     toggle_collapse_table,
     unselect_all_files,
 )
-from .utils import DashCacheManager
-from .vars import STATUS_ARROW
+from .utils import DashCacheManager, MinCacheServer
+from .vars import LOG_FORMAT, STATUS_ARROW
 
 _EXTERNAL_STYLESHEETS = ["https://codepen.io/chriddyp/pen/bWLwgP.css"]
-
-logger.remove()
-logger.add(
-    sys.stderr,
-    format="<green>{time}</green>\t<level>{level}</level>\t<magenta>{file}</magenta>@<yellow>{line}</yellow>\t{message}",
-    level="DEBUG",
-    colorize=True,
-)
 
 
 def service(
@@ -48,8 +40,28 @@ def service(
     dash_ip: str = "localhost",
     dash_port: int = 8050,
     lazy: bool = False,
+    debug: bool = True,
 ):
     init()
+
+    if debug:
+        logger.remove()
+        logger.add(
+            sys.stderr,
+            format=LOG_FORMAT,
+            level="DEBUG",
+            colorize=True,
+        )
+    else:
+        logger.remove()
+        logger.add(
+            sys.stderr,
+            format=LOG_FORMAT,
+            level="INFO",
+            colorize=True,
+        )
+
+    MinCacheServer().start()
 
     print(f"{STATUS_ARROW}Aggregate results...")
     results = aggregate_results(folders, lazy)
@@ -59,15 +71,15 @@ def service(
     del cache_manager
 
     print(f"{STATUS_ARROW}Start dashboard...")
-    create(results, dash_ip, dash_port)
+    create(results, dash_ip, dash_port, debug)
 
 
 def create(
     results: "Results",
     server_ip: str = "localhost",
     server_port: int = 8050,
+    debug: bool = True,
 ):
-
     # Assets ref: https://dash.plotly.com/external-resources
     app = dash.Dash(
         name=__name__,
@@ -245,7 +257,7 @@ def create(
     # signal(SIGINT, handler)
 
     app.run_server(
-        debug=True,
+        debug=debug,
         host=server_ip,
         port=server_port,
     )
