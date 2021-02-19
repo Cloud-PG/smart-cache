@@ -80,7 +80,7 @@ class MinCacheServer(Thread):
                 logger.debug(f"MinCacheServer send -> ok")
                 self._socket.send(b"ok")
                 data = self._socket.recv()
-                logger.debug(f"MinCacheServer data len -> {len(data) / 1024**2} MB")
+                logger.debug(f"MinCacheServer data len -> {len(data) / 1024 / 1024} MB")
                 logger.debug(f"MinCacheServer send -> ok")
                 self._socket.send(b"ok")
                 self._dict[key] = data
@@ -88,7 +88,7 @@ class MinCacheServer(Thread):
                 key = self._socket.recv()
                 logger.debug(f"MinCacheServer key -> {key}")
                 data = self._dict[key]
-                logger.debug(f"MinCacheServer send -> {len(data) / 1024**2} MB")
+                logger.debug(f"MinCacheServer send -> {len(data) / 1024 / 1024} MB")
                 self._socket.send(data)
 
 
@@ -143,7 +143,7 @@ class DashCacheManager:
         self._socket.send(key)
         logger.debug(f"DashCacheManager set resp -> {self._socket.recv()}")
         pickle_data = gzip.compress(pickle.dumps(data, pickle.HIGHEST_PROTOCOL))
-        logger.debug(f"DashCacheManager set send data -> {len(data)/ 1024**2} MB")
+        logger.debug(f"DashCacheManager set send data -> {len(data)/ 1024 / 1024} MB")
         self._socket.send(pickle_data)
         logger.debug(f"DashCacheManager set resp -> {self._socket.recv()}")
         return self
@@ -157,7 +157,9 @@ class DashCacheManager:
         logger.debug(f"DashCacheManager get key -> {key}")
         self._socket.send(key)
         data = gzip.decompress(self._socket.recv())
-        logger.debug(f"DashCacheManager get resp -> data -> {len(data)/ 1024**2} MB")
+        logger.debug(
+            f"DashCacheManager get resp -> data -> {len(data)/ 1024 / 1024} MB"
+        )
         return pickle.loads(data)
 
 
