@@ -211,6 +211,23 @@ def _tab_table(
     num_of_results,
 ) -> tuple:
     if cache_manager.check("tables", hash_args=hash_args):
+        table_obj = cache_manager.get("results", hash_="table_obj")
+        cache_manager.set(
+            "results",
+            hash_="table.csv",
+            data=table_obj.to_csv(index=False).encode("utf-8"),
+        )
+        cache_manager.set(
+            "results",
+            hash_="table.tex",
+            data=table_obj.to_latex(index=False).encode("utf-8"),
+        )
+        cache_manager.set(
+            "results",
+            hash_="table.html",
+            data=table_obj.to_html(index=False).encode("utf-8"),
+        )
+
         data = cache_manager.get("tables", hash_args=hash_args)
         return ("", "", "", data, "", "")
     else:
@@ -252,6 +269,11 @@ def _tab_table(
                 new_metrics=new_metrics,
             )
 
+        cache_manager.set(
+            "results",
+            hash_="table_obj",
+            data=table,
+        )
         cache_manager.set(
             "results", hash_="table.csv", data=table.to_csv(index=False).encode("utf-8")
         )
