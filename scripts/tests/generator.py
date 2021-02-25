@@ -233,7 +233,7 @@ def generator(data_path: "pathlib.Path", args):
         # Trimester
         "jan-mar",
         "apr-jun",
-        "jul-set",
+        "jul-sep",
         "oct-dec",
         # Quadrimester
         "jan-apr",
