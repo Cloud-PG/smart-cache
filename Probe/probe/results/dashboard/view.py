@@ -7,6 +7,7 @@ import dash_html_components as html
 
 from ..data import Results
 from ..data import COLUMNS
+from .callbacks import _MEASURES
 
 
 def compare() -> "Any":
@@ -222,6 +223,20 @@ def measures() -> "Any":
                         },
                     ),
                 ]
+            ),
+            dbc.CardBody(
+                dcc.Dropdown(
+                    id="selected-measures",
+                    options=[
+                        {"label": measure, "value": measure} for measure in _MEASURES
+                    ],
+                    value=[
+                        "Score",
+                        "Throughput ratio",
+                        "Cost ratio",
+                    ],
+                    multi=True,
+                )
             ),
             dbc.Spinner(
                 dbc.CardBody(

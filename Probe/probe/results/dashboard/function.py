@@ -190,6 +190,7 @@ def create(
             Input("columns-binning-size", "value"),
             Input("measures-binning-size", "value"),
             Input("selected-columns", "value"),
+            Input("selected-measures", "value"),
         ],
         [
             State("selected-files", "value"),

@@ -12,6 +12,7 @@ import plotly.express as px
 from ..data import (
     COLUMNS,
     make_table,
+    measure_score,
     measure_avg_free_space,
     measure_bandwidth,
     measure_cost,
@@ -44,6 +45,7 @@ from .vars import PLOT_LAYOUT
 _EMPTY_TUPLE = ("", "", "", "", "", "")
 
 _MEASURES = {
+    "Score": measure_score,
     "Throughput ratio": measure_throughput_ratio,
     "Cost ratio": measure_cost_ratio,
     "Throughput (TB)": measure_throughput,
@@ -54,7 +56,6 @@ _MEASURES = {
     "Std. Dev. Free Space": measure_std_dev_free_space,
     "Bandwidth": measure_bandwidth,
     "Redirect Vol.": measure_redirect_volume,
-    "Hit over Miss": measure_hit_over_miss,
     "Num. miss after del.": measure_num_miss_after_delete,
     "Hit rate": measure_hit_rate,
 }
@@ -122,6 +123,7 @@ def _tab_measures(
     filters_any,
     num_of_results,
     measures_binning_size,
+    measures,
 ) -> tuple:
     if cache_manager.check("measures", hash_args=hash_args):
         data = cache_manager.get("measures", hash_args=hash_args)
@@ -144,7 +146,8 @@ def _tab_measures(
             ]
             prefix = get_prefix(files2plot)
 
-        for measure, function in sorted(_MEASURES.items(), key=lambda elm: elm[0]):
+        for measure in sorted(measures):
+            function = _MEASURES[measure]
             figures.append(
                 dcc.Graph(
                     figure=make_line_figures(
@@ -309,6 +312,7 @@ def switch_tab(
     columns_binning_size,
     measures_binning_size,
     columns,
+    measures,
     files,
     filters_all,
     filters_any,
@@ -325,6 +329,7 @@ def switch_tab(
         columns_binning_size,
         measures_binning_size,
         columns,
+        measures,
     )
 
     if at == "tab-files":
@@ -357,6 +362,7 @@ def switch_tab(
             filters_any,
             num_of_results,
             measures_binning_size,
+            measures,
         )
     elif at == "tab-agents":
         cache_manager = DashCacheManager()
