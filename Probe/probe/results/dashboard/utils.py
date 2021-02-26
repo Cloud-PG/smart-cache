@@ -459,6 +459,7 @@ def selection2hash(
     columns_binning_size: int = 1,
     measures_binning_size: int = 1,
     columns: list = [],
+    measures: list = [],
 ) -> str:
     string = " ".join(
         files
@@ -473,6 +474,7 @@ def selection2hash(
             str(measures_binning_size),
         ]
         + columns
+        + measures
     )
     return str(hash(string))
 

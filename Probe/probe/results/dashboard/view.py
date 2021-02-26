@@ -263,6 +263,7 @@ def filters(results: "Results") -> "Any":
     return dbc.Card(
         dbc.CardBody(
             [
+                html.H2("# of results to show"),
                 dcc.Input(
                     id="num-of-results",
                     type="number",
