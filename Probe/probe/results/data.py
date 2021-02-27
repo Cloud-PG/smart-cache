@@ -513,8 +513,10 @@ def make_table(
         )
 
     df = df.round(2)
-    if top_n != 0:
-        df = df.iloc[:10]
+    if top_n > 0:
+        df = df.iloc[:top_n]
+    else:
+        raise Exception("top_n is negative")
 
     source_files = df.source.to_list()
     del df["source"]
