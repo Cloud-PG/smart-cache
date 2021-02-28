@@ -515,7 +515,7 @@ def make_table(
     df = df.round(2)
     if top_n > 0:
         df = df.iloc[:top_n]
-    else:
+    elif top_n < 0:
         raise Exception("top_n is negative")
 
     source_files = df.source.to_list()
