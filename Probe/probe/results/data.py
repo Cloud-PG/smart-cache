@@ -288,7 +288,7 @@ def missing_column(func):
 
 
 @missing_column
-def measure_score(df: "pd.DataFrame") -> "pd.Series":
+def measure_score_ratio(df: "pd.DataFrame") -> "pd.Series":
     score = measure_throughput_ratio(df) - measure_cost_ratio(df)
     return score
 
@@ -306,6 +306,12 @@ def measure_throughput_ratio_old(df: "pd.DataFrame") -> "pd.Series":
 @missing_column
 def measure_cost_ratio(df: "pd.DataFrame") -> "pd.Series":
     return (df["written data"] + df["deleted data"]) / df["cache size"]
+
+
+@missing_column
+def measure_score(df: "pd.DataFrame") -> "pd.Series":
+    score = measure_throughput(df) - measure_cost(df)
+    return score
 
 
 @missing_column
@@ -454,6 +460,7 @@ def make_table(
             "file",
             "Throughput",
             "Cost",
+            "Score (TB)",
             "Throughput (TB)",
             "Cost (TB)",
             "Read on hit ratio",
@@ -533,9 +540,9 @@ def get_measures(
     measures = [cache_filename]
     # print(cache_filename)
 
-    # Throughput ratio
+    # Score ratio
     if new_metrics:
-        measures.append(measure_score(df).mean())
+        measures.append(measure_score_ratio(df).mean())
         measures.append(measure_throughput_ratio(df).mean())
     else:
         measures.append(measure_throughput_ratio_old(df).mean())
@@ -544,6 +551,8 @@ def get_measures(
     measures.append(measure_cost_ratio(df).mean())
 
     if extended:
+        # Score (TB)
+        measures.append(measure_score(df).mean())
         # Throughput (TB)
         if new_metrics:
             measures.append(measure_throughput(df).mean())
