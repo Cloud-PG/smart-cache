@@ -494,10 +494,10 @@ def make_table(
 
     df = pd.DataFrame(table, columns=columns)
 
+    sorting_by = [elm for elm in sorting_by if elm in columns]
+
     if not sorting_by:
         sorting_by.insert(0, "Score")
-
-    sorting_by = [elm for elm in sorting_by if elm in columns]
 
     df = df.sort_values(
         by=sorting_by,
