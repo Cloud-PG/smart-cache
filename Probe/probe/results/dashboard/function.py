@@ -133,11 +133,6 @@ def create(
     )(show_value("Extended table:"))
 
     app.callback(
-        dash.dependencies.Output("toggle-sort-by-roh-first-output", "children"),
-        [dash.dependencies.Input("toggle-sort-by-roh-first", "value")],
-    )(show_value("Sort by read on hit:"))
-
-    app.callback(
         dash.dependencies.Output("toggle-new-metrics-output", "children"),
         [dash.dependencies.Input("toggle-new-metrics", "value")],
     )(show_value("Use new metrics:"))
@@ -185,7 +180,7 @@ def create(
         [
             Input("tabs", "active_tab"),
             Input("toggle-extended-table", "value"),
-            Input("toggle-sort-by-roh-first", "value"),
+            Input("sorting-by", "value"),
             Input("toggle-new-metrics", "value"),
             Input("columns-binning-size", "value"),
             Input("measures-binning-size", "value"),

@@ -413,7 +413,7 @@ def make_table(
     prefix: str,
     top_n: int = 0,
     extended: bool = False,
-    sort_by_roh_first: bool = False,
+    sorting_by: list = [],
     new_metrics: bool = True,
 ) -> Tuple["pd.DataFrame", list]:
     """Make html table from files to plot
@@ -494,30 +494,15 @@ def make_table(
 
     df = pd.DataFrame(table, columns=columns)
 
-    if sort_by_roh_first:
-        sort_list = [
-            "Read on hit ratio",
-            "Throughput",
-            "Cost",
-        ]
-        if new_metrics:
-            sort_list.insert(0, "Score")
-        df = df.sort_values(
-            by=sort_list,
-            ascending=[False if elm != "Cost" else True for elm in sort_list],
-        )
-    else:
-        sort_list = [
-            "Throughput",
-            "Cost",
-            "Read on hit ratio",
-        ]
-        if new_metrics:
-            sort_list.insert(0, "Score")
-        df = df.sort_values(
-            by=sort_list,
-            ascending=[False if elm != "Cost" else True for elm in sort_list],
-        )
+    if not sorting_by:
+        sorting_by.insert(0, "Score")
+
+    sorting_by = [elm for elm in sorting_by if elm in columns]
+
+    df = df.sort_values(
+        by=sorting_by,
+        ascending=[False if elm.find("Cost") == -1 else True for elm in sorting_by],
+    )
 
     df = df.round(2)
     if top_n > 0:

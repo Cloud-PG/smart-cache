@@ -454,7 +454,7 @@ def selection2hash(
     filters_any: list,
     num_of_results: int,
     extended: bool = False,
-    sort_by_roh_first: bool = False,
+    sorting_by: list = [],
     new_metrics: bool = True,
     columns_binning_size: int = 1,
     measures_binning_size: int = 1,
@@ -465,10 +465,10 @@ def selection2hash(
         files
         + filters_all
         + filters_any
+        + sorting_by
         + [
             str(num_of_results),
             str(extended),
-            str(sort_by_roh_first),
             str(new_metrics),
             str(columns_binning_size),
             str(measures_binning_size),

@@ -206,7 +206,7 @@ def _tab_table(
     cache_manager: "DashCacheManager",
     hash_args: tuple,
     extended,
-    sort_by_roh_first,
+    sorting_by,
     new_metrics,
     files,
     filters_all,
@@ -229,7 +229,7 @@ def _tab_table(
             prefix,
             num_of_results,
             extended=extended,
-            sort_by_roh_first=sort_by_roh_first,
+            sorting_by=sorting_by,
             new_metrics=new_metrics,
         )
         files2plot = [(file_, df) for file_, df in files2plot if file_ in new_file2plot]
@@ -238,7 +238,7 @@ def _tab_table(
             files2plot,
             prefix,
             extended=extended,
-            sort_by_roh_first=sort_by_roh_first,
+            sorting_by=sorting_by,
             new_metrics=new_metrics,
         )
     else:
@@ -246,7 +246,7 @@ def _tab_table(
             files2plot,
             prefix,
             extended=extended,
-            sort_by_roh_first=sort_by_roh_first,
+            sorting_by=sorting_by,
             new_metrics=new_metrics,
         )
 
@@ -307,7 +307,7 @@ def _tab_compare(
 def switch_tab(
     at,
     extended,
-    sort_by_roh_first,
+    sorting_by,
     new_metrics,
     columns_binning_size,
     measures_binning_size,
@@ -324,7 +324,7 @@ def switch_tab(
         filters_any,
         num_of_results,
         extended,
-        sort_by_roh_first,
+        sorting_by,
         new_metrics,
         columns_binning_size,
         measures_binning_size,
@@ -380,7 +380,7 @@ def switch_tab(
             cache_manager,
             hash_args,
             extended,
-            sort_by_roh_first,
+            sorting_by,
             new_metrics,
             files,
             filters_all,

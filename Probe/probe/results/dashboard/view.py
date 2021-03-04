@@ -7,6 +7,7 @@ import dash_html_components as html
 
 from ..data import Results
 from ..data import COLUMNS
+from .vars import SORTING_COLUMNS
 from .callbacks import _MEASURES
 
 
@@ -87,20 +88,6 @@ def table() -> "Any":
                                     "",
                                     color="info",
                                     disabled=True,
-                                    id="toggle-sort-by-roh-first-output",
-                                ),
-                            ),
-                            dbc.ListGroupItem(
-                                daq.ToggleSwitch(
-                                    id="toggle-sort-by-roh-first",
-                                    value=False,
-                                )
-                            ),
-                            dbc.ListGroupItem(
-                                dbc.Button(
-                                    "",
-                                    color="info",
-                                    disabled=True,
                                     id="toggle-new-metrics-output",
                                 ),
                             ),
@@ -110,38 +97,44 @@ def table() -> "Any":
                                     value=True,
                                 )
                             ),
+                            dbc.ListGroupItem(
+                                dcc.Link(
+                                    "Download as CSV",
+                                    refresh=True,
+                                    href="/table/csv",
+                                    target="_blank",
+                                )
+                            ),
+                            dbc.ListGroupItem(
+                                dcc.Link(
+                                    "Download as Latex table",
+                                    refresh=True,
+                                    href="/table/tex",
+                                    target="_blank",
+                                )
+                            ),
+                            dbc.ListGroupItem(
+                                dcc.Link(
+                                    "Download as html",
+                                    refresh=True,
+                                    href="/table/html",
+                                    target="_blank",
+                                )
+                            ),
                         ],
                         horizontal=True,
                     ),
                     dbc.CardBody(
-                        dbc.ListGroup(
-                            [
-                                dbc.ListGroupItem(
-                                    dcc.Link(
-                                        "Download as CSV",
-                                        refresh=True,
-                                        href="/table/csv",
-                                        target="_blank",
-                                    )
-                                ),
-                                dbc.ListGroupItem(
-                                    dcc.Link(
-                                        "Download as Latex table",
-                                        refresh=True,
-                                        href="/table/tex",
-                                        target="_blank",
-                                    )
-                                ),
-                                dbc.ListGroupItem(
-                                    dcc.Link(
-                                        "Download as html",
-                                        refresh=True,
-                                        href="/table/html",
-                                        target="_blank",
-                                    )
-                                ),
-                            ],
-                            horizontal=True,
+                        dbc.ListGroupItem(
+                            dcc.Dropdown(
+                                id="sorting-by",
+                                options=[
+                                    {"label": column, "value": column}
+                                    for column in SORTING_COLUMNS
+                                ],
+                                value=["Score"],
+                                multi=True,
+                            )
                         ),
                     ),
                 ],
