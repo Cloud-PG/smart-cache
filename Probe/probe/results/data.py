@@ -294,11 +294,11 @@ def measure_score_ratio(
     df: "pd.DataFrame", normalize: "pd.DataFrame" = None
 ) -> "pd.Series":
     if isinstance(normalize, pd.DataFrame):
-        score = measure_throughput_ratio(df, normalize=normalize) - measure_cost_ratio(
+        score = measure_throughput_ratio(df, normalize=normalize) / measure_cost_ratio(
             df, normalize=normalize
         )
     else:
-        score = measure_throughput_ratio(df) - measure_cost_ratio(df)
+        score = measure_throughput_ratio(df) / measure_cost_ratio(df)
     return score
 
 
@@ -307,10 +307,8 @@ def measure_throughput_ratio(
     df: "pd.DataFrame", normalize: "pd.DataFrame" = None
 ) -> "pd.Series":
     if isinstance(normalize, pd.DataFrame):
-        return (df["read on hit data"] - df["read on miss data"]) / normalize[
-            "read on hit data"
-        ]
-    return (df["read on hit data"] - df["read on miss data"]) / df["read data"]
+        return df["read on hit data"] / normalize["read on hit data"]
+    return df["read on hit data"] / df["read data"]
 
 
 @missing_column
