@@ -182,7 +182,7 @@ class Results(object):
             yield file_, df
 
     def get_df(
-        self, file_: str, filters_all: list, filters_any: list
+        self, file_: str, filters_all: list = [], filters_any: list = []
     ) -> "pd.DataFrame":
         cur_elm = self._elemets[file_]
         all_ = (
@@ -278,8 +278,10 @@ def aggregate_results(folders: list, lazy: bool = False) -> "Results":
 
 
 def missing_column(func):
-    def wrapper(df: "pd.DataFrame"):
+    def wrapper(df: "pd.DataFrame", normalize: "pd.DataFrame" = None):
         try:
+            if isinstance(normalize, pd.DataFrame):
+                return func(df, normalize=normalize)
             return func(df)
         except KeyError:
             return pd.Series(np.zeros(len(df.index)))
@@ -288,13 +290,26 @@ def missing_column(func):
 
 
 @missing_column
-def measure_score_ratio(df: "pd.DataFrame") -> "pd.Series":
-    score = measure_throughput_ratio(df) - measure_cost_ratio(df)
+def measure_score_ratio(
+    df: "pd.DataFrame", normalize: "pd.DataFrame" = None
+) -> "pd.Series":
+    if isinstance(normalize, pd.DataFrame):
+        score = measure_throughput_ratio(df, normalize=normalize) - measure_cost_ratio(
+            df, normalize=normalize
+        )
+    else:
+        score = measure_throughput_ratio(df) - measure_cost_ratio(df)
     return score
 
 
 @missing_column
-def measure_throughput_ratio(df: "pd.DataFrame") -> "pd.Series":
+def measure_throughput_ratio(
+    df: "pd.DataFrame", normalize: "pd.DataFrame" = None
+) -> "pd.Series":
+    if isinstance(normalize, pd.DataFrame):
+        return (df["read on hit data"] - df["read on miss data"]) / normalize[
+            "read on hit data"
+        ]
     return (df["read on hit data"] - df["read on miss data"]) / df["read data"]
 
 
@@ -304,7 +319,13 @@ def measure_throughput_ratio_old(df: "pd.DataFrame") -> "pd.Series":
 
 
 @missing_column
-def measure_cost_ratio(df: "pd.DataFrame") -> "pd.Series":
+def measure_cost_ratio(
+    df: "pd.DataFrame", normalize: "pd.DataFrame" = None
+) -> "pd.Series":
+    if isinstance(normalize, pd.DataFrame):
+        return (df["written data"] + df["deleted data"]) / (
+            normalize["written data"] * 2
+        )
     return (df["written data"] + df["deleted data"]) / df["cache size"]
 
 
@@ -333,7 +354,9 @@ def measure_cost(df: "pd.DataFrame") -> "pd.Series":
 
 
 @missing_column
-def measure_read_on_hit_ratio(df: "pd.DataFrame") -> "pd.Series":
+def measure_read_on_hit_ratio(
+    df: "pd.DataFrame", normalize: "pd.DataFrame" = None
+) -> "pd.Series":
     return (df["read on hit data"] / df["read data"]) * 100.0
 
 
@@ -415,6 +438,7 @@ def make_table(
     extended: bool = False,
     sorting_by: list = [],
     new_metrics: bool = True,
+    normalization_res: "pd.DataFrame" = None,
 ) -> Tuple["pd.DataFrame", list]:
     """Make html table from files to plot
 
@@ -427,7 +451,13 @@ def make_table(
     """
     table = []
     for file_, df in files2plot:
-        values = get_measures(file_, df, extended=extended, new_metrics=new_metrics)
+        values = get_measures(
+            file_,
+            df,
+            extended=extended,
+            new_metrics=new_metrics,
+            normalization_res=normalization_res,
+        )
         values[0] = values[0].replace(prefix, "").replace(f"/{SIM_RESULT_FILENAME}", "")
 
         row_name = []
@@ -524,19 +554,28 @@ def get_measures(
     df: "pd.DataFrame",
     extended: bool = False,
     new_metrics: bool = True,
+    normalization_res: "pd.DataFrame" = None,
 ) -> list:
     measures = [cache_filename]
     # print(cache_filename)
 
     # Score ratio
     if new_metrics:
-        measures.append(measure_score_ratio(df).mean())
-        measures.append(measure_throughput_ratio(df).mean())
+        measures.append(
+            measure_score_ratio(df, normalize=normalization_res).mean(),
+        )
+        measures.append(
+            measure_throughput_ratio(df, normalize=normalization_res).mean(),
+        )
     else:
-        measures.append(measure_throughput_ratio_old(df).mean())
+        measures.append(
+            measure_throughput_ratio_old(df, normalize=normalization_res).mean(),
+        )
 
     # Cost ratio
-    measures.append(measure_cost_ratio(df).mean())
+    measures.append(
+        measure_cost_ratio(df, normalize=normalization_res).mean(),
+    )
 
     if extended:
         # Score (TB)
@@ -551,7 +590,7 @@ def get_measures(
         measures.append(measure_cost(df).mean())
 
     # Read on hit ratio
-    measures.append(measure_read_on_hit_ratio(df).mean())
+    measures.append(measure_read_on_hit_ratio(df, normalize=normalization_res).mean())
 
     # Read on hit
     measures.append(df["read on hit data"].mean() / (1024.0 ** 2.0))

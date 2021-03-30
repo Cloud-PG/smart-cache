@@ -62,7 +62,7 @@ def compare() -> "Any":
     )
 
 
-def table() -> "Any":
+def table(norm_folder_results: "Results" = None) -> "Any":
     return dbc.Card(
         [
             dbc.CardBody(
@@ -126,15 +126,34 @@ def table() -> "Any":
                     ),
                     dbc.CardBody(
                         dbc.ListGroupItem(
-                            dcc.Dropdown(
-                                id="sorting-by",
-                                options=[
-                                    {"label": column, "value": column}
-                                    for column in SORTING_COLUMNS
-                                ],
-                                value=["Score"],
-                                multi=True,
-                            )
+                            [
+                                html.H5("Sorting by"),
+                                dcc.Dropdown(
+                                    id="sorting-by",
+                                    options=[
+                                        {"label": column, "value": column}
+                                        for column in SORTING_COLUMNS
+                                    ],
+                                    value=["Score"],
+                                    multi=True,
+                                ),
+                            ],
+                        ),
+                    ),
+                    dbc.CardBody(
+                        dbc.ListGroupItem(
+                            [
+                                html.H5("Normalize file"),
+                                dcc.Dropdown(
+                                    id="normalization-file",
+                                    options=[
+                                        {"label": f" {filename}", "value": filename}
+                                        for filename in norm_folder_results.files
+                                        + ["Nil"]
+                                    ],
+                                    value="Nil",
+                                ),
+                            ],
                         ),
                     ),
                 ],

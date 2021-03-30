@@ -16,6 +16,7 @@ import numpy as np
 
 # Create random data with numpy
 import pandas as pd
+from pkg_resources import normalize_path
 import plotly.express as px
 
 # import plotly.express as px
@@ -455,6 +456,7 @@ def selection2hash(
     num_of_results: int,
     extended: bool = False,
     sorting_by: list = [],
+    normalization_file: str = "",
     new_metrics: bool = True,
     columns_binning_size: int = 1,
     measures_binning_size: int = 1,
@@ -467,6 +469,7 @@ def selection2hash(
         + filters_any
         + sorting_by
         + [
+            normalization_file,
             str(num_of_results),
             str(extended),
             str(new_metrics),

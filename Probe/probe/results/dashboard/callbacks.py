@@ -207,6 +207,7 @@ def _tab_table(
     hash_args: tuple,
     extended,
     sorting_by,
+    normalization_file,
     new_metrics,
     files,
     filters_all,
@@ -223,6 +224,15 @@ def _tab_table(
     )
     prefix = get_prefix(files2plot)
 
+    normalization_res = None
+
+    if normalization_file != "Nil":
+        if cache_manager.check("norm_results", hash_="data"):
+            norm_data = cache_manager.get("norm_results", hash_="data")
+            normalization_res = norm_data.get_df(normalization_file)
+
+    # print(normalization_file, normalization_res)
+
     if num_of_results != 0 and num_of_results is not None:
         table, new_file2plot = make_table(
             files2plot,
@@ -231,6 +241,7 @@ def _tab_table(
             extended=extended,
             sorting_by=sorting_by,
             new_metrics=new_metrics,
+            normalization_res=normalization_res,
         )
         files2plot = [(file_, df) for file_, df in files2plot if file_ in new_file2plot]
         prefix = get_prefix(files2plot)
@@ -240,6 +251,7 @@ def _tab_table(
             extended=extended,
             sorting_by=sorting_by,
             new_metrics=new_metrics,
+            normalization_res=normalization_res,
         )
     else:
         table, _ = make_table(
@@ -248,6 +260,7 @@ def _tab_table(
             extended=extended,
             sorting_by=sorting_by,
             new_metrics=new_metrics,
+            normalization_res=normalization_res,
         )
 
     cache_manager.set(
@@ -308,6 +321,7 @@ def switch_tab(
     at,
     extended,
     sorting_by,
+    normalization_file,
     new_metrics,
     columns_binning_size,
     measures_binning_size,
@@ -325,6 +339,7 @@ def switch_tab(
         num_of_results,
         extended,
         sorting_by,
+        normalization_file,
         new_metrics,
         columns_binning_size,
         measures_binning_size,
@@ -381,6 +396,7 @@ def switch_tab(
             hash_args,
             extended,
             sorting_by,
+            normalization_file,
             new_metrics,
             files,
             filters_all,

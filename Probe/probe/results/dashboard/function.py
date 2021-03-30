@@ -37,6 +37,7 @@ _EXTERNAL_STYLESHEETS = ["https://codepen.io/chriddyp/pen/bWLwgP.css"]
 
 def service(
     folders: "List[str]",
+    norm_folder: str = "",
     dash_ip: str = "localhost",
     dash_port: int = 8050,
     lazy: bool = False,
@@ -63,15 +64,22 @@ def service(
 
     MinCacheServer().start()
 
+    cache_manager = DashCacheManager()
+
     print(f"{STATUS_ARROW}Aggregate results...")
     results = aggregate_results(folders, lazy)
-
-    cache_manager = DashCacheManager()
     cache_manager.set("results", hash_="data", data=results)
+
+    if norm_folder:
+        norm_folder_results = aggregate_results([norm_folder], lazy)
+        cache_manager.set("norm_results", hash_="data", data=norm_folder_results)
+    else:
+        norm_folder_results = None
+
     del cache_manager
 
     print(f"{STATUS_ARROW}Start dashboard...")
-    create(results, dash_ip, dash_port, debug)
+    create(results, dash_ip, dash_port, debug, norm_folder_results=norm_folder_results)
 
 
 def create(
@@ -79,6 +87,7 @@ def create(
     server_ip: str = "localhost",
     server_port: int = 8050,
     debug: bool = True,
+    norm_folder_results: "Results" = None,
 ):
     # Assets ref: https://dash.plotly.com/external-resources
     app = dash.Dash(
@@ -93,7 +102,7 @@ def create(
     _TAB_COLUMNS = view.columns()
     _TAB_MEASURES = view.measures()
     _TAB_AGENTS = view.agents()
-    _TAB_TABLE = view.table()
+    _TAB_TABLE = view.table(norm_folder_results)
     _TAB_COMPARE = view.compare()
 
     _TABS = dbc.Tabs(
@@ -181,6 +190,7 @@ def create(
             Input("tabs", "active_tab"),
             Input("toggle-extended-table", "value"),
             Input("sorting-by", "value"),
+            Input("normalization-file", "value"),
             Input("toggle-new-metrics", "value"),
             Input("columns-binning-size", "value"),
             Input("measures-binning-size", "value"),
