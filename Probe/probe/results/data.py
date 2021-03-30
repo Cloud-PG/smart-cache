@@ -295,7 +295,7 @@ def measure_score_ratio(df: "pd.DataFrame") -> "pd.Series":
 
 @missing_column
 def measure_throughput_ratio(df: "pd.DataFrame") -> "pd.Series":
-    return (df["read on hit data"]) / df["cache size"]
+    return (df["read on hit data"] - df["read on miss data"]) / df["read data"]
 
 
 @missing_column
