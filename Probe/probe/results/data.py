@@ -497,7 +497,10 @@ def make_table(
     sorting_by = [elm for elm in sorting_by if elm in columns]
 
     if not sorting_by:
-        sorting_by.insert(0, "Score")
+        if new_metrics:
+            sorting_by.insert(0, "Score")
+        else:
+            sorting_by.insert(0, "Throughput")
 
     df = df.sort_values(
         by=sorting_by,
