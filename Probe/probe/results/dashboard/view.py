@@ -147,9 +147,15 @@ def table(norm_folder_results: "Results" = None) -> "Any":
                                 dcc.Dropdown(
                                     id="normalization-file",
                                     options=[
-                                        {"label": f" {filename}", "value": filename}
-                                        for filename in norm_folder_results.files
-                                        + ["Nil"]
+                                        {
+                                            "label": f" {filename}",
+                                            "value": filename,
+                                        }
+                                        for filename in (
+                                            norm_folder_results.files + ["Nil"]
+                                            if isinstance(norm_folder_results, Results)
+                                            else ["Nil"]
+                                        )
                                     ],
                                     value="Nil",
                                 ),
