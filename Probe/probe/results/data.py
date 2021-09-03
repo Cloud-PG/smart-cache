@@ -567,7 +567,7 @@ def get_measures(
         )
     else:
         measures.append(
-            measure_throughput_ratio_old(df, normalize=normalization_res).mean(),
+            measure_throughput_ratio_old(df).mean(),
         )
 
     # Cost ratio
