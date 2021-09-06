@@ -307,7 +307,7 @@ def measure_throughput_ratio(
     df: "pd.DataFrame", normalize: "pd.DataFrame" = None
 ) -> "pd.Series":
     if isinstance(normalize, pd.DataFrame):
-        return df["read on hit data"] / normalize["read on hit data"]
+        return df["read on hit data"].mean() / normalize["read on hit data"].mean()
     return df["read on hit data"] / df["read data"]
 
 
@@ -321,9 +321,9 @@ def measure_cost_ratio(
     df: "pd.DataFrame", normalize: "pd.DataFrame" = None
 ) -> "pd.Series":
     if isinstance(normalize, pd.DataFrame):
-        return (df["written data"] + df["deleted data"]) / (
-            normalize["written data"] * 2
-        )
+        return (df["written data"] + df["deleted data"]).mean() / (
+            normalize["written data"] * 2.0
+        ).mean()
     return (df["written data"] + df["deleted data"]) / df["cache size"]
 
 
