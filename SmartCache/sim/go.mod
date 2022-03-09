@@ -15,4 +15,5 @@ require (
 	golang.org/x/tools v0.0.0-20200207224406-61798d64f025 // indirect
 	gonum.org/v1/gonum v0.7.0
 	google.golang.org/grpc v1.30.0
+	gopkg.in/yaml.v2 v2.2.8 // indirect
 )
