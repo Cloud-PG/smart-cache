@@ -5,6 +5,8 @@ import keras.initializers
 import tensorflow as tf
 import math
 
+tf.random.set_seed(2021)
+
 def minimal_dense(input_len, output_activation, nb_actions, lr):
     model = Sequential()
     model.add(Dense(16, input_dim=input_len))
@@ -54,6 +56,7 @@ def small_dense(input_len, output_activation, nb_actions, lr, seed_):
     print(model.summary())
     #opt = keras.optimizers.Adam(learning_rate=0.00001)
     opt = keras.optimizers.Adam(learning_rate=lr)
+    #model.compile(loss='mse', optimizer=opt)
     model.compile(loss=tf.keras.losses.Huber(), optimizer=opt)
     #model.compile(optimizer='adam', loss=tf.keras.losses.Huber())
 
@@ -74,6 +77,8 @@ def small_dense(input_len, output_activation, nb_actions, lr):
     #model.compile(optimizer='adam', loss=tf.keras.losses.Huber())
 
     return model
+'''
+
 '''
 def big_dense(input_len, output_activation, nb_actions, lr):
     model = Sequential()
@@ -99,6 +104,22 @@ def big_dense(input_len, output_activation, nb_actions, lr):
     model.add(Activation('sigmoid'))
     model.add(Dense(nb_actions))
     model.add(Activation(output_activation))
+    print(model.summary())
+    opt = keras.optimizers.Adam(learning_rate=lr)
+    model.compile(loss=tf.keras.losses.Huber(), optimizer=opt)
+    #model.compile(optimizer='adam', loss=tf.keras.losses.Huber())
+
+    return model
+'''
+
+def big_dense(input_len, output_activation, nb_actions, lr, seed_):
+    model = Sequential()
+    initializer = keras.initializers.glorot_uniform(seed = seed_)
+    model.add(Dense(256, input_dim=input_len, activation = 'sigmoid', kernel_initializer=initializer ))
+    model.add(Dense(128, activation = 'sigmoid', kernel_initializer=initializer))
+    model.add(Dense(64, activation = 'sigmoid', kernel_initializer=initializer))
+    model.add(Dense(32, activation = 'sigmoid', kernel_initializer=initializer))
+    model.add(Dense(nb_actions, activation = output_activation, kernel_initializer=initializer))
     print(model.summary())
     opt = keras.optimizers.Adam(learning_rate=lr)
     model.compile(loss=tf.keras.losses.Huber(), optimizer=opt)
