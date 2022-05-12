@@ -56,8 +56,8 @@ parser.add_argument('--slope_add', type=float, default=0.00001)
 parser.add_argument('--slope_evict', type=float, default=0.00001)
 parser.add_argument('--decay_rate_add', type=float, default=0.00001)
 parser.add_argument('--decay_rate_evict', type=float, default=0.00001)
-parser.add_argument('--warm_up_steps_add', type=int, default=60000)
-parser.add_argument('--warm_up_steps_evict', type=int, default=60000)
+parser.add_argument('--warm_up_steps_add', type=int, default=100000)
+parser.add_argument('--warm_up_steps_evict', type=int, default=100000)
 parser.add_argument('--eps_add_max', type=float, default=1.0)
 parser.add_argument('--eps_add_min', type=float, default=0.1)
 parser.add_argument('--eps_evict_max', type=float, default = 1.0)
@@ -90,6 +90,16 @@ parser.add_argument('--seed', type = int, default = 2019)
 parser.add_argument('--eviction_frequency', type = int, default = 50000)
 parser.add_argument('--check_next_size', type = bool, default = False)
 
+os.environ['PYTHONHASHSEED']=str(0)
+tf.random.set_seed(2021)
+#random.seed(seed_)
+#np.random.seed(seed_)
+random.seed(2021)
+np.random.seed(2021)
+#from keras import backend as K
+#session_conf = tf.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1)
+#sess = tf.Session(graph=tf.get_default_graph(), config=session_conf)
+#K.set_session(sess)
 
 args = parser.parse_args()
 
@@ -175,6 +185,9 @@ if args.load_weights_from_file == True:
     #model_evict.load_weights(out_directory + '/' + args.in_evict_weights)
     model_evict.load_weights(args.in_evict_weights)
     print('EVICT WEIGHTS LOADED')
+
+for layer in model_add.layers: print(layer.get_config(), layer.get_weights())
+for layer in target_model_add.layers: print(layer.get_config(), layer.get_weights())
 ###### START LOOPING #######################################################################################################
 
 #if args.region == 'it':
@@ -229,7 +242,9 @@ def write_stats():
                     'Action delete half',
                     'Action delete quarter',
                     'Action delete one',
-                    'Action not delete'
+                    'Action not delete',
+                    'Addition_memory_size',
+                    'Eviction_memory_size',
                     ])
 
     with open(environment._out_directory + '/' + environment._out_name, 'a', newline='') as file:
@@ -278,7 +293,9 @@ def write_stats():
                 0,
                 0,
                 environment._cache._delete_actions,
-                environment._cache._not_delete_actions
+                environment._cache._not_delete_actions,
+                environment.get_add_memory_size(),
+                environment.get_evict_memory_size(),
                 ])
 
     return
@@ -483,6 +500,8 @@ def add_request(action):
     #filestats = environment._cache._stats._files[filename]
     filestats._last_request = environment._curRequest_from_start
     added = environment._cache.update_policy(filename, filestats, hit, action)
+    #if hit == False and action == 1:
+        #print(added)
     environment._cache.after_request(filestats, hit, added)
 
     #COMPUTE CPU EFFICIENCY        
@@ -571,8 +590,7 @@ filestats = environment._cache.before_request(
 
 environment.set_curValues(filestats._size/1000,filestats._hit + filestats._miss, environment._curRequest_from_start - filestats._last_request,0. if filestats._datatype == 0 else 1., environment._cache.capacity()/100.,environment._cache.hit_rate())
 
-random.seed(seed_)
-np.random.seed(seed_)
+
 environment._adding_or_evicting = 0
 step_add = 0
 step_evict = 0
@@ -664,7 +682,9 @@ while end == False and test == False:
 
         # UPDATE STUFF
         step_add += 1
-        if eps_add > eps_add_min and step_add > warm_up_steps_add:
+        #if eps_add > eps_add_min and step_add > warm_up_steps_add:
+        #if eps_add > eps_add_min and environment.get_add_memory_size() > 100000:
+        if eps_add > eps_add_min and environment.get_add_memory_size() > warm_up_steps_add:
             step_add_decay += 1
             if annealing_type == 'exponential':
                 eps_add = eps_add_max * math.exp(- decay_rate_add * step_add_decay)
@@ -678,8 +698,11 @@ while end == False and test == False:
                 
         # GET ACTION
         rnd_eps = random.random()
-        if rnd_eps < eps_add or step_add < warm_up_steps_add:
+        #if rnd_eps < eps_add or step_add < warm_up_steps_add:
+        #if rnd_eps < eps_add or environment.get_add_memory_size() < 100000:
+        if rnd_eps < eps_add or environment.get_add_memory_size() < warm_up_steps_add:
             rnd = random.random()
+            #print(rnd)
             if rnd < 0.5:
                 action = 0
             else:
@@ -815,7 +838,8 @@ while end == False and test == False:
         current_occupancy = environment._cache.capacity()
         #occupancies.append(current_occupancy)
         environment._cache._add_to_occupancies(current_occupancy)
-        if current_occupancy <= environment._cache._h_watermark and next_occupancy < 100.:
+        #if current_occupancy <= environment._cache._h_watermark and next_occupancy < 100.:
+        if current_occupancy <= environment._cache._h_watermark and next_occupancy < 100. and (step_add % eviction_frequency != 0 or step_add == 0):
             get_next_request_values()
         
         # REMOVE THE FIRST DUMMY ELEMENT IN MEMORY
@@ -832,22 +856,29 @@ while end == False and test == False:
             environment.delete_first_add_memory()
     
         # TRAIN NETWORK
-        if step_add > warm_up_steps_add and test == False:
+        #if step_add > warm_up_steps_add and test == False:
+        #if  environment.get_add_memory_size() > 100000 and test == False:
+        if  environment.get_add_memory_size() > warm_up_steps_add and test == False:
             #print('started training')
             batch = np.asarray(environment.get_random_batch(BATCH_SIZE))
             #print('BATCH')
-            #print(batch)    
+            #print(environment.get_add_memory_size())
+            #print(batch)
+            #print()    
             #batch = environment.add_memory_vector[np.random.randint(0, environment.add_memory_vector.shape[0], BATCH_SIZE), :]
             train_cur_vals ,train_actions, train_rewards, train_next_vals = np.split(batch, [input_len, input_len + 1, input_len + 2] , axis = 1)
             #train_cur_vals ,train_actions, train_rewards = np.split(batch, [input_len, input_len + 1] , axis = 1)
             target = model_add.predict_on_batch(train_cur_vals)
-            if debug == True and step_add % 10000 == 0:
+            #if debug == True and step_add % 10000 == 0:
+            if debug == True and step_add <100:
             #if debug == True and step_add == warm_up_steps_add + 1:
-                print('PREDICT ON BATCH')
-                print(environment._adding_or_evicting)
-                print(batch)
-                print(target)
-                print()
+                print('PREDICT ON BATCH STEP ADD' + str(step_add))
+                #print(environment._adding_or_evicting)
+                #print(train_cur_vals)
+                #print(batch)
+                #print(model_add.predict_on_batch(train_cur_vals))
+                #print(target_model_add.predict_on_batch(train_cur_vals))
+                #print()
             if use_target_model == False:
                 predictions = model_add.predict_on_batch(train_next_vals)
                 #predictions = model_add.predict_on_batch(train_cur_vals)
@@ -860,8 +891,25 @@ while end == False and test == False:
                 for i in range(0,BATCH_SIZE):
                     action_ = int(train_actions[i])               
                     target[i,action_] = train_rewards[i] + gamma * max(predictions[i])  
-            
+            if debug == True and step_add <100:
+                print('INPUT:')
+                print(train_cur_vals)
+                print('Y HAT:')
+                print(model_add.predict_on_batch(train_cur_vals))
+                print('TRUE VALUE:')
+                print(target)
+                #print(model_add)
+                print('BEFORE')
+                for n, layer in enumerate(model_add.layers): 
+                    if n == 0:
+                        print(layer.get_config(), layer.get_weights())
             model_add.train_on_batch(train_cur_vals, target)
+            if debug == True and step_add <100:  
+                print('AFTER')  
+                for n, layer in enumerate(model_add.layers): 
+                    if n == 0:
+                        print(layer.get_config(), layer.get_weights())
+                print()
 
     ### EVICTING #############################################################################################################
     elif environment._adding_or_evicting == 1: 
@@ -872,7 +920,9 @@ while end == False and test == False:
         
         # UPDATE STUFF
         step_evict += 1
-        if eps_evict > eps_evict_min and step_evict > warm_up_steps_evict:
+        #if eps_evict > eps_evict_min and step_evict > warm_up_steps_evict:
+        #if eps_evict > eps_evict_min and environment.get_evict_memory_size() > 100000:
+        if eps_evict > eps_evict_min and environment.get_evict_memory_size() > warm_up_steps_evict:
             step_evict_decay += 1
             if annealing_type == 'exponential':
                 eps_evict = eps_evict_max * math.exp(- decay_rate_evict * step_evict_decay)
@@ -886,7 +936,9 @@ while end == False and test == False:
         
         # GET ACTION
         rnd_eps = random.random()
-        if rnd_eps < eps_evict or step_evict < warm_up_steps_evict:
+        #if rnd_eps < eps_evict or step_evict < warm_up_steps_evict:
+        #if rnd_eps < eps_evict or environment.get_evict_memory_size() < 100000:
+        if rnd_eps < eps_evict or environment.get_evict_memory_size() < warm_up_steps_evict:
             rnd = random.random()
             if rnd < 0.5:
                 action = 0
@@ -939,7 +991,9 @@ while end == False and test == False:
             environment.delete_first_evict_memory()
         
         # TRAIN NETWORK
-        if step_evict > warm_up_steps_evict and test == False:
+        #if step_evict > warm_up_steps_evict and test == False:
+        #if environment.get_evict_memory_size() > 100000 and test == False:
+        if environment.get_evict_memory_size() > warm_up_steps_evict and test == False:
             batch = np.asarray(environment.get_random_batch(BATCH_SIZE))
             #print('BATCH')
             #print(batch)    
@@ -976,13 +1030,18 @@ while end == False and test == False:
     if environment._adding_or_evicting == 0 and (current_occupancy > environment._cache._h_watermark or next_occupancy > 100. or (step_add % eviction_frequency == 0 and step_add != 0)):
         #print('START EVICTION')
         environment._cache._eviction_calls += 1
-        if next_occupancy > 100.:
+        #if next_occupancy > 100.:
+        if next_occupancy > 100. or current_occupancy > environment._cache._h_watermark:
             environment._cache._eviction_forced_calls += 1
         environment._adding_or_evicting = 1 
         addition_counter += 1
+        print(len(environment._cache._cached_files_keys))
         environment.create_cached_files_keys_list()
         #environment._cache._cached_files_keys = list(environment._cache._cached_files)
+        #print('BEFORE SHUFFLING:',environment._cache._cached_files_keys)
         #random.shuffle(environment._cache._cached_files_keys)
+        #print('AFTER_SHUFFLING',environment._cache._cached_files_keys)
+        print()
         #to_print = np.asarray(environment._cache._cached_files_keys)
         environment._cached_files_index = -1
         get_next_file_in_cache_values()
@@ -1031,7 +1090,7 @@ while end == False and test == False:
 ###########################
 #########################
 
-
+'''
 while end == False and test == True:
     end_of_cache = False
     ######## REPORT TIMING ##################################################################################################
@@ -1217,7 +1276,7 @@ while end == False and test == True:
             to_print = np.asarray(environment._cache._cached_files_keys)
             environment._cached_files_index = -1
             cur_values = environment.get_next_file_in_cache_values()
-
+'''
 
 
 

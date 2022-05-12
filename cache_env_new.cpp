@@ -11,6 +11,8 @@
 #include <Python.h>
 #include <algorithm>
 #include <random>
+#include <map>
+
 namespace py = pybind11;
 
 using namespace std;
@@ -188,12 +190,14 @@ class cache {
         };               
         inline bool update_policy(int filename, FileStats file_stats, bool hit, int action){   
             _stats._files[filename] = file_stats;
-            if (hit == false and action == 0){
+            //if (hit == false and action == 0){
+            if (hit == false && action == 0){
                 _cached_files.insert(filename);
                 return true;
             }
             else if (hit == true)
                 return false;
+            return false;
         };
         inline void after_request(FileStats fileStats, bool hit, bool added){
             if (hit == true){
@@ -269,7 +273,9 @@ class env{
         float _cache_size, _size_tot;
         int _idx_start, _idx_end, _curDay, _totalDays, _adding_or_evicting, _curRequest, _curRequest_from_start, _cached_files_index;
         cache _cache;
-        unordered_map<int,vector<WindowElement>> _request_window_elements, _eviction_window_elements;
+        //unordered_map<int,vector<WindowElement>> _request_window_elements, _eviction_window_elements;
+        map<int,vector<WindowElement>> _request_window_elements, _eviction_window_elements;
+        default_random_engine _rng{1};
         vector<float> _curValues;
         vector<vector<float>> _add_memory_vector;
         vector<vector<float>> _evict_memory_vector;        
@@ -377,7 +383,8 @@ void env::update_windows_getting_eventual_rewards_accumulate(int curFilename, in
             else if (size >= it_limsup_size) coeff = 1;
             else coeff = (size - it_liminf_size)/it_delta_size;
         }
-        unordered_map<int,vector<WindowElement>>::iterator it;
+        //unordered_map<int,vector<WindowElement>>::iterator it;
+        map<int,vector<WindowElement>>::iterator it;
         it = _request_window_elements.find(curFilename);
         if(it != _request_window_elements.end()){  //is pending
             int len_ = it->second.size();
@@ -448,7 +455,8 @@ void env::update_windows_getting_eventual_rewards_accumulate(int curFilename, in
 
     else if (_adding_or_evicting == 1){
             WindowElement to_add(_curRequest_from_start, _curValues, 0, action);
-            unordered_map<int,vector<WindowElement>>::iterator it;
+            //unordered_map<int,vector<WindowElement>>::iterator it;
+            map<int,vector<WindowElement>>::iterator it;
             it = _eviction_window_elements.find(curFilename);
             if (it != _eviction_window_elements.end()){ //there is
                     (it->second).push_back(to_add);
@@ -463,9 +471,10 @@ void env::update_windows_getting_eventual_rewards_accumulate(int curFilename, in
 
 void env::look_for_invalidated_add_evict_accumulate(){
     unordered_set<int> toDelete_filenames;
-    float coeff;
+    float coeff = 1;
     for (auto & elem: _request_window_elements){
         vector<int> toDelete_vector;
+        //cout <<  elem.first << ":" << elem.second.size() << endl;
         for(int i=0; i < elem.second.size(); i++){
             int curFilename = elem.first;
             float size = elem.second[i].cur_values[0];
@@ -475,6 +484,7 @@ void env::look_for_invalidated_add_evict_accumulate(){
                 else if (size >= it_limsup_size) float coeff = 1; 
                 else float coeff = (size - it_liminf_size)/it_delta_size;
             }
+            //cout<<coeff<<endl;
             
             if ((_curRequest_from_start - elem.second[i].counter) > _time_span_add){
                 if (elem.second[i].reward != 0){  //some hits
@@ -499,9 +509,11 @@ void env::look_for_invalidated_add_evict_accumulate(){
             _request_window_elements[elem.first].erase(_request_window_elements[elem.first].begin() + toDelete_vector[toDelete_vector.size() - j - 1]);
         }
     }
-
-    for (auto const& filename: toDelete_filenames)
+    //cout<<"To delete: "<<endl;
+    for (auto const& filename: toDelete_filenames){
+        //cout<<filename<<endl;
         _request_window_elements.erase(filename);
+    }
     
     toDelete_filenames.clear();
     for (auto & elem: _eviction_window_elements){
@@ -566,23 +578,35 @@ void env::set_curValues(float size, float frequency, float recency, float dataty
 py::array env::get_random_batch(int batch_size){
     //srand(_seed);
     //int randomNumbers[batch_size];
-    int randomNumber;
+    //int randomNumber;
+    //int randomNumber_pure;
     //int counter = 0;
     vector<vector<float>> batch;
     //float batch[batch_size][2*6 + 1 + 1];
     if(_adding_or_evicting == 0){
+        std::vector<int> v(_add_memory_vector.size()) ; // vector with 100 ints.
+        std::iota (std::begin(v), std::end(v), 0);
+        std::shuffle(begin(v), end(v), _rng);
+        //cout<<_add_memory_vector.size()<<" "<<v[0]<<" "<<v[1]<<" "<<v[2]<<" "<<v[3]<<" "<<v[4]<<endl;
         for (int index = 0; index < batch_size; index++){
-            randomNumber = rand() % _add_memory_vector.size();
-            batch.push_back(_add_memory_vector[randomNumber]);
+            //randomNumber_pure = rand();
+            //randomNumber = rand() % _add_memory_vector.size();
+            //randomNumber = randomNumber_pure % _add_memory_vector.size();
+            //batch.push_back(_add_memory_vector[randomNumber]);
+            batch.push_back(_add_memory_vector[v[index]]);
             //for(int i=0; i < 2*6 + 1 + 1 ; i++)
             //    batch[counter][i] = _add_memory_vector[randomNumber][i];
             //    counter += 1;
         }
     }
     if(_adding_or_evicting == 1){
+        std::vector<int> v(_evict_memory_vector.size()) ; // vector with 100 ints.
+        std::iota (std::begin(v), std::end(v), 0);
+        std::shuffle(begin(v), end(v), _rng);
         for (int index = 0; index < batch_size; index++){
-            randomNumber = rand() % _evict_memory_vector.size();
-            batch.push_back(_evict_memory_vector[randomNumber]);
+            //randomNumber = rand() % _evict_memory_vector.size();
+            //batch.push_back(_evict_memory_vector[randomNumber]);
+            batch.push_back(_evict_memory_vector[v[index]]);
             //for(int i=0; i < 2*6 + 1 + 1 ; i++)
             //    batch[counter][i] = _evict_memory_vector[randomNumber][i];
             //    counter += 1;
@@ -642,8 +666,11 @@ void env::create_cached_files_keys_list(){
     _cache._cached_files_keys.insert(_cache._cached_files_keys.end(), _cache._cached_files.begin(), _cache._cached_files.end());
     //for (auto it = _cache._cached_files.begin(); it != _cache._cached_files.end(); ) {
         //_cache._cached_files_keys.push_back(move(_cache._cached_files.extract(it++).value()));
-    auto rng = default_random_engine {};
-    std::shuffle(begin(_cache._cached_files_keys), end(_cache._cached_files_keys), rng);
+    //cout<<"BEFORE"<<_cache._cached_files_keys[0]<<endl;
+    //auto rng = default_random_engine {};
+    //std::shuffle(begin(_cache._cached_files_keys), end(_cache._cached_files_keys), rng);
+    std::shuffle(begin(_cache._cached_files_keys), end(_cache._cached_files_keys), _rng);
+    //cout<<"AFTER"<<_cache._cached_files_keys[0]<<endl;
 }
 
 int env::get_stats_len(){
