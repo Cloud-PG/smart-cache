@@ -34,7 +34,7 @@ fastavro==1.0.0.post1
 findspark==1.4.2
 Flask==1.1.2
 Flask-Compress==1.7.0
-future==0.18.2
+future==0.18.3
 gast==0.3.3
 google-auth==1.22.1
 google-auth-oauthlib==0.4.1
