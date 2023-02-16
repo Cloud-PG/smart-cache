@@ -40,4 +40,4 @@ tornado==6.1
 tqdm==4.54.0
 typer==0.3.2
 typing-extensions==3.7.4.3
-Werkzeug==1.0.1
+Werkzeug==2.2.3
